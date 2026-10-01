@@ -1,4 +1,5 @@
-import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
@@ -13,14 +14,25 @@ import { getGaps, monthData } from '@/data/timeline';
 
 const RECENT_QUESTIONS = ['밤중 수유는 언제부터 줄여도 되나요?', '분유량이 갑자기 줄었는데 괜찮나요?'];
 
+/** 한 번에 보여주는 「챙길 것」 수 — 빨간 표시가 한꺼번에 쏟아지면 불안만 준다 */
+const VISIBLE_TODOS = 3;
+
 export default function HomeScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const { baby, age } = useBaby();
+  const [showAllTodos, setShowAllTodos] = useState(false);
 
   if (!age) return <ScreenLoading />;
 
   const { missed, upcoming } = getGaps(age.month);
+  // 놓친 것을 먼저, 다가오는 것을 뒤에. 길면 접어 두고 눌러서 펼친다
+  const todos = [
+    ...missed.map((t) => ({ ...t, isMissed: true })),
+    ...upcoming.map((t) => ({ ...t, isMissed: false })),
+  ];
+  const shownTodos = showAllTodos ? todos : todos.slice(0, VISIBLE_TODOS);
+  const hiddenTodoCount = todos.length - shownTodos.length;
   const thisMonth = monthData(age.month);
   // 발달·생활 항목이 이번 달 발달 포인트가 된다 (접종·검진은 위의 「챙길 것」이 맡는다)
   const points = (thisMonth?.l1 ?? []).filter((i) => i.kind === '발달' || i.kind === '생활');
@@ -51,34 +63,42 @@ export default function HomeScreen() {
             지금 챙길 것
           </ThemedText>
           <ThemedView type="backgroundElement" style={styles.card}>
-            {missed.map(({ month, item }) => (
+            {shownTodos.map(({ month, item, isMissed }) => (
               <View key={item.label} style={styles.todoRow}>
-                <ThemedText style={styles.missedMark}>!</ThemedText>
+                <ThemedText style={isMissed ? styles.missedMark : { color: colors.accent }}>
+                  {isMissed ? '!' : '○'}
+                </ThemedText>
                 <View style={styles.todoLabel}>
                   <ThemedText>{item.label}</ThemedText>
-                  <ThemedText type="small" style={styles.missedMark}>
-                    {month}개월 차 항목인데 기록이 없어요 — 완료했다면 알려주세요
+                  <ThemedText
+                    type="small"
+                    style={isMissed ? styles.missedMark : { color: colors.textSecondary }}>
+                    {isMissed
+                      ? `${month}개월 차 항목인데 기록이 없어요 — 완료했다면 알려주세요`
+                      : month === age.month
+                        ? '이번 달'
+                        : `${month}개월에 다가와요`}
                   </ThemedText>
                 </View>
               </View>
             ))}
-            {upcoming.map(({ month, item }) => (
-              <View key={item.label} style={styles.todoRow}>
-                <ThemedText style={{ color: colors.accent }}>○</ThemedText>
-                <View style={styles.todoLabel}>
-                  <ThemedText>{item.label}</ThemedText>
-                  <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                    {month === age.month ? '이번 달' : `${month}개월에 다가와요`}
-                  </ThemedText>
-                </View>
-              </View>
-            ))}
-            {missed.length === 0 && upcoming.length === 0 && (
+            {hiddenTodoCount > 0 && (
+              <Pressable onPress={() => setShowAllTodos(true)}>
+                <ThemedText type="small" style={{ color: colors.accent }}>
+                  {hiddenTodoCount}건 더 보기
+                </ThemedText>
+              </Pressable>
+            )}
+            {todos.length === 0 && (
               <ThemedText type="small" style={{ color: colors.textSecondary }}>
                 지금은 챙길 게 없어요 🎉
               </ThemedText>
             )}
           </ThemedView>
+
+          {/* 배너는 첫 화면 안에 보이도록 핵심 카드 바로 뒤에 둔다 — 아기 카드와 「챙길 것」보다
+              위로는 올리지 않는다(첫인상이 광고가 되지 않게) */}
+          <AdBanner />
 
           {/* 이번 달 발달 포인트 (성장 타임라인 요약) */}
           <ThemedText type="subtitle" style={styles.sectionTitle}>
@@ -111,8 +131,6 @@ export default function HomeScreen() {
               이어서 물어보기 →
             </ThemedText>
           </ThemedView>
-
-          <AdBanner />
 
           <ThemedText type="small" style={[styles.disclaimer, { color: colors.textSecondary }]}>
             말콩의 정보는 공공 의료·육아 지식을 근거로 제공되는 참고 자료예요

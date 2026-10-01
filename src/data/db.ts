@@ -28,6 +28,10 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           birth_date  TEXT NOT NULL,
           created_at  TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS settings (
+          key    TEXT PRIMARY KEY,
+          value  TEXT NOT NULL
+        );
       `);
       return db;
     })();
@@ -52,5 +56,24 @@ export async function writeBabyRow(baby: Baby): Promise<void> {
     baby.name,
     baby.birthDate,
     baby.createdAt,
+  );
+}
+
+/** 설정 한 칸 읽기 — 광고 제거 구매 여부·브리핑 시각처럼 작은 값들이 여기 들어간다 */
+export async function readSetting(key: string): Promise<string | null> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ value: string }>(
+    'SELECT value FROM settings WHERE key = ?',
+    key,
+  );
+  return row?.value ?? null;
+}
+
+export async function writeSetting(key: string, value: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    key,
+    value,
   );
 }

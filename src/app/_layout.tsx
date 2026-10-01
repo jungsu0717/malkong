@@ -5,6 +5,7 @@ import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BabyProvider, useBaby } from '@/data/baby-context';
+import { EntitlementsProvider } from '@/data/entitlements-context';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -32,13 +33,15 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
-      <BabyProvider>
-        <OnboardingGate />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-        </Stack>
-      </BabyProvider>
+      <EntitlementsProvider>
+        <BabyProvider>
+          <OnboardingGate />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+          </Stack>
+        </BabyProvider>
+      </EntitlementsProvider>
     </ThemeProvider>
   );
 }

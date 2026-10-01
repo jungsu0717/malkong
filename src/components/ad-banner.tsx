@@ -2,6 +2,8 @@ import { StyleSheet, useColorScheme, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing } from '@/constants/theme';
+import { areAdsEnabled } from '@/data/entitlements';
+import { useEntitlements } from '@/data/entitlements-context';
 
 /**
  * 광고 자리 컴포넌트 (placeholder).
@@ -18,6 +20,10 @@ import { Colors, Spacing } from '@/constants/theme';
 export function AdBanner() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const { ads } = useEntitlements();
+
+  // 광고 제거를 구매했거나 운영자(가족) 기기면 자리까지 사라진다 (SPEC-MY-06)
+  if (!ads) return null;
 
   return (
     <View style={[styles.banner, { backgroundColor: colors.backgroundElement }]}>
@@ -36,6 +42,8 @@ export function AdBanner() {
  * AdMob 연결 전까지는 아무것도 하지 않는다.
  */
 export async function showInterstitial(): Promise<void> {
+  // 광고 제거를 샀으면 전면 광고도 뜨지 않는다 (SPEC-MY-06)
+  if (!areAdsEnabled()) return;
   // TODO(AdMob): InterstitialAd.createForAdRequest(TestIds.INTERSTITIAL) 로 교체
   return;
 }

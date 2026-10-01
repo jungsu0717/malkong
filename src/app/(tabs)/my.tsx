@@ -10,6 +10,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
+import { useEntitlements } from '@/data/entitlements-context';
 import { allItems, L1_VERSION, pendingReviewCount } from '@/data/l1';
 
 const MENU_SECTIONS: { title: string; items: string[] }[] = [
@@ -23,6 +24,7 @@ export default function MyScreen() {
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const router = useRouter();
   const { baby, age } = useBaby();
+  const { ads } = useEntitlements();
 
   return (
     <ThemedView style={styles.container}>
@@ -43,6 +45,21 @@ export default function MyScreen() {
               </View>
               <ThemedText type="small" style={{ color: colors.accent }}>
                 수정
+              </ThemedText>
+            </Pressable>
+          )}
+
+          {/* 광고 제거 — 결제 SDK 는 EAS 개발 빌드 단계에서 붙인다 (SPEC-MY-06) */}
+          {ads && (
+            <Pressable style={[styles.profileCard, { backgroundColor: colors.backgroundElement }]}>
+              <View style={styles.profileText}>
+                <ThemedText type="subtitle">광고 없이 쓰기</ThemedText>
+                <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                  한 번 결제하면 배너와 전면 광고가 모두 사라져요
+                </ThemedText>
+              </View>
+              <ThemedText type="small" style={{ color: colors.accent }}>
+                준비 중
               </ThemedText>
             </Pressable>
           )}

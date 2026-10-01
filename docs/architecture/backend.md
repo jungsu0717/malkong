@@ -175,6 +175,10 @@ CREATE TABLE chat_message (                -- 대화 — 단일 타임라인 (�
   meta_json   TEXT,                        -- sources · followup · 저장된 record id 등
   created_at  TEXT NOT NULL
 );
+CREATE TABLE settings (                    -- 작은 설정값 (광고 제거 구매 사본 · 브리핑 시각 등)
+  key    TEXT PRIMARY KEY,
+  value  TEXT NOT NULL
+);
 CREATE TABLE inbox_card (                  -- 아침 브리핑 등 능동 카드 (SPEC-HOME-06)
   id           TEXT PRIMARY KEY,
   kind         TEXT NOT NULL,              -- briefing (후속: reminder 등)

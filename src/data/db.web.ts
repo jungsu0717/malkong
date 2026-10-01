@@ -9,6 +9,7 @@
 import type { Baby } from './baby';
 
 const KEY = 'malkong.baby';
+const SETTING_PREFIX = 'malkong.setting.';
 
 export async function readBabyRow(): Promise<Baby | null> {
   try {
@@ -24,5 +25,21 @@ export async function writeBabyRow(baby: Baby): Promise<void> {
     globalThis.localStorage?.setItem(KEY, JSON.stringify(baby));
   } catch {
     // 저장이 막힌 브라우저에서도 앱은 그대로 동작해야 한다 (이번 실행에만 유지된다)
+  }
+}
+
+export async function readSetting(key: string): Promise<string | null> {
+  try {
+    return globalThis.localStorage?.getItem(`${SETTING_PREFIX}${key}`) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export async function writeSetting(key: string, value: string): Promise<void> {
+  try {
+    globalThis.localStorage?.setItem(`${SETTING_PREFIX}${key}`, value);
+  } catch {
+    // 위와 같다
   }
 }

@@ -14,6 +14,7 @@
 | 서버 데이터 | **TanStack Query** (agent 연결 시점에 도입) | 캐싱·재시도 표준 |
 | 로컬 저장 | **expo-sqlite** (기기) + **localStorage** (웹 미리보기) | 스키마는 [backend](../architecture/backend.md) 기기 DB 절이 정본. expo-sqlite 의 웹 지원이 알파(Metro WASM 설정·COOP/COEP 헤더 필요)라 브라우저 검토가 깨지므로, `src/data/db.ts`(sqlite)와 `src/data/db.web.ts`(localStorage)로 플랫폼을 나눈다. 웹은 검토용이고 출시 대상은 iOS·Android 다 |
 | 광고 | **Google AdMob + react-native-google-mobile-ads** | 배너·전면·보상형. 네이티브 모듈이라 **Expo Go 불가 → EAS 개발 빌드 단계에서 도입**. 절차는 `src/components/ad-banner.tsx` 주석. iOS 는 expo-tracking-transparency 동의 선행. **개발·가족 기기는 광고 면제 또는 테스트 광고 ID** — 실광고 자기 클릭은 AdMob 계정 정지 사유([backend](../architecture/backend.md) 운영자 절) |
+| 결제 (광고 제거) | **RevenueCat `react-native-purchases`** (Expo 권장, 도입은 나중) | 한 번 사면 광고가 사라지는 비소모성 상품. 네이티브 모듈이라 AdMob 과 같은 EAS 개발 빌드 단계에서 함께 붙인다. 구매 사실의 정본은 스토어이고 기기 저장은 복원용 사본 — 자리는 `src/data/entitlements.ts` |
 
 동향 근거: [Expo 공식 — NativeWind 고품질 UI](https://expo.dev/blog/building-high-quality-uis-with-expo-and-nativewind) ·
 [Expo 공식 — Reanimated·Skia 로 AI 앱 감각 만들기](https://expo.dev/blog/making-ai-feel-human-in-a-mobile-app-with-expo-reanimated-and-skia) ·
@@ -51,6 +52,14 @@
 | 짧은 차단 동작 (1초 미만) | 기본 ActivityIndicator |
 | 스플래시 | expo-splash-screen + AnimatedSplashOverlay (템플릿 그대로) |
 | 화면 전환·미세 반응 | Reanimated |
+
+## 광고 자리
+
+- **홈**: 아기 카드 → 「지금 챙길 것」 → **배너** → 나머지. 스크롤하지 않아도 보이되 첫인상과 핵심
+  카드보다 앞서지 않는다(SPEC-HOME-05). 바닥에 두면 탭바에 눌려 잘 보이지 않는다.
+- **성장**: 바닥에 둔다. 가로 타임라인이 화면을 채우는 것이 이 화면의 값이라, 위를 잘라내지 않는다.
+- **물어보기**: 두지 않는다. 대화 흐름을 끊고, 되묻기·답변 사이에 광고가 끼면 신뢰가 깎인다.
+- 광고를 없앤 사용자에게는 `AdBanner` 가 아무것도 그리지 않아 자리까지 사라진다(SPEC-MY-06).
 
 ## 라우트 구조
 
