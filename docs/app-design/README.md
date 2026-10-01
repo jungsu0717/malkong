@@ -12,7 +12,7 @@
 | 애니메이션 | **Reanimated v4** (설치됨) — 제스처·화면 전환 | 표준. Skia 와 UI 스레드에서 연동된다 |
 | 커스텀 그래픽 | **@shopify/react-native-skia** (필요 시점에 도입) | 타임라인 연결 곡선·다수 요소 애니메이션처럼 View 로는 버거운 그림만. **하이브리드가 정석** — 레이아웃·콘텐츠는 RN View, 그림만 Skia 캔버스 |
 | 서버 데이터 | **TanStack Query** (agent 연결 시점에 도입) | 캐싱·재시도 표준 |
-| 로컬 저장 | **expo-sqlite** | 스키마(baby·record·chat_message·inbox_card)는 [backend](../architecture/backend.md) 기기 DB 절이 정본 |
+| 로컬 저장 | **expo-sqlite** (기기) + **localStorage** (웹 미리보기) | 스키마는 [backend](../architecture/backend.md) 기기 DB 절이 정본. expo-sqlite 의 웹 지원이 알파(Metro WASM 설정·COOP/COEP 헤더 필요)라 브라우저 검토가 깨지므로, `src/data/db.ts`(sqlite)와 `src/data/db.web.ts`(localStorage)로 플랫폼을 나눈다. 웹은 검토용이고 출시 대상은 iOS·Android 다 |
 | 광고 | **Google AdMob + react-native-google-mobile-ads** | 배너·전면·보상형. 네이티브 모듈이라 **Expo Go 불가 → EAS 개발 빌드 단계에서 도입**. 절차는 `src/components/ad-banner.tsx` 주석. iOS 는 expo-tracking-transparency 동의 선행. **개발·가족 기기는 광고 면제 또는 테스트 광고 ID** — 실광고 자기 클릭은 AdMob 계정 정지 사유([backend](../architecture/backend.md) 운영자 절) |
 
 동향 근거: [Expo 공식 — NativeWind 고품질 UI](https://expo.dev/blog/building-high-quality-uis-with-expo-and-nativewind) ·
@@ -51,6 +51,15 @@
 | 짧은 차단 동작 (1초 미만) | 기본 ActivityIndicator |
 | 스플래시 | expo-splash-screen + AnimatedSplashOverlay (템플릿 그대로) |
 | 화면 전환·미세 반응 | Reanimated |
+
+## 라우트 구조
+
+```
+src/app/_layout.tsx        루트 Stack — 테마 · BabyProvider · 온보딩 게이트
+src/app/(tabs)/_layout.tsx 하단 탭 4개 (그룹이라 URL 에는 (tabs) 가 나타나지 않는다)
+src/app/(tabs)/*.tsx       홈 · 물어보기 · 성장 · 마이
+src/app/onboarding.tsx     탭 밖 전체 화면. `?edit=1` 이면 프로필 수정으로 쓰인다
+```
 
 ## 코딩 스타일
 

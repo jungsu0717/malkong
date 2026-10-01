@@ -2,17 +2,27 @@ import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
+import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
-import { BABY, getGaps } from '@/data/timeline';
+import { DEFAULT_BABY_NAME } from '@/data/baby';
+import { useBaby } from '@/data/baby-context';
+import { getGaps, monthData } from '@/data/timeline';
 
 const RECENT_QUESTIONS = ['밤중 수유는 언제부터 줄여도 되나요?', '분유량이 갑자기 줄었는데 괜찮나요?'];
 
 export default function HomeScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const { missed, upcoming } = getGaps();
+  const { baby, age } = useBaby();
+
+  if (!age) return <ScreenLoading />;
+
+  const { missed, upcoming } = getGaps(age.month);
+  const thisMonth = monthData(age.month);
+  // 발달·생활 항목이 이번 달 발달 포인트가 된다 (접종·검진은 위의 「챙길 것」이 맡는다)
+  const points = (thisMonth?.l1 ?? []).filter((i) => i.kind === '발달' || i.kind === '생활');
 
   return (
     <ThemedView style={styles.container}>
@@ -22,15 +32,17 @@ export default function HomeScreen() {
             말콩
           </ThemedText>
 
-          {/* 아기 카드 */}
+          {/* 아기 카드 — 월령은 저장된 생일에서 계산한다 (SPEC-HOME-01) */}
           <View style={[styles.babyCard, { backgroundColor: colors.accentSoft }]}>
-            <ThemedText type="title">우리 아기</ThemedText>
+            <ThemedText type="title">{baby?.name ?? DEFAULT_BABY_NAME}</ThemedText>
             <ThemedText style={{ color: colors.textSecondary }}>
-              태어난 지 {BABY.days}일 · {BABY.month}개월차
+              태어난 지 {age.days}일 · 만 {age.month}개월
             </ThemedText>
-            <ThemedText type="small" style={{ color: colors.accent, marginTop: Spacing.two }}>
-              이 시기 아기는 목을 가누기 시작하고 옹알이가 늘어나요
-            </ThemedText>
+            {thisMonth && (
+              <ThemedText type="small" style={{ color: colors.accent, marginTop: Spacing.two }}>
+                {thisMonth.headline}
+              </ThemedText>
+            )}
           </View>
 
           {/* 지금 챙길 것 — 표준(L1) 대비 우리 아기 기록(L2)의 차집합 */}
@@ -55,7 +67,7 @@ export default function HomeScreen() {
                 <View style={styles.todoLabel}>
                   <ThemedText>{item.label}</ThemedText>
                   <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                    {month === BABY.month ? '이번 달' : `${month}개월 차에 다가와요`}
+                    {month === age.month ? '이번 달' : `${month}개월에 다가와요`}
                   </ThemedText>
                 </View>
               </View>
@@ -72,8 +84,13 @@ export default function HomeScreen() {
             이번 달 발달 포인트
           </ThemedText>
           <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText>엎드려서 고개를 45~90도 들어요</ThemedText>
-            <ThemedText>손을 펴고 물건에 뻗기 시작해요</ThemedText>
+            {points.length > 0 ? (
+              points.map((item) => <ThemedText key={item.label}>{item.label}</ThemedText>)
+            ) : (
+              <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                이 월령의 표준 지식은 아직 준비 중이에요
+              </ThemedText>
+            )}
             <ThemedText type="small" style={{ color: colors.accent }}>
               성장 타임라인에서 전체 흐름 보기 →
             </ThemedText>

@@ -2,10 +2,12 @@ import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
+import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
-import { BABY, TIMELINE, type L1Item, type L2Item } from '@/data/timeline';
+import { useBaby } from '@/data/baby-context';
+import { TIMELINE, type L1Item, type L2Item } from '@/data/timeline';
 
 const COLUMN_WIDTH = 264;
 
@@ -17,6 +19,13 @@ const COLUMN_WIDTH = 264;
 export default function GrowthScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const { age } = useBaby();
+
+  if (!age) return <ScreenLoading />;
+
+  // 목업 범위를 넘는 월령이면 마지막 컬럼에서 시작한다
+  const lastMonth = TIMELINE[TIMELINE.length - 1]?.month ?? 0;
+  const startMonth = Math.min(age.month, lastMonth);
 
   return (
     <ThemedView style={styles.container}>
@@ -40,11 +49,11 @@ export default function GrowthScreen() {
           showsHorizontalScrollIndicator={false}
           snapToInterval={COLUMN_WIDTH + Spacing.three}
           decelerationRate="fast"
-          contentOffset={{ x: (COLUMN_WIDTH + Spacing.three) * BABY.month, y: 0 }}
+          contentOffset={{ x: (COLUMN_WIDTH + Spacing.three) * startMonth, y: 0 }}
           contentContainerStyle={styles.track}>
           {TIMELINE.map((m) => {
-            const isNow = m.month === BABY.month;
-            const isFuture = m.month > BABY.month;
+            const isNow = m.month === age.month;
+            const isFuture = m.month > age.month;
             return (
               <View
                 key={m.month}
@@ -68,7 +77,7 @@ export default function GrowthScreen() {
                   </View>
                   {isNow && (
                     <ThemedText type="small" style={{ color: colors.accent }}>
-                      지금 · D+{BABY.days}
+                      지금 · D+{age.days}
                     </ThemedText>
                   )}
                 </View>

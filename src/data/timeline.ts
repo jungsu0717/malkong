@@ -27,20 +27,23 @@ export type MonthData = {
   l2: L2Item[];
 };
 
-export const BABY = { name: '우리 아기', days: 87, month: 3 };
+/** 해당 월의 표준 데이터 — 목업 범위(0~6개월)를 벗어나면 없다 */
+export function monthData(month: number): MonthData | undefined {
+  return TIMELINE.find((m) => m.month === month);
+}
 
 /** 표준(L1) 대비 우리 아기 기록(L2)의 차집합 — 홈의 추천이 여기서 나온다 */
-export function getGaps() {
+export function getGaps(currentMonth: number) {
   const missed: { month: number; item: L1Item }[] = [];
   const upcoming: { month: number; item: L1Item }[] = [];
 
   for (const m of TIMELINE) {
-    if (m.month > BABY.month + 1) continue;
+    if (m.month > currentMonth + 1) continue;
     for (const item of m.l1) {
       if (item.kind !== '접종' && item.kind !== '검진') continue;
       const covered = m.l2.some((r) => r.covers === item.label);
       if (covered) continue;
-      if (m.month < BABY.month) missed.push({ month: m.month, item });
+      if (m.month < currentMonth) missed.push({ month: m.month, item });
       else upcoming.push({ month: m.month, item });
     }
   }

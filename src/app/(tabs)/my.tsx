@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -6,9 +7,11 @@ import { BabyRunLoading } from '@/components/baby-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
+import { DEFAULT_BABY_NAME } from '@/data/baby';
+import { useBaby } from '@/data/baby-context';
 
 const MENU_SECTIONS: { title: string; items: string[] }[] = [
-  { title: '내 정보', items: ['아기 프로필', '알림 설정'] },
+  { title: '내 정보', items: ['알림 설정'] },
   { title: '소식', items: ['공지사항', '자주 묻는 질문'] },
   { title: '약관', items: ['이용약관', '개인정보 처리방침', '의학 정보 출처와 한계 고지'] },
 ];
@@ -16,12 +19,31 @@ const MENU_SECTIONS: { title: string; items: string[] }[] = [
 export default function MyScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const router = useRouter();
+  const { baby, age } = useBaby();
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <ThemedText type="title">마이</ThemedText>
+
+          {/* 아기 프로필 — 저장된 생일과 거기서 계산한 월령 (SPEC-MY-02) */}
+          {baby && age && (
+            <Pressable
+              style={[styles.profileCard, { backgroundColor: colors.backgroundElement }]}
+              onPress={() => router.push('/onboarding?edit=1')}>
+              <View style={styles.profileText}>
+                <ThemedText type="subtitle">{baby.name ?? DEFAULT_BABY_NAME}</ThemedText>
+                <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                  {baby.birthDate.replace(/-/g, '. ')} · 태어난 지 {age.days}일 · 만 {age.month}개월
+                </ThemedText>
+              </View>
+              <ThemedText type="small" style={{ color: colors.accent }}>
+                수정
+              </ThemedText>
+            </Pressable>
+          )}
 
           {/* 로그인 유도 카드 */}
           <View style={[styles.loginCard, { backgroundColor: colors.accentSoft }]}>
@@ -77,6 +99,14 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     paddingBottom: Spacing.five * 2,
   },
+  profileCard: {
+    borderRadius: 20,
+    padding: Spacing.four,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  profileText: { flex: 1, gap: Spacing.half },
   loginCard: {
     borderRadius: 20,
     padding: Spacing.four,

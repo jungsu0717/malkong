@@ -3,10 +3,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ThinkingStatus, type ThinkingStep } from '@/components/thinking-status';
 import { Colors, Spacing } from '@/constants/theme';
+import { useBaby } from '@/data/baby-context';
 
 const SUGGESTED = [
   '밤중 수유는 언제부터 줄여도 되나요?',
@@ -74,6 +76,7 @@ function DemoExchange({ question }: { question: string }) {
 export default function AskScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const { age } = useBaby();
   const [input, setInput] = useState('');
   const [sent, setSent] = useState<string | null>(null);
   const [sendCount, setSendCount] = useState(0);
@@ -85,13 +88,15 @@ export default function AskScreen() {
     setInput('');
   };
 
+  if (!age) return <ScreenLoading />;
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
           <ThemedText type="title">말콩이</ThemedText>
           <ThemedText type="small" style={{ color: colors.textSecondary }}>
-            3개월 아기 기준으로 답해요
+            만 {age.month}개월 아기 기준으로 답해요
           </ThemedText>
         </View>
 
@@ -105,7 +110,7 @@ export default function AskScreen() {
           {/* 말콩이 인사 말풍선 */}
           <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>
             <ThemedText>
-              안녕하세요, 말콩이예요 🌱{'\n'}우리 아기 3개월차에 맞춰서 답해드릴게요. 무엇이든
+              안녕하세요, 말콩이예요 🌱{'\n'}만 {age.month}개월에 맞춰서 답해드릴게요. 무엇이든
               물어보세요.
             </ThemedText>
           </View>

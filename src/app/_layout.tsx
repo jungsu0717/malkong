@@ -1,56 +1,44 @@
-import { DarkTheme, DefaultTheme, ThemeProvider, Tabs } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import { BabyFaceIcon, PacifierIcon, RattleIcon, TeddyIcon } from '@/components/baby-icons';
-import { Colors } from '@/constants/theme';
+import { BabyProvider, useBaby } from '@/data/baby-context';
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
+/**
+ * 저장된 생일이 없으면 온보딩으로 보낸다 (SPEC-MY-01).
+ * 반대로 이미 저장돼 있는데 온보딩에 머물러 있으면 홈으로 되돌린다.
+ */
+function OnboardingGate() {
+  const { baby, loading } = useBaby();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+    const onOnboarding = segments[0] === 'onboarding';
+    if (!baby && !onOnboarding) router.replace('/onboarding');
+  }, [baby, loading, segments, router]);
+
+  return null;
+}
+
+export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: colors.accent,
-          tabBarInactiveTintColor: colors.textSecondary,
-          tabBarStyle: { backgroundColor: colors.background },
-        }}>
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: '홈',
-            tabBarIcon: ({ color, size }) => <BabyFaceIcon size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="ask"
-          options={{
-            title: '물어보기',
-            tabBarIcon: ({ color, size }) => <PacifierIcon size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="growth"
-          options={{
-            title: '성장',
-            tabBarIcon: ({ color, size }) => <RattleIcon size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="my"
-          options={{
-            title: '마이',
-            tabBarIcon: ({ color, size }) => <TeddyIcon size={size} color={color} />,
-          }}
-        />
-      </Tabs>
+      <BabyProvider>
+        <OnboardingGate />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+        </Stack>
+      </BabyProvider>
     </ThemeProvider>
   );
 }

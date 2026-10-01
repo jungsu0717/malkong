@@ -55,9 +55,11 @@
 
 ## HOW (현재 구현)
 
-- 화면: `src/app/index.tsx`. 추천은 `src/data/timeline.ts` 의 `getGaps()`(covers 차집합)로 계산 — 지금은 목업 데이터.
+- 화면: `src/app/(tabs)/index.tsx`. 월령·일수·이번 달 발달 포인트는 저장된 생일에서 계산한 값으로
+  나오고(`useBaby()`), 추천은 `src/data/timeline.ts` 의 `getGaps(월령)`(covers 차집합)로 만든다.
+  표준 데이터(L1)는 아직 목업이다 — 실데이터는 task/common/001.
 - 광고: `src/components/ad-banner.tsx` placeholder.
-- 미구현: 생일 기반 실계산(SPEC-HOME-01 둘째 줄 — task/my/001), 완료 알림 → L2 생성 흐름, 질문 이어보기 연결.
+- 미구현: 완료 알림 → L2 생성 흐름, 질문 이어보기 연결, 생활 항목 포함·끄기(SPEC-HOME-02), 브리핑(SPEC-HOME-06).
 
 ## changelog
 
