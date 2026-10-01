@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
+import { AskFab } from '@/components/ask-fab';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -10,6 +11,8 @@ import { useBaby } from '@/data/baby-context';
 import { TIMELINE, type L1Item, type L2Item } from '@/data/timeline';
 
 const COLUMN_WIDTH = 264;
+/** 바닥에 고정된 배너(최소 64) + 위아래 여백 — 플로팅 버튼을 이 위로 올려 광고를 가리지 않게 한다 */
+const AD_FOOTER_HEIGHT = 64 + Spacing.four * 2;
 
 /**
  * 성장 타임라인 — 0개월부터 가로로 흐르는 월령 시퀀스.
@@ -138,6 +141,7 @@ export default function GrowthScreen() {
           <AdBanner />
         </View>
       </SafeAreaView>
+      <AskFab bottom={AD_FOOTER_HEIGHT + Spacing.three} />
     </ThemedView>
   );
 }

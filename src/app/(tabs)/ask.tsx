@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -77,14 +78,20 @@ export default function AskScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const { age } = useBaby();
+  // 다른 탭의 플로팅 버튼에서 넘어온 질문 (SPEC-ASK-07). t 는 같은 질문을 다시 보냈을 때의 구분값이다
+  const { q, t } = useLocalSearchParams<{ q?: string; t?: string }>();
   const [input, setInput] = useState('');
-  const [sent, setSent] = useState<string | null>(null);
-  const [sendCount, setSendCount] = useState(0);
+  const [local, setLocal] = useState<{ question: string; at: number } | null>(null);
   const scrollRef = useRef<ScrollView>(null);
 
+  // 이 화면에서 보낸 것과 플로팅 버튼에서 넘어온 것 중 더 나중 것을 보여준다
+  const paramAt = t ? Number(t) : q ? 1 : 0;
+  const fromParam = paramAt > (local?.at ?? 0);
+  const sent = fromParam ? (q ?? null) : (local?.question ?? null);
+  const runKey = fromParam ? `p-${paramAt}` : `l-${local?.at}`;
+
   const send = () => {
-    setSent(input.trim() || DEFAULT_QUESTION);
-    setSendCount((c) => c + 1);
+    setLocal({ question: input.trim() || DEFAULT_QUESTION, at: Date.now() });
     setInput('');
   };
 
@@ -154,8 +161,8 @@ export default function AskScreen() {
           </View>
 
           {/* 처리 현황 시연 (SPEC-ASK-05) — 전송하면 질문 아래에서 지금 하는 일이 보이고, 끝나면 접힌다.
-              key=전송 횟수라 같은 질문을 다시 보내도 처음부터 재생된다 */}
-          {sent && <DemoExchange key={sendCount} question={sent} />}
+              key 가 전송마다 바뀌므로 같은 질문을 다시 보내도 처음부터 재생된다 */}
+          {sent && <DemoExchange key={runKey} question={sent} />}
         </ScrollView>
 
         {/* 입력 바 */}

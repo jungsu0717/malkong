@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { AskFab } from '@/components/ask-fab';
 import { BabyRunLoading } from '@/components/baby-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -87,6 +88,7 @@ export default function MyScreen() {
           </ThemedText>
         </ScrollView>
       </SafeAreaView>
+      <AskFab />
     </ThemedView>
   );
 }

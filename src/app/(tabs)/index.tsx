@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
+import { AskFab } from '@/components/ask-fab';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -118,6 +119,7 @@ export default function HomeScreen() {
           </ThemedText>
         </ScrollView>
       </SafeAreaView>
+      <AskFab />
     </ThemedView>
   );
 }
