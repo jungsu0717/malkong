@@ -25,11 +25,12 @@ export function AdBanner() {
   // 광고 제거를 구매했거나 운영자(가족) 기기면 자리까지 사라진다 (SPEC-MY-06)
   if (!ads) return null;
 
+  // 콘텐츠 카드(채운 회색)와 다르게 테두리만 두른다 — 광고가 우리 콘텐츠처럼 보이면 안 된다
   return (
-    <View style={[styles.banner, { backgroundColor: colors.backgroundElement }]}>
-      <View style={[styles.adTag, { backgroundColor: colors.backgroundSelected }]}>
-        <ThemedText type="small">AD</ThemedText>
-      </View>
+    <View style={[styles.banner, { borderColor: colors.backgroundSelected }]}>
+      <ThemedText type="small" style={{ color: colors.textSecondary }}>
+        광고
+      </ThemedText>
       <ThemedText type="small" style={{ color: colors.textSecondary }}>
         배너 광고 영역 · AdMob 연결 예정
       </ThemedText>
@@ -52,15 +53,11 @@ const styles = StyleSheet.create({
   banner: {
     alignSelf: 'stretch',
     borderRadius: Spacing.three,
+    borderWidth: 1,
     paddingVertical: Spacing.three,
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.one,
     minHeight: 64,
-  },
-  adTag: {
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 1,
-    borderRadius: Spacing.one,
   },
 });

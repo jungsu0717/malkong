@@ -59,10 +59,8 @@ export default function HomeScreen() {
           </View>
 
           {/* 지금 챙길 것 — 표준(L1) 대비 우리 아기 기록(L2)의 차집합 */}
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            지금 챙길 것
-          </ThemedText>
           <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="subtitle">지금 챙길 것</ThemedText>
             {shownTodos.map(({ month, item, isMissed }) => (
               <View key={item.label} style={styles.todoRow}>
                 <ThemedText style={isMissed ? styles.missedMark : { color: colors.accent }}>
@@ -101,10 +99,8 @@ export default function HomeScreen() {
           <AdBanner />
 
           {/* 이번 달 발달 포인트 (성장 타임라인 요약) */}
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            이번 달 발달 포인트
-          </ThemedText>
           <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="subtitle">이번 달 발달 포인트</ThemedText>
             {points.length > 0 ? (
               points.map((item) => <ThemedText key={item.label}>{item.label}</ThemedText>)
             ) : (
@@ -118,10 +114,8 @@ export default function HomeScreen() {
           </ThemedView>
 
           {/* 최근 질문 */}
-          <ThemedText type="subtitle" style={styles.sectionTitle}>
-            말콩이에게 물어본 것
-          </ThemedText>
           <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="subtitle">말콩이에게 물어본 것</ThemedText>
             {RECENT_QUESTIONS.map((q) => (
               <ThemedText key={q} style={styles.questionRow}>
                 💬 {q}
@@ -154,9 +148,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: Spacing.four,
     gap: Spacing.one,
-  },
-  sectionTitle: {
-    marginTop: Spacing.two,
   },
   card: {
     borderRadius: 20,

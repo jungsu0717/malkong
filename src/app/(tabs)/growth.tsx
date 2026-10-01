@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -11,6 +12,7 @@ import { useBaby } from '@/data/baby-context';
 import { TIMELINE, type L1Item, type L2Item } from '@/data/timeline';
 
 const COLUMN_WIDTH = 264;
+const COLUMN_STEP = COLUMN_WIDTH + Spacing.three;
 /** 바닥에 고정된 배너(최소 64) + 위아래 여백 — 플로팅 버튼을 이 위로 올려 광고를 가리지 않게 한다 */
 const AD_FOOTER_HEIGHT = 64 + Spacing.four * 2;
 
@@ -23,6 +25,8 @@ export default function GrowthScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const { age } = useBaby();
+  const scrollRef = useRef<ScrollView>(null);
+  const [startedAtCurrentMonth, setStartedAtCurrentMonth] = useState(false);
 
   if (!age) return <ScreenLoading />;
 
@@ -48,11 +52,19 @@ export default function GrowthScreen() {
         </View>
 
         <ScrollView
+          ref={scrollRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          snapToInterval={COLUMN_WIDTH + Spacing.three}
+          snapToInterval={COLUMN_STEP}
           decelerationRate="fast"
-          contentOffset={{ x: (COLUMN_WIDTH + Spacing.three) * startMonth, y: 0 }}
+          // contentOffset 은 iOS 에서만 먹는다. 웹·안드로이드까지 현재 월에서 시작하려면
+          // 내용이 깔린 뒤 한 번 옮겨 줘야 한다 (SPEC-GROW-01)
+          contentOffset={{ x: COLUMN_STEP * startMonth, y: 0 }}
+          onContentSizeChange={() => {
+            if (startedAtCurrentMonth) return;
+            scrollRef.current?.scrollTo({ x: COLUMN_STEP * startMonth, animated: false });
+            setStartedAtCurrentMonth(true);
+          }}
           contentContainerStyle={styles.track}>
           {TIMELINE.map((m) => {
             const isNow = m.month === age.month;
@@ -62,7 +74,8 @@ export default function GrowthScreen() {
                 key={m.month}
                 style={[
                   styles.column,
-                  { borderColor: isNow ? colors.accent : 'transparent' },
+                  // 달마다 하나의 카드로 묶여 보이게 — 현재 월만 포인트 색으로 두드러진다
+                  { borderColor: isNow ? colors.accent : colors.backgroundElement },
                   isFuture && styles.futureColumn,
                 ]}>
                 {/* 월 헤더 */}
