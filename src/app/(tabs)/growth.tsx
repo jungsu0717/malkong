@@ -30,7 +30,7 @@ export default function GrowthScreen() {
 
   if (!age) return <ScreenLoading />;
 
-  // 목업 범위를 넘는 월령이면 마지막 컬럼에서 시작한다
+  // 타임라인 범위를 넘는 월령이면 마지막 컬럼에서 시작한다
   const lastMonth = TIMELINE[TIMELINE.length - 1]?.month ?? 0;
   const startMonth = Math.min(age.month, lastMonth);
 
@@ -69,6 +69,8 @@ export default function GrowthScreen() {
           {TIMELINE.map((m) => {
             const isNow = m.month === age.month;
             const isFuture = m.month > age.month;
+            // 아직 오지 않은 달에는 기록이 있을 수 없다 (SPEC-GROW-03 — 목업 기록도 같은 규칙)
+            const records = isFuture ? [] : m.l2;
             return (
               <View
                 key={m.month}
@@ -97,23 +99,30 @@ export default function GrowthScreen() {
                     </ThemedText>
                   )}
                 </View>
-                <ThemedText type="subtitle">{m.headline}</ThemedText>
+                {m.headline && <ThemedText type="subtitle">{m.headline}</ThemedText>}
 
                 {/* L1 트랙 — 표준 지식 */}
                 <ThemedView type="backgroundElement" style={styles.layerCard}>
                   <ThemedText type="small" style={{ color: colors.textSecondary }}>
                     표준
                   </ThemedText>
-                  {m.l1.map((item: L1Item) => (
-                    <View key={item.label} style={styles.itemRow}>
-                      <View style={[styles.kindTag, { backgroundColor: colors.backgroundSelected }]}>
-                        <ThemedText type="small">{item.kind}</ThemedText>
+                  {m.l1.length === 0 ? (
+                    <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                      이 달에 새로 시작하는 항목은 없어요
+                    </ThemedText>
+                  ) : (
+                    m.l1.map((item: L1Item) => (
+                      <View key={item.id} style={styles.itemRow}>
+                        <View
+                          style={[styles.kindTag, { backgroundColor: colors.backgroundSelected }]}>
+                          <ThemedText type="small">{item.kind}</ThemedText>
+                        </View>
+                        <ThemedText type="small" style={styles.itemLabel}>
+                          {item.title}
+                        </ThemedText>
                       </View>
-                      <ThemedText type="small" style={styles.itemLabel}>
-                        {item.label}
-                      </ThemedText>
-                    </View>
-                  ))}
+                    ))
+                  )}
                 </ThemedView>
 
                 {/* L2 트랙 — 우리 아기 지식 */}
@@ -121,12 +130,12 @@ export default function GrowthScreen() {
                   <ThemedText type="small" style={{ color: colors.accent }}>
                     우리 아기
                   </ThemedText>
-                  {m.l2.length === 0 ? (
+                  {records.length === 0 ? (
                     <ThemedText type="small" style={{ color: colors.textSecondary }}>
                       {isFuture ? '앞으로 채워질 기록' : '기록 없음'}
                     </ThemedText>
                   ) : (
-                    m.l2.map((item: L2Item) => (
+                    records.map((item: L2Item) => (
                       <View key={item.label} style={styles.itemRow}>
                         <View style={[styles.kindTag, { backgroundColor: colors.accent }]}>
                           <ThemedText type="small" style={styles.kindTagTextOnAccent}>
