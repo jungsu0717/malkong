@@ -52,3 +52,4 @@ Docs: https://docs.expo.dev/eas/index.md
 - WHAT(SPEC 문장)과 HOW(구현)를 섞지 않는다. 같은 내용을 두 곳에 적지 않는다. 문서는 덧대지 않고 정의를 갱신한다
 - 육아·의료 내용은 출처 화이트리스트 원칙([knowledge-layers](docs/architecture/knowledge-layers.md))을 따르고, 위험 신호 응답 규칙(SPEC-ASK-02)을 우회하지 않는다
 - 스택·스타일 결정은 [docs/app-design/README.md](docs/app-design/README.md)가 정본이다 — StyleSheet+토큰, NativeWind 미도입, Skia 는 하이브리드로
+- `미결:` 세션을 시작하면 먼저 Julian 에게 상기시킨다 — 하네스·지식맵이 **neuro-spec / knowledge foundation** 을 본딴 것인지 확인하기. 내용은 [knowledge-layers 미결](docs/architecture/knowledge-layers.md#미결). 확인되면 이 줄을 지운다

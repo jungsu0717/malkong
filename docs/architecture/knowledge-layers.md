@@ -49,6 +49,14 @@
 `covers: L1 id[]` · `whenLabel`) · `getGaps(월령, 기록)` · `buildTimeline(기록, 생일)`.
 기록은 `record` 테이블(backend 기기 DB 절)에 있고 `records-context.tsx` 가 화면에 공급한다.
 
+## 미결
+
+- `미결:` **이 지식층 설계(지식맵·L1 지식베이스)와 docs 하네스 구조의 출처 확인** — Julian 기억으로는
+  하네스 구조는 **neuro-spec 문서**를, 지식맵 구축은 **neuro 의 knowledge foundation** 을 본따 만들었다
+  (2026-10-02 제기). 그 문서는 이 저장소에 없다(다른 PC 에 있을 수 있음). 맞다면 [README](../README.md)와
+  이 문서에 참고 출처로 적고, 아니라면 이 항목을 지운다. **어느 PC 에서든 세션을 시작하면 Julian 에게 이
+  확인을 먼저 상기시킨다.**
+
 ## changelog
 
 - 2026-09-30 최초 작성
