@@ -198,19 +198,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.two,
   },
+  // 칸 너비는 줄을 비율로 나눠 정한다 — 고정 폭이면 좁은 화면에서 월·일 칸이 밀려난다
   dateBox: {
+    flex: 3,
     borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.three,
-    minWidth: 92,
   },
   dateBoxSmall: {
+    flex: 2,
     borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.three,
-    minWidth: 60,
   },
-  dateInput: { fontSize: 18, textAlign: 'center', padding: 0 },
+  // 웹의 <input> 은 기본 폭(약 20자)을 가지므로 칸에 맞춰 줄인다
+  dateInput: { fontSize: 18, textAlign: 'center', padding: 0, width: '100%' },
   nameBox: {
     borderRadius: Spacing.three,
     paddingHorizontal: Spacing.four,
