@@ -1,0 +1,17 @@
+[
+  {
+    "id": "k-vacc-0001",
+    "months": [0],
+    "kind": "접종",
+    "title": "BCG (결핵)",
+    "body": "생후 4주 이내에 한 번 맞는 결핵 예방접종이에요. 국가예방접종 지원 대상입니다.",
+    "source": {
+      "name": "질병관리청 예방접종도우미",
+      "url": "https://nip.kdca.go.kr/irhp/infm/goVcntInfo.do?menuLv=1&menuCd=131",
+      "checked": "2026-10-01"
+    },
+    "confidence": "표준",
+    "red_flag": false,
+    "status": "draft"
+  }
+]

@@ -10,6 +10,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
+import { allItems, L1_VERSION, pendingReviewCount } from '@/data/l1';
 
 const MENU_SECTIONS: { title: string; items: string[] }[] = [
   { title: '내 정보', items: ['알림 설정'] },
@@ -73,13 +74,16 @@ export default function MyScreen() {
             </View>
           ))}
 
-          {/* 시안 전용 — 브랜드 로딩 모션 미리보기. 실제 로딩에 배선되면 이 카드는 뺀다 */}
+          {/* 구축 중에만 두는 칸 — 로딩 모션 시안과 L1 지식 쌓인 정도. 완성되면 통째로 뺀다 */}
           <View style={styles.section}>
             <ThemedText type="small" style={{ color: colors.textSecondary }}>
-              로딩 모션 시안 (Lottie 제작 전 임시)
+              구축 현황 (임시)
             </ThemedText>
             <ThemedView type="backgroundElement" style={[styles.menuCard, styles.loadingPreview]}>
               <BabyRunLoading label="말콩이가 달려오고 있어요…" />
+              <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                L1 지식 {allItems().length}건 · 승인 대기 {pendingReviewCount()}건 · 판 {L1_VERSION}
+              </ThemedText>
             </ThemedView>
           </View>
 
