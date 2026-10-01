@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
 import { AskFab } from '@/components/ask-fab';
+import { MarkDoneSheet } from '@/components/mark-done-sheet';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -11,7 +12,16 @@ import { Colors, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { itemsForMonth } from '@/data/l1';
-import { getGaps, groupGaps, monthData, type GapGroup } from '@/data/timeline';
+import type { BabyRecord } from '@/data/records';
+import { useRecords } from '@/data/records-context';
+import {
+  getGaps,
+  groupGaps,
+  groupLabel,
+  headlineOf,
+  type GapGroup,
+  type L1Item,
+} from '@/data/timeline';
 
 const RECENT_QUESTIONS = ['밤중 수유는 언제부터 줄여도 되나요?', '분유량이 갑자기 줄었는데 괜찮나요?'];
 
@@ -29,15 +39,38 @@ export default function HomeScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const { baby, age } = useBaby();
+  const { records, add, remove } = useRecords();
   const [showAllTodos, setShowAllTodos] = useState(false);
+  /** 완료를 알리려고 연 줄 */
+  const [picking, setPicking] = useState<GapGroup | null>(null);
+  /** 방금 만든 기록 — 무엇을 기록했는지 보여주고 되돌릴 수 있게 둔다 (SPEC-HOME-02 저장 표시) */
+  const [justSaved, setJustSaved] = useState<BabyRecord | null>(null);
 
   if (!age) return <ScreenLoading />;
 
   // 놓친 것 → 지금 → 다음 달 순서로, 같은 날 챙길 것은 한 줄로. 길면 접어 두고 눌러서 펼친다
-  const todos = groupGaps(getGaps(age.month));
+  const todos = groupGaps(getGaps(age.month, records));
   const shownTodos = showAllTodos ? todos : todos.slice(0, VISIBLE_TODOS);
   const hiddenTodoCount = todos.length - shownTodos.length;
-  const thisMonth = monthData(age.month);
+  const headline = headlineOf(age.month);
+
+  const markDone = async (items: L1Item[]) => {
+    setPicking(null);
+    // 날짜는 묻지 않는다 — 기록의 시점은 알린 날이다
+    const record = await add({
+      kind: '기록',
+      label: `${groupLabel(items)} 완료`,
+      covers: items.map((i) => i.id),
+      whenLabel: `D+${age.days}에 알림`,
+    });
+    setJustSaved(record);
+  };
+
+  const undo = async () => {
+    if (!justSaved) return;
+    await remove(justSaved.id);
+    setJustSaved(null);
+  };
   // 발달·생활 항목이 이번 달 발달 포인트가 된다 (접종·검진은 위의 「챙길 것」이 맡는다)
   const points = itemsForMonth(age.month).filter((i) => i.kind === '발달' || i.kind === '생활');
 
@@ -55,9 +88,9 @@ export default function HomeScreen() {
             <ThemedText style={{ color: colors.textSecondary }}>
               태어난 지 {age.days}일 · 만 {age.month}개월
             </ThemedText>
-            {thisMonth?.headline && (
+            {headline && (
               <ThemedText type="small" style={{ color: colors.accent, marginTop: Spacing.two }}>
-                {thisMonth.headline}
+                {headline}
               </ThemedText>
             )}
           </View>
@@ -65,8 +98,25 @@ export default function HomeScreen() {
           {/* 지금 챙길 것 — 표준(L1) 대비 우리 아기 기록(L2)의 차집합 */}
           <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="subtitle">지금 챙길 것</ThemedText>
+            {justSaved && (
+              <View style={[styles.savedNotice, { backgroundColor: colors.accentSoft }]}>
+                <ThemedText type="small" style={styles.savedText}>
+                  「{justSaved.label}」로 기록했어요
+                </ThemedText>
+                <Pressable onPress={undo} hitSlop={8}>
+                  <ThemedText type="smallBold" style={{ color: colors.accent }}>
+                    되돌리기
+                  </ThemedText>
+                </Pressable>
+              </View>
+            )}
             {shownTodos.map((todo) => (
-              <View key={todo.key} style={styles.todoRow}>
+              <Pressable
+                key={todo.key}
+                accessibilityRole="button"
+                accessibilityHint="완료했다면 눌러서 알려 주세요"
+                style={styles.todoRow}
+                onPress={() => setPicking(todo)}>
                 <ThemedText
                   style={todo.status === 'missed' ? styles.missedMark : { color: colors.accent }}>
                   {todo.status === 'missed' ? '!' : '○'}
@@ -81,7 +131,12 @@ export default function HomeScreen() {
                     {todoWhen(todo, age.month)}
                   </ThemedText>
                 </View>
-              </View>
+                <View style={[styles.doneChip, { borderColor: colors.accent }]}>
+                  <ThemedText type="small" style={{ color: colors.accent }}>
+                    완료
+                  </ThemedText>
+                </View>
+              </Pressable>
             ))}
             {hiddenTodoCount > 0 && (
               <Pressable onPress={() => setShowAllTodos(true)}>
@@ -135,6 +190,12 @@ export default function HomeScreen() {
         </ScrollView>
       </SafeAreaView>
       <AskFab />
+      <MarkDoneSheet
+        key={picking?.key ?? 'closed'}
+        group={picking}
+        onClose={() => setPicking(null)}
+        onConfirm={markDone}
+      />
     </ThemedView>
   );
 }
@@ -163,6 +224,21 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   todoLabel: { flex: 1, gap: Spacing.half },
+  doneChip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: Spacing.two + Spacing.one,
+    paddingVertical: Spacing.half,
+  },
+  savedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    borderRadius: Spacing.three,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  savedText: { flex: 1 },
   missedMark: { color: '#F04452', fontWeight: '700' },
   questionRow: {},
   disclaimer: { textAlign: 'center' },

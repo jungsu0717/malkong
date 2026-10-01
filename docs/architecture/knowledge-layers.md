@@ -45,9 +45,9 @@
 
 ## 코드의 자리
 
-`src/data/timeline.ts` — `L1Item`(= 지식베이스 항목) · `L2Item(kind: 기록|요약, when, covers: L1 id[])` ·
-`getGaps()`. L1 은 승인된 지식베이스를 읽고, L2 는 기록 저장이 생기기 전까지 목업이다.
-실데이터 전환 시에도 이 타입 구조를 유지한다.
+`src/data/timeline.ts` — `L1Item`(= 지식베이스 항목 `@/data/l1`) · `L2Item`(= 기기 기록 `@/data/records`,
+`covers: L1 id[]` · `whenLabel`) · `getGaps(월령, 기록)` · `buildTimeline(기록, 생일)`.
+기록은 `record` 테이블(backend 기기 DB 절)에 있고 `records-context.tsx` 가 화면에 공급한다.
 
 ## changelog
 

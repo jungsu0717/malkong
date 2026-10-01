@@ -9,7 +9,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
-import { TIMELINE, type L1Item, type L2Item } from '@/data/timeline';
+import { useRecords } from '@/data/records-context';
+import { buildTimeline, type L1Item, type L2Item } from '@/data/timeline';
 
 const COLUMN_WIDTH = 264;
 const COLUMN_STEP = COLUMN_WIDTH + Spacing.three;
@@ -24,14 +25,17 @@ const AD_FOOTER_HEIGHT = 64 + Spacing.four * 2;
 export default function GrowthScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const { age } = useBaby();
+  const { baby, age } = useBaby();
+  const { records } = useRecords();
   const scrollRef = useRef<ScrollView>(null);
   const [startedAtCurrentMonth, setStartedAtCurrentMonth] = useState(false);
 
-  if (!age) return <ScreenLoading />;
+  if (!age || !baby) return <ScreenLoading />;
+
+  const timeline = buildTimeline(records, baby.birthDate);
 
   // 타임라인 범위를 넘는 월령이면 마지막 컬럼에서 시작한다
-  const lastMonth = TIMELINE[TIMELINE.length - 1]?.month ?? 0;
+  const lastMonth = timeline[timeline.length - 1]?.month ?? 0;
   const startMonth = Math.min(age.month, lastMonth);
 
   return (
@@ -66,11 +70,9 @@ export default function GrowthScreen() {
             setStartedAtCurrentMonth(true);
           }}
           contentContainerStyle={styles.track}>
-          {TIMELINE.map((m) => {
+          {timeline.map((m) => {
             const isNow = m.month === age.month;
             const isFuture = m.month > age.month;
-            // 아직 오지 않은 달에는 기록이 있을 수 없다 (SPEC-GROW-03 — 목업 기록도 같은 규칙)
-            const records = isFuture ? [] : m.l2;
             return (
               <View
                 key={m.month}
@@ -130,13 +132,13 @@ export default function GrowthScreen() {
                   <ThemedText type="small" style={{ color: colors.accent }}>
                     우리 아기
                   </ThemedText>
-                  {records.length === 0 ? (
+                  {m.l2.length === 0 ? (
                     <ThemedText type="small" style={{ color: colors.textSecondary }}>
                       {isFuture ? '앞으로 채워질 기록' : '기록 없음'}
                     </ThemedText>
                   ) : (
-                    records.map((item: L2Item) => (
-                      <View key={item.label} style={styles.itemRow}>
+                    m.l2.map((item: L2Item) => (
+                      <View key={item.id} style={styles.itemRow}>
                         <View style={[styles.kindTag, { backgroundColor: colors.accent }]}>
                           <ThemedText type="small" style={styles.kindTagTextOnAccent}>
                             {item.kind}
@@ -144,9 +146,9 @@ export default function GrowthScreen() {
                         </View>
                         <View style={styles.itemLabel}>
                           <ThemedText type="small">{item.label}</ThemedText>
-                          {item.when && (
+                          {item.whenLabel && (
                             <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                              {item.when}
+                              {item.whenLabel}
                             </ThemedText>
                           )}
                         </View>

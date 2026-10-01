@@ -7,6 +7,7 @@
  */
 
 import type { Baby } from './baby';
+import type { BabyRecord } from './records';
 
 const KEY = 'malkong.baby';
 const SETTING_PREFIX = 'malkong.setting.';
@@ -42,4 +43,31 @@ export async function writeSetting(key: string, value: string): Promise<void> {
   } catch {
     // 위와 같다
   }
+}
+
+const RECORDS_KEY = 'malkong.records';
+
+export async function readRecordRows(): Promise<BabyRecord[]> {
+  try {
+    const raw = globalThis.localStorage?.getItem(RECORDS_KEY);
+    return raw ? (JSON.parse(raw) as BabyRecord[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeRecordRows(records: BabyRecord[]): Promise<void> {
+  try {
+    globalThis.localStorage?.setItem(RECORDS_KEY, JSON.stringify(records));
+  } catch {
+    // 저장이 막힌 브라우저에서도 화면은 그대로 동작해야 한다 (이번 실행에만 유지된다)
+  }
+}
+
+export async function insertRecordRow(record: BabyRecord): Promise<void> {
+  await writeRecordRows([...(await readRecordRows()), record]);
+}
+
+export async function deleteRecordRow(id: string): Promise<void> {
+  await writeRecordRows((await readRecordRows()).filter((r) => r.id !== id));
 }

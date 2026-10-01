@@ -161,7 +161,7 @@ CREATE TABLE record (                      -- L2 — 기록과 요약
   baby_id            TEXT NOT NULL REFERENCES baby(id),
   kind               TEXT NOT NULL CHECK (kind IN ('기록','요약')),
   label              TEXT NOT NULL,        -- "수유 텀 3시간 · 160ml"
-  covers             TEXT,                 -- 완료 처리하는 L1 항목 id (홈 추천 차집합의 근거)
+  covers             TEXT,                 -- 완료 처리하는 L1 항목 id 목록, JSON 배열 (홈 추천 차집합의 근거)
   when_label         TEXT,                 -- "D+86 질문에서" 같은 시점 표기
   source_message_id  TEXT,                 -- 어느 대화에서 나왔나
   stale              INTEGER NOT NULL DEFAULT 0,   -- 요약이 낡았다고 표시되면 1
@@ -186,7 +186,6 @@ CREATE TABLE inbox_card (                  -- 아침 브리핑 등 능동 카드
   read_at      TEXT,
   created_at   TEXT NOT NULL
 );
-CREATE INDEX ix_record_covers ON record(covers);
 CREATE INDEX ix_chat_created  ON chat_message(created_at);
 CREATE INDEX ix_inbox_created ON inbox_card(created_at);
 ```
@@ -198,3 +197,4 @@ CREATE INDEX ix_inbox_created ON inbox_card(created_at);
 ## changelog
 
 - 2026-09-30 최초 작성 — 서버 형태·DB 2단계·LLM 라우팅 확정 (Julian 결정)
+- 2026-10-01 record.covers 를 L1 id 목록(JSON 배열)으로 — 기록 하나가 여러 항목을 닫는다. covers 색인 제거

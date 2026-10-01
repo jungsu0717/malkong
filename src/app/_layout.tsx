@@ -6,6 +6,7 @@ import { useColorScheme } from 'react-native';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BabyProvider, useBaby } from '@/data/baby-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
+import { RecordsProvider } from '@/data/records-context';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -35,11 +36,13 @@ export default function RootLayout() {
       <AnimatedSplashOverlay />
       <EntitlementsProvider>
         <BabyProvider>
-          <OnboardingGate />
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-          </Stack>
+          <RecordsProvider>
+            <OnboardingGate />
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+            </Stack>
+          </RecordsProvider>
         </BabyProvider>
       </EntitlementsProvider>
     </ThemeProvider>

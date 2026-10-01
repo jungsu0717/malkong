@@ -2,7 +2,7 @@
  * 기기 저장소 — expo-sqlite (iOS · Android).
  *
  * 스키마 정본은 docs/architecture/backend.md 의 「기기 DB 스키마」 절이다. 여기서는 그 중
- * 지금 쓰는 테이블만 만든다 — record · chat_message · inbox_card 는 각 기능 task 에서 추가한다.
+ * 지금 쓰는 테이블만 만든다 — chat_message · inbox_card 는 각 기능 task 에서 추가한다.
  *
  * 웹은 expo-sqlite 의 웹 지원이 알파(Metro WASM 설정·특수 헤더 필요)라 미리보기가 깨지므로,
  * 같은 함수를 localStorage 로 구현한 db.web.ts 가 대신 쓰인다.
@@ -11,6 +11,7 @@
 import * as SQLite from 'expo-sqlite';
 
 import type { Baby } from './baby';
+import type { BabyRecord } from './records';
 
 const DB_NAME = 'malkong.db';
 
@@ -31,6 +32,18 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
         CREATE TABLE IF NOT EXISTS settings (
           key    TEXT PRIMARY KEY,
           value  TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS record (
+          id                 TEXT PRIMARY KEY,
+          baby_id            TEXT NOT NULL REFERENCES baby(id),
+          kind               TEXT NOT NULL CHECK (kind IN ('기록','요약')),
+          label              TEXT NOT NULL,
+          covers             TEXT,
+          when_label         TEXT,
+          source_message_id  TEXT,
+          stale              INTEGER NOT NULL DEFAULT 0,
+          created_at         TEXT NOT NULL,
+          updated_at         TEXT NOT NULL
         );
       `);
       return db;
@@ -76,4 +89,50 @@ export async function writeSetting(key: string, value: string): Promise<void> {
     key,
     value,
   );
+}
+
+type RecordRow = {
+  id: string;
+  kind: BabyRecord['kind'];
+  label: string;
+  covers: string | null;
+  when_label: string | null;
+  created_at: string;
+};
+
+/** 기록 전체 — 오래된 것부터. 한 아기의 기록은 많지 않아서 한 번에 읽는다 */
+export async function readRecordRows(): Promise<BabyRecord[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<RecordRow>(
+    'SELECT id, kind, label, covers, when_label, created_at FROM record ORDER BY created_at',
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    label: row.label,
+    covers: row.covers ? (JSON.parse(row.covers) as string[]) : [],
+    whenLabel: row.when_label,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function insertRecordRow(record: BabyRecord): Promise<void> {
+  const db = await getDb();
+  // 아기는 당분간 한 명이다 — 그 아기의 기록으로 넣는다
+  await db.runAsync(
+    `INSERT INTO record (id, baby_id, kind, label, covers, when_label, created_at, updated_at)
+     VALUES (?, (SELECT id FROM baby LIMIT 1), ?, ?, ?, ?, ?, ?)`,
+    record.id,
+    record.kind,
+    record.label,
+    JSON.stringify(record.covers),
+    record.whenLabel,
+    record.createdAt,
+    record.createdAt,
+  );
+}
+
+export async function deleteRecordRow(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM record WHERE id = ?', id);
 }

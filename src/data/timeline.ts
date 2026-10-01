@@ -7,21 +7,15 @@
  *   - 요약: 질의에서 추출한 해석 (낡을 수 있어 시점이 붙는다)
  * 사실과 해석을 한 칸에 섞으면 반드시 한쪽이 낡는다.
  *
- * L1 은 승인된 지식베이스(`@/data/l1`)에서 온다. L2 는 기록 저장이 생기기 전까지 목업이다.
+ * L1 은 승인된 지식베이스(`@/data/l1`), L2 는 기기에 저장된 기록(`@/data/records`)이다.
  */
 
-import { allItems, type KnowledgeItem } from '@/data/l1';
+import { ageFrom } from '@/data/baby';
+import { allItems, itemById, type KnowledgeItem } from '@/data/l1';
+import type { BabyRecord } from '@/data/records';
 
 export type L1Item = KnowledgeItem;
-
-export type L2Kind = '기록' | '요약';
-export type L2Item = {
-  kind: L2Kind;
-  label: string;
-  when?: string;
-  /** 이 기록이 완료 처리하는 L1 항목 id — 하나의 기록이 여러 항목을 닫을 수 있다 */
-  covers?: string[];
-};
+export type L2Item = BabyRecord;
 
 export type MonthData = {
   month: number;
@@ -45,56 +39,36 @@ const HEADLINES: Record<number, string> = {
   6: '앉기와 이유식 시작',
 };
 
-/**
- * 우리 아기 기록 (목업 — 기록 저장 task 에서 기기 DB 로 바뀐다).
- * 아기 월령과 상관없이 고정이라, 아직 오지 않은 달의 것은 없는 것으로 다룬다.
- */
-const MOCK_RECORDS: Record<number, L2Item[]> = {
-  0: [
-    { kind: '기록', label: '3.2kg 출생 · 자연분만', when: 'D+0' },
-    {
-      kind: '기록',
-      label: 'BCG · B형간염 1차 접종 완료',
-      when: 'D+1',
-      covers: ['k-vacc-0001', 'k-vacc-0002'],
-    },
-  ],
-  1: [
-    {
-      kind: '기록',
-      label: '건강검진 1차 완료 — 이상 없음',
-      when: 'D+21',
-      covers: ['k-chk-0001'],
-    },
-    { kind: '요약', label: '밤중 수유 3회, 등센서 있는 편', when: 'D+28 질문에서' },
-  ],
-  2: [
-    {
-      kind: '기록',
-      label: '1차 접종 완료 · 접종 후 미열 하루',
-      when: 'D+61',
-      covers: ['k-vacc-0201', 'k-vacc-0202', 'k-vacc-0203', 'k-vacc-0204', 'k-vacc-0205'],
-    },
-    { kind: '요약', label: '분유량 갑자기 줄어 걱정 → 급성장기로 판단', when: 'D+70 질문에서' },
-  ],
-  3: [
-    { kind: '기록', label: '몸무게 6.4kg (50~75 백분위)', when: 'D+85' },
-    { kind: '요약', label: '밤중 수유 2회로 줄음 — 수면 흐름 좋아지는 중', when: 'D+86 질문에서' },
-  ],
-};
-
 const startOf = (item: L1Item) => item.months[0];
 const endOf = (item: L1Item) => item.months[item.months.length - 1];
 
-export const TIMELINE: MonthData[] = Array.from({ length: LAST_MONTH + 1 }, (_, month) => ({
-  month,
-  headline: HEADLINES[month],
-  l1: allItems().filter((item) => startOf(item) === month),
-  l2: MOCK_RECORDS[month] ?? [],
-}));
+/**
+ * 기록이 놓일 월 — 완료 처리한 항목이 시작하는 월. 2개월 접종을 5개월에 알려도 2개월 컬럼에 놓여야
+ * 표준과 나란히 보인다. 닫는 항목이 없으면 기록한 날의 월령이다.
+ */
+function recordMonth(record: L2Item, birthDate: string): number {
+  const starts = record.covers.flatMap((id) => {
+    const item = itemById(id);
+    return item ? [startOf(item)] : [];
+  });
+  return starts.length > 0
+    ? Math.min(...starts)
+    : ageFrom(birthDate, new Date(record.createdAt)).month;
+}
 
-export function monthData(month: number): MonthData | undefined {
-  return TIMELINE.find((m) => m.month === month);
+/** 0개월부터 이어지는 월 컬럼 — 표준 항목과 우리 아기 기록을 월마다 나란히 둔다 */
+export function buildTimeline(records: L2Item[], birthDate: string): MonthData[] {
+  return Array.from({ length: LAST_MONTH + 1 }, (_, month) => ({
+    month,
+    headline: HEADLINES[month],
+    l1: allItems().filter((item) => startOf(item) === month),
+    l2: records.filter((r) => recordMonth(r, birthDate) === month),
+  }));
+}
+
+/** 월 한 줄 특징 — 홈 아기 카드가 쓴다 */
+export function headlineOf(month: number): string | undefined {
+  return HEADLINES[month];
 }
 
 /**
@@ -106,12 +80,8 @@ export type GapStatus = 'missed' | 'open' | 'soon';
 export type Gap = { item: L1Item; status: GapStatus };
 
 /** 표준(L1 접종·검진) 대비 우리 아기 기록(L2)의 차집합 — 홈의 추천이 여기서 나온다 */
-export function getGaps(currentMonth: number): Gap[] {
-  const covered = new Set(
-    TIMELINE.filter((m) => m.month <= currentMonth).flatMap((m) =>
-      m.l2.flatMap((r) => r.covers ?? []),
-    ),
-  );
+export function getGaps(currentMonth: number, records: L2Item[]): Gap[] {
+  const covered = new Set(records.flatMap((r) => r.covers));
   const gaps: Gap[] = [];
 
   for (const item of allItems()) {
@@ -139,7 +109,7 @@ const STATUS_ORDER: GapStatus[] = ['missed', 'open', 'soon'];
 const shortTitle = (title: string) => title.replace(/\s*\([^)]*\)/g, '').trim();
 
 /** 차수가 같은 것끼리 이름을 이어 붙인다 — "DTaP·폴리오 3차 · 인플루엔자" */
-function groupLabel(items: L1Item[]): string {
+export function groupLabel(items: L1Item[]): string {
   if (items.length === 1) return items[0].title;
   const byDose = new Map<string, string[]>();
   for (const item of items) {
