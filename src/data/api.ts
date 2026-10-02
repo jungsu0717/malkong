@@ -5,6 +5,8 @@
  * 로컬 서버로 시험할 때는 `.env.local` 에 `EXPO_PUBLIC_API_URL=http://localhost:8000` 을 둔다.
  */
 
+import { CryptoDigestAlgorithm, digestStringAsync } from 'expo-crypto';
+
 import { readSetting, writeSetting } from './db';
 import type { RecordKind } from './records';
 
@@ -94,6 +96,14 @@ async function getDeviceKey(): Promise<string> {
       issuing = null;
     });
   return issuing;
+}
+
+/**
+ * 보상형 광고의 서버 확인(SSV)에 실을 기기 이름 — 키의 SHA-256. 서버도 키를 해시로만 알아서 이것으로 기기를 찾는다.
+ * 키 원문은 광고 회사로 보내지 않는다.
+ */
+export async function deviceKeyHash(): Promise<string> {
+  return digestStringAsync(CryptoDigestAlgorithm.SHA256, await getDeviceKey());
 }
 
 /** 운영자(가족) 기기 등록용으로 마이에서 보여준다 — 아직 없으면 null */

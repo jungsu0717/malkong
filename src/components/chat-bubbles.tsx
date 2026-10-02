@@ -233,10 +233,16 @@ export function ErrorBubble({ text, onRetry }: { text: string; onRetry: () => vo
  */
 export function LimitBubble({
   dailyLimit,
+  busy = false,
+  note = null,
   onEco,
   onReward,
 }: {
   dailyLimit: number | null;
+  /** 광고를 보는 중이면 단추를 잠근다 */
+  busy?: boolean;
+  /** 충전 확인이 안 됐을 때처럼 한 줄 덧붙일 말 */
+  note?: string | null;
   onEco: () => void;
   onReward?: () => void;
 }) {
@@ -251,18 +257,29 @@ export function LimitBubble({
       </ThemedText>
       <View style={styles.quickChips}>
         {onReward && (
-          <Pressable style={[styles.chip, { backgroundColor: colors.accent }]} onPress={onReward}>
+          <Pressable
+            style={[styles.chip, { backgroundColor: colors.accent, opacity: busy ? 0.5 : 1 }]}
+            disabled={busy}
+            onPress={onReward}>
             <ThemedText type="small" style={styles.callText}>
-              광고 보고 정밀 답변
+              {busy ? '광고를 불러오는 중…' : '광고 보고 정밀 답변'}
             </ThemedText>
           </Pressable>
         )}
-        <Pressable style={[styles.chip, { backgroundColor: colors.accentSoft }]} onPress={onEco}>
+        <Pressable
+          style={[styles.chip, { backgroundColor: colors.accentSoft }]}
+          disabled={busy}
+          onPress={onEco}>
           <ThemedText type="small" style={{ color: colors.accent }}>
             일반 기준으로 바로 답변
           </ThemedText>
         </Pressable>
       </View>
+      {note && (
+        <ThemedText type="small" style={{ color: colors.textSecondary }}>
+          {note}
+        </ThemedText>
+      )}
     </View>
   );
 }

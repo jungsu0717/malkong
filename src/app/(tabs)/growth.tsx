@@ -162,7 +162,7 @@ export default function GrowthScreen() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <AdBanner />
+          <AdBanner anchored />
         </View>
       </SafeAreaView>
       <AskFab bottom={AD_FOOTER_HEIGHT + Spacing.three} />

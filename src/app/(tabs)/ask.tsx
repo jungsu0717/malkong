@@ -33,6 +33,7 @@ import { dayKey, dayLabel } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { useRecords } from '@/data/records-context';
+import { canOfferRewardedAd } from '@/data/ads';
 import { useMalkong, type AskFailure } from '@/hooks/use-malkong';
 
 const SUGGESTED = [
@@ -65,7 +66,20 @@ export default function AskScreen() {
   const { age, baby } = useBaby();
   const { loading } = useChat();
   const { records, remove } = useRecords();
-  const { messages, pendingId, failure, openFollowup, send, reply, retry, answerInEco } = useMalkong();
+  const {
+    messages,
+    pendingId,
+    failure,
+    openFollowup,
+    send,
+    reply,
+    retry,
+    answerInEco,
+    refillWithAd,
+  } = useMalkong();
+  /** 광고를 보는 중 — 한도 말풍선의 단추를 잠근다 */
+  const [watching, setWatching] = useState(false);
+  const [refillMissed, setRefillMissed] = useState(false);
   const { dailyLimit, remaining } = useEntitlements();
   // 다른 탭의 플로팅 버튼에서 넘어온 질문 (SPEC-ASK-07). t 는 같은 질문을 다시 보냈을 때의 구분값이다
   const { q, t, focus, ft } = useLocalSearchParams<{
@@ -187,10 +201,24 @@ export default function AskScreen() {
       <LimitBubble
         key="limit"
         dailyLimit={dailyLimit}
+        busy={watching}
+        note={refillMissed ? '충전을 확인하지 못했어요. 광고를 끝까지 봤다면 잠시 뒤 다시 눌러 주세요' : null}
         onEco={() => {
           stickToEnd.current = true;
           void answerInEco();
         }}
+        onReward={
+          failure.limit?.rewardAvailable && canOfferRewardedAd()
+            ? async () => {
+                setWatching(true);
+                setRefillMissed(false);
+                stickToEnd.current = true;
+                const ok = await refillWithAd();
+                setWatching(false);
+                setRefillMissed(!ok);
+              }
+            : undefined
+        }
       />,
     );
   } else if (failure) {

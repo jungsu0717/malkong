@@ -24,8 +24,9 @@
 4. **`my/003`** 약관·개인정보 처리방침·의학 정보 고지 본문(SPEC-MY-03) — 법률 검토는 Julian 판단
 5. **`common/005`** 디바이스 키·일일 한도·재시도 안전·한도 화면 — 코드 완료. **배포(Julian 허락)와 Neon 연결(Julian 계정)이
    남았다** — [common/005](docs/task/common/005-device-key-and-limit.md) 「출시 전에 Julian 이 할 것」. 앱은 새 서버가 있어야 답을 받는다
-6. **`ask/003`** 답변 피드백(SPEC-ASK-06) — 5 의 저장소 위에서
-7. **광고(AdMob)와 광고 제거 구매(RevenueCat)** — 네이티브 모듈이라 EAS 개발 빌드부터. 광고·스토어 계정은 Julian
+6. **`ask/003`** 답변 피드백(SPEC-ASK-06) — 코드 완료, 배포 뒤 저장
+7. **광고(AdMob)와 광고 제거 구매(RevenueCat)** — 광고는 코드 완료([common/006](docs/task/common/006-ads.md)), 실제 확인은
+   EAS 개발 빌드에서. 구매는 my/004. 광고·스토어 계정은 Julian
 8. **앱 아이콘·시작 화면** — 임시 아이콘, 최종은 디자이너
 9. **몰아 시험** — 웹 화면, 실기기(sqlite 포함)
 10. **답변 완성도** — 위험 신호 다듬기와 Julian 승인([common/004](docs/task/common/004-real-answer.md) 「알려진 문제」).

@@ -7,7 +7,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import { getEntitlements } from './api';
 import {
-  cacheAdsEnabled,
   DEFAULT_ENTITLEMENTS,
   loadEntitlements,
   setAdsRemoved,
@@ -36,7 +35,6 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
         const server = await getEntitlements();
         if (cancelled) return;
         const ads = local.ads && server.ads;
-        cacheAdsEnabled(ads);
         setEntitlements({ ...server, ads });
       } catch {
         // 연결이 안 되면 다음 실행 때 다시 받는다

@@ -12,7 +12,15 @@
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 
-import { ApiError, postAsk, type AskResponse, type LimitInfo } from '@/data/api';
+import { watchRewardedAd } from '@/data/ads';
+import {
+  ApiError,
+  deviceKeyHash,
+  getEntitlements,
+  postAsk,
+  type AskResponse,
+  type LimitInfo,
+} from '@/data/api';
 import { useBaby } from '@/data/baby-context';
 import {
   newMessageId,
@@ -229,5 +237,41 @@ export function useMalkong() {
     await run({ questionId, question, mode: 'eco', carriedRecordIds }, records);
   }, [failure, pendingId, records, run]);
 
-  return { messages, pendingId, failure, openFollowup, send, reply, retry, answerInEco };
+  /**
+   * 광고 1편을 보고 정밀 답변 1회를 채운 뒤 같은 질문을 다시 보낸다(ask.md 한도 표시).
+   * 적립은 AdMob 이 서버로 직접 알리므로(SSV) 서버가 남은 수를 올릴 때까지 잠깐 기다린다.
+   * 끝까지 보지 않았거나 확인이 늦으면 false — 화면은 그대로 선택지를 다시 보인다.
+   */
+  const refillWithAd = useCallback(async (): Promise<boolean> => {
+    if (!failure || pendingId) return false;
+    const earned = await watchRewardedAd(await deviceKeyHash());
+    if (!earned) return false;
+    for (let i = 0; i < 6; i++) {
+      await new Promise((r) => setTimeout(r, 1500));
+      try {
+        const { remaining } = await getEntitlements();
+        if (remaining === null || remaining > 0) {
+          setRemaining(remaining);
+          const { questionId, question, carriedRecordIds } = failure;
+          await run({ questionId, question, carriedRecordIds }, records);
+          return true;
+        }
+      } catch {
+        // 연결이 잠깐 끊겨도 몇 번 더 본다
+      }
+    }
+    return false;
+  }, [failure, pendingId, records, run, setRemaining]);
+
+  return {
+    messages,
+    pendingId,
+    failure,
+    openFollowup,
+    send,
+    reply,
+    retry,
+    answerInEco,
+    refillWithAd,
+  };
 }

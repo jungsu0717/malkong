@@ -33,6 +33,11 @@ CREATE TABLE IF NOT EXISTS counted_message (
   day           DATE NOT NULL,
   PRIMARY KEY (key_hash, message_hash)
 );
+CREATE TABLE IF NOT EXISTS reward_tx (
+  tx_hash   TEXT PRIMARY KEY,
+  key_hash  TEXT NOT NULL,
+  day       DATE NOT NULL
+);
 """
 
 # 지우는 기준 — 하루 사용 수는 30일(개인정보 처리방침),
@@ -58,6 +63,10 @@ class UsageStore(Protocol):
         """처음 보는 질문이면 1 을 더한다. 더한 뒤(또는 이미 센 경우 그대로)의 쓴 수를 돌려준다."""
         ...
 
+    def add_reward(self, key_hash: str, day: date, tx_hash: str, max_per_day: int) -> bool:
+        """보상형 광고 1편 적립 — 같은 거래는 한 번만, 하루 상한까지. 적립했으면 True."""
+        ...
+
     def purge(self, today: date) -> None: ...
 
 
@@ -68,6 +77,7 @@ class MemoryUsageStore:
         self._used: dict[tuple[str, date], int] = defaultdict(int)
         self._rewards: dict[tuple[str, date], int] = defaultdict(int)
         self._counted: dict[tuple[str, str], date] = {}
+        self._reward_tx: dict[str, date] = {}
 
     def add_device(self, key_hash: str) -> None:
         with self._lock:
@@ -86,10 +96,20 @@ class MemoryUsageStore:
                 self._used[(key_hash, day)] += 1
             return self._used[(key_hash, day)]
 
+    def add_reward(self, key_hash: str, day: date, tx_hash: str, max_per_day: int) -> bool:
+        with self._lock:
+            if tx_hash in self._reward_tx or self._rewards[(key_hash, day)] >= max_per_day:
+                return False
+            self._reward_tx[tx_hash] = day
+            self._rewards[(key_hash, day)] += 1
+            return True
+
     def purge(self, today: date) -> None:
         usage_before = today - timedelta(days=USAGE_KEEP_DAYS)
         counted_before = today - timedelta(days=COUNTED_KEEP_DAYS)
         with self._lock:
+            for key in [k for k, d in self._reward_tx.items() if d < counted_before]:
+                del self._reward_tx[key]
             for key in [k for k in self._used if k[1] < usage_before]:
                 del self._used[key]
             for key in [k for k in self._rewards if k[1] < usage_before]:
@@ -169,6 +189,28 @@ class PostgresUsageStore:
                 ).fetchone()
         return row[0] if row else 0
 
+    def add_reward(self, key_hash: str, day: date, tx_hash: str, max_per_day: int) -> bool:
+        with self._conn() as conn, conn.transaction():
+            row = conn.execute(
+                "SELECT rewards FROM daily_usage WHERE key_hash = %s AND day = %s FOR UPDATE",
+                (key_hash, day),
+            ).fetchone()
+            if row and row[0] >= max_per_day:
+                return False
+            fresh = conn.execute(
+                "INSERT INTO reward_tx (tx_hash, key_hash, day) VALUES (%s, %s, %s) "
+                "ON CONFLICT DO NOTHING RETURNING 1",
+                (tx_hash, key_hash, day),
+            ).fetchone()
+            if not fresh:
+                return False
+            conn.execute(
+                "INSERT INTO daily_usage (key_hash, day, rewards) VALUES (%s, %s, 1) "
+                "ON CONFLICT (key_hash, day) DO UPDATE SET rewards = daily_usage.rewards + 1",
+                (key_hash, day),
+            )
+        return True
+
     def purge(self, today: date) -> None:
         with self._conn() as conn:
             conn.execute(
@@ -177,5 +219,9 @@ class PostgresUsageStore:
             )
             conn.execute(
                 "DELETE FROM counted_message WHERE day < %s",
+                (today - timedelta(days=COUNTED_KEEP_DAYS),),
+            )
+            conn.execute(
+                "DELETE FROM reward_tx WHERE day < %s",
                 (today - timedelta(days=COUNTED_KEEP_DAYS),),
             )

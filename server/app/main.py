@@ -12,6 +12,7 @@ from app.domain.ask.router import router as ask_router
 from app.domain.devices.router import router as devices_router
 from app.domain.entitlements.router import router as entitlements_router
 from app.domain.feedback.router import router as feedback_router
+from app.domain.reward.router import router as reward_router
 
 
 def create_app() -> FastAPI:
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(devices_router, prefix="/v1")
     app.include_router(entitlements_router, prefix="/v1")
     app.include_router(feedback_router, prefix="/v1")
+    app.include_router(reward_router, prefix="/v1")
 
     # /healthz 로 하지 않는다 — Cloud Run 은 z 로 끝나는 일부 경로를 예약해 두어
     # 그 요청이 앱까지 오지 않는다.

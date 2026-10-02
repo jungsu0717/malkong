@@ -68,10 +68,17 @@
 키가 없거나 모르는 키면 401 `DEVICE_KEY_INVALID`. 앱은 부팅 시 1회 받아 광고 표시·한도 안내에 쓴다.
 지정은 서버 allowlist([backend](backend.md) 운영자 절). 차감·리셋 규칙은 backend 의 일일 한도 절이 정본.
 
-## POST /v1/reward/ssv — 보상형 광고 적립 (AdMob 서버가 호출)
+## GET /v1/reward/ssv — 보상형 광고 적립 (AdMob 서버가 호출)
 
-AdMob 의 서버 측 검증(SSV) 콜백. 서명 검증 후 해당 디바이스 키에 +1회 적립(하루 3회 상한).
-앱의 자체 신고로는 적립하지 않는다 — 광고를 끝까지 봤다는 판정은 AdMob→서버 경로만 믿는다.
+AdMob 의 서버 측 검증(SSV) 콜백. AdMob 은 GET 쿼리로 부른다(`user_id` · `transaction_id` · `signature` · `key_id` 등).
+앱은 광고를 요청할 때 `userId` 에 **기기 키의 SHA-256** 을 싣는다 — 키 원문은 광고 회사로 보내지 않는다.
+
+```
+평시     ▸ 서버는 signature 앞까지의 쿼리 문자열을 Google 공개 키로 검증한 뒤, user_id 의 기기에 +1회 적립한다(하루 3회 상한).
+평시     ▸ 같은 transaction_id 는 한 번만 적립한다. 검증된 콜백이면 적립하지 않았어도 200 — AdMob 이 되풀이하지 않게.
+조건 위반 ▸ 서명이 없거나 틀리면 403 { code: "INVALID_SIGNATURE" }.
+금지     ▸ 앱의 자체 신고로는 적립하지 않는다 — 광고를 끝까지 봤다는 판정은 AdMob→서버 경로만 믿는다.
+```
 
 ## POST /v1/feedback — 답변 피드백 (SPEC-ASK-06)
 
@@ -111,5 +118,6 @@ AdMob 의 서버 측 검증(SSV) 콜백. 서명 검증 후 해당 디바이스 �
 
 - 2026-09-30 최초 작성 (v0)
 - 2026-10-02 `/v1/ask` 응답에 level, 일반 정보일 때만 빈 sources, 지어낸 id 금지, 503 MODEL_UNAVAILABLE (task common/004)
+- 2026-10-03 `/v1/reward/ssv` 를 GET 으로 바로잡고 검증·적립 규칙(user_id = 기기 키 해시) (task common/006)
 - 2026-10-03 `/v1/feedback` 요청 모양(answer 정보 · 동의한 원문만 shared · 기기 키와 분리) (task ask/003)
 - 2026-10-03 `POST /v1/devices`, `X-Device-Key` 필수(위험 신호는 예외)·401 DEVICE_KEY_INVALID, entitlements 에 remaining, usage.remaining 은 운영자 기기에서 null (task common/005)

@@ -33,7 +33,22 @@
           "imageWidth": 76
         }
       ],
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "delayAppMeasurementInit": true,
+          "userTrackingUsageDescription": "맞춤형 광고를 보여 드리는 데만 써요. 허용하지 않아도 말콩은 그대로 쓸 수 있어요."
+        }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "맞춤형 광고를 보여 드리는 데만 써요. 허용하지 않아도 말콩은 그대로 쓸 수 있어요."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

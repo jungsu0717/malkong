@@ -32,27 +32,12 @@ export const DEFAULT_ENTITLEMENTS: Entitlements = {
 
 const ADS_REMOVED_KEY = 'ads_removed';
 
-/**
- * React 밖(함수 호출 시점)에서도 광고를 띄울지 알아야 해서 두는 사본.
- * 공급자가 값을 바꿀 때마다 같이 갱신한다.
- */
-let adsEnabledCache = DEFAULT_ENTITLEMENTS.ads;
-
-export function areAdsEnabled(): boolean {
-  return adsEnabledCache;
-}
-
-export function cacheAdsEnabled(enabled: boolean): void {
-  adsEnabledCache = enabled;
-}
-
 export async function loadEntitlements(): Promise<Entitlements> {
   const removed = (await readSetting(ADS_REMOVED_KEY)) === 'true';
   const entitlements: Entitlements = {
     ...DEFAULT_ENTITLEMENTS,
     ads: !removed,
   };
-  cacheAdsEnabled(entitlements.ads);
   return entitlements;
 }
 
@@ -62,5 +47,4 @@ export async function loadEntitlements(): Promise<Entitlements> {
  */
 export async function setAdsRemoved(removed: boolean): Promise<void> {
   await writeSetting(ADS_REMOVED_KEY, removed ? 'true' : 'false');
-  cacheAdsEnabled(!removed);
 }
