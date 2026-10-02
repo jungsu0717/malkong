@@ -16,11 +16,15 @@ from app.common.core.schema import ApiModel
 # 문장이 길고 자주 고치는 글이라 코드 밖 파일로 둔다
 SYSTEM_PROMPT = (Path(__file__).parent / "system_prompt.txt").read_text(encoding="utf-8")
 
+# 위험 신호 범주 — L1 red_flag 항목 id(decisions/010). 규칙을 통과한 질문을 모델이 한 번 더 본다
+RED_FLAG_IDS = [f"k-warn-000{n}" for n in range(1, 9)]
+
 # 모델이 돌려줄 JSON — 두 회사 모두 받아들이도록 $ref 없이 평평하게 적는다.
-# level 을 맨 앞에 두어 수위부터 정하고 답하게 한다.
+# redFlag 와 level 을 맨 앞에 두어 위험 신호와 수위부터 정하고 답하게 한다.
 MODEL_OUTPUT_SCHEMA: dict = {
     "type": "object",
     "properties": {
+        "redFlag": {"type": "string", "enum": ["없음", *RED_FLAG_IDS]},
         "level": {"type": "string", "enum": ["사실", "일반", "판단"]},
         "type": {"type": "string", "enum": ["answer", "followup"]},
         "answer": {"type": "string"},
@@ -48,7 +52,7 @@ MODEL_OUTPUT_SCHEMA: dict = {
             },
         },
     },
-    "required": ["level", "type", "answer", "citedIds", "followup", "records"],
+    "required": ["redFlag", "level", "type", "answer", "citedIds", "followup", "records"],
     "additionalProperties": False,
 }
 
@@ -70,6 +74,8 @@ class ModelOutput(ApiModel):
     계약 응답(AnswerResponse 등)으로 바꾸는 것은 service 몫이다.
     """
 
+    # "없음" 이 아니면 서버가 모델 답을 버리고 고정 응급 안내를 낸다(decisions/010)
+    red_flag: str = "없음"
     level: Literal["사실", "일반", "판단"]
     type: Literal["answer", "followup"]
     answer: str

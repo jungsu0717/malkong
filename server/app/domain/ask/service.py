@@ -20,6 +20,7 @@ from app.common.core.setting import Settings
 from app.domain.ask import redflag
 from app.domain.ask.prompt import (
     MODEL_OUTPUT_SCHEMA,
+    RED_FLAG_IDS,
     SYSTEM_PROMPT,
     BabyRecordLine,
     L1Snippet,
@@ -123,19 +124,19 @@ class AskService:
         user = build_user_message(req.question, req.baby.months, records, snippets)
         if eco:
             user += ECO_NOTE
-        return self._answer(user, {i.id: i for i in items}, eco)
+        return self._answer(user, {i.id: i for i in items}, eco, req.baby.months)
 
     def _redflag(self, ids: list[str]) -> RedflagResponse:
         items = [item for i in ids if (item := self._l1.get(i)) is not None]
         parts = [REDFLAG_HEAD, *(f"{i.title}\n{i.body}" for i in items), REDFLAG_TAIL]
         return RedflagResponse(answer="\n\n".join(parts), sources=[_source(i) for i in items])
 
-    def _answer(self, user: str, given: dict[str, L1Item], eco: bool) -> AskResponse:
+    def _answer(self, user: str, given: dict[str, L1Item], eco: bool, months: int) -> AskResponse:
         note = ""
         last_problem = ""
         for _ in range(MAX_ATTEMPTS):
             out = self._generate(user + note)
-            problem, response = self._check(out, given, eco)
+            problem, response = self._check(out, given, eco, months)
             if response is not None:
                 return response
             last_problem = problem
@@ -151,11 +152,18 @@ class AskService:
         )
 
     def _check(
-        self, out: ModelOutput | None, given: dict[str, L1Item], eco: bool
+        self, out: ModelOutput | None, given: dict[str, L1Item], eco: bool, months: int
     ) -> tuple[str, AskResponse | None]:
         """모델 출력을 검사한다. 통과하면 (\"\", 응답), 걸리면 (문제 이름, None)."""
         if out is None:
             return "broken", None
+
+        # 두 번째 겹 — 규칙이 놓친 위험 신호를 모델이 표시했으면
+        # 그 답은 버리고 고정 응급 안내를 낸다
+        # (decisions/010). 3개월 미만의 열(k-warn-0001)은 월령이 맞을 때만 받는다
+        flag = out.red_flag
+        if flag in RED_FLAG_IDS and not (flag == "k-warn-0001" and months >= 3):
+            return "", self._redflag([flag])
 
         if out.type == "followup":
             if eco:

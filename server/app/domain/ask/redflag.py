@@ -42,23 +42,26 @@ _CLAUSE_END = re.compile(
     r"는데|은데|인데|지만|면서|니까|어서|아서|해서|더니|다가|고서|나서|했고|하고|이고|[,.?!]"
 )
 # 증상이 없다는 말
-_NEGATION = re.compile(r"없|않|안나(?!아)|안났|아니|안해|안했|안하|안보|전혀|하나도")
+# "동안·불안·편안"의 "안"은 부정이 아니다
+_NEGATION = re.compile(r"없|않|(?<![동불편])안(나(?!아)|났|해|했|하|보)|아니|전혀|하나도")
 # 증상이 멈추지·나아지지 않는다는 말 — 부정이 아니라 증상이 계속된다는 뜻
 _PERSISTS = re.compile(
     r"(안|못)(멈|끝|떨어|내려|내리|나아|일어|깨|그치|그쳐|가라앉|잡히|돌아)"
-    r"|(멈추|끝나|떨어지|내리|내려가|나아지|일어나|깨|그치|가라앉|잡히|좋아지)지(는|도|가)?(않|못|안)"
+    r"|(멈추|멎|끝나|떨어지|내리|내려가|나아지|일어나|깨|그치|가라앉|잡히|좋아지|없어지|사라지)"
+    r"(지(는|도|가|를)?|질)(않|못|안)"
+    r"|생각을안"
 )
 
 
 def _negated(after: str) -> bool:
-    """걸린 낱말 바로 뒤가 '없다'는 뜻인가."""
-    if _PERSISTS.search(after[:12]):
-        return False
-    window = after[:8]
-    end = _CLAUSE_END.search(window)
+    """걸린 낱말 바로 뒤가 '없다'는 뜻인가. 구절을 먼저 자르고 그 안에서만 본다."""
+    clause = after[:12]
+    end = _CLAUSE_END.search(clause)
     if end:
-        window = window[: end.start()]
-    return bool(_NEGATION.search(window))
+        clause = clause[: end.start()]
+    if _PERSISTS.search(clause):
+        return False
+    return bool(_NEGATION.search(clause[:8]))
 
 
 def _found(pattern: str, text: str) -> bool:
@@ -75,8 +78,14 @@ _NOT_TEMPERATURE = re.compile(
 )
 _TEMPERATURE_UNIT = re.compile(r"^(도|℃|°c|°f|°|c(?![a-z]))")
 _ABOVE = re.compile(r"^(도|℃|°c|°f|°)?(넘|이상|초과)")
+# 숫자 바로 뒤가 그 온도가 아니라는 말이거나 물·분유의 온도라는 말
+_NOT_THIS_TEMPERATURE = re.compile(
+    r"(미만|이하|안넘|아니|안돼|안되|로데|데웠|데워|로타|물로|물에|물은|물이|물을)"
+)
 # 체온이 아닌 온도의 문맥 — 분유 물, 목욕물, 방 온도
-_ENVIRONMENT = re.compile(r"물|온도|습도|실내|목욕|분유|기온|날씨|에어컨|보일러|방")
+_ENVIRONMENT = re.compile(r"물온도|목욕물|분유물|물이|물은|온도|습도|실내|기온|날씨|에어컨|보일러")
+# 키·몸무게·둘레 — "머리둘레 40.5" 는 체온이 아니다
+_GROWTH = re.compile(r"둘레|키가|키는|키|몸무게|체중|신장")
 _BODY_HEAT = re.compile(r"체온|열")
 
 
@@ -95,6 +104,10 @@ def _temperatures(text: str) -> list[float]:
         if not (has_unit or "." in raw or near_fever):
             continue
         if _ENVIRONMENT.search(before) and not _BODY_HEAT.search(before):
+            continue
+        if _GROWTH.search(before[-4:]):
+            continue
+        if _NOT_THIS_TEMPERATURE.search(text[m.end() : m.end() + 6]):
             continue
         value = float(raw)
         if 95.0 <= value <= 110.0:  # 화씨
@@ -134,8 +147,16 @@ def _days(text: str) -> float:
 # --- 범주별 문장 -----------------------------------------------------------
 
 FEVER = (
-    r"열(이|나|났|있|올|감|높|날)|발열|고열|미열|불덩이"
+    r"(?<!태)열(이|나|났|있|올|감|높|날)|발열|고열|불덩이"
     r"|(이마|몸|머리|배|등|목)(이|가)?.{0,3}(뜨거|뜨끈|화끈)"
+)
+# 아기가 아닌 사람의 열("엄마가 열감기", "제가 열이 38.5도")
+NOT_BABY_FEVER = (
+    r"(엄마|제가|저는|저도|내가|큰애|첫째|형|누나|언니|오빠|아빠|남편|어른).{0,4}(열|체온)"
+)
+# 열이 나면 어떻게 하느냐, 몇 도부터 열이냐 — 지금 열이 난다는 말이 아니다
+HYPOTHETICAL_FEVER = (
+    r"열(이)?(나면|오르면|있으면|나나요|오르나요|날까|오를까)|몇도부터|열이에요\?|열인가요"
 )
 ANTIPYRETIC = r"해열제|타이레놀|챔프|부루펜|맥시부펜|세토펜|이부프로펜|아세트아미노펜|덱시부프로펜"
 ANTIPYRETIC_FAIL = (
@@ -154,7 +175,7 @@ BREATHING = (
     r"|(입술|얼굴|입주변|입주위|입가|손톱).{0,3}(파래|퍼래|퍼레|파랗|퍼렇|보라|새파|시퍼)"
 )
 SEIZURE = (
-    r"경련|발작|열경기|경기(를|해|했|하|가|일으|같)"
+    r"경련|(?<!기침)발작(?!적|하듯)|열경기|경기(를|해|했|하|가|일으|같)"
     r"|눈(이|을)?.{0,3}(돌아|뒤집|까뒤집)"
     r"|몸(이)?.{0,3}(굳|뻣뻣)"
     r"|(부들|바들|덜덜).{0,3}떨|팔다리.{0,4}떨|사지.{0,3}떨"
@@ -165,19 +186,21 @@ UNRESPONSIVE = (
     r"|깨워도.{0,6}(안|못|않|반응없)"
     r"|불러도.{0,6}(대답|반응|쳐다).{0,3}(없|안|않)"
     r"|의식(이|을)?.{0,3}(없|흐|잃|떨어)|정신(을|이)?.{0,3}(잃|못차|없|나갔)|기절|실신"
-    r"|축.{0,2}(처|쳐|늘어)"
-    r"|(?<!간격이)(?<!간격)(?<!텀이)(?<!시간이)(?<!양이)늘어(져|졌|지)"
-    r"|(?<!기분이)(?<!눈이)(?<!가슴이)(처져|쳐져|처졌|쳐졌)"
+    r"|(?<!고개가)(?<!고개)(?<!목이)(?<!목)축.{0,2}(처|쳐|늘어)"
+    r"|(?<!간격이)(?<!간격)(?<!텀이)(?<!시간이)(?<!양이)(?<!량이)늘어(져|졌|지(?!게))"
+    r"|(?<!기분이)(?<!눈이)(?<!가슴이)(?<!고개가)(?<!고개)(?<!목이)(?<!꺼풀이)(?<!목)"
+    r"(?<!축)(처져|쳐져|처졌|쳐졌)"
     r"|멍하(니|게)"
 )
+NECK_CONTROL = r"(고개|목)(이|가|은|는)?.{0,4}(축)?(처|쳐|늘어)"
 DEHYDRATION = (
-    r"(소변|오줌|쉬야|쉬)(을|를|이|가)?.{0,8}(안|못)(봐|봤|누|눴|싸|쌌|나와|나|해|했)"
+    r"(소변|오줌|쉬야|쉬(?=를|가))(을|를|이|가)?.{0,8}(안|못)(봐|봤|누|눴|싸|쌌|나와|나|해|했)"
     r"|(소변|오줌)(을|를)?(보|누|싸)지(는|도)?않"
     r"|(소변|오줌)(이|가)?.{0,2}없"
     r"|기저귀(가)?.{0,8}(말라|말랐|안젖|젖지(는|도)?않|뽀송|그대로|깨끗)"
     r"|눈물(이)?.{0,3}(안나|없|안흘|나지(는|도)?않)"
     r"|입(?!술)(안|속)?(이)?.{0,3}(바짝|바싹)?(말라|말랐|마른|마르)"
-    r"|탈수"
+    r"|탈수(?!.{0,4}예방)"
 )
 HEAD_EVENT = (
     r"(머리|이마|뒤통수|얼굴)(를|가|을)?.{0,4}(박|부딪|찧|쿵|다쳤|찍)"
@@ -218,8 +241,9 @@ def detect(question: str, months: int) -> list[RedflagHit]:
         hits.setdefault(l1_id, rule)
 
     # k-warn-0001 — 3개월 미만의 열. 38°C 이상이 적혀 있거나 "열"이라는 말만 있어도 잡는다
-    if months < 3 and (max_temp >= 38.0 or _found(FEVER, text)):
-        hit("k-warn-0001", "3개월 미만 열")
+    if months < 3 and not re.search(NOT_BABY_FEVER, text):
+        if max_temp >= 38.0 or (_found(FEVER, text) and not re.search(HYPOTHETICAL_FEVER, text)):
+            hit("k-warn-0001", "3개월 미만 열")
 
     # k-warn-0002 — 40°C 넘는 열 · 해열제가 듣지 않는 열 · 나아지다 다시 오는 열·기침
     if max_temp >= 40.0:
@@ -233,7 +257,8 @@ def detect(question: str, months: int) -> list[RedflagHit]:
         hit("k-warn-0003", "호흡곤란·청색증")
     if _found(SEIZURE, text):
         hit("k-warn-0004", "경련")
-    if _found(UNRESPONSIVE, text):
+    # 목 가누기("고개가 축 처져요", "목이 아직 처져요")는 반응 없음이 아니다
+    if _found(UNRESPONSIVE, re.sub(NECK_CONTROL, "", text)):
         hit("k-warn-0005", "반응 없음")
     if _found(DEHYDRATION, text):
         hit("k-warn-0006", "탈수")

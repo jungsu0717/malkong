@@ -449,3 +449,27 @@ def test_bad_model_settings_do_not_block_redflag(monkeypatch) -> None:
         lambda: Settings(llm_provider="anthropic", llm_model="x", _env_file=None),
     )
     assert router.get_llm_client.__wrapped__() is None
+
+
+# --- 두 번째 겹 — 모델이 표시한 위험 신호 (decisions/010) ---
+
+
+def test_model_flag_turns_answer_into_fixed_redflag(app, client: TestClient) -> None:
+    use(app, FakeLlm(model_out(redFlag="k-warn-0003", answer="모델이 쓴 답")))
+    body = client.post(
+        "/v1/ask",
+        json={"question": "애기가 좀 이상해요", "baby": {"months": 6}, "clientMessageId": "f"},
+    ).json()
+    assert body["type"] == "redflag"
+    assert [s["id"] for s in body["sources"]] == ["k-warn-0003"]
+    assert "모델이 쓴 답" not in body["answer"]
+    assert "119" in body["answer"]
+
+
+def test_under_three_month_fever_flag_is_ignored_for_older_babies(app, client: TestClient) -> None:
+    use(app, FakeLlm(model_out(redFlag="k-warn-0001", answer="일반적으로는 이래요.")))
+    body = client.post(
+        "/v1/ask",
+        json={"question": "애기가 좀 이상해요", "baby": {"months": 8}, "clientMessageId": "f2"},
+    ).json()
+    assert body["type"] == "answer"
