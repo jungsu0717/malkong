@@ -1,0 +1,26 @@
+{
+  "_note": "백만 토큰당 달러. 2026-10-02 공식 가격표 기준. Gemini 3.8 Flash 는 2026-12-31 까지의 가격이고 2027-01-01 부터 입력 1.50, 출력 7.50 으로 오른다. Claude 는 Vertex AI 글로벌 엔드포인트 가격(직결과 같다). 캐시 쓰기 가산(1.25배)은 작아서 반영하지 않는다",
+  "usd_to_krw": 1400,
+  "models": {
+    "gemini-2.5-flash-lite": {
+      "input": 0.1,
+      "cached_input": 0.01,
+      "output": 0.4
+    },
+    "gemini-3.5-flash-lite": {
+      "input": 0.3,
+      "cached_input": 0.03,
+      "output": 2.5
+    },
+    "gemini-3.8-flash": {
+      "input": 0.75,
+      "cached_input": 0.075,
+      "output": 3.75
+    },
+    "claude-sonnet-5-5": {
+      "input": 2.0,
+      "cached_input": 0.2,
+      "output": 10.0
+    }
+  }
+}

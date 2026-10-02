@@ -1,6 +1,8 @@
 # gcloud run deploy --source 가 올리지 않을 것 (Docker 빌드 전에 업로드 단계에서 거른다)
 .gcloudignore
 .venv/
+.env
+eval/
 __pycache__/
 .pytest_cache/
 .ruff_cache/

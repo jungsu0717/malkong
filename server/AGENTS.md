@@ -18,7 +18,18 @@ uv add <패키지>                                   # 의존성 추가 (개발�
 uv run ruff check .
 uv run ruff format --check .                     # 고칠 때는 --check 를 빼고 돌린다
 uv run pytest
+
+# 모델 비교 (task common/003) — 실제 API 를 부르므로 돈이 든다. 모델 id 는 인자로 넘긴다
+uv run python -m eval.run --model gemini:<id> [--model anthropic:<id> --vertex-project malkong]
+uv run python -m eval.score eval/results/<날짜>
 ```
+
+결과 폴더에는 그 판에 쓴 `system_prompt.txt` 를 함께 남긴다 — 프롬프트를 고치면 점수가 바뀌기 때문이다.
+
+- Gemini 키는 `server/.env` 에 둔다(`MALKONG_GEMINI_API_KEY`). 이 파일은 git, Docker 빌드, gcloud 업로드에서
+  모두 빠진다. 키 값을 출력하거나 로그·커밋에 남기지 않는다
+- Claude 는 Vertex AI 로 부른다 — 키가 없고, 로컬은 `gcloud auth application-default login` 권한을 쓴다.
+  Claude API 직결이 필요하면 `--claude-via api` 와 `MALKONG_ANTHROPIC_API_KEY`
 
 ## 배포 (Cloud Run)
 
@@ -55,8 +66,12 @@ app/
     router.py
     schema.py
     service.py
-  infra/               저장소 접근. 아직 없고, Neon 을 붙일 때(common/004) 만든다
+  domain/ask/prompt.py 말콩이 시스템 프롬프트(system_prompt.txt)와 모델 출력 JSON 모양
+  infra/               바깥 시스템에 닿는 것
+    llm/               모델 어댑터 — 각 회사 공식 SDK 를 base.py 계약 뒤에 둔다(decisions/007)
+                       저장소(Neon) 접근은 common/004 에서 infra/ 아래에 만든다
 tests/
+eval/                  모델 비교 장치 — 질문 세트, 실행, 채점, 결과. 서버 이미지에는 들어가지 않는다
 ```
 
 도메인 이름은 api-contract 경로의 첫 토막을 쓴다 — `ask`, `knowledge`, `entitlements`, `reward`,

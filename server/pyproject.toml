@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "말콩 agent 서버 — LLM 프록시, L1 지식 검색, 사용량 제어"
 requires-python = ">=3.13,<3.14"
 dependencies = [
+    "anthropic[vertex]>=1.11.0",
     "fastapi>=0.142.2",
+    "google-genai>=2.27.0",
     "pydantic-settings>=2.15.0",
     "uvicorn[standard]>=0.54.0",
 ]

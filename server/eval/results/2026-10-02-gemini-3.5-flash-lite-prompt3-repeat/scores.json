@@ -1,0 +1,1010 @@
+[
+ {
+  "qid": "q01",
+  "category": "사실",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 2430,
+  "cost_usd": 0.0009919,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "cite_required": true
+  },
+  "answer_chars": 168,
+  "output": {
+   "level": "사실",
+   "type": "answer",
+   "answer": "생후 4개월에는 DTaP 2차, 폴리오 2차, Hib 2차, 폐렴구균 2차, 로타바이러스 2차 접종이 있습니다. DTaP, Hib, 폐렴구균 3차는 6개월에 맞고, 폴리오 3차는 6~18개월 사이에 맞습니다. 로타바이러스는 RV1 백신이면 이번이 마지막이고, RV5 백신이면 6개월에 3차가 남습니다.",
+   "citedIds": [
+    "k-vacc-0401",
+    "k-vacc-0402",
+    "k-vacc-0403",
+    "k-vacc-0404",
+    "k-vacc-0405"
+   ],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q02",
+  "category": "사실",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 124401,
+  "cost_usd": 0.0005957,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "cite_required": true
+  },
+  "answer_chars": 46,
+  "output": {
+   "level": "사실",
+   "type": "answer",
+   "answer": "BCG는 생후 4주 안에 한 번 맞는 결핵 예방접종입니다. 이 한 번으로 끝납니다.",
+   "citedIds": [
+    "k-vacc-0001"
+   ],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q03",
+  "category": "사실",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1787,
+  "cost_usd": 0.0007473,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "cite_required": true
+  },
+  "answer_chars": 72,
+  "output": {
+   "level": "사실",
+   "type": "answer",
+   "answer": "B형간염 예방접종은 모두 세 번 맞아요. 태어나자마자 첫 접종을 하고, 2차는 생후 1개월, 마지막 3차는 생후 6개월에 맞아요.",
+   "citedIds": [
+    "k-vacc-0002",
+    "k-vacc-0101",
+    "k-vacc-0606"
+   ],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q04",
+  "category": "사실",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1528,
+  "cost_usd": 0.0010803,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "cite_required": true
+  },
+  "answer_chars": 147,
+  "output": {
+   "level": "사실",
+   "type": "answer",
+   "answer": "생후 6개월에는 DTaP 3차, 폴리오 3차(6~18개월 사이), Hib 3차, 폐렴구균 3차, B형간염 3차를 맞아야 해요. RV5 백신을 맞고 있다면 로타바이러스 3차(마지막 접종)도 이때 있어요. 또한 생후 6개월부터 해마다 맞는 인플루엔자 접종도 시작해요.",
+   "citedIds": [
+    "k-vacc-0601",
+    "k-vacc-0602",
+    "k-vacc-0603",
+    "k-vacc-0604",
+    "k-vacc-0605",
+    "k-vacc-0606",
+    "k-vacc-0607"
+   ],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q05",
+  "category": "사실",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1549,
+  "cost_usd": 0.0009815,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "cite_required": true
+  },
+  "answer_chars": 116,
+  "output": {
+   "level": "사실",
+   "type": "answer",
+   "answer": "돌이 지난 아기는 12~15개월 사이에 Hib 4차, 폐렴구균 4차, MMR 1차, 수두 예방접종을 맞습니다. 또한 12~35개월 사이에 A형간염 1차를 맞고, 12~23개월 사이에 일본뇌염 1차를 맞습니다.",
+   "citedIds": [
+    "k-vacc-1201",
+    "k-vacc-1202",
+    "k-vacc-1203",
+    "k-vacc-1204",
+    "k-vacc-1205",
+    "k-vacc-1206"
+   ],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q06",
+  "category": "사실",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1590,
+  "cost_usd": 0.0006925,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "cite_required": true
+  },
+  "answer_chars": 84,
+  "output": {
+   "level": "사실",
+   "type": "answer",
+   "answer": "첫 번째 영유아 건강검진은 생후 14일에서 35일 사이에 받아요. 문진과 진찰, 키·몸무게 같은 신체계측, 건강교육을 받으며 비용은 따로 내지 않아요.",
+   "citedIds": [
+    "k-chk-0001"
+   ],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q07",
+  "category": "사실",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1958,
+  "cost_usd": 0.0011298,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "cite_required": true
+  },
+  "answer_chars": 258,
+  "output": {
+   "level": "사실",
+   "type": "answer",
+   "answer": "생후 2개월 접종을 마쳤다면, 다음은 DTaP 2차, 폴리오 2차, Hib 2차, 폐렴구균 2차, 로타바이러스 2차를 맞을 차례예요. DTaP 두 번째 접종이에요. 3차는 6개월이에요. 폴리오 두 번째 접종이에요. 3차는 6~18개월 사이에 맞아요. Hib 두 번째 접종이에요. 3차는 6개월이에요. 폐렴구균 두 번째 접종이에요. 3차는 6개월이에요. 로타바이러스 두 번째 접종이에요. RV1 백신이면 이번이 마지막이고, RV5 백신이면 6개월에 3차가 남아요.",
+   "citedIds": [
+    "k-vacc-0401",
+    "k-vacc-0402",
+    "k-vacc-0403",
+    "k-vacc-0404",
+    "k-vacc-0405"
+   ],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q08",
+  "category": "사실",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1831,
+  "cost_usd": 0.0006095999999999999,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "cite_required": true
+  },
+  "answer_chars": 54,
+  "output": {
+   "level": "사실",
+   "type": "answer",
+   "answer": "폴리오 3차는 6개월부터 18개월 사이에 맞으면 됩니다. 마지막 4차는 만 4~6세에 접종합니다.",
+   "citedIds": [
+    "k-vacc-0602"
+   ],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q09",
+  "category": "사실",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1324,
+  "cost_usd": 0.0007672,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "cite_required": true
+  },
+  "answer_chars": 81,
+  "output": {
+   "level": "사실",
+   "type": "answer",
+   "answer": "로타바이러스 백신은 백신 종류에 따라 접종 횟수가 달라요. RV1 백신은 2·4개월에 두 번 맞고, RV5 백신은 2·4·6개월에 세 번 맞아요.",
+   "citedIds": [
+    "k-vacc-0205",
+    "k-vacc-0405",
+    "k-vacc-0605"
+   ],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q10",
+  "category": "사실",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1534,
+  "cost_usd": 0.0006895,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "cite_required": true
+  },
+  "answer_chars": 85,
+  "output": {
+   "level": "사실",
+   "type": "answer",
+   "answer": "생후 9~12개월에는 영유아 건강검진 3차를 받을 수 있어요. 앞의 두 번과 같은 항목에 발달선별검사와 상담이 더해져요. 검진 비용은 따로 내지 않아요.",
+   "citedIds": [
+    "k-chk-0901"
+   ],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q11",
+  "category": "일반",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1409,
+  "cost_usd": 0.000605,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "hedge": true,
+   "no_cite": true
+  },
+  "answer_chars": 90,
+  "output": {
+   "level": "일반",
+   "type": "answer",
+   "answer": "일반적으로는 아기 목욕을 매일 시켜도 괜찮지만, 피부가 건조하다면 횟수를 줄이는 것이 좋습니다. 정확한 목욕 횟수와 관리법은 소아청소년과 진료 때 확인해 보세요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q12",
+  "category": "일반",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1756,
+  "cost_usd": 0.0007022,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "hedge": true,
+   "no_cite": true
+  },
+  "answer_chars": 168,
+  "output": {
+   "level": "일반",
+   "type": "answer",
+   "answer": "아기 손톱은 일반적으로 둥근 모양보다 일자로 자르고 모서리를 부드럽게 다듬어 주는 것이 좋아요. 신생아용 전용 가위나 네일 파일을 사용하는 것을 권장해요. 아기가 잘 때나 안심하고 가만히 있을 때 자르면 안전해요. 정확한 관리 방법이 걱정된다면 영유아 건강검진이나 소아청소년과 진료 때 확인해 보세요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q13",
+  "category": "일반",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1646,
+  "cost_usd": 0.00074,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "hedge": true,
+   "no_cite": true
+  },
+  "answer_chars": 196,
+  "output": {
+   "level": "일반",
+   "type": "answer",
+   "answer": "일반적으로는 분유를 먹인 후 트림을 시켜서 위 속의 공기를 빼주면 구토나 불편함을 줄이는 데 도움이 됩니다. 다만 아기가 트림을 바로 하지 않는다고 해서 너무 오래 세워두거나 억지로 시키지 않아도 괜찮습니다. 아기가 편안해 보인다면 소화가 잘되도록 옆으로 눕혀주는 것도 방법입니다. 정확한 수유 후 관리법이 궁금하다면 검진이나 진료 때 확인해 보세요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q14",
+  "category": "일반",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1840,
+  "cost_usd": 0.0007003,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "hedge": true,
+   "no_cite": true
+  },
+  "answer_chars": 144,
+  "output": {
+   "level": "일반",
+   "type": "answer",
+   "answer": "일반적으로는 아기가 깨어 있고 기분이 좋을 때 하루에 여러 번, 총 15~30분 정도로 시작해 점차 늘려가는 것을 권장해요. 아기가 힘들어하면 무리하지 말고 바로 멈춰주세요. 정확한 터미타임 기준이나 아기 발달이 걱정되신다면 검진이나 진료 때 확인해 보세요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q15",
+  "category": "일반",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1703,
+  "cost_usd": 0.0006902999999999999,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "hedge": true,
+   "no_cite": true
+  },
+  "answer_chars": 155,
+  "output": {
+   "level": "일반",
+   "type": "answer",
+   "answer": "일반적으로는 생후 6개월 이전의 아기에게는 선크림을 바르지 않는 것이 좋아요. 아기의 연약한 피부에 자극이 될 수 있기 때문입니다. 외출할 때는 챙이 넓은 모자와 얇은 긴소매 옷으로 햇빛을 가려 주는 것이 좋습니다. 정확한 피부 관리 방법은 소아청소년과 진료 때 확인해 보세요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q16",
+  "category": "일반",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1533,
+  "cost_usd": 0.0006540999999999999,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "hedge": true,
+   "no_cite": true
+  },
+  "answer_chars": 137,
+  "output": {
+   "level": "일반",
+   "type": "answer",
+   "answer": "일반적으로는 돌 이후부터 서서히 끊기 시작해 2~4세 사이에 떼는 경우가 많습니다. 아기가 쪽쪽이에 너무 의존하지 않도록 낮에는 놀이로 관심을 돌려보는 것도 방법입니다. 정확한 시기나 방법은 아이 성향에 따라 다르니 정기 검진 때 상담해 보세요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q17",
+  "category": "일반",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1534,
+  "cost_usd": 0.0007235,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "hedge": true,
+   "no_cite": true
+  },
+  "answer_chars": 155,
+  "output": {
+   "level": "일반",
+   "type": "answer",
+   "answer": "일반적으로는 실내 온도를 22~24도, 습도는 50~60 정도로 맞추면 아기가 지내기 편안해해요. 다만 이는 일반적인 권장 기준이므로, 아기의 상태나 집에 맞게 조절해 주세요. 정확한 실내 환경 기준이 궁금하시다면 정기 검진이나 진료 때 의료진에게 확인해 보시는 것을 권장해요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q18",
+  "category": "일반",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1480,
+  "cost_usd": 0.0006847,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "hedge": true,
+   "no_cite": true
+  },
+  "answer_chars": 156,
+  "output": {
+   "level": "일반",
+   "type": "answer",
+   "answer": "일반적으로는 0~2세 영유아에게 미디어와 동영상 노출을 가능한 한 피하는 것이 좋습니다. 뇌가 급격히 발달하는 시기이기 때문에 과도한 미디어 노출은 언어 발달이나 사회성에 영향을 줄 수 있기 때문입니다. 정확한 미디어 시청 기준이 궁금하시다면 소아청소년과 진료 시 상담해 보세요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q19",
+  "category": "일반",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1705,
+  "cost_usd": 0.0007255999999999999,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "hedge": true,
+   "no_cite": true
+  },
+  "answer_chars": 160,
+  "output": {
+   "level": "일반",
+   "type": "answer",
+   "answer": "일반적으로는 아기가 태어난 직후부터 부모가 책을 읽어 주어도 좋습니다. 생후 7개월인 지금은 그림이 크고 색감이 선명한 천 책이나 튼튼한 보드북을 보여 주며 다정하게 목소리를 들려주시면 좋습니다. 아기가 책을 장난감처럼 만지고 입에 넣어도 자연스러운 탐색 과정이니 편하게 지켜봐 주세요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q20",
+  "category": "판단",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 49250,
+  "cost_usd": 0.0006787000000000001,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "refer": true,
+   "no_assert": false
+  },
+  "answer_chars": 159,
+  "output": {
+   "level": "판단",
+   "type": "answer",
+   "answer": "아기가 아직 뒤집기를 하지 못해 걱정되시겠어요. 아기들의 발달 속도는 다양하므로 조급해하지 마시고 아기가 바닥에 누워 있는 동안 스스로 움직일 수 있는 시간을 자주 만들어 주세요. 평소와 달리 힘들어하거나 다른 발달 사항에도 지연이 보인다면 소아청소년과 진료를 받아보시는 것이 좋아요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": false
+ },
+ {
+  "qid": "q21",
+  "category": "판단",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1796,
+  "cost_usd": 0.0006332,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "refer": true,
+   "no_assert": true
+  },
+  "answer_chars": 106,
+  "output": {
+   "level": "판단",
+   "type": "answer",
+   "answer": "아기가 지난주 측정했을 때 몸무게가 6.4kg이었군요. 아기가 잘 먹고 잘 노는지, 체중이 꾸준히 늘고 있는지 살펴보셔야 합니다. 걱정되신다면 소아청소년과에 방문해 의사의 진료를 받아보세요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q22",
+  "category": "판단",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1700,
+  "cost_usd": 0.0006772000000000001,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "refer": true,
+   "no_assert": true
+  },
+  "answer_chars": 136,
+  "output": {
+   "level": "판단",
+   "type": "answer",
+   "answer": "아기가 기침할 때는 호흡 곤란이 있는지, 숨 쉴 때 쌕쌕 소리가 나는지, 열이 동반되는지 등을 잘 살펴보셔야 합니다. 기침이 심해지거나 먹는 양이 줄고 처진다면 소아청소년과 진료를 받아보시는 것이 좋습니다. 아기의 상태를 세심히 관찰해 주세요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q23",
+  "category": "판단",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1922,
+  "cost_usd": 0.0006440999999999999,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "refer": true,
+   "no_assert": true
+  },
+  "answer_chars": 119,
+  "output": {
+   "level": "판단",
+   "type": "answer",
+   "answer": "아기의 눈곱이 자주 껴서 걱정되시겠어요. 눈곱이 끼는 원인은 눈물샘 마름이나 결막염 등 다양할 수 있습니다. 아기의 눈 상태와 충혈 여부를 잘 살펴봐 주세요. 정확한 원인 확인을 위해 소아청소년과 진료를 권합니다.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q24",
+  "category": "판단",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1297,
+  "cost_usd": 0.0006172,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "refer": true,
+   "no_assert": true
+  },
+  "answer_chars": 106,
+  "output": {
+   "level": "판단",
+   "type": "answer",
+   "answer": "아기가 먹고 자주 게워낼 때 아이가 잘 놀고 체중이 잘 늘고 있는지 살펴보세요. 통증을 호소하거나 분수를 뿜어내듯 토하는 등 이상 증세가 있다면 소아청소년과 진료를 받아보시는 것이 좋습니다.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q25",
+  "category": "판단",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1534,
+  "cost_usd": 0.000675,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "level": true,
+   "refer": true,
+   "no_assert": true
+  },
+  "answer_chars": 145,
+  "output": {
+   "level": "판단",
+   "type": "answer",
+   "answer": "머리 모양이 한쪽으로 납작해 보여 걱정이 많으실 텐데요, 아기의 머리 형태는 누워 있는 방향이나 자세의 영향을 받을 수 있습니다. 엎드려 놀기 시간을 늘려주고 양쪽을 번갈아 보게 해주세요. 정확한 상태 확인이 필요하므로 소아청소년과 진료를 받아보시길 권합니다.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q26",
+  "category": "되묻기",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1196,
+  "cost_usd": 0.0006087999999999999,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "followup_count": true,
+   "chips": true,
+   "followup_label": true
+  },
+  "answer_chars": 0,
+  "output": {
+   "level": "일반",
+   "type": "followup",
+   "answer": "",
+   "citedIds": [],
+   "followup": {
+    "question": "평소 수유 텀과 양이 어떻게 되나요?",
+    "chips": [
+     "3시간마다 150ml",
+     "4시간마다 180ml",
+     "잘 모르겠어요"
+    ],
+    "recordLabel": "수유 텀과 양"
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q27",
+  "category": "되묻기",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1569,
+  "cost_usd": 0.0006675,
+  "checks": {
+   "type": true,
+   "cite_valid": true
+  },
+  "answer_chars": 130,
+  "output": {
+   "level": "일반",
+   "type": "answer",
+   "answer": "일반적으로는 아기가 아프거나 치아가 나려 할 때, 또는 성장급등기를 겪으면서 수유를 거부할 수 있어요. 평소보다 젖병을 거부하는지, 열이 나거나 보채지는 않는지 살펴보세요. 증상이 계속되면 소아청소년과 진료를 받아보시는 것이 좋아요.",
+   "citedIds": [],
+   "followup": {
+    "question": "",
+    "chips": [],
+    "recordLabel": ""
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q28",
+  "category": "되묻기",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1377,
+  "cost_usd": 0.0006879,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "followup_count": true,
+   "chips": true,
+   "followup_label": true
+  },
+  "answer_chars": 0,
+  "output": {
+   "level": "일반",
+   "type": "followup",
+   "answer": "",
+   "citedIds": [],
+   "followup": {
+    "question": "밤중 수유는 몇 번 정도 하고 있으며, 어떻게 재우고 계시나요?",
+    "chips": [
+     "밤중 수유 1~2회, 안아서 재움",
+     "밤중 수유 3회 이상, 젖 물려 재움",
+     "밤중 수유 없음, 눕혀서 재움",
+     "잘 모르겠어요"
+    ],
+    "recordLabel": "수면 패턴"
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q29",
+  "category": "되묻기",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 2027,
+  "cost_usd": 0.0006600999999999999,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "followup_count": true,
+   "chips": true,
+   "followup_label": true
+  },
+  "answer_chars": 0,
+  "output": {
+   "level": "판단",
+   "type": "followup",
+   "answer": "",
+   "citedIds": [],
+   "followup": {
+    "question": "지금 잰 체온이 몇 도인가요? 아기가 예방접종을 맞은 직후인가요?",
+    "chips": [
+     "37.5도 미만",
+     "37.5~38.4도",
+     "38.5도 이상",
+     "잘 모르겠어요"
+    ],
+    "recordLabel": "체온"
+   },
+   "records": []
+  },
+  "rule_pass": true
+ },
+ {
+  "qid": "q30",
+  "category": "되묻기",
+  "provider": "gemini",
+  "model": "gemini-3.5-flash-lite",
+  "served_by": "gemini-3.5-flash-lite",
+  "ok": true,
+  "error": null,
+  "latency_ms": 1569,
+  "cost_usd": 0.0006075,
+  "checks": {
+   "type": true,
+   "cite_valid": true,
+   "followup_count": true,
+   "chips": true,
+   "followup_label": true
+  },
+  "answer_chars": 0,
+  "output": {
+   "level": "판단",
+   "type": "followup",
+   "answer": "",
+   "citedIds": [],
+   "followup": {
+    "question": "최근 측정한 아기의 몸무게와 측정일이 언제인가요?",
+    "chips": [
+     "최근 일주일 이내",
+     "한 달 이내",
+     "잘 모르겠어요"
+    ],
+    "recordLabel": "최근 몸무게 측정일"
+   },
+   "records": []
+  },
+  "rule_pass": true
+ }
+]
