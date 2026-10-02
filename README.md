@@ -9,19 +9,19 @@
   물어보기 답변은 아직 예시 고정값이다 — 앱은 서버를 부르지 않는다
 - **지식(L1)**: 승인된 73건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호(미국 CDC).
   남은 일은 출처 1곳 라이선스 확인과 국내 출처 보강([common/001](docs/task/common/001-l1-knowledge-build.md))
-- **서버**: `POST /v1/ask` 가 로컬에서 실제로 답한다 — 위험 신호 규칙 필터 → L1 검색 → Gemini 3.5 Flash-Lite →
-  답 검사([common/004](docs/task/common/004-real-answer.md)). Cloud Run 에 배포된 판은 아직 목업이다
-  (배포는 gcloud 로그인이 필요해 Julian 과 함께). 지금 키는 무료 티어라 아기 기록은 모델로 보내지 않는다
+- **서버**: Cloud Run 에서 `POST /v1/ask` 가 실제로 답한다 — 위험 신호 규칙 필터 → L1 검색 → Gemini 3.5 Flash-Lite →
+  답 검사([common/004](docs/task/common/004-real-answer.md)). Gemini 키는 Secret Manager 에 있다.
+  지금 키는 무료 티어라 아기 기록은 모델로 보내지 않는다
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
 ## 다음 시작점
 
-1. **배포** — 이 판을 Cloud Run 에 올린다. gcloud 로그인(Julian 개인 구글 계정)이 필요하다.
-   모델은 환경변수 `MALKONG_LLM_PROVIDER=gemini`, `MALKONG_LLM_MODEL=gemini-3.5-flash-lite` 로, 키는 Secret Manager 로
-2. **`ask/002`** — 앱 물어보기 화면을 예시 고정값에서 실제 서버 호출로 바꾼다. 응답의 `level` 과 빈 `sources`
+1. **`ask/002`** — 앱 물어보기 화면을 예시 고정값에서 실제 서버 호출로 바꾼다. 응답의 `level` 과 빈 `sources`
    ("공공 지식 근거 없음 · 일반 정보" 표시)를 화면에 반영한다
-3. **`common/005`** — 디바이스 키 발급·일일 한도·Neon·같은 clientMessageId 재시도. Neon 계정은 Julian 이 만든다.
+2. **`common/005`** — 디바이스 키 발급·일일 한도·Neon·같은 clientMessageId 재시도. Neon 계정은 Julian 이 만든다.
    디바이스 키 발급 API 는 [api-contract](docs/architecture/api-contract.md)에 먼저 적어야 한다
+3. **답변 완성도** — 앱 화면이 다 된 뒤에 한다. 위험 신호 다듬기와 Julian 승인([common/004](docs/task/common/004-real-answer.md)
+   「알려진 문제」). 그 전까지 Gemini 무료 할당량은 Julian 이 결과물을 판단하는 데 쓴다
 4. **실사용 전** — Gemini 를 유료 티어로 바꾸고 지출 한도 예산을 건다(그때 `MALKONG_LLM_PAID_TIER=true`)
 
 ## 다른 PC 에서 시작하기

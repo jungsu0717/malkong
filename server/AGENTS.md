@@ -50,14 +50,30 @@ backend 를 먼저 고치고 아래 명령을 맞춘다. 이미지는 Cloud Buil
 # 처음 한 번 — 프로젝트를 고르고, 필요한 API 를 켜고, 빌드용 기본 서비스 계정에 빌드 권한을 준다
 # (권한이 없으면 배포가 PERMISSION_DENIED 로 멈춘다)
 gcloud config set project malkong
-gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com \
+  secretmanager.googleapis.com
 gcloud projects add-iam-policy-binding malkong --condition=None \
   --member="serviceAccount:481623022922-compute@developer.gserviceaccount.com" --role="roles/run.builder"
 
-# 배포 (server/ 에서)
+# 처음 한 번 — Gemini 키를 Secret Manager 에 넣고(키 값은 화면에 나오지 않는다), 서버가 읽게 한다.
+# 키 넣기는 Julian 이 직접 한다. 키를 바꿀 때는 create 대신 `gcloud secrets versions add` 로 같은 파이프를 쓴다
+grep '^MALKONG_GEMINI_API_KEY=' .env | cut -d= -f2- | tr -d '\n' | \
+  gcloud secrets create malkong-gemini-key --replication-policy=automatic --data-file=-
+gcloud secrets add-iam-policy-binding malkong-gemini-key --condition=None \
+  --member="serviceAccount:481623022922-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+
+# 배포 (server/ 에서) — 모델은 환경변수로, 키는 Secret Manager 에서
 gcloud run deploy malkong-server --source . --region asia-northeast3 \
-  --allow-unauthenticated --min-instances 0 --max-instances 2
+  --allow-unauthenticated --min-instances 0 --max-instances 2 \
+  --set-env-vars MALKONG_LLM_PROVIDER=gemini,MALKONG_LLM_MODEL=gemini-3.5-flash-lite \
+  --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest
 ```
+
+- gcloud 는 Homebrew 로 깐다(`brew install --cask gcloud-cli` — 소스 컴파일 없이 Google 공식 파일을 받는다).
+  로그인은 Julian 개인 구글 계정으로 `gcloud auth login`
+- 배포 뒤 확인은 Gemini 무료 할당량을 아끼려고 `/health` · 위험 신호 질문 하나(모델을 부르지 않는다) ·
+  사실 질문 하나만 한다
 
 ## 구조
 
@@ -83,6 +99,8 @@ app/
 scripts/               손으로 돌리는 도구(sync_l1). 서버 이미지에는 들어가지 않는다
 tests/
 eval/                  모델 비교 장치 — 질문 세트, 실행, 채점, 결과. 서버 이미지에는 들어가지 않는다
+  redflag_phrases.json 위험 신호 검증 문장 표(task common/004). expect 는 잡을 k-warn id · "없음" ·
+                       "아님:<id>"(그 id 는 나오면 안 됨) · "되도록:<id>". 실제 모델로 재면 무료 할당량을 쓴다
 ```
 
 도메인 이름은 api-contract 경로의 첫 토막을 쓴다 — `ask`, `knowledge`, `entitlements`, `reward`,
