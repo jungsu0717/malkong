@@ -43,13 +43,21 @@ const startOf = (item: L1Item) => item.months[0];
 const endOf = (item: L1Item) => item.months[item.months.length - 1];
 
 /**
+ * 타임라인 표준 트랙에 오르는 분류 — 그 달에 생기는 일정만. 수유·수면·생활·안전·대응은 월령 내내
+ * 쓰는 상시 지식이라(대부분 0개월에 시작한다) 컬럼에 올리면 0개월이 수십 줄이 된다. 답변 근거와
+ * 홈의 팁으로 쓴다.
+ */
+const TIMELINE_KINDS: L1Item['kind'][] = ['접종', '검진', '발달'];
+
+/**
  * 기록이 놓일 월 — 완료 처리한 항목이 시작하는 월. 2개월 접종을 5개월에 알려도 2개월 컬럼에 놓여야
- * 표준과 나란히 보인다. 닫는 항목이 없으면 기록한 날의 월령이다.
+ * 표준과 나란히 보인다. 트랙에 오르지 않는 항목(생활 팁 등)만 닫는 기록이나 닫는 항목이 없는 기록은
+ * 기록한 날의 월령에 놓는다 — 짝이 되는 표준 줄 없이 엉뚱한 달에 기록만 보이지 않게.
  */
 function recordMonth(record: L2Item, birthDate: string): number {
   const starts = record.covers.flatMap((id) => {
     const item = itemById(id);
-    return item ? [startOf(item)] : [];
+    return item && TIMELINE_KINDS.includes(item.kind) ? [startOf(item)] : [];
   });
   return starts.length > 0
     ? Math.min(...starts)
@@ -61,7 +69,7 @@ export function buildTimeline(records: L2Item[], birthDate: string): MonthData[]
   return Array.from({ length: LAST_MONTH + 1 }, (_, month) => ({
     month,
     headline: HEADLINES[month],
-    l1: allItems().filter((item) => startOf(item) === month),
+    l1: allItems().filter((item) => TIMELINE_KINDS.includes(item.kind) && startOf(item) === month),
     l2: records.filter((r) => recordMonth(r, birthDate) === month),
   }));
 }

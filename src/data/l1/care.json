@@ -1,1 +1,572 @@
-[]
+[
+  {
+    "id": "k-feed-0001",
+    "months": [0, 1],
+    "kind": "수유",
+    "title": "모유 수유 — 하루 8~12번, 처음엔 1~3시간마다도",
+    "body": "처음 며칠에는 1~3시간마다 먹고 싶어 할 수 있어요. 모유만 먹는 아기는 보통 2~4시간마다, 하루 8~12번 먹어요. 한 시간마다 먹는 때(몰아 먹기)도 있고, 4~5시간 길게 자는 때도 있어요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/breastfeeding/how-much-and-how-often.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0002",
+    "months": [0, 1],
+    "kind": "수유",
+    "title": "분유 — 첫날은 1~2온스(약 30~60mL)를 2~3시간마다",
+    "body": "태어나서 처음 며칠은 2~3시간마다 1~2온스(약 30~60mL)로 시작해요. 분유를 먹는 신생아는 대개 하루 8~12번 먹어요. 그 뒤 몇 주에서 몇 달 동안은 보통 3~4시간마다 먹어요. 한 번에 먹는 양은 아기마다 달라서 의료진과 상의해요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/formula-feeding/how-much-and-how-often.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0003",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "수유",
+    "title": "비타민 D 보충 — 모유만 먹거나 분유가 하루 32온스(약 950mL) 미만이면",
+    "body": "모유만 먹는 아기, 또는 분유를 하루 32온스(약 950mL)보다 적게 먹는 아기는 태어난 직후부터 비타민 D 를 따로 보충해 줘야 해요. 약국에서 파는 비타민 D 드롭으로 보충할 수 있고, 궁금한 점은 의료진과 상의하세요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/breastfeeding/how-much-and-how-often.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0004",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "수유",
+    "title": "꿀·우유·주스는 12개월 전에 주지 않아요",
+    "body": "꿀은 보툴리누스증이라는 심한 식중독을 일으킬 수 있어 12개월 전에는 주지 않아요. 일반 우유(소젖)는 12개월 전에 주면 장출혈 위험이 있고, 아기 콩팥이 감당하기에 단백질과 무기질이 너무 많아요. 과일·채소 주스도 12개월 전에는 주지 않아요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/foods-and-drinks-to-avoid-or-limit.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0005",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "수유",
+    "title": "젖병에 쌀가루·이유식을 섞지 않아요",
+    "body": "젖병에 쌀가루(시리얼)나 다른 이유식을 넣어 준다고 아기가 더 오래 자지 않아요. 오히려 질식 위험이 커질 수 있어요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/faqs/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-life-0001",
+    "months": [0, 1, 2, 3, 4, 5],
+    "kind": "생활",
+    "title": "깨어 있을 때 터미타임 — 지켜보는 가운데 엎드려 놀기",
+    "body": "아기가 깨어 있을 때 보호자가 지켜보는 가운데 엎드려 놀게 해요(터미타임). 눈높이에 장난감을 두면 고개 드는 연습이 돼요.",
+    "source": {
+      "name": "미국 CDC 발달 이정표",
+      "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-life-0002",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "생활",
+    "title": "말 걸고, 읽어 주고, 노래해 주기",
+    "body": "아기가 소리를 내면 신나게 웃으며 말로 답해 줘요. 말을 걸고 책을 읽어 주고 노래해 주면 말을 배우고 알아듣는 바탕이 돼요. 안아 주고 품어 주는 시간은 아기가 안전하다고 느끼게 해요.",
+    "source": {
+      "name": "미국 CDC 발달 이정표",
+      "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-safe-0001",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "안전",
+    "title": "아기를 절대 흔들지 않아요",
+    "body": "아기 목 근육은 아직 약해서 머리를 받치지 못해요. 어떤 경우에도 아기를 흔들면 안 돼요.",
+    "source": {
+      "name": "미국 CDC 양육 팁 (영아)",
+      "url": "https://www.cdc.gov/child-development/positive-parenting-tips/infants.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-safe-0002",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "안전",
+    "title": "카시트는 뒷좌석에 뒤보기로, 가능한 한 오래",
+    "body": "카시트의 최대 몸무게·키 한도에 이를 때까지 뒤를 보는(후방) 카시트에 하네스로 앉혀요. 뒤보기는 가능한 한 오래 유지해요. 뒤보기 카시트를 앞좌석에 두면 절대 안 돼요 — 조수석 에어백이 사고 때 아이를 크게 다치게 할 수 있어요. 설치한 카시트는 벨트가 지나는 자리에서 앞뒤·좌우로 1인치(약 2.5cm) 넘게 움직이지 않아야 해요.",
+    "source": {
+      "name": "미국 CDC 어린이 탑승 안전",
+      "url": "https://www.cdc.gov/child-passenger-safety/prevention/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-safe-0003",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "안전",
+    "title": "삼킬 수 있는 작은 것, 얼굴을 덮을 수 있는 것은 치워요",
+    "body": "삼킬 수 있을 만큼 작은 장난감이나 물건은 아기가 갖고 놀지 않게 하고, 얼굴을 덮을 수 있는 것도 갖고 놀게 하지 않아요. 음식은 작은 한입 크기로 잘라 질식을 막아요.",
+    "source": {
+      "name": "미국 CDC 양육 팁 (영아)",
+      "url": "https://www.cdc.gov/child-development/positive-parenting-tips/infants.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-safe-0004",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "안전",
+    "title": "아기를 안고 뜨거운 것을 들지 않아요",
+    "body": "뜨거운 음료나 음식을 아기 가까이에서 들고 다니거나, 아기를 안은 채로 들지 않아요.",
+    "source": {
+      "name": "미국 CDC 양육 팁 (영아)",
+      "url": "https://www.cdc.gov/child-development/positive-parenting-tips/infants.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-safe-0005",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "안전",
+    "title": "물 근처에선 눈을 떼지 않아요 — 욕조도",
+    "body": "욕조를 포함해 아이가 물속이나 물 근처에 있을 때는 책임지는 어른이 가까이에서 끊임없이 지켜봐요. 익수는 몇 초 만에 일어나고, 소리가 나지 않는 경우가 많아요.",
+    "source": {
+      "name": "미국 CDC 익수 예방",
+      "url": "https://www.cdc.gov/drowning/prevention/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-safe-0006",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "안전",
+    "title": "아기 주변에서 담배를 피우지 않아요",
+    "body": "임신 중에는 흡연과 니코틴을 하지 않고, 아기 주변에서는 담배를 피우거나 피우게 두지 않아요. 안전한 잠 수칙의 하나이기도 해요.",
+    "source": {
+      "name": "미국 CDC 안전한 잠",
+      "url": "https://www.cdc.gov/sudden-infant-death/sleep-safely/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-sleep-0001",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "수면",
+    "title": "잘 때는 언제나 등을 대고 눕혀요",
+    "body": "낮잠이든 밤잠이든 모든 잠은 아기를 등을 대고 눕혀 재워요. 영아돌연사증후군(SIDS) 같은 수면 관련 영아 사망 위험을 줄이는 기본이에요.",
+    "source": {
+      "name": "미국 CDC 안전한 잠",
+      "url": "https://www.cdc.gov/sudden-infant-death/sleep-safely/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-sleep-0002",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "수면",
+    "title": "단단하고 평평한 바닥에, 잠자리는 비워 두고",
+    "body": "안전 인증을 받은 아기 침대 매트리스에 꼭 맞는 시트만 깐 것처럼, 단단하고 평평한(기울지 않은) 바닥에서 재워요. 이불, 베개, 범퍼 가드, 푹신한 인형은 아기 잠자리에 두지 않아요.",
+    "source": {
+      "name": "미국 CDC 안전한 잠",
+      "url": "https://www.cdc.gov/sudden-infant-death/sleep-safely/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-sleep-0003",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "수면",
+    "title": "같은 방, 아기만의 잠자리 — 적어도 6개월까지",
+    "body": "아기 침대나 바구니 침대 같은 아기만의 잠자리를 부모가 자는 방에 둬요. 적어도 생후 6개월까지는 같은 방에서 재우는 게 좋아요.",
+    "source": {
+      "name": "미국 CDC 안전한 잠",
+      "url": "https://www.cdc.gov/sudden-infant-death/sleep-safely/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-sleep-0004",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "수면",
+    "title": "머리를 덮지 않고, 너무 덥지 않게",
+    "body": "아기 머리를 덮지 말고, 너무 덥게 하지 않아요. 땀을 흘리거나 가슴이 뜨겁게 느껴지면 더운 신호예요.",
+    "source": {
+      "name": "미국 CDC 안전한 잠",
+      "url": "https://www.cdc.gov/sudden-infant-death/sleep-safely/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-sleep-0005",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+    "kind": "수면",
+    "title": "낮잠·밤잠 때 쪽쪽이를 물려 줘도 좋아요",
+    "body": "낮잠과 밤잠 때 쪽쪽이를 물려 줄 수 있어요. 모유 수유 중이라면 수유가 자리 잡은 뒤에 시작하는 게 좋아요.",
+    "source": {
+      "name": "미국 CDC 안전한 잠",
+      "url": "https://www.cdc.gov/sudden-infant-death/sleep-safely/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-warn-0001",
+    "months": [0, 1, 2],
+    "kind": "대응",
+    "title": "3개월 미만 아기의 열 — 38°C 이상이면 바로 의료진에게 연락",
+    "body": "생후 3개월이 안 된 아기가 38°C(100.4°F) 이상 열이 나면 바로 의료진에게 연락해요.",
+    "source": {
+      "name": "미국 CDC 요로감염 안내",
+      "url": "https://www.cdc.gov/uti/about/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "표준",
+    "red_flag": true,
+    "status": "approved"
+  },
+  {
+    "id": "k-warn-0002",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "대응",
+    "title": "40°C 넘는 열이 해열제로도 안 떨어질 때",
+    "body": "40°C(104°F)를 넘는 열이 해열제를 써도 떨어지지 않으면 바로 진료를 받아야 하는 응급 경고 신호예요. 열이나 기침이 나아지다가 다시 돌아오거나 심해지는 것, 생후 12주 미만 아기의 모든 열도 같은 경고 신호예요. 독감 같은 감염병의 응급 경고 신호 목록에 있는 항목이에요.",
+    "source": {
+      "name": "미국 CDC 독감 증상·응급 경고 신호",
+      "url": "https://www.cdc.gov/flu/signs-symptoms/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "표준",
+    "red_flag": true,
+    "status": "approved"
+  },
+  {
+    "id": "k-warn-0003",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "대응",
+    "title": "숨쉬기 힘들어하거나 입술·얼굴이 파래질 때",
+    "body": "숨이 빠르거나 숨쉬기 힘들어하거나, 숨 쉴 때마다 갈비뼈 사이가 움푹 들어가거나, 입술이나 얼굴이 파랗게 변하면 — 하나라도 보이면 바로 진료를 받아야 하는 응급 경고 신호예요. 독감 같은 감염병의 응급 경고 신호 목록에 있는 항목이에요.",
+    "source": {
+      "name": "미국 CDC 독감 증상·응급 경고 신호",
+      "url": "https://www.cdc.gov/flu/signs-symptoms/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "표준",
+    "red_flag": true,
+    "status": "approved"
+  },
+  {
+    "id": "k-warn-0004",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "대응",
+    "title": "경련(발작)",
+    "body": "경련(발작)이 있으면 바로 진료를 받아야 하는 응급 경고 신호예요. 독감 같은 감염병의 응급 경고 신호 목록에 있는 항목이에요.",
+    "source": {
+      "name": "미국 CDC 독감 증상·응급 경고 신호",
+      "url": "https://www.cdc.gov/flu/signs-symptoms/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "표준",
+    "red_flag": true,
+    "status": "approved"
+  },
+  {
+    "id": "k-warn-0005",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "대응",
+    "title": "깨어 있는데 반응이 없을 때",
+    "body": "깨어 있는데도 멍하니 반응이 없거나 상호작용을 하지 않으면 바로 진료를 받아야 하는 응급 경고 신호예요. 독감 같은 감염병의 응급 경고 신호 목록에 있는 항목이에요.",
+    "source": {
+      "name": "미국 CDC 독감 증상·응급 경고 신호",
+      "url": "https://www.cdc.gov/flu/signs-symptoms/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "표준",
+    "red_flag": true,
+    "status": "approved"
+  },
+  {
+    "id": "k-warn-0006",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "대응",
+    "title": "탈수 신호 — 8시간 소변 없음 · 입 마름 · 울어도 눈물 없음",
+    "body": "8시간 동안 소변을 보지 않거나, 입이 마르거나, 울어도 눈물이 나지 않으면 탈수 신호예요. 바로 진료를 받아야 하는 응급 경고 신호예요. 독감 같은 감염병의 응급 경고 신호 목록에 있는 항목이에요.",
+    "source": {
+      "name": "미국 CDC 독감 증상·응급 경고 신호",
+      "url": "https://www.cdc.gov/flu/signs-symptoms/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "표준",
+    "red_flag": true,
+    "status": "approved"
+  },
+  {
+    "id": "k-warn-0007",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "대응",
+    "title": "머리를 부딪히거나 떨어진 뒤 — 이런 징후면 바로 응급실",
+    "body": "머리를 부딪히거나 떨어진 뒤에 달래지지 않고 계속 울거나, 젖이나 음식을 먹지 않거나, 반복해서 토하거나, 의식을 잃거나 점점 처져서 깨우기 어렵거나 깨어 있지 못하거나, 평소와 달리 안절부절못하고 보채거나, 한쪽 눈동자가 다른 쪽보다 크거나, 경련을 하면 119 를 부르거나 바로 응급실로 가요.",
+    "source": {
+      "name": "미국 CDC HEADS UP 뇌진탕 위험 징후",
+      "url": "https://www.cdc.gov/heads-up/signs-symptoms/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "표준",
+    "red_flag": true,
+    "status": "approved"
+  },
+  {
+    "id": "k-warn-0008",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "대응",
+    "title": "구토·설사가 2일 넘게, 피 섞인 변, 38.9°C 넘는 열",
+    "body": "설사나 구토가 2일 넘게 이어지거나, 변이나 소변에 피가 섞이거나, 열이 102°F(약 38.9°C)를 넘거나, 탈수 신호(소변이 거의 없거나 아주 진함, 심한 갈증, 입과 목이 마름, 울어도 눈물이 없음)가 보이면 진료를 받아요. 어린아이는 탈수가 빨리 와요. 소변이 거의 없고, 뺨과 아래 눈꺼풀 안쪽의 분홍빛이 사라지고, 이유 없는 멍이나 작은 붉은 점 발진이 생기고, 소변에 피가 섞이고, 몹시 처지거나 보채고, 반응이 떨어지면 용혈성요독증후군(HUS)일 수 있어 응급 상황이에요. 대장균 감염 안내의 기준이에요.",
+    "source": {
+      "name": "미국 CDC 대장균 감염 안내",
+      "url": "https://www.cdc.gov/ecoli/signs-symptoms/index.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "표준",
+    "red_flag": true,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0401",
+    "months": [4, 5, 6],
+    "kind": "수유",
+    "title": "이유식 시작은 6개월 무렵 — 4개월 전에는 안 돼요",
+    "body": "모유·분유 외의 음식은 생후 6개월 무렵에 시작하는 걸 권해요. 4개월이 되기 전에 시작하는 건 권하지 않아요. 시작하기 전에 아기가 준비됐는지 신호를 확인해요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/when-what-and-how-to-introduce-solid-foods.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0402",
+    "months": [4, 5, 6],
+    "kind": "수유",
+    "title": "이유식 준비 신호 — 앉기·머리 가누기·음식에 입 벌리기",
+    "body": "혼자 또는 받쳐 주면 앉고, 머리와 목을 가누고, 음식을 주면 입을 벌리고, 음식을 턱으로 밀어내지 않고 삼키고, 물건을 입으로 가져가고, 장난감이나 음식 같은 작은 것을 잡으려 하고, 음식을 혀 앞에서 뒤로 옮겨 삼킬 수 있으면 이유식을 시작할 준비가 된 거예요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/when-what-and-how-to-introduce-solid-foods.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-sleep-0401",
+    "months": [4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "kind": "수면",
+    "title": "4~12개월엔 낮잠 포함 하루 12~16시간 잠",
+    "body": "4~12개월 아기는 낮잠을 포함해 하루 12~16시간 자야 해요.",
+    "source": {
+      "name": "미국 CDC 발달 이정표",
+      "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0601",
+    "months": [6, 7, 8],
+    "kind": "수유",
+    "title": "새 음식은 한 번에 한 가지, 다음 음식까지 3~5일",
+    "body": "처음에는 재료가 하나뿐인 음식을 한 번에 한 가지씩 줘요. 새 음식을 더할 때는 3~5일 간격을 둬요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/when-what-and-how-to-introduce-solid-foods.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0602",
+    "months": [6, 7, 8, 9, 10, 11],
+    "kind": "수유",
+    "title": "달걀·땅콩·밀·조개류도 다른 음식과 함께 시작할 수 있어요",
+    "body": "달걀, 조개류, 견과류 버터(땅콩 포함), 밀처럼 알레르기를 일으킬 수 있는 식품도 다른 음식과 함께 시작할 수 있어요. 다만 아기가 심한 아토피 피부염이 있거나 달걀 알레르기가 있으면, 땅콩이 든 음식을 언제 어떻게 안전하게 시작할지 의료진과 먼저 상의하세요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/when-what-and-how-to-introduce-solid-foods.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0603",
+    "months": [6, 7, 8, 9, 10, 11],
+    "kind": "수유",
+    "title": "질감은 아주 곱게 으깬 것부터, 점점 덩어리지게",
+    "body": "처음에는 으깨거나 갈거나 체에 거른, 아주 부드러운 음식으로 시작해요. 아기가 먹는 능력이 자라는 데 맞춰 점점 더 되직하고 덩어리진 음식으로 옮겨 가요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/when-what-and-how-to-introduce-solid-foods.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0604",
+    "months": [6, 7, 8, 9, 10, 11],
+    "kind": "수유",
+    "title": "6~12개월엔 분유나 이유식을 하루 5~6번 정도",
+    "body": "분유를 먹는 6~12개월 아기는 대개 하루에 5~6번 분유나 이유식을 먹어요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/formula-feeding/how-much-and-how-often.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0605",
+    "months": [6, 7, 8, 9, 10, 11],
+    "kind": "수유",
+    "title": "6~12개월 — 다양한 채소·과일·단백질, 물은 하루 4~8온스(약 120~240mL)",
+    "body": "6~12개월에는 모유나 분유를 계속 주면서, 채소·과일·단백질(고기·생선·달걀·두부 등)·설탕 없는 유제품·건강한 지방·통곡물을 작은 한입 크기로 잘라 골고루 줘요. 물은 하루 4~8온스(약 120~240mL) 줄 수 있어요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/foods-and-drinks-to-encourage.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0606",
+    "months": [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "수유",
+    "title": "질식 위험 음식은 모양을 바꿔서 — 소시지는 동그랗게 말고, 포도는 잘라서",
+    "body": "핫도그·소시지는 동그란 토막으로 주지 않아요. 포도, 체리, 베리, 방울토마토는 작게 잘라서 줘요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/when-what-and-how-to-introduce-solid-foods.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-feed-0607",
+    "months": [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "수유",
+    "title": "첨가당·짠 음식·살균 안 된 식품·카페인은 피해요",
+    "body": "24개월 전에는 설탕을 더한 음식과 음료를 주지 않아요. 가공육, 통조림, 냉동식품, 포장된 유아 간식처럼 소금이 많은 음식도 피해요. 살균하지 않은 우유·주스·치즈는 심한 설사를 일으키는 세균 위험이 있어요. 카페인 음료는 24개월 전에는 주지 않아요. 수은이 많은 생선(상어, 황새치, 왕고등어, 눈다랑어 등)은 피해요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/foods-and-drinks/foods-and-drinks-to-avoid-or-limit.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-life-1201",
+    "months": [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "생활",
+    "title": "화면은 가족과 영상통화 정도만",
+    "body": "TV·태블릿·휴대폰 같은 화면 보는 시간은 가족과 영상통화하는 정도로만 제한해요.",
+    "source": {
+      "name": "미국 CDC 발달 이정표",
+      "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-safe-1201",
+    "months": [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "안전",
+    "title": "집 안 안전장치 — 안전하게 탐색할 곳을 만들어 줘요",
+    "body": "아기가 안전하게 돌아다니며 탐색할 곳을 마련해 주고, 집 안에 아기용 안전장치를 해요.",
+    "source": {
+      "name": "미국 CDC 발달 이정표",
+      "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+      "checked": "2026-10-02"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  }
+]

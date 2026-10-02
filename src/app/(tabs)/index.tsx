@@ -11,7 +11,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
-import { itemsForMonth } from '@/data/l1';
+import { itemsForMonth, itemsOfKind } from '@/data/l1';
 import type { BabyRecord } from '@/data/records';
 import { useRecords } from '@/data/records-context';
 import {
@@ -27,6 +27,14 @@ const RECENT_QUESTIONS = ['밤중 수유는 언제부터 줄여도 되나요?', 
 
 /** 한 번에 보여주는 「챙길 것」 수 — 빨간 표시가 한꺼번에 쏟아지면 불안만 준다 */
 const VISIBLE_TODOS = 3;
+
+/** 발달 포인트가 비었을 때 — 첫 이정표보다 어리면 그게 언제인지 알려준다 (SPEC-HOME-03 조건) */
+function emptyPointsText(currentMonth: number): string {
+  const starts = itemsOfKind('발달').map((i) => i.months[0]);
+  const first = starts.length > 0 ? Math.min(...starts) : null;
+  if (first !== null && currentMonth < first) return `첫 발달 이정표는 ${first}개월이에요`;
+  return '이 월령의 표준 지식은 아직 준비 중이에요';
+}
 
 /** 「챙길 것」 한 줄의 시점 안내. 지난 것은 놓침으로 단정하지 않고 묻는다 (SPEC-HOME-02) */
 function todoWhen({ status, month }: GapGroup, currentMonth: number): string {
@@ -72,7 +80,8 @@ export default function HomeScreen() {
     setJustSaved(null);
   };
   // 발달·생활 항목이 이번 달 발달 포인트가 된다 (접종·검진은 위의 「챙길 것」이 맡는다)
-  const points = itemsForMonth(age.month).filter((i) => i.kind === '발달' || i.kind === '생활');
+  // 이정표 요약과 조기 상담 안내 (SPEC-HOME-03). 생활 팁은 「챙길 것」의 몫이라 여기 넣지 않는다
+  const points = itemsForMonth(age.month).filter((i) => i.kind === '발달');
 
   return (
     <ThemedView style={styles.container}>
@@ -163,7 +172,7 @@ export default function HomeScreen() {
               points.map((item) => <ThemedText key={item.id}>{item.title}</ThemedText>)
             ) : (
               <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                이 월령의 표준 지식은 아직 준비 중이에요
+                {emptyPointsText(age.month)}
               </ThemedText>
             )}
             <ThemedText type="small" style={{ color: colors.accent }}>

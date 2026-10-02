@@ -15,7 +15,7 @@ import vaccination from './vaccination.json';
 export type { Confidence, KnowledgeItem, KnowledgeKind, ReviewStatus, SourceRef } from './types';
 
 /** 번들 판 번호. 항목을 고치면 올리고, 서버의 최신 판과 비교해 갱신받는다 */
-export const L1_VERSION = '2026.10.1';
+export const L1_VERSION = '2026.10.2';
 
 const BUNDLED = [...vaccination, ...checkup, ...development, ...care] as KnowledgeItem[];
 
