@@ -65,10 +65,36 @@ export default function AskScreen() {
   const { records, remove } = useRecords();
   const { messages, pendingId, failure, openFollowup, send, reply, retry } = useMalkong();
   // 다른 탭의 플로팅 버튼에서 넘어온 질문 (SPEC-ASK-07). t 는 같은 질문을 다시 보냈을 때의 구분값이다
-  const { q, t } = useLocalSearchParams<{ q?: string; t?: string }>();
+  const { q, t, focus, ft } = useLocalSearchParams<{
+    q?: string;
+    t?: string;
+    /** 홈의 최근 질문에서 넘어온 질문 말풍선 id (SPEC-HOME-04) */
+    focus?: string;
+    ft?: string;
+  }>();
   const [input, setInput] = useState('');
   const scrollRef = useRef<ScrollView>(null);
   const handledParam = useRef<string | null>(null);
+  /** 말풍선 위치 — 최근 질문에서 넘어오면 그 자리로 스크롤한다 */
+  const positions = useRef<Record<string, number>>({});
+  const focusedKey = useRef<string | null>(null);
+  /** 새 말풍선이 붙을 때 맨 끝을 따라갈지. 지난 질문 자리로 가 있는 동안은 끌어내리지 않는다 */
+  const stickToEnd = useRef(true);
+
+  const scrollToFocus = (id: string) => {
+    const key = `${focus}-${ft}`;
+    if (id !== focus || focusedKey.current === key) return;
+    const y = positions.current[id];
+    if (y === undefined) return;
+    focusedKey.current = key;
+    stickToEnd.current = false;
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - Spacing.four), animated: true });
+  };
+
+  // 이미 그려진 화면으로 넘어온 경우 — 위치를 알고 있으니 바로 간다. 처음 그려질 때는 onLayout 이 맡는다
+  useEffect(() => {
+    if (focus) scrollToFocus(focus);
+  });
 
   // 넘어온 질문은 한 번만 보낸다 — 보낸 뒤 주소에서 지워 새로 고침해도 다시 나가지 않게 한다
   useEffect(() => {
@@ -78,6 +104,7 @@ export default function AskScreen() {
     handledParam.current = key;
     router.setParams({ q: undefined, t: undefined });
     if (t && Date.now() - Number(t) > PARAM_FRESH_MS) return;
+    stickToEnd.current = true;
     void send(q);
   }, [q, t, loading, age, send]);
 
@@ -85,6 +112,7 @@ export default function AskScreen() {
 
   const submit = () => {
     if (!input.trim() || pendingId) return;
+    stickToEnd.current = true;
     void send(input);
     setInput('');
   };
@@ -99,7 +127,17 @@ export default function AskScreen() {
       lastDay = day;
     }
     if (m.role === 'user') {
-      rows.push(<UserBubble key={m.id} text={m.content} />);
+      const id = m.id;
+      rows.push(
+        <View
+          key={id}
+          onLayout={(e) => {
+            positions.current[id] = e.nativeEvent.layout.y;
+            scrollToFocus(id);
+          }}>
+          <UserBubble text={m.content} />
+        </View>,
+      );
       continue;
     }
     if (m.meta.type === 'redflag') {
@@ -115,7 +153,10 @@ export default function AskScreen() {
           key={m.id}
           message={m}
           open={m.id === openFollowup?.id && !pendingId}
-          onChip={(chip) => void reply(m, chip)}
+          onChip={(chip) => {
+            stickToEnd.current = true;
+            void reply(m, chip);
+          }}
         />
       ),
     );
@@ -145,7 +186,7 @@ export default function AskScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             onContentSizeChange={() => {
-              if (messages.length) scrollRef.current?.scrollToEnd({ animated: true });
+              if (messages.length && stickToEnd.current) scrollRef.current?.scrollToEnd({ animated: true });
             }}>
             {/* 말콩이 인사 말풍선 */}
             <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>

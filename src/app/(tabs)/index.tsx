@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +12,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
+import type { UserMessage } from '@/data/chat';
+import { useChat } from '@/data/chat-context';
 import { itemsForMonth, itemsOfKind } from '@/data/l1';
 import type { BabyRecord } from '@/data/records';
 import { useRecords } from '@/data/records-context';
@@ -23,7 +26,8 @@ import {
   type L1Item,
 } from '@/data/timeline';
 
-const RECENT_QUESTIONS = ['밤중 수유는 언제부터 줄여도 되나요?', '분유량이 갑자기 줄었는데 괜찮나요?'];
+/** 홈에 보여주는 최근 질문 수 (SPEC-HOME-04) */
+const RECENT_COUNT = 2;
 
 /** 한 번에 보여주는 「챙길 것」 수 — 빨간 표시가 한꺼번에 쏟아지면 불안만 준다 */
 const VISIBLE_TODOS = 3;
@@ -48,6 +52,7 @@ export default function HomeScreen() {
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const { baby, age } = useBaby();
   const { records, add, remove } = useRecords();
+  const { messages } = useChat();
   const [showAllTodos, setShowAllTodos] = useState(false);
   /** 완료를 알리려고 연 줄 */
   const [picking, setPicking] = useState<GapGroup | null>(null);
@@ -82,6 +87,11 @@ export default function HomeScreen() {
   // 발달·생활 항목이 이번 달 발달 포인트가 된다 (접종·검진은 위의 「챙길 것」이 맡는다)
   // 이정표 요약과 조기 상담 안내 (SPEC-HOME-03). 생활 팁은 「챙길 것」의 몫이라 여기 넣지 않는다
   const points = itemsForMonth(age.month).filter((i) => i.kind === '발달');
+  // 최근 질문 — 되묻기에 고른 답("3시간 · 160ml")은 질문이 아니라서 뺀다
+  const recent = messages
+    .filter((m): m is UserMessage => m.role === 'user' && !m.meta.replyTo)
+    .slice(-RECENT_COUNT)
+    .reverse();
 
   return (
     <ThemedView style={styles.container}>
@@ -175,22 +185,38 @@ export default function HomeScreen() {
                 {emptyPointsText(age.month)}
               </ThemedText>
             )}
-            <ThemedText type="small" style={{ color: colors.accent }}>
-              성장 타임라인에서 전체 흐름 보기 →
-            </ThemedText>
+            <Pressable onPress={() => router.navigate('/growth')} hitSlop={8}>
+              <ThemedText type="small" style={{ color: colors.accent }}>
+                성장 타임라인에서 전체 흐름 보기 →
+              </ThemedText>
+            </Pressable>
           </ThemedView>
 
           {/* 최근 질문 */}
           <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="subtitle">말콩이에게 물어본 것</ThemedText>
-            {RECENT_QUESTIONS.map((q) => (
-              <ThemedText key={q} style={styles.questionRow}>
-                💬 {q}
+            {recent.length > 0 ? (
+              recent.map((m) => (
+                // 누르면 물어보기 타임라인의 그 질문 자리로 (ft 는 같은 질문을 다시 눌렀을 때의 구분값)
+                <Pressable
+                  key={m.id}
+                  accessibilityRole="button"
+                  onPress={() =>
+                    router.navigate({ pathname: '/ask', params: { focus: m.id, ft: String(Date.now()) } })
+                  }>
+                  <ThemedText numberOfLines={1}>💬 {m.content}</ThemedText>
+                </Pressable>
+              ))
+            ) : (
+              <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                아직 물어본 게 없어요. 궁금한 게 생기면 언제든 물어보세요
               </ThemedText>
-            ))}
-            <ThemedText type="small" style={{ color: colors.accent }}>
-              이어서 물어보기 →
-            </ThemedText>
+            )}
+            <Pressable onPress={() => router.navigate('/ask')} hitSlop={8}>
+              <ThemedText type="small" style={{ color: colors.accent }}>
+                {recent.length > 0 ? '이어서 물어보기 →' : '말콩이에게 물어보기 →'}
+              </ThemedText>
+            </Pressable>
           </ThemedView>
 
           <ThemedText type="small" style={[styles.disclaimer, { color: colors.textSecondary }]}>
@@ -249,6 +275,5 @@ const styles = StyleSheet.create({
   },
   savedText: { flex: 1 },
   missedMark: { fontWeight: '700' },
-  questionRow: {},
   disclaimer: { textAlign: 'center' },
 });
