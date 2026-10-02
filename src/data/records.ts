@@ -1,5 +1,9 @@
 /**
- * L2 — 우리 아기 기록과 요약.
+ * L2 — 우리 아기 기록과 요약. **증류된 쪽**이다.
+ *
+ * 아래층에 대화 원문(`chat_message`)이 있고, 이 기록은 거기서 뽑아낸 것이다 — `sourceMessageId` 가
+ * 그 연결이다. 원문을 남겨 두는 이유는 요약이 틀렸거나 낡았을 때 **원문으로 돌아가 다시 증류**하기
+ * 위해서다. 요약만 남기면 고칠 길이 없다.
  *
  * 저장 위치는 기기 안이다(knowledge-layers 저장 규칙). 스키마 정본은 docs/architecture/backend.md 의
  * 기기 DB 절의 record 테이블이다.
@@ -17,6 +21,10 @@ export type BabyRecord = {
   covers: string[];
   /** "D+98에 알림" 같은 시점 표기 */
   whenLabel: string | null;
+  /** 이 기록이 나온 대화 — 다시 증류하거나 되짚을 때의 실마리 */
+  sourceMessageId: string | null;
+  /** 요약이 낡았다고 보는 표시. 그대로 단정하지 않고 재확인한다 */
+  stale: boolean;
   createdAt: string;
 };
 
@@ -25,11 +33,14 @@ export async function loadRecords(): Promise<BabyRecord[]> {
 }
 
 export async function addRecord(
-  input: Pick<BabyRecord, 'kind' | 'label' | 'covers' | 'whenLabel'>,
+  input: Pick<BabyRecord, 'kind' | 'label' | 'covers' | 'whenLabel'> &
+    Partial<Pick<BabyRecord, 'sourceMessageId'>>,
 ): Promise<BabyRecord> {
   const record: BabyRecord = {
+    sourceMessageId: null,
     ...input,
     id: `rec-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    stale: false,
     createdAt: new Date().toISOString(),
   };
   await insertRecordRow(record);

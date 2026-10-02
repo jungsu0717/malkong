@@ -1,5 +1,10 @@
 # 말콩(malkong) 문서 체계
 
+> 두 가지를 Neuro 에서 본떴다 — **문서 하네스는 `neuro-spec`의 구조**를, **지식층은 Neuro 의
+> Knowledge Foundation(K1~K4)**을 줄여서 가져왔다. 무엇을 가져오고 무엇을 두고 왔는지는
+> [knowledge-layers](architecture/knowledge-layers.md) 첫 절에 적어 두었다. 가져온 것은 구조와
+> 원칙이고, 회사 문서의 내용을 옮겨 오지는 않는다.
+
 이 폴더가 설계의 정본이다. 흐름은 한 방향이다 (스펙 주도 개발의 표준 사이클을 따른다):
 
 ```

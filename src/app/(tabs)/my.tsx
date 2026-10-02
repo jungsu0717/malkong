@@ -11,7 +11,9 @@ import { Colors, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { useEntitlements } from '@/data/entitlements-context';
+import { unitFromL1, unitFromRecord } from '@/data/knowledge';
 import { allItems, L1_VERSION, pendingReviewCount } from '@/data/l1';
+import { useRecords } from '@/data/records-context';
 
 const MENU_SECTIONS: { title: string; items: string[] }[] = [
   { title: '내 정보', items: ['알림 설정'] },
@@ -25,6 +27,11 @@ export default function MyScreen() {
   const router = useRouter();
   const { baby, age } = useBaby();
   const { ads } = useEntitlements();
+  const { records } = useRecords();
+
+  // 두 층을 같은 겉모양으로 본다 (src/data/knowledge.ts 유닛 계약)
+  const units = [...allItems().map(unitFromL1), ...records.map(unitFromRecord)];
+  const standardCount = units.filter((u) => u.layer === 'L1').length;
 
   return (
     <ThemedView style={styles.container}>
@@ -99,7 +106,8 @@ export default function MyScreen() {
             <ThemedView type="backgroundElement" style={[styles.menuCard, styles.loadingPreview]}>
               <BabyRunLoading label="말콩이가 달려오고 있어요…" />
               <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                L1 지식 {allItems().length}건 · 승인 대기 {pendingReviewCount()}건 · 판 {L1_VERSION}
+                지식 유닛 {units.length}건 — 표준 {standardCount}건(승인 대기 {pendingReviewCount()}건) ·
+                우리 아기 {units.length - standardCount}건 · 판 {L1_VERSION}
               </ThemedText>
             </ThemedView>
           </View>

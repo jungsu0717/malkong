@@ -97,6 +97,8 @@ type RecordRow = {
   label: string;
   covers: string | null;
   when_label: string | null;
+  source_message_id: string | null;
+  stale: number;
   created_at: string;
 };
 
@@ -104,7 +106,8 @@ type RecordRow = {
 export async function readRecordRows(): Promise<BabyRecord[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<RecordRow>(
-    'SELECT id, kind, label, covers, when_label, created_at FROM record ORDER BY created_at',
+    `SELECT id, kind, label, covers, when_label, source_message_id, stale, created_at
+     FROM record ORDER BY created_at`,
   );
   return rows.map((row) => ({
     id: row.id,
@@ -112,6 +115,8 @@ export async function readRecordRows(): Promise<BabyRecord[]> {
     label: row.label,
     covers: row.covers ? (JSON.parse(row.covers) as string[]) : [],
     whenLabel: row.when_label,
+    sourceMessageId: row.source_message_id,
+    stale: row.stale === 1,
     createdAt: row.created_at,
   }));
 }
@@ -120,13 +125,14 @@ export async function insertRecordRow(record: BabyRecord): Promise<void> {
   const db = await getDb();
   // 아기는 당분간 한 명이다 — 그 아기의 기록으로 넣는다
   await db.runAsync(
-    `INSERT INTO record (id, baby_id, kind, label, covers, when_label, created_at, updated_at)
-     VALUES (?, (SELECT id FROM baby LIMIT 1), ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO record (id, baby_id, kind, label, covers, when_label, source_message_id, created_at, updated_at)
+     VALUES (?, (SELECT id FROM baby LIMIT 1), ?, ?, ?, ?, ?, ?, ?)`,
     record.id,
     record.kind,
     record.label,
     JSON.stringify(record.covers),
     record.whenLabel,
+    record.sourceMessageId,
     record.createdAt,
     record.createdAt,
   );

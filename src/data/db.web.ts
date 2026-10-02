@@ -50,7 +50,15 @@ const RECORDS_KEY = 'malkong.records';
 export async function readRecordRows(): Promise<BabyRecord[]> {
   try {
     const raw = globalThis.localStorage?.getItem(RECORDS_KEY);
-    return raw ? (JSON.parse(raw) as BabyRecord[]) : [];
+    if (!raw) return [];
+    // 칸이 늘기 전에 저장된 기록도 읽을 수 있게 메워 준다
+    type Stored = Omit<BabyRecord, 'sourceMessageId' | 'stale'> &
+      Partial<Pick<BabyRecord, 'sourceMessageId' | 'stale'>>;
+    return (JSON.parse(raw) as Stored[]).map((record) => ({
+      ...record,
+      sourceMessageId: record.sourceMessageId ?? null,
+      stale: record.stale ?? false,
+    }));
   } catch {
     return [];
   }
