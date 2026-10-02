@@ -56,6 +56,21 @@ export default function MyScreen() {
             </Pressable>
           )}
 
+          {/* 우리 아기 기록(L2) 보기·고치기 (SPEC-MY-02) */}
+          <Pressable
+            style={[styles.profileCard, { backgroundColor: colors.backgroundElement }]}
+            onPress={() => router.push('/records')}>
+            <View style={styles.profileText}>
+              <ThemedText type="subtitle">우리 아기 기록</ThemedText>
+              <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                {records.length > 0
+                  ? `${records.length}건 — 보고 고치거나 지울 수 있어요`
+                  : '대화와 홈에서 모은 기록이 여기 쌓여요'}
+              </ThemedText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
+          </Pressable>
+
           {/* 광고 제거 — 결제 SDK 는 EAS 개발 빌드 단계에서 붙인다 (SPEC-MY-06) */}
           {ads && (
             <Pressable style={[styles.profileCard, { backgroundColor: colors.backgroundElement }]}>

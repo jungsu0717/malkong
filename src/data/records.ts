@@ -9,7 +9,7 @@
  * 기기 DB 절의 record 테이블이다.
  */
 
-import { deleteRecordRow, insertRecordRow, readRecordRows } from './db';
+import { deleteRecordRow, insertRecordRow, readRecordRows, updateRecordLabelRow } from './db';
 
 export type RecordKind = '기록' | '요약';
 
@@ -49,4 +49,9 @@ export async function addRecord(
 
 export async function removeRecord(id: string): Promise<void> {
   await deleteRecordRow(id);
+}
+
+/** 문구를 고친다. 고친 기록은 사용자가 확인한 것이라 낡음 표시를 지운다 */
+export async function updateRecordLabel(id: string, label: string): Promise<void> {
+  await updateRecordLabelRow(id, label);
 }

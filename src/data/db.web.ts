@@ -100,3 +100,9 @@ export async function insertChatRow(message: ChatMessage): Promise<void> {
     // 저장이 막힌 브라우저에서도 화면은 그대로 동작해야 한다 (이번 실행에만 유지된다)
   }
 }
+
+export async function updateRecordLabelRow(id: string, label: string): Promise<void> {
+  await writeRecordRows(
+    (await readRecordRows()).map((r) => (r.id === id ? { ...r, label, stale: false } : r)),
+  );
+}

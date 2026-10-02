@@ -48,6 +48,10 @@ export default function RootLayout() {
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(tabs)" />
                   <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+                  <Stack.Screen
+                    name="records"
+                    options={{ headerShown: true, title: '우리 아기 기록', headerBackTitle: '마이' }}
+                  />
                 </Stack>
               </ChatProvider>
             </RecordsProvider>

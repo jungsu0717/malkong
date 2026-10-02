@@ -189,3 +189,14 @@ export async function insertChatRow(message: ChatMessage): Promise<void> {
     message.createdAt,
   );
 }
+
+/** 기록 문구 고치기 — 고친 시각을 남긴다(SPEC-MY-02 정정) */
+export async function updateRecordLabelRow(id: string, label: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'UPDATE record SET label = ?, stale = 0, updated_at = ? WHERE id = ?',
+    label,
+    new Date().toISOString(),
+    id,
+  );
+}

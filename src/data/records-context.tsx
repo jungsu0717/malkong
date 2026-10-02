@@ -7,7 +7,13 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { addRecord, loadRecords, removeRecord, type BabyRecord } from './records';
+import {
+  addRecord,
+  loadRecords,
+  removeRecord,
+  updateRecordLabel,
+  type BabyRecord,
+} from './records';
 
 type RecordsContextValue = {
   records: BabyRecord[];
@@ -16,6 +22,8 @@ type RecordsContextValue = {
       Partial<Pick<BabyRecord, 'sourceMessageId'>>,
   ) => Promise<BabyRecord>;
   remove: (id: string) => Promise<void>;
+  /** 문구 고치기(SPEC-MY-02) — 홈 추천과 답변에 보내는 기록이 바로 따라 바뀐다 */
+  update: (id: string, label: string) => Promise<void>;
 };
 
 const RecordsContext = createContext<RecordsContextValue | null>(null);
@@ -44,7 +52,15 @@ export function RecordsProvider({ children }: { children: React.ReactNode }) {
     setRecords((prev) => prev.filter((r) => r.id !== id));
   }, []);
 
-  const value = useMemo(() => ({ records, add, remove }), [records, add, remove]);
+  const update = useCallback(async (id: string, label: string) => {
+    await updateRecordLabel(id, label);
+    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, label, stale: false } : r)));
+  }, []);
+
+  const value = useMemo(
+    () => ({ records, add, remove, update }),
+    [records, add, remove, update],
+  );
 
   return <RecordsContext.Provider value={value}>{children}</RecordsContext.Provider>;
 }
