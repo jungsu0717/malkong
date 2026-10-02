@@ -7,6 +7,7 @@ dependencies = [
     "anthropic[vertex]>=1.11.0",
     "fastapi>=0.142.2",
     "google-genai>=2.27.0",
+    "psycopg[binary,pool]>=3.3.6",
     "pydantic-settings>=2.15.0",
     "uvicorn[standard]>=0.54.0",
 ]

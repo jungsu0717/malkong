@@ -5,7 +5,9 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { getEntitlements } from './api';
 import {
+  cacheAdsEnabled,
   DEFAULT_ENTITLEMENTS,
   loadEntitlements,
   setAdsRemoved,
@@ -15,6 +17,8 @@ import {
 type EntitlementsContextValue = Entitlements & {
   /** 결제·복원이 끝나면 부른다 */
   applyAdsRemoved: (removed: boolean) => Promise<void>;
+  /** 답변이 올 때마다 서버가 알려 준 남은 수로 고친다 */
+  setRemaining: (remaining: number | null) => void;
 };
 
 const EntitlementsContext = createContext<EntitlementsContextValue | null>(null);
@@ -24,9 +28,20 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     let cancelled = false;
-    loadEntitlements().then((loaded) => {
-      if (!cancelled) setEntitlements(loaded);
-    });
+    (async () => {
+      const local = await loadEntitlements();
+      if (!cancelled) setEntitlements(local);
+      // 서버 자격 — 운영자(가족) 기기면 광고·한도가 풀린다. 못 받으면 기본값으로 둔다
+      try {
+        const server = await getEntitlements();
+        if (cancelled) return;
+        const ads = local.ads && server.ads;
+        cacheAdsEnabled(ads);
+        setEntitlements({ ...server, ads });
+      } catch {
+        // 연결이 안 되면 다음 실행 때 다시 받는다
+      }
+    })();
     return () => {
       cancelled = true;
     };
@@ -37,9 +52,13 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
     setEntitlements((prev) => ({ ...prev, ads: !removed }));
   }, []);
 
+  const setRemaining = useCallback((remaining: number | null) => {
+    setEntitlements((prev) => ({ ...prev, remaining }));
+  }, []);
+
   const value = useMemo<EntitlementsContextValue>(
-    () => ({ ...entitlements, applyAdsRemoved }),
-    [entitlements, applyAdsRemoved],
+    () => ({ ...entitlements, applyAdsRemoved, setRemaining }),
+    [entitlements, applyAdsRemoved, setRemaining],
   );
 
   return <EntitlementsContext.Provider value={value}>{children}</EntitlementsContext.Provider>;

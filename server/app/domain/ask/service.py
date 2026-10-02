@@ -18,6 +18,7 @@ from pydantic import ValidationError
 from app.common.core.exception import ApiException
 from app.common.core.setting import Settings
 from app.domain.ask import redflag
+from app.domain.ask.cache import ResponseCache
 from app.domain.ask.prompt import (
     MODEL_OUTPUT_SCHEMA,
     RED_FLAG_IDS,
@@ -39,6 +40,7 @@ from app.domain.ask.schema import (
     Source,
     Usage,
 )
+from app.domain.entitlements.service import EntitlementsService
 from app.domain.knowledge.repository import L1Item, L1Repository
 from app.infra.llm.base import LlmClient, LlmError, LlmRequest
 
@@ -92,6 +94,9 @@ JUDGMENT_FALLBACK = (
 )
 GENERAL_PREFIX = "일반적으로는, "
 
+# 답을 만드는 동안의 자리 값 — ask() 가 사용량을 센 뒤 실제 남은 수로 바꾼다
+PENDING_USAGE = Usage(remaining=None)
+
 REDFLAG_HEAD = "말씀하신 내용에 바로 진료가 필요할 수 있는 신호가 있어요."
 REDFLAG_TAIL = (
     "증상이 심하거나 아기가 반응이 없으면 바로 119 에 전화하세요. "
@@ -100,17 +105,48 @@ REDFLAG_TAIL = (
 
 
 class AskService:
-    def __init__(self, l1: L1Repository, llm: LlmClient | None, settings: Settings) -> None:
+    def __init__(
+        self,
+        l1: L1Repository,
+        llm: LlmClient | None,
+        settings: Settings,
+        usage: EntitlementsService,
+        cache: ResponseCache,
+    ) -> None:
         self._l1 = l1
         self._llm = llm
         self._settings = settings
+        self._usage = usage
+        self._cache = cache
 
-    def ask(self, req: AskRequest) -> AskResponse:
-        # ① 위험 신호 — 모델을 부르지 않는다(SPEC-ASK-02). 한도와 상관없이 언제나 나간다
+    def ask(self, req: AskRequest, device_key: str | None) -> AskResponse:
+        # ① 위험 신호 — 모델을 부르지 않는다(SPEC-ASK-02). 키·한도와 상관없이 언제나 나간다
         hits = redflag.detect(req.question, req.baby.months)
         if hits:
             return self._redflag([h.l1_id for h in hits])
 
+        device = self._usage.device(device_key)
+        # 같은 clientMessageId 의 재요청 — 새로 만들지 않고 같은 응답(api-contract 재시도 안전)
+        cached = self._cache.get(device.key_hash, req.client_message_id)
+        if cached is not None:
+            return cached
+        # 절약 모드 요청은 한도와 상관없다. 정밀 답변 요청만 다 썼는지 본다
+        precise = req.mode != "eco"
+        if precise:
+            self._usage.ensure_can_answer(device)
+
+        response = self._model_answer(req)
+        if isinstance(response, AnswerResponse):
+            remaining = (
+                self._usage.record_answer(device, req.client_message_id)
+                if precise
+                else self._usage.remaining(device)
+            )
+            response = response.model_copy(update={"usage": Usage(remaining=remaining)})
+        self._cache.put(device.key_hash, req.client_message_id, response)
+        return response
+
+    def _model_answer(self, req: AskRequest) -> AskResponse:
         # ③ 모델
         if self._llm is None:
             raise ApiException(
@@ -145,7 +181,7 @@ class AskService:
         if last_problem == "judgment":
             # 마지막까지 안심 표현을 지우지 못했으면 판단하지 않는 고정 문장으로 끝낸다
             return AnswerResponse(
-                answer=JUDGMENT_FALLBACK, level="판단", usage=self._usage(), eco=eco
+                answer=JUDGMENT_FALLBACK, level="판단", usage=PENDING_USAGE, eco=eco
             )
         raise ApiException(
             HTTPStatus.SERVICE_UNAVAILABLE, "MODEL_UNAVAILABLE", "답변을 만들지 못했어요"
@@ -207,13 +243,9 @@ class AskService:
                 for r in out.records
                 if r.label.strip()
             ],
-            usage=self._usage(),
+            usage=PENDING_USAGE,
             eco=eco,
         )
-
-    def _usage(self) -> Usage:
-        # 일일 한도 집계는 common/005 — 그전까지는 설정값
-        return Usage(remaining=self._settings.daily_limit)
 
 
 def _clean_followup(out: ModelOutput) -> Followup | None:

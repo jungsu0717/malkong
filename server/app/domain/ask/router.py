@@ -8,8 +8,12 @@ from fastapi import APIRouter, Depends, Header
 
 from app.common.core.exception import ErrorBody
 from app.common.core.setting import Settings, get_settings
+from app.domain.ask.cache import ResponseCache
 from app.domain.ask.schema import AskRequest, AskResponse
 from app.domain.ask.service import AskService
+from app.domain.entitlements.router import get_entitlements_service
+from app.domain.entitlements.schema import LimitExceededBody
+from app.domain.entitlements.service import EntitlementsService
 from app.domain.knowledge.repository import L1Repository
 from app.infra.llm.anthropic import AnthropicClient
 from app.infra.llm.base import LlmClient
@@ -52,24 +56,36 @@ def get_llm_client() -> LlmClient | None:
     return None
 
 
+@lru_cache
+def get_response_cache() -> ResponseCache:
+    return ResponseCache()
+
+
 def get_ask_service(
     l1: Annotated[L1Repository, Depends(get_l1_repository)],
     llm: Annotated[LlmClient | None, Depends(get_llm_client)],
     settings: Annotated[Settings, Depends(get_settings)],
+    usage: Annotated[EntitlementsService, Depends(get_entitlements_service)],
+    cache: Annotated[ResponseCache, Depends(get_response_cache)],
 ) -> AskService:
-    return AskService(l1, llm, settings)
+    return AskService(l1, llm, settings, usage, cache)
 
 
 @router.post(
     "/ask",
     summary="질문",
     response_model=AskResponse,
-    responses={422: {"model": ErrorBody}, 503: {"model": ErrorBody}},
+    responses={
+        401: {"model": ErrorBody},
+        422: {"model": ErrorBody},
+        429: {"model": LimitExceededBody},
+        503: {"model": ErrorBody},
+    },
 )
 def ask(
     req: AskRequest,
     service: Annotated[AskService, Depends(get_ask_service)],
-    # 받기만 하고 검사하지 않는다. 발급과 검사는 한도 task(common/005)에서 한다
+    # POST /v1/devices 로 받은 키. 위험 신호 응답은 키 없이도 나간다
     x_device_key: Annotated[str | None, Header()] = None,
 ) -> AskResponse:
-    return service.ask(req)
+    return service.ask(req, x_device_key)

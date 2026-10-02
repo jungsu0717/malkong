@@ -8,7 +8,8 @@ from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
 from app.common.core.setting import Settings, get_settings
-from app.domain.ask.router import get_ask_service, get_llm_client
+from app.domain.ask.cache import ResponseCache
+from app.domain.ask.router import get_ask_service, get_llm_client, get_response_cache
 from app.domain.ask.schema import (
     AnswerResponse,
     AskRequest,
@@ -18,6 +19,9 @@ from app.domain.ask.schema import (
     Source,
     Usage,
 )
+from app.domain.entitlements.router import get_entitlements_service
+from app.domain.entitlements.service import EntitlementsService
+from app.infra.db.usage_store import MemoryUsageStore
 from app.infra.llm.base import LlmError, LlmRequest, LlmResult
 from app.main import create_app
 
@@ -75,16 +79,26 @@ class FakeLlm:
 
 
 @pytest.fixture
-def app():
+def usage() -> EntitlementsService:
+    return EntitlementsService(MemoryUsageStore(), Settings(_env_file=None))
+
+
+@pytest.fixture
+def app(usage: EntitlementsService):
     app = create_app()
     # 진짜 팩토리는 셸 환경변수와 .env 를 읽는다 — 테스트가 그 값에 흔들리지 않게 기본은 모델 없음
     app.dependency_overrides[get_llm_client] = lambda: None
+    # 사용량은 시험마다 새 메모리 저장소, 재시도 기억도 새로
+    cache = ResponseCache()
+    app.dependency_overrides[get_entitlements_service] = lambda: usage
+    app.dependency_overrides[get_response_cache] = lambda: cache
     return app
 
 
 @pytest.fixture
-def client(app) -> TestClient:
-    return TestClient(app)
+def client(app, usage: EntitlementsService) -> TestClient:
+    # 발급받은 기기 키를 늘 싣는다(api-contract X-Device-Key)
+    return TestClient(app, headers={"X-Device-Key": usage.issue_device("test")})
 
 
 def use(app, llm: FakeLlm | None, *, paid: bool = False) -> None:
@@ -97,7 +111,7 @@ def use(app, llm: FakeLlm | None, *, paid: bool = False) -> None:
 
 def test_answer_has_contract_shape(app, client: TestClient) -> None:
     use(app, FakeLlm(model_out()))
-    res = client.post("/v1/ask", json=VALID, headers={"X-Device-Key": "test"})
+    res = client.post("/v1/ask", json=VALID)
     assert res.status_code == 200
     body = res.json()
     assert body["type"] == "answer"
@@ -107,9 +121,13 @@ def test_answer_has_contract_shape(app, client: TestClient) -> None:
     assert isinstance(body["usage"]["remaining"], int)
 
 
-def test_device_key_is_optional(app, client: TestClient) -> None:
-    use(app, FakeLlm(model_out()))
-    assert client.post("/v1/ask", json=VALID).status_code == 200
+def test_model_answer_needs_known_device_key(app) -> None:
+    use(app, FakeLlm(model_out(), model_out()))
+    bare = TestClient(app)
+    for headers in ({}, {"X-Device-Key": "dk_unknown"}):
+        res = bare.post("/v1/ask", json=VALID, headers=headers)
+        assert res.status_code == 401
+        assert res.json()["code"] == "DEVICE_KEY_INVALID"
 
 
 def test_fact_answer_without_sources_cannot_be_built() -> None:
@@ -161,7 +179,7 @@ class FixedService:
     def __init__(self, response) -> None:
         self.response = response
 
-    def ask(self, _req: AskRequest):
+    def ask(self, _req: AskRequest, _device_key: str | None):
         return self.response
 
 
@@ -432,10 +450,11 @@ def test_twice_broken_is_503(app, client: TestClient) -> None:
     assert client.post("/v1/ask", json=VALID).status_code == 503
 
 
-def test_programming_errors_are_not_hidden(app) -> None:
+def test_programming_errors_are_not_hidden(app, usage: EntitlementsService) -> None:
     # 우리 코드의 버그는 503 으로 덮지 않고 500 으로 흘려 traceback 을 남긴다
     use(app, FakeLlm(AttributeError("버그")))
-    res = TestClient(app, raise_server_exceptions=False).post("/v1/ask", json=VALID)
+    key = {"X-Device-Key": usage.issue_device("test")}
+    res = TestClient(app, raise_server_exceptions=False, headers=key).post("/v1/ask", json=VALID)
     assert res.status_code == 500
 
 

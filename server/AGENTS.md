@@ -68,6 +68,9 @@ gcloud run deploy malkong-server --source . --region asia-northeast3 \
   --allow-unauthenticated --min-instances 0 --max-instances 2 \
   --set-env-vars MALKONG_LLM_PROVIDER=gemini,MALKONG_LLM_MODEL=gemini-3.5-flash-lite \
   --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest
+
+# Neon 과 운영자 기기를 넣은 뒤에는 --set-secrets 를 이렇게 늘린다(비밀값 이름은 task common/005)
+#   --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest,MALKONG_DATABASE_URL=malkong-database-url:latest,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest
 ```
 
 - gcloud 는 Homebrew 로 깐다(`brew install --cask gcloud-cli` — 소스 컴파일 없이 Google 공식 파일을 받는다).
@@ -93,9 +96,12 @@ app/
   domain/ask/retrieval.py L1 검색 — 질문에 맞는 승인된 항목을 골라 모델에 건넨다
   domain/knowledge/repository.py 승인된 L1 만 읽는 저장소
   data/l1/             L1 사본 — scripts/sync_l1.py 가 만든다. 손으로 고치지 않는다
+  domain/ask/cache.py  같은 clientMessageId 응답을 메모리에 10분 — 재시도 안전
+  domain/entitlements/ 기기 키 확인·하루 한도(service.py) · GET /entitlements · 저장소 팩토리
+  domain/devices/      POST /devices — 기기 키 발급
   infra/               바깥 시스템에 닿는 것
     llm/               모델 어댑터 — 각 회사 공식 SDK 를 base.py 계약 뒤에 둔다(decisions/007)
-                       저장소(Neon) 접근은 common/005 에서 infra/ 아래에 만든다
+    db/usage_store.py  사용량 저장소 — Neon(Postgres)과 메모리 판. 주소가 없으면 메모리
 scripts/               손으로 돌리는 도구(sync_l1). 서버 이미지에는 들어가지 않는다
 tests/
 eval/                  모델 비교 장치 — 질문 세트, 실행, 채점, 결과. 서버 이미지에는 들어가지 않는다

@@ -12,7 +12,7 @@
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 
-import { ApiError, postAsk, type AskResponse } from '@/data/api';
+import { ApiError, postAsk, type AskResponse, type LimitInfo } from '@/data/api';
 import { useBaby } from '@/data/baby-context';
 import {
   newMessageId,
@@ -21,6 +21,7 @@ import {
   type UserMessage,
 } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
+import { useEntitlements } from '@/data/entitlements-context';
 import type { BabyRecord } from '@/data/records';
 import { useRecords } from '@/data/records-context';
 
@@ -39,7 +40,7 @@ type Attempt = {
   carriedRecordIds: string[];
 };
 
-export type AskFailure = Attempt & { status: number; code: string };
+export type AskFailure = Attempt & { status: number; code: string; limit?: LimitInfo };
 
 function traceFor(response: AskResponse, sentRecords: number): TraceStep[] {
   if (response.type === 'redflag') return [];
@@ -70,6 +71,7 @@ export function useMalkong() {
   const { age } = useBaby();
   const { messages, append } = useChat();
   const { records, add } = useRecords();
+  const { setRemaining } = useEntitlements();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [failure, setFailure] = useState<AskFailure | null>(null);
   const { mutateAsync: askServer } = useMutation({ mutationFn: postAsk, retry: 0 });
@@ -101,6 +103,7 @@ export function useMalkong() {
         };
         let message: MalkongMessage;
         if (response.type === 'answer') {
+          setRemaining(response.usage.remaining);
           // 기록 제안은 자동 저장한다 — 같은 문구가 이미 있으면 다시 넣지 않는다
           const savedIds = [...attempt.carriedRecordIds];
           const labels = new Set(known.map((r) => r.label));
@@ -151,12 +154,12 @@ export function useMalkong() {
         await append(message);
       } catch (error) {
         const e = error instanceof ApiError ? error : new ApiError(0, 'UNKNOWN', '');
-        setFailure({ ...attempt, status: e.status, code: e.code });
+        setFailure({ ...attempt, status: e.status, code: e.code, limit: e.limit });
       } finally {
         setPendingId(null);
       }
     },
-    [age, askServer, add, append],
+    [age, askServer, add, append, setRemaining],
   );
 
   /** 되묻기에 답한다 — 칩을 누르거나, 되묻기가 열려 있을 때 입력창에 친 글 */
@@ -219,5 +222,12 @@ export function useMalkong() {
     await run({ questionId, question, mode, carriedRecordIds }, records);
   }, [failure, pendingId, records, run]);
 
-  return { messages, pendingId, failure, openFollowup, send, reply, retry };
+  /** 하루 정밀 답변을 다 썼을 때 — 같은 질문을 기록 없이 일반 기준으로 다시 묻는다(backend 일일 한도 절약 모드) */
+  const answerInEco = useCallback(async () => {
+    if (!failure || pendingId) return;
+    const { questionId, question, carriedRecordIds } = failure;
+    await run({ questionId, question, mode: 'eco', carriedRecordIds }, records);
+  }, [failure, pendingId, records, run]);
+
+  return { messages, pendingId, failure, openFollowup, send, reply, retry, answerInEco };
 }

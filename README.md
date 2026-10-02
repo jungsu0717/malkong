@@ -22,8 +22,8 @@
 2. **`my/002`** 아기 프로필과 기록 보기·고치기(SPEC-MY-02)
 3. **`home/003`** 「챙길 것」 생활 항목(SPEC-HOME-02)
 4. **`my/003`** 약관·개인정보 처리방침·의학 정보 고지 본문(SPEC-MY-03) — 법률 검토는 Julian 판단
-5. **`common/005`** 디바이스 키·일일 한도·Neon·같은 clientMessageId 재시도 + 한도 화면. Neon 계정은 Julian 이 만든다.
-   디바이스 키 발급 API 는 [api-contract](docs/architecture/api-contract.md)에 먼저 적는다
+5. **`common/005`** 디바이스 키·일일 한도·재시도 안전·한도 화면 — 코드 완료. **배포(Julian 허락)와 Neon 연결(Julian 계정)이
+   남았다** — [common/005](docs/task/common/005-device-key-and-limit.md) 「출시 전에 Julian 이 할 것」. 앱은 새 서버가 있어야 답을 받는다
 6. **`ask/003`** 답변 피드백(SPEC-ASK-06) — 5 의 저장소 위에서
 7. **광고(AdMob)와 광고 제거 구매(RevenueCat)** — 네이티브 모듈이라 EAS 개발 빌드부터. 광고·스토어 계정은 Julian
 8. **앱 아이콘·시작 화면** — 임시 아이콘, 최종은 디자이너

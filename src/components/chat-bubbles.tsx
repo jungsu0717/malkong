@@ -222,6 +222,46 @@ export function ErrorBubble({ text, onRetry }: { text: string; onRetry: () => vo
   );
 }
 
+/**
+ * 하루 정밀 답변을 다 썼을 때(429) — 아예 막지 않고 선택지를 준다(ask.md 한도 표시).
+ * 광고 충전(정밀 답변 +1)은 보상형 광고가 붙으면 `onReward` 로 들어온다.
+ */
+export function LimitBubble({
+  dailyLimit,
+  onEco,
+  onReward,
+}: {
+  dailyLimit: number | null;
+  onEco: () => void;
+  onReward?: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>
+      <ThemedText>
+        오늘 우리 아기 기록을 반영한 정밀 답변{dailyLimit ? ` ${dailyLimit}회` : ''}를 다 썼어요.
+        {onReward
+          ? ' 광고 1편을 보면 정밀 답변 1회가 충전돼요(오늘 3편까지). 아니면 지금 바로 일반 기준으로 답해 드릴 수 있어요.'
+          : ' 지금 바로 일반 기준으로 답해 드릴 수 있어요. 정밀 답변은 내일 0시에 다시 채워져요.'}
+      </ThemedText>
+      <View style={styles.quickChips}>
+        {onReward && (
+          <Pressable style={[styles.chip, { backgroundColor: colors.accent }]} onPress={onReward}>
+            <ThemedText type="small" style={styles.callText}>
+              광고 보고 정밀 답변
+            </ThemedText>
+          </Pressable>
+        )}
+        <Pressable style={[styles.chip, { backgroundColor: colors.accentSoft }]} onPress={onEco}>
+          <ThemedText type="small" style={{ color: colors.accent }}>
+            일반 기준으로 바로 답변
+          </ThemedText>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   bubble: {
     borderRadius: 20,

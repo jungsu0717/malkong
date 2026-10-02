@@ -47,7 +47,8 @@ class RecordSuggestion(ApiModel):
 
 
 class Usage(ApiModel):
-    remaining: int
+    # 오늘 남은 정밀 답변 수. 운영자(가족) 기기는 null(무제한)
+    remaining: int | None
 
 
 Level = Literal["사실", "일반", "판단"]

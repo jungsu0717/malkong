@@ -33,9 +33,19 @@ class Settings(BaseSettings):
     # 유료 전환은 Julian 이 한다
     llm_paid_tier: bool = False
 
-    # 하루 정밀 답변 수(backend 「일일 한도」). 집계는 common/005 —
-    # 그전까지 응답의 remaining 은 이 값이다
+    # 하루 정밀 답변 수와 보상형 광고로 더 받을 수 있는 수(backend 「일일 한도」)
     daily_limit: int = 10
+    reward_max_per_day: int = 3
+
+    # 운영 데이터 저장소(Neon Postgres) 접속 주소.
+    # 없으면 메모리 저장소로 돈다(인스턴스가 바뀌면 잊는다)
+    database_url: SecretStr | None = None
+
+    # 운영자(가족) 기기 키 — 쉼표로 구분. 한도 없음·광고 없음(backend 「운영자 기기」)
+    operator_device_keys: SecretStr | None = None
+
+    # 연결 출처(IP)당 하루 키 발급 상한 — 키를 새로 받아 한도를 피하는 것을 막는다
+    devices_per_ip_per_day: int = 20
 
     # 모델 한 번 부를 때 기다리는 최대 시간(초). 넘으면 그 시도는 실패로 보고 한 번 더 해 본다
     llm_timeout_s: float = 20.0

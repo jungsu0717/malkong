@@ -6,7 +6,7 @@
  *   2. 광고 제거 구매 — 스토어가 정본이고, 여기 저장되는 건 복원용 사본이다
  *   3. 서버 자격(GET /v1/entitlements) — 운영자(가족) 기기 면제가 여기서 온다
  *
- * 지금은 2번까지만 자리를 잡아 두었다. 결제 SDK(RevenueCat `react-native-purchases` 권장)는
+ * 서버 자격은 부팅 때 한 번 받는다(entitlements-context). 결제 SDK(RevenueCat `react-native-purchases`)는
  * AdMob 과 마찬가지로 네이티브 모듈이라 EAS 개발 빌드 단계에서 붙인다.
  */
 
@@ -19,12 +19,15 @@ export type Entitlements = {
   dailyLimit: number | null;
   /** 보상형 광고로 더 받을 수 있는 횟수 */
   rewardMaxPerDay: number;
+  /** 오늘 남은 정밀 답변 수 — 서버에서 받기 전이거나 무제한이면 null */
+  remaining: number | null;
 };
 
 export const DEFAULT_ENTITLEMENTS: Entitlements = {
   ads: true,
   dailyLimit: 10,
   rewardMaxPerDay: 3,
+  remaining: null,
 };
 
 const ADS_REMOVED_KEY = 'ads_removed';

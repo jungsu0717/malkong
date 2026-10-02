@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -9,6 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
+import { storedDeviceKey } from '@/data/api';
 import { useBaby } from '@/data/baby-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { unitFromL1, unitFromRecord } from '@/data/knowledge';
@@ -37,6 +39,8 @@ export default function MyScreen() {
   const { ads } = useEntitlements();
   const { records } = useRecords();
   const { scheduleOnly, setScheduleOnly } = usePreferences();
+  /** 버전을 길게 누르면 보이는 기기 키 — 운영자(가족) 기기로 등록할 때 쓴다(backend 「운영자 기기」) */
+  const [deviceKey, setDeviceKey] = useState<string | null>(null);
 
   // 두 층을 같은 겉모양으로 본다 (src/data/knowledge.ts 유닛 계약)
   const units = [...allItems().map(unitFromL1), ...records.map(unitFromRecord)];
@@ -159,9 +163,18 @@ export default function MyScreen() {
             </ThemedView>
           </View>
 
-          <ThemedText type="small" style={[styles.version, { color: colors.textSecondary }]}>
-            말콩 v1.0.0
-          </ThemedText>
+          <Pressable
+            onLongPress={async () => setDeviceKey((await storedDeviceKey()) || '아직 없어요')}
+            delayLongPress={800}>
+            <ThemedText type="small" style={[styles.version, { color: colors.textSecondary }]}>
+              말콩 v1.0.0
+            </ThemedText>
+          </Pressable>
+          {deviceKey && (
+            <ThemedText selectable type="small" style={[styles.version, { color: colors.textSecondary }]}>
+              기기 키 {deviceKey}
+            </ThemedText>
+          )}
         </ScrollView>
       </SafeAreaView>
       <AskFab />

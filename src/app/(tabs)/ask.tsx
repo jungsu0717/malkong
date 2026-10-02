@@ -19,6 +19,7 @@ import {
   DoneTrace,
   ErrorBubble,
   FollowupBubble,
+  LimitBubble,
   RedflagCard,
   UserBubble,
 } from '@/components/chat-bubbles';
@@ -30,6 +31,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { dayKey, dayLabel } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
+import { useEntitlements } from '@/data/entitlements-context';
 import { useRecords } from '@/data/records-context';
 import { useMalkong, type AskFailure } from '@/hooks/use-malkong';
 
@@ -63,7 +65,8 @@ export default function AskScreen() {
   const { age, baby } = useBaby();
   const { loading } = useChat();
   const { records, remove } = useRecords();
-  const { messages, pendingId, failure, openFollowup, send, reply, retry } = useMalkong();
+  const { messages, pendingId, failure, openFollowup, send, reply, retry, answerInEco } = useMalkong();
+  const { dailyLimit, remaining } = useEntitlements();
   // 다른 탭의 플로팅 버튼에서 넘어온 질문 (SPEC-ASK-07). t 는 같은 질문을 다시 보냈을 때의 구분값이다
   const { q, t, focus, ft } = useLocalSearchParams<{
     q?: string;
@@ -163,6 +166,17 @@ export default function AskScreen() {
   }
   if (pendingId) {
     rows.push(<ThinkingStatus key={`p-${pendingId}`} steps={PENDING_STEPS} done={false} />);
+  } else if (failure?.code === 'LIMIT_EXCEEDED') {
+    rows.push(
+      <LimitBubble
+        key="limit"
+        dailyLimit={dailyLimit}
+        onEco={() => {
+          stickToEnd.current = true;
+          void answerInEco();
+        }}
+      />,
+    );
   } else if (failure) {
     rows.push(<ErrorBubble key="error" text={failureText(failure)} onRetry={() => void retry()} />);
   }
@@ -218,6 +232,15 @@ export default function AskScreen() {
 
             {rows}
           </ScrollView>
+
+          {/* 남은 정밀 답변 — 평소엔 숨기고 3회 이하일 때만 조용히(ask.md 한도 표시) */}
+          {remaining !== null && remaining <= 3 && (
+            <ThemedText type="small" style={[styles.remaining, { color: colors.textSecondary }]}>
+              {remaining > 0
+                ? `오늘 정밀 답변 ${remaining}번 남았어요`
+                : '오늘 정밀 답변을 다 썼어요 · 내일 0시에 다시 채워져요'}
+            </ThemedText>
+          )}
 
           {/* 입력 바 */}
           <View style={[styles.inputBar, { backgroundColor: colors.backgroundElement }]}>
@@ -296,6 +319,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  remaining: { textAlign: 'center', paddingBottom: Spacing.two },
   disclaimer: {
     textAlign: 'center',
     paddingHorizontal: Spacing.four,

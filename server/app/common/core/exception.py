@@ -24,13 +24,19 @@ class ErrorBody(BaseModel):
 
 
 class ApiException(Exception):
-    """code 는 대문자 스네이크. api-contract 에 적힌 code 가 있으면 그것을 그대로 쓴다."""
+    """code 는 대문자 스네이크. api-contract 에 적힌 code 가 있으면 그것을 그대로 쓴다.
 
-    def __init__(self, status: HTTPStatus, code: str, message: str) -> None:
+    `extra` 는 계약이 그 오류에 더 싣기로 한 칸이다(예: 429 LIMIT_EXCEEDED 의 resetAt).
+    """
+
+    def __init__(
+        self, status: HTTPStatus, code: str, message: str, extra: dict | None = None
+    ) -> None:
         super().__init__(message)
         self.status = status
         self.code = code
         self.message = message
+        self.extra = extra or {}
 
 
 def error_response(
@@ -44,6 +50,9 @@ def error_response(
 
 
 async def on_api_error(_: Request, exc: ApiException) -> JSONResponse:
+    if exc.extra:
+        content = ErrorBody(code=exc.code, message=exc.message).model_dump() | exc.extra
+        return JSONResponse(status_code=exc.status, content=content)
     return error_response(exc.status, exc.code, exc.message)
 
 
