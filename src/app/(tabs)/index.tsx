@@ -127,7 +127,7 @@ export default function HomeScreen() {
                 style={styles.todoRow}
                 onPress={() => setPicking(todo)}>
                 <ThemedText
-                  style={todo.status === 'missed' ? styles.missedMark : { color: colors.accent }}>
+                  style={todo.status === 'missed' ? [styles.missedMark, { color: colors.danger }] : { color: colors.accent }}>
                   {todo.status === 'missed' ? '!' : '○'}
                 </ThemedText>
                 <View style={styles.todoLabel}>
@@ -135,7 +135,7 @@ export default function HomeScreen() {
                   <ThemedText
                     type="small"
                     style={
-                      todo.status === 'missed' ? styles.missedMark : { color: colors.textSecondary }
+                      todo.status === 'missed' ? [styles.missedMark, { color: colors.danger }] : { color: colors.textSecondary }
                     }>
                     {todoWhen(todo, age.month)}
                   </ThemedText>
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   savedText: { flex: 1 },
-  missedMark: { color: '#F04452', fontWeight: '700' },
+  missedMark: { fontWeight: '700' },
   questionRow: {},
   disclaimer: { textAlign: 'center' },
 });

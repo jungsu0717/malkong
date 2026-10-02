@@ -11,7 +11,7 @@
 | 스타일 | **StyleSheet + 테마 토큰** (`src/constants/theme.ts`) | 의존성 최소·웹 번들 작음. NativeWind 는 Tailwind 에 익숙한 팀에서만 이점 — 우리는 도입하지 않는다 (2026 동향도 "프로토타입은 StyleSheet 로 충분" 쪽) |
 | 애니메이션 | **Reanimated v4** (설치됨) — 제스처·화면 전환 | 표준. Skia 와 UI 스레드에서 연동된다 |
 | 커스텀 그래픽 | **@shopify/react-native-skia** (필요 시점에 도입) | 타임라인 연결 곡선·다수 요소 애니메이션처럼 View 로는 버거운 그림만. **하이브리드가 정석** — 레이아웃·콘텐츠는 RN View, 그림만 Skia 캔버스 |
-| 서버 데이터 | **TanStack Query** (agent 연결 시점에 도입) | 캐싱·재시도 표준 |
+| 서버 데이터 | **TanStack Query** (ask/002 에서 도입) | 캐싱·재시도 표준. 묻기(`/v1/ask`)는 모델 호출이 다시 나가므로 자동 재시도하지 않는다 |
 | 로컬 저장 | **expo-sqlite** (기기) + **localStorage** (웹 미리보기) | 스키마는 [backend](../architecture/backend.md) 기기 DB 절이 정본. expo-sqlite 의 웹 지원이 알파(Metro WASM 설정·COOP/COEP 헤더 필요)라 브라우저 검토가 깨지므로, `src/data/db.ts`(sqlite)와 `src/data/db.web.ts`(localStorage)로 플랫폼을 나눈다. 웹은 검토용이고 출시 대상은 iOS·Android 다 |
 | 광고 | **Google AdMob + react-native-google-mobile-ads** | 배너·전면·보상형. 네이티브 모듈이라 **Expo Go 불가 → EAS 개발 빌드 단계에서 도입**. 절차는 `src/components/ad-banner.tsx` 주석. iOS 는 expo-tracking-transparency 동의 선행. **개발·가족 기기는 광고 면제 또는 테스트 광고 ID** — 실광고 자기 클릭은 AdMob 계정 정지 사유([backend](../architecture/backend.md) 운영자 절) |
 | 결제 (광고 제거) | **RevenueCat `react-native-purchases`** (Expo 권장, 도입은 나중) | 한 번 사면 광고가 사라지는 비소모성 상품. 네이티브 모듈이라 AdMob 과 같은 EAS 개발 빌드 단계에서 함께 붙인다. 구매 사실의 정본은 스토어이고 기기 저장은 복원용 사본 — 자리는 `src/data/entitlements.ts` |
@@ -27,7 +27,7 @@
 - 흰 배경 + 회색 카드(`backgroundElement`, radius 16~24) + **포인트 색 하나**(`accent` #3182F6)
 - 큰 제목·짧은 한글 라벨 — 탭·버튼은 한 단어(홈·물어보기·성장·마이)
 - 화면당 주요 행동 하나. 설명보다 여백
-- 색은 반드시 `theme.ts` 토큰으로 쓴다 — 화면에 hex 를 직접 적지 않는다 (예외: 경고 `#F04452` 는 토큰화 예정)
+- 색은 반드시 `theme.ts` 토큰으로 쓴다 — 화면에 hex 를 직접 적지 않는다. 경고·위험 신호는 `danger`·`dangerSoft` 에만
 - 다크 모드는 토큰이 자동 처리 — light/dark 두 벌을 항상 같이 채운다
 
 ## 아이콘 — 아기자기함은 아이콘이 맡고, 레이아웃은 미니멀을 지킨다

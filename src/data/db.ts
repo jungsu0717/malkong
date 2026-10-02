@@ -2,7 +2,7 @@
  * 기기 저장소 — expo-sqlite (iOS · Android).
  *
  * 스키마 정본은 docs/architecture/backend.md 의 「기기 DB 스키마」 절이다. 여기서는 그 중
- * 지금 쓰는 테이블만 만든다 — chat_message · inbox_card 는 각 기능 task 에서 추가한다.
+ * 지금 쓰는 테이블만 만든다 — inbox_card 는 그 기능 task 에서 추가한다.
  *
  * 웹은 expo-sqlite 의 웹 지원이 알파(Metro WASM 설정·특수 헤더 필요)라 미리보기가 깨지므로,
  * 같은 함수를 localStorage 로 구현한 db.web.ts 가 대신 쓰인다.
@@ -11,6 +11,7 @@
 import * as SQLite from 'expo-sqlite';
 
 import type { Baby } from './baby';
+import type { ChatMessage } from './chat';
 import type { BabyRecord } from './records';
 
 const DB_NAME = 'malkong.db';
@@ -45,6 +46,14 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           created_at         TEXT NOT NULL,
           updated_at         TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS chat_message (
+          id          TEXT PRIMARY KEY,
+          role        TEXT NOT NULL CHECK (role IN ('user','malkong')),
+          content     TEXT NOT NULL,
+          meta_json   TEXT,
+          created_at  TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_chat_created ON chat_message(created_at);
       `);
       return db;
     })();
@@ -141,4 +150,42 @@ export async function insertRecordRow(record: BabyRecord): Promise<void> {
 export async function deleteRecordRow(id: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM record WHERE id = ?', id);
+}
+
+type ChatRow = {
+  id: string;
+  role: ChatMessage['role'];
+  content: string;
+  meta_json: string | null;
+  created_at: string;
+};
+
+/** 대화 전체 — 오래된 것부터. 길어지면 날짜 단위로 나눠 읽는다(검색·보관함 task) */
+export async function readChatRows(): Promise<ChatMessage[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<ChatRow>(
+    'SELECT id, role, content, meta_json, created_at FROM chat_message ORDER BY created_at, rowid',
+  );
+  return rows.map(
+    (row) =>
+      ({
+        id: row.id,
+        role: row.role,
+        content: row.content,
+        meta: row.meta_json ? JSON.parse(row.meta_json) : {},
+        createdAt: row.created_at,
+      }) as ChatMessage,
+  );
+}
+
+export async function insertChatRow(message: ChatMessage): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT INTO chat_message (id, role, content, meta_json, created_at) VALUES (?, ?, ?, ?, ?)',
+    message.id,
+    message.role,
+    message.content,
+    JSON.stringify(message.meta),
+    message.createdAt,
+  );
 }

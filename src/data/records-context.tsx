@@ -11,7 +11,10 @@ import { addRecord, loadRecords, removeRecord, type BabyRecord } from './records
 
 type RecordsContextValue = {
   records: BabyRecord[];
-  add: (input: Pick<BabyRecord, 'kind' | 'label' | 'covers' | 'whenLabel'>) => Promise<BabyRecord>;
+  add: (
+    input: Pick<BabyRecord, 'kind' | 'label' | 'covers' | 'whenLabel'> &
+      Partial<Pick<BabyRecord, 'sourceMessageId'>>,
+  ) => Promise<BabyRecord>;
   remove: (id: string) => Promise<void>;
 };
 

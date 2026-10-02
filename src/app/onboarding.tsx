@@ -133,7 +133,7 @@ export default function OnboardingScreen() {
                 <ThemedText style={{ color: colors.textSecondary }}>일</ThemedText>
               </View>
               {error && (
-                <ThemedText type="small" style={styles.error}>
+                <ThemedText type="small" style={{ color: colors.danger }}>
                   {error}
                 </ThemedText>
               )}
@@ -219,7 +219,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
   },
   nameInput: { fontSize: 16, padding: 0 },
-  error: { color: '#F04452' },
   footer: {
     padding: Spacing.four,
     gap: Spacing.three,

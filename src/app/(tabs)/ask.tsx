@@ -1,15 +1,37 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, useColorScheme, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  useColorScheme,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import {
+  AnswerBubble,
+  DateDivider,
+  DoneTrace,
+  ErrorBubble,
+  FollowupBubble,
+  RedflagCard,
+  UserBubble,
+} from '@/components/chat-bubbles';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ThinkingStatus, type ThinkingStep } from '@/components/thinking-status';
 import { Colors, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
+import { dayKey, dayLabel } from '@/data/chat';
+import { useChat } from '@/data/chat-context';
+import { useRecords } from '@/data/records-context';
+import { useMalkong, type AskFailure } from '@/hooks/use-malkong';
 
 const SUGGESTED = [
   '밤중 수유는 언제부터 줄여도 되나요?',
@@ -18,171 +40,169 @@ const SUGGESTED = [
   '수면 교육은 언제부터 시작하나요?',
 ];
 
-// 처리 현황 시연 대본 — 라벨은 ask.md의 단계 표를 따른다 (내부 이름 노출 금지)
-const DEMO_STEPS = [
-  { id: 'l2', title: '우리 아기 기록 확인', brief: '접종 기록 1건' },
-  { id: 'l1', title: '표준 지식 찾기', brief: '질병관리청 외 3건' },
-  { id: 'compose', title: '답변 정리' },
+// 기다리는 동안의 단계 — 서버가 단계를 보내 주기 전까지는 순환 문구가 헤더를 맡는다(ask.md 처리 현황 블록)
+const PENDING_STEPS: ThinkingStep[] = [
+  { id: 'l2', title: '우리 아기 기록 확인', done: false },
+  { id: 'l1', title: '표준 지식 찾기', done: false },
+  { id: 'compose', title: '답변 정리', done: false },
 ];
-const DEMO_STEP_MS = 2600;
-const DEFAULT_QUESTION = '이번 달 예방접종 뭐가 있죠?';
 
-const VACCINE_ANSWER =
-  '3개월에는 예정된 국가 예방접종이 없어요. 다음은 4개월 — DTaP 2차, 폴리오 2차, b형 헤모필루스(Hib) 2차예요. 2개월 접종을 마쳤다는 기록이 있으니 일정대로면 돼요.';
-const DEMO_FALLBACK_ANSWER =
-  '지금은 화면 시연 단계라 준비된 예시 답변만 보여드릴 수 있어요. 말콩이가 연결되면 이 질문에 우리 아기 기록과 출처를 근거로 답해드릴게요.';
+/** 플로팅 버튼에서 넘어온 주소가 이보다 오래됐으면 새로 고침으로 남은 것이라 다시 보내지 않는다 */
+const PARAM_FRESH_MS = 30_000;
 
-/** 전송 1회 = 예시 대화 1개: 질문 버블 → 처리 현황(단계 진행) → 답변 (SPEC-ASK-05 시연) */
-function DemoExchange({ question }: { question: string }) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const [doneCount, setDoneCount] = useState(0);
-
-  useEffect(() => {
-    const timers = DEMO_STEPS.map((_, i) =>
-      setTimeout(() => setDoneCount(i + 1), (i + 1) * DEMO_STEP_MS),
-    );
-    return () => timers.forEach(clearTimeout);
-  }, []);
-
-  const done = doneCount >= DEMO_STEPS.length;
-  const steps: ThinkingStep[] = DEMO_STEPS.slice(0, done ? DEMO_STEPS.length : doneCount + 1).map(
-    (s, i) => ({ ...s, done: i < doneCount }),
-  );
-  const isVaccine = question.includes('접종');
-
-  return (
-    <>
-      <View style={[styles.userBubble, { backgroundColor: colors.accent }]}>
-        <ThemedText style={styles.userBubbleText}>{question}</ThemedText>
-      </View>
-      <ThinkingStatus steps={steps} done={done} />
-      {done && (
-        <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>
-          <ThemedText>{isVaccine ? VACCINE_ANSWER : DEMO_FALLBACK_ANSWER}</ThemedText>
-          {isVaccine && (
-            <View style={styles.sourceRow}>
-              <Ionicons name="link-outline" size={13} color={colors.textSecondary} />
-              <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                질병관리청 예방접종도우미
-              </ThemedText>
-            </View>
-          )}
-        </View>
-      )}
-    </>
-  );
+function failureText(failure: AskFailure): string {
+  if (failure.status === 0) return '인터넷 연결이 불안정해서 답을 받지 못했어요. 연결을 확인하고 다시 시도해 주세요.';
+  if (failure.status === 503) return '말콩이가 지금 답을 만들지 못했어요. 잠시 뒤에 다시 시도해 주세요.';
+  if (failure.status === 422) return '질문을 알아듣지 못했어요. 조금 바꿔서 다시 물어봐 주세요.';
+  return '잠깐 문제가 생겼어요. 다시 시도해 주세요.';
 }
 
 export default function AskScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const { age } = useBaby();
+  const { age, baby } = useBaby();
+  const { loading } = useChat();
+  const { records, remove } = useRecords();
+  const { messages, pendingId, failure, openFollowup, send, reply, retry } = useMalkong();
   // 다른 탭의 플로팅 버튼에서 넘어온 질문 (SPEC-ASK-07). t 는 같은 질문을 다시 보냈을 때의 구분값이다
   const { q, t } = useLocalSearchParams<{ q?: string; t?: string }>();
   const [input, setInput] = useState('');
-  const [local, setLocal] = useState<{ question: string; at: number } | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const handledParam = useRef<string | null>(null);
 
-  // 이 화면에서 보낸 것과 플로팅 버튼에서 넘어온 것 중 더 나중 것을 보여준다
-  const paramAt = t ? Number(t) : q ? 1 : 0;
-  const fromParam = paramAt > (local?.at ?? 0);
-  const sent = fromParam ? (q ?? null) : (local?.question ?? null);
-  const runKey = fromParam ? `p-${paramAt}` : `l-${local?.at}`;
+  // 넘어온 질문은 한 번만 보낸다 — 보낸 뒤 주소에서 지워 새로 고침해도 다시 나가지 않게 한다
+  useEffect(() => {
+    if (!q || loading || !age) return;
+    const key = t ?? q;
+    if (handledParam.current === key) return;
+    handledParam.current = key;
+    router.setParams({ q: undefined, t: undefined });
+    if (t && Date.now() - Number(t) > PARAM_FRESH_MS) return;
+    void send(q);
+  }, [q, t, loading, age, send]);
 
-  const send = () => {
-    setLocal({ question: input.trim() || DEFAULT_QUESTION, at: Date.now() });
+  if (!age || loading) return <ScreenLoading />;
+
+  const submit = () => {
+    if (!input.trim() || pendingId) return;
+    void send(input);
     setInput('');
   };
 
-  if (!age) return <ScreenLoading />;
+  // 타임라인 — 날짜가 바뀌는 자리마다 구분선(SPEC-ASK-10)
+  const rows: React.ReactNode[] = [];
+  let lastDay = '';
+  for (const m of messages) {
+    const day = dayKey(m.createdAt);
+    if (day !== lastDay) {
+      rows.push(<DateDivider key={`d-${day}`} label={dayLabel(m.createdAt, baby?.birthDate ?? null)} />);
+      lastDay = day;
+    }
+    if (m.role === 'user') {
+      rows.push(<UserBubble key={m.id} text={m.content} />);
+      continue;
+    }
+    if (m.meta.type === 'redflag') {
+      rows.push(<RedflagCard key={m.id} message={m} />);
+      continue;
+    }
+    rows.push(<DoneTrace key={`t-${m.id}`} trace={m.meta.trace} />);
+    rows.push(
+      m.meta.type === 'answer' ? (
+        <AnswerBubble key={m.id} message={m} records={records} onRemoveRecord={remove} />
+      ) : (
+        <FollowupBubble
+          key={m.id}
+          message={m}
+          open={m.id === openFollowup?.id && !pendingId}
+          onChip={(chip) => void reply(m, chip)}
+        />
+      ),
+    );
+  }
+  if (pendingId) {
+    rows.push(<ThinkingStatus key={`p-${pendingId}`} steps={PENDING_STEPS} done={false} />);
+  } else if (failure) {
+    rows.push(<ErrorBubble key="error" text={failureText(failure)} onRetry={() => void retry()} />);
+  }
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <View style={styles.header}>
-          <ThemedText type="title">말콩이</ThemedText>
-          <ThemedText type="small" style={{ color: colors.textSecondary }}>
-            만 {age.month}개월 아기 기준으로 답해요
-          </ThemedText>
-        </View>
-
-        <ScrollView
-          ref={scrollRef}
-          contentContainerStyle={styles.scroll}
-          showsVerticalScrollIndicator={false}
-          onContentSizeChange={() => {
-            if (sent) scrollRef.current?.scrollToEnd({ animated: true });
-          }}>
-          {/* 말콩이 인사 말풍선 */}
-          <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>
-            <ThemedText>
-              안녕하세요, 말콩이예요 🌱{'\n'}만 {age.month}개월에 맞춰서 답해드릴게요. 무엇이든
-              물어보세요.
-            </ThemedText>
-          </View>
-
-          {/* 기록 수집 패턴 시연 — 답변 전에 필요한 것만 되묻고, 답은 기록으로 저장한다 */}
-          <View style={[styles.userBubble, { backgroundColor: colors.accent }]}>
-            <ThemedText style={styles.userBubbleText}>분유를 갑자기 잘 안 먹어요</ThemedText>
-          </View>
-          <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>
-            <ThemedText>
-              답하기 전에 하나만 확인할게요. 평소 수유 텀과 한 번에 먹는 양이 어떻게 되나요?
-            </ThemedText>
-            <View style={styles.quickChips}>
-              {['3시간 · 160ml', '4시간 · 200ml', '잘 모르겠어요'].map((c) => (
-                <Pressable key={c} style={[styles.chip, { backgroundColor: colors.accentSoft }]}>
-                  <ThemedText type="small" style={{ color: colors.accent }}>
-                    {c}
-                  </ThemedText>
-                </Pressable>
-              ))}
-            </View>
+        <KeyboardAvoidingView
+          style={styles.safeArea}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.header}>
+            <ThemedText type="title">말콩이</ThemedText>
             <ThemedText type="small" style={{ color: colors.textSecondary }}>
-              알려주시면 기록해 두고, 같은 건 다시 묻지 않아요
+              만 {age.month}개월 아기 기준으로 답해요
             </ThemedText>
           </View>
 
-          <ThemedText type="small" style={{ color: colors.textSecondary }}>
-            이런 걸 많이 물어봐요 — 누르면 입력창에 담겨요
-          </ThemedText>
-          <View style={styles.chipWrap}>
-            {SUGGESTED.map((q) => (
-              <Pressable
-                key={q}
-                style={[styles.chip, { backgroundColor: colors.accentSoft }]}
-                onPress={() => setInput(q)}>
-                <ThemedText type="small" style={{ color: colors.accent }}>
-                  {q}
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={() => {
+              if (messages.length) scrollRef.current?.scrollToEnd({ animated: true });
+            }}>
+            {/* 말콩이 인사 말풍선 */}
+            <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>
+              <ThemedText>
+                안녕하세요, 말콩이예요 🌱{'\n'}만 {age.month}개월에 맞춰서 답해드릴게요. 무엇이든
+                물어보세요.
+              </ThemedText>
+            </View>
+
+            {messages.length === 0 && (
+              <>
+                <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                  이런 걸 많이 물어봐요 — 누르면 입력창에 담겨요
                 </ThemedText>
-              </Pressable>
-            ))}
+                <View style={styles.chipWrap}>
+                  {SUGGESTED.map((s) => (
+                    <Pressable
+                      key={s}
+                      style={[styles.chip, { backgroundColor: colors.accentSoft }]}
+                      onPress={() => setInput(s)}>
+                      <ThemedText type="small" style={{ color: colors.accent }}>
+                        {s}
+                      </ThemedText>
+                    </Pressable>
+                  ))}
+                </View>
+              </>
+            )}
+
+            {rows}
+          </ScrollView>
+
+          {/* 입력 바 */}
+          <View style={[styles.inputBar, { backgroundColor: colors.backgroundElement }]}>
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              placeholder={openFollowup ? '답을 입력하거나 위에서 골라 주세요' : '말콩이에게 물어보세요'}
+              placeholderTextColor={colors.textSecondary}
+              value={input}
+              onChangeText={setInput}
+              onSubmitEditing={submit}
+              returnKeyType="send"
+            />
+            <Pressable
+              style={[
+                styles.sendButton,
+                { backgroundColor: colors.accent, opacity: pendingId || !input.trim() ? 0.4 : 1 },
+              ]}
+              disabled={!!pendingId || !input.trim()}
+              onPress={submit}>
+              <Ionicons name="arrow-up" size={18} color="#fff" />
+            </Pressable>
           </View>
-
-          {/* 처리 현황 시연 (SPEC-ASK-05) — 전송하면 질문 아래에서 지금 하는 일이 보이고, 끝나면 접힌다.
-              key 가 전송마다 바뀌므로 같은 질문을 다시 보내도 처음부터 재생된다 */}
-          {sent && <DemoExchange key={runKey} question={sent} />}
-        </ScrollView>
-
-        {/* 입력 바 */}
-        <View style={[styles.inputBar, { backgroundColor: colors.backgroundElement }]}>
-          <TextInput
-            style={[styles.input, { color: colors.text }]}
-            placeholder="말콩이에게 물어보세요"
-            placeholderTextColor={colors.textSecondary}
-            value={input}
-            onChangeText={setInput}
-            onSubmitEditing={send}
-            returnKeyType="send"
-          />
-          <Pressable style={[styles.sendButton, { backgroundColor: colors.accent }]} onPress={send}>
-            <Ionicons name="arrow-up" size={18} color="#fff" />
-          </Pressable>
-        </View>
-        <ThemedText type="small" style={[styles.disclaimer, { color: colors.textSecondary }]}>
-          답변은 참고용이에요. 응급 상황은 119 또는 병원으로 연락하세요.
-        </ThemedText>
+          <ThemedText type="small" style={[styles.disclaimer, { color: colors.textSecondary }]}>
+            답변은 참고용이에요. 응급 상황은 119 또는 병원으로 연락하세요.
+          </ThemedText>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </ThemedView>
   );
@@ -207,30 +227,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     maxWidth: '90%',
   },
-  userBubble: {
-    borderRadius: 20,
-    borderTopRightRadius: Spacing.one,
-    padding: Spacing.three,
-    alignSelf: 'flex-end',
-    maxWidth: '85%',
-  },
-  userBubbleText: { color: '#ffffff' },
-  quickChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
-    marginTop: Spacing.two,
-  },
   chipWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.two,
-  },
-  sourceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    marginTop: Spacing.two,
   },
   chip: {
     borderRadius: 999,

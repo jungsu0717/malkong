@@ -7,6 +7,7 @@
  */
 
 import type { Baby } from './baby';
+import type { ChatMessage } from './chat';
 import type { BabyRecord } from './records';
 
 const KEY = 'malkong.baby';
@@ -78,4 +79,24 @@ export async function insertRecordRow(record: BabyRecord): Promise<void> {
 
 export async function deleteRecordRow(id: string): Promise<void> {
   await writeRecordRows((await readRecordRows()).filter((r) => r.id !== id));
+}
+
+const CHAT_KEY = 'malkong.chat';
+
+export async function readChatRows(): Promise<ChatMessage[]> {
+  try {
+    const raw = globalThis.localStorage?.getItem(CHAT_KEY);
+    return raw ? (JSON.parse(raw) as ChatMessage[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function insertChatRow(message: ChatMessage): Promise<void> {
+  const messages = [...(await readChatRows()), message];
+  try {
+    globalThis.localStorage?.setItem(CHAT_KEY, JSON.stringify(messages));
+  } catch {
+    // 저장이 막힌 브라우저에서도 화면은 그대로 동작해야 한다 (이번 실행에만 유지된다)
+  }
 }

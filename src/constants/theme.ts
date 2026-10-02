@@ -17,6 +17,8 @@ export const Colors = {
     accent: '#3182F6',
     accentSoft: '#E8F3FF',
     horse: '#DE5A4B', // 붉은 말 — 말콩 브랜드 모티프 (말띠 해)
+    danger: '#F04452', // 위험 신호·오류 — 이 색은 경고에만 쓴다
+    dangerSoft: '#FFEEEE',
   },
   dark: {
     text: '#ffffff',
@@ -27,6 +29,8 @@ export const Colors = {
     accent: '#4593FC',
     accentSoft: '#152B45',
     horse: '#E57365',
+    danger: '#F66570',
+    dangerSoft: '#3B1F23',
   },
 } as const;
 

@@ -6,7 +6,7 @@
 ## 지금 상태 (2026-10-02)
 
 - **앱**: 4개 탭(홈·물어보기·성장·마이) 화면 뼈대. 온보딩(생일 → 월령), 홈 「챙길 것」과 완료 기록이 동작한다.
-  물어보기 답변은 아직 예시 고정값이다 — 앱은 서버를 부르지 않는다
+  물어보기는 서버에 이어져 진짜 답을 받고, 대화는 기기에 하나의 타임라인으로 저장된다([ask/002](docs/task/ask/002-real-answer-screen.md))
 - **지식(L1)**: 승인된 73건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호(미국 CDC).
   남은 일은 출처 1곳 라이선스 확인과 국내 출처 보강([common/001](docs/task/common/001-l1-knowledge-build.md))
 - **서버**: Cloud Run 에서 `POST /v1/ask` 가 실제로 답한다 — 위험 신호 규칙 필터 → L1 검색 → Gemini 3.5 Flash-Lite →
@@ -16,13 +16,21 @@
 
 ## 다음 시작점
 
-1. **`ask/002`** — 앱 물어보기 화면을 예시 고정값에서 실제 서버 호출로 바꾼다. 응답의 `level` 과 빈 `sources`
-   ("공공 지식 근거 없음 · 일반 정보" 표시)를 화면에 반영한다
-2. **`common/005`** — 디바이스 키 발급·일일 한도·Neon·같은 clientMessageId 재시도. Neon 계정은 Julian 이 만든다.
-   디바이스 키 발급 API 는 [api-contract](docs/architecture/api-contract.md)에 먼저 적어야 한다
-3. **답변 완성도** — 앱 화면이 다 된 뒤에 한다. 위험 신호 다듬기와 Julian 승인([common/004](docs/task/common/004-real-answer.md)
-   「알려진 문제」). 그 전까지 Gemini 무료 할당량은 Julian 이 결과물을 판단하는 데 쓴다
-4. **실사용 전** — Gemini 를 유료 티어로 바꾸고 지출 한도 예산을 건다(그때 `MALKONG_LLM_PAID_TIER=true`)
+첫 출시판 개발을 끝까지 이어 간다(Julian 지시, 2026-10-03 — 작업 단위로 커밋, 시험은 마지막에 몰아서).
+
+1. **`home/002`** 최근 질문 이어보기(SPEC-HOME-04)
+2. **`my/002`** 아기 프로필과 기록 보기·고치기(SPEC-MY-02)
+3. **`home/003`** 「챙길 것」 생활 항목(SPEC-HOME-02)
+4. **`my/003`** 약관·개인정보 처리방침·의학 정보 고지 본문(SPEC-MY-03) — 법률 검토는 Julian 판단
+5. **`common/005`** 디바이스 키·일일 한도·Neon·같은 clientMessageId 재시도 + 한도 화면. Neon 계정은 Julian 이 만든다.
+   디바이스 키 발급 API 는 [api-contract](docs/architecture/api-contract.md)에 먼저 적는다
+6. **`ask/003`** 답변 피드백(SPEC-ASK-06) — 5 의 저장소 위에서
+7. **광고(AdMob)와 광고 제거 구매(RevenueCat)** — 네이티브 모듈이라 EAS 개발 빌드부터. 광고·스토어 계정은 Julian
+8. **앱 아이콘·시작 화면** — 임시 아이콘, 최종은 디자이너
+9. **몰아 시험** — 웹 화면, 실기기(sqlite 포함)
+10. **답변 완성도** — 위험 신호 다듬기와 Julian 승인([common/004](docs/task/common/004-real-answer.md) 「알려진 문제」).
+    그 전까지 Gemini 무료 할당량은 Julian 이 결과물을 판단하는 데 쓴다
+11. **실사용 전** — Gemini 유료 티어와 지출 한도(그때 `MALKONG_LLM_PAID_TIER=true`), 스토어 등록(개발자 계정은 Julian)
 
 ## 다른 PC 에서 시작하기
 
