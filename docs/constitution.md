@@ -21,10 +21,12 @@
 6. **SPEC 이 먼저다.** 근거 SPEC 없는 기능 코드를 만들지 않는다. SPEC 이 모호하면 지어내지 않고 묻는다.
 7. **검증은 구현과 분리한다.** task 를 끝낼 때는 완료 조건(SPEC 문장)과 실제 동작을 대조해 확인하고,
    통과시키려고 조건을 몰래 완화하지 않는다. 규모가 커지면 검증을 별도 세션(에이전트)에 맡긴다.
-8. **품질 게이트**: `npx tsc --noEmit` + `npx expo lint` 통과 전에는 끝났다고 하지 않는다.
+8. **품질 게이트**: 앱은 `npx tsc --noEmit` + `npx expo lint`, 서버는 `uv run ruff check .` +
+   `uv run ruff format --check .` + `uv run pytest` 를 통과하기 전에는 끝났다고 하지 않는다.
 9. **스택·스타일의 정본은 [app-design](app-design/README.md)** 이고, 무게 있는 선택의 이유는
    [decisions](decisions/README.md)에 남긴다.
 
 ## changelog
 
 - 2026-09-30 최초 작성 — main-design 의 원칙 다섯을 승격하고 개발 원칙을 더함 (SDD constitution 관행)
+- 2026-10-02 원칙 8 품질 게이트에 서버 몫(ruff, pytest)을 더함 (task common/002)

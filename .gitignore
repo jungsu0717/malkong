@@ -41,3 +41,12 @@ example
 # generated native folders
 /ios
 /android
+
+# server (Python)
+server/.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Playwright MCP 검증 기록 (스냅샷, 콘솔 로그)
+.playwright-mcp/

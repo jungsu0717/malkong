@@ -27,6 +27,8 @@
 - 형태: **FastAPI 단일 경량 서버.** 역할은 셋 — LLM 프록시(라우팅 포함) · L1 지식 검색 · 사용량 제어.
 - 실행은 **Cloud Run**, 상태는 **Neon**(서버리스 Postgres), 비밀값은 Secret Manager 에 둔다
   — 고른 이유는 아래 「무엇을 어디에 둘 것인가」.
+- 코드는 같은 repo 의 `server/` 에 있다. 코드 구조와 규칙, 로컬 실행과 배포 명령은
+  [server/AGENTS.md](../../server/AGENTS.md)가 정본이다.
 
 ### 서버가 저장하는 것 — 아기 데이터가 아니라 운영 데이터다
 
@@ -65,6 +67,16 @@
 조사 근거: [FastAPI 호스팅 비교 2026](https://www.pandastack.ai/blog/best-fastapi-hosting-platforms-2026/) ·
 [백엔드 배포 도구 2026](https://northflank.com/blog/best-tools-to-deploy-backends) ·
 [Neon vs Supabase 2026](https://dev.to/raxxostudios/supabase-vs-neon-choosing-a-serverless-database-in-2026-23n4)
+
+### 배포 설정
+
+| 설정 | 값 | 이유 |
+|---|---|---|
+| 리전 | asia-northeast3 (서울) | 사용자가 한국에 있어서 왕복 지연이 가장 짧다 |
+| 최소 인스턴스 | 0 | 요청이 없으면 0원에 수렴해야 한다(이 절 첫 규칙) |
+| 최대 인스턴스 | 2 | 비용이 갑자기 불어나는 것을 막는 상한 |
+| 인증 없는 호출 | 허용 | 앱이 로그인 없이 부르기 때문이다. 남용은 디바이스 키와 일일 한도가 막는다 |
+| 상태 확인 경로 | `GET /health` | `/healthz` 처럼 z 로 끝나는 일부 경로는 Cloud Run 이 예약해 두어 앱까지 오지 않는다 |
 
 ## DB — 두 단계
 
@@ -277,3 +289,4 @@ CREATE INDEX ix_inbox_created ON inbox_card(created_at);
   어느 급을 쓸지는 비교 측정 후 결정 (사내 AI 담당 조언 반영)
 - 2026-10-02 호스팅·DB 확정: Cloud Run + Neon. 서버가 저장하는 운영 데이터 다섯을 명시(빠져 있던 부분) ·
   가족 공유 DB 후보를 Supabase 에서 Neon 으로 바꿈
+- 2026-10-02 서버 코드 위치(`server/`)와 배포 설정(서울, 인스턴스 0~2, 인증 없는 호출)을 정의 (task common/002)

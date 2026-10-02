@@ -1,0 +1,99 @@
+# 말콩 서버 — 코드 작업 규칙
+
+이 폴더는 말콩 agent 서버(FastAPI)다. 서버가 무엇을 하고 무엇을 저장하는지는
+[backend](../docs/architecture/backend.md) 서버 절이, API 모양은 [api-contract](../docs/architecture/api-contract.md)가
+정본이다. 이 파일은 코드를 어떻게 쓰는지만 다룬다.
+
+폴더 구조와 계층 규칙은 회사 FastAPI 프로젝트(neuro-ontology-manager-api)를 따른다. 무엇을 가져오고
+무엇을 뺐는지는 [decisions/006](../docs/decisions/006-server-structure.md)에 있다.
+
+## 명령 (`server/` 에서)
+
+```bash
+uv sync                                          # 의존성 설치 (가상환경은 server/.venv)
+uv run uvicorn app.main:app --reload --port 8000 # 로컬 실행
+uv add <패키지>                                   # 의존성 추가 (개발용은 uv add --dev)
+
+# 게이트 — 작업을 끝냈다고 하기 전에 셋 다 통과시킨다
+uv run ruff check .
+uv run ruff format --check .                     # 고칠 때는 --check 를 빼고 돌린다
+uv run pytest
+```
+
+## 배포 (Cloud Run)
+
+배포 설정의 값(리전, 인스턴스 수, 인증 없는 호출)은 backend 「배포 설정」이 정한다. 값을 바꿀 때는
+backend 를 먼저 고치고 아래 명령을 맞춘다. 이미지는 Cloud Build 가 `Dockerfile` 로 만들고,
+업로드에서 뺄 것은 `.gcloudignore` 에 있다.
+
+- GCP 프로젝트: `malkong` (번호 481623022922)
+- 서비스 주소: https://malkong-server-481623022922.asia-northeast3.run.app (API 문서는 `/docs`)
+
+```bash
+# 처음 한 번 — 프로젝트를 고르고, 필요한 API 를 켜고, 빌드용 기본 서비스 계정에 빌드 권한을 준다
+# (권한이 없으면 배포가 PERMISSION_DENIED 로 멈춘다)
+gcloud config set project malkong
+gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+gcloud projects add-iam-policy-binding malkong --condition=None \
+  --member="serviceAccount:481623022922-compute@developer.gserviceaccount.com" --role="roles/run.builder"
+
+# 배포 (server/ 에서)
+gcloud run deploy malkong-server --source . --region asia-northeast3 \
+  --allow-unauthenticated --min-instances 0 --max-instances 2
+```
+
+## 구조
+
+```
+app/
+  main.py              create_app() — 미들웨어, 에러 핸들러, 라우터 등록. GET /health
+  common/core/         여러 도메인이 함께 쓰는 것
+    setting.py         환경변수 설정
+    exception.py       ApiException 과 공통 에러 핸들러
+    schema.py          ApiModel (camelCase 변환) 같은 공통 모형
+  domain/<기능>/       api-contract 의 엔드포인트 묶음 하나가 폴더 하나
+    router.py
+    schema.py
+    service.py
+  infra/               저장소 접근. 아직 없고, Neon 을 붙일 때(common/004) 만든다
+tests/
+```
+
+도메인 이름은 api-contract 경로의 첫 토막을 쓴다 — `ask`, `knowledge`, `entitlements`, `reward`,
+`feedback`, `cohort`.
+
+## 계층 규칙 — Router → Service → Repository
+
+- router 는 요청을 받아 service 를 부르고 그 결과를 돌려주기만 한다. 판단과 계산은 service 가 한다
+- service 는 router 가 `Depends` 로 받는다. 팩토리 `get_<도메인>_service()` 는 그 도메인의 `router.py` 에 둔다
+- repository 는 저장소를 읽고 쓰는 일만 한다. repository 를 부르는 것은 service 뿐이다
+- 버전 접두어 `/v1` 은 `main.py` 에서 붙인다. 도메인 router 에는 계약 경로에서 `/v1` 을 뺀 경로를 적는다
+- 라우트마다 `response_model` 을 적는다. 에러 응답 모양은 `responses={422: {"model": ErrorBody}}` 처럼 알린다
+- 요청과 응답 모형은 `domain/<기능>/schema.py` 에 두고 `ApiModel` 을 상속한다. 그러면 JSON 필드는
+  계약대로 camelCase, 파이썬 이름은 snake_case 가 된다
+
+## 에러
+
+- 모든 에러는 `{ code, message }` 로 나간다. 형식이 틀린 요청, 없는 경로, 예상 못 한 오류도
+  `common/core/exception.py` 의 핸들러가 같은 형식으로 바꾼다
+- 우리 코드가 에러를 낼 때는 `ApiException(상태, code, message)` 를 던진다
+- code 는 대문자 스네이크로 쓴다(`INVALID_REQUEST`). api-contract 에 적힌 code 가 있으면 그대로 쓴다
+
+## 설정
+
+- 설정값은 환경변수(접두어 `MALKONG_`)로만 받고, `common/core/setting.py` 한 곳에서 읽는다
+- 모델 이름, 접속 주소, 키를 코드에 적지 않는다(backend 「모델은 갈아끼우는 부품이다」)
+
+## 금지
+
+- `HTTPException` 을 쓰지 않는다. 대신 `ApiException` 을 던진다
+- router 에서 repository 나 DB 를 바로 부르지 않는다
+- `async def` 안에서 막히는 호출(동기 DB, 동기 HTTP)을 하지 않는다. 그런 경로는 `def` 로 둔다
+- 서버에 저장하거나 로그에 남겨도 되는 것은 backend 「서버가 저장하는 것」 절이 정한다.
+  그 밖의 것, 특히 아기 데이터(질문 원문, 기록)는 저장하지도 로그에 남기지도 않는다
+- 회사 사내 공통 패키지를 쓰지 않는다(decisions/006)
+
+## 테스트
+
+- 새 엔드포인트를 만들면 `tests/` 에 테스트를 하나 이상 둔다
+- LLM 같은 바깥 호출은 `app.dependency_overrides` 로 가짜를 끼워 시험한다
