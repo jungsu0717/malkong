@@ -6,13 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AskFab } from '@/components/ask-fab';
 import { BabyRunLoading } from '@/components/baby-loading';
+import { NoAdsCard } from '@/components/no-ads-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { storedDeviceKey } from '@/data/api';
 import { useBaby } from '@/data/baby-context';
-import { useEntitlements } from '@/data/entitlements-context';
 import { unitFromL1, unitFromRecord } from '@/data/knowledge';
 import { allItems, L1_VERSION, pendingReviewCount } from '@/data/l1';
 import { usePreferences } from '@/data/preferences-context';
@@ -36,7 +36,6 @@ export default function MyScreen() {
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const router = useRouter();
   const { baby, age } = useBaby();
-  const { ads } = useEntitlements();
   const { records } = useRecords();
   const { scheduleOnly, setScheduleOnly } = usePreferences();
   /** 버전을 길게 누르면 보이는 기기 키 — 운영자(가족) 기기로 등록할 때 쓴다(backend 「운영자 기기」) */
@@ -84,20 +83,8 @@ export default function MyScreen() {
             <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
           </Pressable>
 
-          {/* 광고 제거 — 결제 SDK 는 EAS 개발 빌드 단계에서 붙인다 (SPEC-MY-06) */}
-          {ads && (
-            <Pressable style={[styles.profileCard, { backgroundColor: colors.backgroundElement }]}>
-              <View style={styles.profileText}>
-                <ThemedText type="subtitle">광고 없이 쓰기</ThemedText>
-                <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                  한 번 결제하면 배너와 전면 광고가 모두 사라져요
-                </ThemedText>
-              </View>
-              <ThemedText type="small" style={{ color: colors.accent }}>
-                준비 중
-              </ThemedText>
-            </Pressable>
-          )}
+          {/* 광고 없이 쓰기 — 구매·복원 (SPEC-MY-06) */}
+          <NoAdsCard />
 
           {/* 로그인 유도 카드 — 로그인은 가족 공유·기기 이전과 함께 들인다(SPEC-MY-04). 그 전엔 누를 단추를 두지 않는다 */}
           <View style={[styles.loginCard, { backgroundColor: colors.accentSoft }]}>

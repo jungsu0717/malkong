@@ -32,17 +32,13 @@ export const DEFAULT_ENTITLEMENTS: Entitlements = {
 
 const ADS_REMOVED_KEY = 'ads_removed';
 
-export async function loadEntitlements(): Promise<Entitlements> {
-  const removed = (await readSetting(ADS_REMOVED_KEY)) === 'true';
-  const entitlements: Entitlements = {
-    ...DEFAULT_ENTITLEMENTS,
-    ads: !removed,
-  };
-  return entitlements;
+/** 기기에 적어 둔 광고 제거 구매 사본 — 스토어에 묻기 전·오프라인일 때 쓴다 */
+export async function loadAdsRemoved(): Promise<boolean> {
+  return (await readSetting(ADS_REMOVED_KEY)) === 'true';
 }
 
 /**
- * 광고 제거 구매 결과를 적어 둔다. 결제 SDK 를 붙이면 구매·복원 성공 시 이 함수를 부른다.
+ * 광고 제거 구매 결과를 적어 둔다 — 구매·복원·부팅 때 스토어에 물어본 결과(purchases.ts).
  * 스토어가 정본이므로, 앱을 다시 깔면 복원으로 다시 채운다.
  */
 export async function setAdsRemoved(removed: boolean): Promise<void> {

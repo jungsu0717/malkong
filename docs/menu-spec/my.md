@@ -66,6 +66,10 @@
   (`OPERATOR`), 출시 전에 Julian 이 채우고 검토한 뒤 `DRAFT` 를 내린다. 개인정보 처리방침은 기기 안 저장(SPEC-MY-03
   둘째 줄), 질문 때 보내는 것, 서버에 남는 것, 광고·결제, 위탁·국외 이전을 앱이 실제로 하는 대로 적는다 — 앱이 바뀌면 같이 고친다.
 - 로그인 유도 카드는 「가족과 함께 보기 · 준비 중」 안내만 둔다(누를 단추 없음).
+- 광고 없이 쓰기(task my/004): `src/components/no-ads-card.tsx` + `src/data/purchases.ts`(RevenueCat, 웹은
+  `purchases.web.ts`). entitlement `no_ads`, 현재 offering 의 lifetime 꾸러미. 구매·복원·부팅 때 스토어에 물은 결과를
+  settings `ads_removed` 사본에 맞춘다(환불이면 광고가 다시 나온다). 광고 표시는 서버 자격(운영자 기기)과 구매를 따로 들고
+  둘 다 허락할 때만이다(entitlements-context). 공개 SDK 키 `EXPO_PUBLIC_REVENUECAT_{IOS,ANDROID}_KEY` 가 없으면 「준비 중」.
 - 미구현: 알림 설정(브리핑과 함께), 공지사항, 로그인(SPEC-MY-04), 가족 공유(SPEC-MY-05), 사진(SPEC-MY-02 다음).
 
 ## changelog
@@ -73,4 +77,4 @@
 - 2026-09-30 최초 작성
 - 2026-10-01 온보딩·프로필 수정 구현 (task/my/001) — 저장소는 기기 sqlite, 웹 미리보기는 localStorage
 - 2026-10-02 SPEC-MY-02 에 프로필·기록 사진(다음, 기기 저장)
-- 2026-10-03 기록 보기·고치기(task my/002) · 약관·개인정보·의학 고지·FAQ 초안(task my/003)
+- 2026-10-03 기록 보기·고치기(task my/002) · 약관·개인정보·의학 고지·FAQ 초안(task my/003) · 광고 없이 쓰기 구매·복원(task my/004)
