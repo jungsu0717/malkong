@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { Colors, Spacing } from '@/constants/theme';
-import type { GapGroup, L1Item } from '@/data/timeline';
+import { isLifeGroup, type GapGroup, type L1Item } from '@/data/timeline';
 
 /**
  * 「챙길 것」 한 줄의 완료 알리기 (SPEC-HOME-02 완료 알림).
@@ -39,6 +39,9 @@ export function MarkDoneSheet({
     });
 
   const items = group?.items ?? [];
+  // 생활 항목은 해낸 일이 아니라 알아 둔 것이라 「확인」이라 부른다
+  const life = group ? isLifeGroup(group) : false;
+  const verb = life ? '확인' : '완료';
   const chosen = items.filter((i) => !excluded.has(i.id));
 
   return (
@@ -54,9 +57,11 @@ export function MarkDoneSheet({
             styles.sheet,
             { backgroundColor: colors.background, paddingBottom: Spacing.four + insets.bottom },
           ]}>
-          <ThemedText type="subtitle">완료했나요?</ThemedText>
+          <ThemedText type="subtitle">{life ? '확인했나요?' : '완료했나요?'}</ThemedText>
           <ThemedText type="small" style={{ color: colors.textSecondary }}>
-            {items.length > 1 ? '한 것만 남기고 골라 주세요. ' : ''}날짜는 따로 적지 않아도 돼요
+            {life
+              ? '읽고 챙기기로 한 것만 남기고 골라 주세요'
+              : `${items.length > 1 ? '한 것만 남기고 골라 주세요. ' : ''}날짜는 따로 적지 않아도 돼요`}
           </ThemedText>
 
           <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
@@ -97,7 +102,7 @@ export function MarkDoneSheet({
                 styles.buttonText,
                 { color: chosen.length > 0 ? '#ffffff' : colors.textSecondary },
               ]}>
-              {chosen.length > 1 ? `${chosen.length}건 완료했어요` : '완료했어요'}
+              {chosen.length > 1 ? `${chosen.length}건 ${verb}했어요` : `${verb}했어요`}
             </ThemedText>
           </Pressable>
           <Pressable style={styles.cancel} onPress={onClose}>

@@ -16,12 +16,14 @@ import type { UserMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { itemsForMonth, itemsOfKind } from '@/data/l1';
 import type { BabyRecord } from '@/data/records';
+import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
 import {
   getGaps,
   groupGaps,
   groupLabel,
   headlineOf,
+  isLifeGroup,
   type GapGroup,
   type L1Item,
 } from '@/data/timeline';
@@ -41,7 +43,13 @@ function emptyPointsText(currentMonth: number): string {
 }
 
 /** 「챙길 것」 한 줄의 시점 안내. 지난 것은 놓침으로 단정하지 않고 묻는다 (SPEC-HOME-02) */
-function todoWhen({ status, month }: GapGroup, currentMonth: number): string {
+function todoWhen(group: GapGroup, currentMonth: number): string {
+  const { status, month } = group;
+  if (isLifeGroup(group)) {
+    // 생활 항목은 마감이 없다 — 언제부터 챙길 것인지만 말한다
+    if (status === 'soon') return `${month}개월부터 알아 두면 좋아요`;
+    return month === currentMonth ? '이번 달부터 알아 두면 좋아요' : '지금 시기에 알아 두면 좋아요';
+  }
   if (status === 'missed') return `${month}개월 차 항목인데 기록이 없어요 — 완료했다면 알려주세요`;
   if (status === 'soon') return `${month}개월에 다가와요`;
   return month === currentMonth ? '이번 달' : `${month}개월부터 챙길 시기예요`;
@@ -53,6 +61,7 @@ export default function HomeScreen() {
   const { baby, age } = useBaby();
   const { records, add, remove } = useRecords();
   const { messages } = useChat();
+  const { scheduleOnly } = usePreferences();
   const [showAllTodos, setShowAllTodos] = useState(false);
   /** 완료를 알리려고 연 줄 */
   const [picking, setPicking] = useState<GapGroup | null>(null);
@@ -62,17 +71,18 @@ export default function HomeScreen() {
   if (!age) return <ScreenLoading />;
 
   // 놓친 것 → 지금 → 다음 달 순서로, 같은 날 챙길 것은 한 줄로. 길면 접어 두고 눌러서 펼친다
-  const todos = groupGaps(getGaps(age.month, records));
+  const todos = groupGaps(getGaps(age.month, records, { scheduleOnly }));
   const shownTodos = showAllTodos ? todos : todos.slice(0, VISIBLE_TODOS);
   const hiddenTodoCount = todos.length - shownTodos.length;
   const headline = headlineOf(age.month);
 
   const markDone = async (items: L1Item[]) => {
+    const life = picking ? isLifeGroup(picking) : false;
     setPicking(null);
     // 날짜는 묻지 않는다 — 기록의 시점은 알린 날이다
     const record = await add({
       kind: '기록',
-      label: `${groupLabel(items)} 완료`,
+      label: `${groupLabel(items)} ${life ? '확인' : '완료'}`,
       covers: items.map((i) => i.id),
       whenLabel: `D+${age.days}에 알림`,
     });
@@ -152,7 +162,7 @@ export default function HomeScreen() {
                 </View>
                 <View style={[styles.doneChip, { borderColor: colors.accent }]}>
                   <ThemedText type="small" style={{ color: colors.accent }}>
-                    완료
+                    {isLifeGroup(todo) ? '확인' : '완료'}
                   </ThemedText>
                 </View>
               </Pressable>

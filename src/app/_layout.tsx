@@ -8,6 +8,7 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BabyProvider, useBaby } from '@/data/baby-context';
 import { ChatProvider } from '@/data/chat-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
+import { PreferencesProvider } from '@/data/preferences-context';
 import { RecordsProvider } from '@/data/records-context';
 
 SplashScreen.preventAutoHideAsync();
@@ -41,6 +42,7 @@ export default function RootLayout() {
       <AnimatedSplashOverlay />
       <QueryClientProvider client={queryClient}>
         <EntitlementsProvider>
+          <PreferencesProvider>
           <BabyProvider>
             <RecordsProvider>
               <ChatProvider>
@@ -56,6 +58,7 @@ export default function RootLayout() {
               </ChatProvider>
             </RecordsProvider>
           </BabyProvider>
+          </PreferencesProvider>
         </EntitlementsProvider>
       </QueryClientProvider>
     </ThemeProvider>

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AskFab } from '@/components/ask-fab';
@@ -13,6 +13,7 @@ import { useBaby } from '@/data/baby-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { unitFromL1, unitFromRecord } from '@/data/knowledge';
 import { allItems, L1_VERSION, pendingReviewCount } from '@/data/l1';
+import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
 
 const MENU_SECTIONS: { title: string; items: string[] }[] = [
@@ -28,6 +29,7 @@ export default function MyScreen() {
   const { baby, age } = useBaby();
   const { ads } = useEntitlements();
   const { records } = useRecords();
+  const { scheduleOnly, setScheduleOnly } = usePreferences();
 
   // 두 층을 같은 겉모양으로 본다 (src/data/knowledge.ts 유닛 계약)
   const units = [...allItems().map(unitFromL1), ...records.map(unitFromRecord)];
@@ -95,6 +97,28 @@ export default function MyScreen() {
             <Pressable style={[styles.loginButton, { backgroundColor: colors.accent }]}>
               <ThemedText style={styles.loginButtonText}>로그인 · 가입</ThemedText>
             </Pressable>
+          </View>
+
+          {/* 설정 — 홈 「챙길 것」에서 생활 항목을 뺄 수 있다 (SPEC-HOME-02 생활 항목) */}
+          <View style={styles.section}>
+            <ThemedText type="small" style={{ color: colors.textSecondary }}>
+              설정
+            </ThemedText>
+            <ThemedView type="backgroundElement" style={styles.menuCard}>
+              <View style={styles.menuRow}>
+                <View style={styles.profileText}>
+                  <ThemedText>「챙길 것」에 생활 항목도 보기</ThemedText>
+                  <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                    끄면 접종·검진만 보여요
+                  </ThemedText>
+                </View>
+                <Switch
+                  value={!scheduleOnly}
+                  onValueChange={(on) => void setScheduleOnly(!on)}
+                  trackColor={{ true: colors.accent }}
+                />
+              </View>
+            </ThemedView>
           </View>
 
           {MENU_SECTIONS.map((section) => (
