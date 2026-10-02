@@ -45,8 +45,10 @@ Docs: https://docs.expo.dev/eas/index.md
 설계 문서가 `docs/` 에 있고, 코드보다 먼저 읽는다. 흐름은 한 방향이다:
 **architecture(전체 WHAT) → menu-spec(메뉴별 SPEC + HOW) → task(작업 단위) → 코드.**
 
+- 지금 어디까지 왔고 다음에 무엇을 할지: [README.md](README.md) 「지금 상태」「다음 시작점」(다른 PC 에서 이어받을 때도 여기부터)
 - 시작점: [docs/README.md](docs/README.md) — 문서 지도 · 작성 규칙 여덟 · SPEC ID 규칙(`SPEC-<HOME|ASK|GROW|MY>-NN`) · 작업 사이클(specify → clarify → plan/task → implement → verify)
 - 모든 SPEC 위에 [docs/constitution.md](docs/constitution.md)가 있다 — 충돌하면 constitution 이 이긴다
+- 작업 흐름(Julian 지시, 2026-10-02): task 를 만들고 → 끝까지 구현하고 → 리뷰와 검증을 돌리고 → 커밋할지 묻고 → 승인되면 다음 task 로 이어 간다. 단계마다 끊지 않고, Julian 이 결정해야 하는 것(미결, 대안 선택, 비용, 계정·결제 같은 Julian 만 할 수 있는 일)이 생길 때만 묻는다. 커밋·푸시는 매번 승인을 받은 뒤에만 한다
 - 기능 작업은 **근거 SPEC 이 있는 task**(`docs/task/<메뉴>/NNN-*.md`)로만 시작한다. SPEC 이 없으면 먼저 쓰고, `미결:` 이 걸려 있으면 지어내지 말고 사용자에게 물어 푼 뒤 시작한다
 - 무게 있는 선택(대안 기각)은 [docs/decisions/](docs/decisions/README.md)에 ADR 로 남긴다. 스토어 문구·포지셔닝의 원천은 [docs/product/product-brief.md](docs/product/product-brief.md)
 - WHAT(SPEC 문장)과 HOW(구현)를 섞지 않는다. 같은 내용을 두 곳에 적지 않는다. 문서는 덧대지 않고 정의를 갱신한다

@@ -3,10 +3,43 @@
 우리 아기 기준으로 답하는 AI 육아 비서. 궁금할 때 물어보면 월령과 우리 아기 기록에 맞춰
 공공 의료·육아 지식의 출처와 함께 답하고, 아침마다 오늘 챙길 것을 먼저 알려준다.
 
-## 지금 상태
+## 지금 상태 (2026-10-02)
 
-설계는 끝났고 구현은 시작 단계다. 4개 탭(홈·물어보기·성장·마이)의 화면 뼈대와 지식층 데이터
-모형이 있고, 답변은 아직 예시 고정값이다 — 서버와 agent 는 연결 전이다.
+- **앱**: 4개 탭(홈·물어보기·성장·마이) 화면 뼈대. 온보딩(생일 → 월령), 홈 「챙길 것」과 완료 기록이 동작한다.
+  물어보기 답변은 아직 예시 고정값이다 — 앱은 서버를 부르지 않는다
+- **서버**: FastAPI(`server/`)를 Cloud Run 서울에 배포했다(GCP 프로젝트 `malkong`).
+  `POST /v1/ask` 는 아직 목업 답변을 돌려준다 — https://malkong-server-481623022922.asia-northeast3.run.app/docs
+- **모델**: 운영 모델을 Gemini 3.5 Flash-Lite 로 정했다([decisions/008](docs/decisions/008-model-choice.md)).
+  모델 어댑터, 말콩이 프롬프트, 질문 30개 채점 장치(`server/eval/`)가 있지만 `/v1/ask` 에는 아직 붙이지 않았다
+- 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다. 가장 최근은
+  [common/003](docs/task/common/003-model-compare.md)
+
+## 다음 시작점
+
+1. **`docs/task/common/004` task 를 만든다** — `/v1/ask` 를 목업에서 실제 답변으로 바꾸는 일.
+   범위 메모는 [common/003](docs/task/common/003-model-compare.md)과
+   [common/002](docs/task/common/002-server.md)의 「이 task 다음」에 있다. 먼저 정할 것:
+   - 한 task 로 할지 나눌지 — 실제 답변(L1 검색 + 모델 + 판단 질문의 안심 표현 검사) / 위험 신호 규칙 필터 /
+     디바이스 키·일일 한도·Neon / 캐시
+   - 위험 신호 규칙 필터는 L1 의 red_flag 항목이 먼저 있어야 한다(common/001 4단계, 기준 수치는 출처에서만)
+   - 디바이스 키 발급 API 는 [api-contract](docs/architecture/api-contract.md)에 먼저 적어야 한다
+2. 그다음 `ask/002` — 앱 물어보기 화면을 예시 고정값에서 실제 서버 호출로 바꾼다
+
+## 다른 PC 에서 시작하기
+
+Claude Code 의 메모리는 PC 마다 따로라서, 이어받는 기준은 이 README 와 `docs/task/` 다.
+명령어는 [AGENTS.md](AGENTS.md)(앱)와 [server/AGENTS.md](server/AGENTS.md)(서버)에 있다. 아래는 git 에 없어서
+PC 마다 새로 준비해야 하는 것만 적는다.
+
+- **git 계정**: 이 repo 는 개인 계정(jungsu0717)으로만 커밋한다. 회사 계정과 섞이지 않게 **repo 로컬 설정**으로
+  `user.name=jungsu0717`, `user.email=6903839+jungsu0717@users.noreply.github.com` 을 둔다.
+  인증도 repo 로컬 `credential.helper` 로 개인 계정 것을 쓰고, 전역 설정은 건드리지 않는다
+- **앱**: Node 를 설치하고 `npm install`
+- **서버**: uv 를 설치하고 `server/` 에서 `uv sync` (Python 3.13 은 uv 가 받는다)
+- **Gemini 키**: git 에 없다. https://aistudio.google.com/apikey 의 「Default Gemini Project」(결제가 연결되지 않은
+  프로젝트)에서 키를 만들거나 복사해 `server/.env` 에 `MALKONG_GEMINI_API_KEY=...` 한 줄로 둔다.
+  `malkong` 프로젝트의 키는 선불 등급이 되어 402 로 막힌다
+- **배포할 때만**: gcloud CLI 설치 → `gcloud auth login`(개인 구글 계정) → `gcloud config set project malkong`
 
 ## 핵심 개념
 
