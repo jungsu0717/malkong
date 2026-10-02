@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from app.common.core.schema import ApiModel, NonEmptyStr
 
@@ -50,14 +50,25 @@ class Usage(ApiModel):
     remaining: int
 
 
+Level = Literal["사실", "일반", "판단"]
+
+
 class AnswerResponse(ApiModel):
     type: Literal["answer"] = "answer"
     answer: str
-    # 근거 없는 답변은 내보내지 않는다 — 비어 있으면 모형을 만드는 단계에서 막힌다
-    sources: list[Source] = Field(min_length=1)
+    # 답변 수위(SPEC-ASK-08). 앱은 sources 가 비면 "공공 지식 근거 없음 · 일반 정보"를 표시한다
+    level: Level
+    sources: list[Source] = []
     records: list[RecordSuggestion] = []
     usage: Usage
     eco: bool = False
+
+    @model_validator(mode="after")
+    def _fact_needs_sources(self) -> "AnswerResponse":
+        # 근거 없는 답을 근거 있는 척 내보내지 않는다(constitution 1) — 사실 답은 반드시 출처가 있다
+        if self.level == "사실" and not self.sources:
+            raise ValueError("사실 수위 답에는 sources 가 있어야 한다")
+        return self
 
 
 class Followup(ApiModel):

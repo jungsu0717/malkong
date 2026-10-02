@@ -29,14 +29,17 @@ class AnthropicClient:
         vertex_project: str | None = None,
         vertex_region: str = "global",
         api_key: str | None = None,
+        timeout_s: float | None = None,
     ) -> None:
+        # 서버에서는 시간 제한을 걸고 SDK 자체 재시도를 끈다 — 재시도는 서비스가 한 번만 한다
+        limits: dict[str, Any] = {"timeout": timeout_s, "max_retries": 0} if timeout_s else {}
         if vertex_project:
             self._client: Any = anthropic.AnthropicVertex(
-                project_id=vertex_project, region=vertex_region
+                project_id=vertex_project, region=vertex_region, **limits
             )
             self._fallbacks = False
         elif api_key:
-            self._client = anthropic.Anthropic(api_key=api_key)
+            self._client = anthropic.Anthropic(api_key=api_key, **limits)
             self._fallbacks = True
         else:
             raise ValueError("vertex_project 나 api_key 중 하나가 있어야 한다")
@@ -64,7 +67,8 @@ class AnthropicClient:
         latency_ms = round((time.perf_counter() - started) * 1000)
 
         if response.stop_reason == "refusal":
-            raise LlmError(f"거절됨: {getattr(response, 'stop_details', None)}")
+            # 거절 사유(stop_details)에는 질문 내용이 섞일 수 있어 메시지에 넣지 않는다
+            raise LlmError("거절됨")
         if response.stop_reason == "max_tokens":
             raise LlmError("출력이 상한에서 잘렸다")
 
@@ -72,7 +76,7 @@ class AnthropicClient:
         try:
             data = json.loads(text)
         except json.JSONDecodeError as exc:
-            raise LlmError(f"JSON 이 아닌 답: {text[:200]!r}") from exc
+            raise LlmError(f"JSON 이 아닌 답 (길이 {len(text)})") from exc
 
         usage = response.usage
         return LlmResult(

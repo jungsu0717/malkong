@@ -8,6 +8,7 @@
 """
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -26,6 +27,21 @@ class Settings(BaseSettings):
     vertex_region: str = "global"
     # Claude API 직결로 부를 때만 쓴다
     anthropic_api_key: SecretStr | None = None
+
+    # 결제가 연결된 유료 티어인가. 꺼져 있으면(무료 티어 — 입력이 학습에 쓰일 수 있다)
+    # 아기 기록을 모델에 보내지 않고 응답에 eco 를 단다(backend 일일 한도 절 · task common/004).
+    # 유료 전환은 Julian 이 한다
+    llm_paid_tier: bool = False
+
+    # 하루 정밀 답변 수(backend 「일일 한도」). 집계는 common/005 —
+    # 그전까지 응답의 remaining 은 이 값이다
+    daily_limit: int = 10
+
+    # 모델 한 번 부를 때 기다리는 최대 시간(초). 넘으면 그 시도는 실패로 보고 한 번 더 해 본다
+    llm_timeout_s: float = 20.0
+
+    # 승인된 L1 사본이 있는 곳(scripts/sync_l1.py 가 만든다)
+    l1_dir: Path = Path(__file__).resolve().parents[2] / "data" / "l1"
 
 
 @lru_cache

@@ -20,16 +20,21 @@
 
 | type | 뜻 | 함께 오는 것 |
 |---|---|---|
-| `answer` | 답변 | `answer`, `sources[{id,name,url}]`, `records[]`(저장 제안 — kind·label·covers?), `usage{remaining}` |
+| `answer` | 답변 | `answer`, `level`(사실·일반·판단), `sources[{id,name,url}]`, `records[]`(저장 제안 — kind·label·covers?), `usage{remaining}` |
 | `followup` | 답변 전 되묻기 | `followup{question, chips[], recordLabel}` — 답을 받으면 같은 API 로 재요청 |
 | `redflag` | 위험 신호 고정 응답 | `answer`(병원·119 안내), `sources[]` — LLM 미호출 |
 
 ```
-평시     ▸ type=answer 의 sources 는 비어 있어서는 안 된다. 근거 없는 답변은 서버가 내보내지 않는다.
+평시     ▸ type=answer 의 sources 는 비어 있어서는 안 된다. 예외는 공공 지식에 근거가 없는 답 하나다 —
+          level 이 "일반" 또는 "판단"이고 인용이 없을 때 sources 는 비어 있고, 앱은 "공공 지식 근거 없음 ·
+          일반 정보"를 표시한다. level 이 "사실"이면 sources 는 반드시 있다.
+평시     ▸ sources 의 id 는 서버가 모델에 건넨 L1 조각의 id 여야 한다. 모델이 지어낸 id 는 내보내지 않는다.
+조건 위반 ▸ 모델이 답하지 못하면(거절·형식 오류·시간 초과) 503 { code: "MODEL_UNAVAILABLE" } 를 반환한다.
 조건 위반 ▸ 일일 한도 초과면 429 { code: "LIMIT_EXCEEDED", resetAt, rewardAvailable, ecoAvailable }
           를 반환하고, 앱은 광고 충전(정밀)과 절약 모드(일반 기준) 선택지를 제시한다.
 평시     ▸ 요청에 "mode": "eco" 가 오면 서버는 L2 기록 없이 무료 경로로 답하고, 응답에
           "eco": true 를 넣는다 — 앱은 "일반 기준 답변" 표시를 붙인다(backend 일일 한도 절).
+          eco 답에는 되묻기(followup)가 오지 않는다 — 기록을 쓸 수 없는데 되물으면 같은 질문이 되풀이된다.
 평시     ▸ 같은 clientMessageId 재요청은 새로 처리하지 않고 같은 응답을 돌려준다(재시도 안전).
 ```
 
@@ -74,3 +79,4 @@ AdMob 의 서버 측 검증(SSV) 콜백. 서명 검증 후 해당 디바이스 �
 ## changelog
 
 - 2026-09-30 최초 작성 (v0)
+- 2026-10-02 `/v1/ask` 응답에 level, 일반 정보일 때만 빈 sources, 지어낸 id 금지, 503 MODEL_UNAVAILABLE (task common/004)

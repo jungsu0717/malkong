@@ -7,23 +7,22 @@
 
 - **앱**: 4개 탭(홈·물어보기·성장·마이) 화면 뼈대. 온보딩(생일 → 월령), 홈 「챙길 것」과 완료 기록이 동작한다.
   물어보기 답변은 아직 예시 고정값이다 — 앱은 서버를 부르지 않는다
-- **서버**: FastAPI(`server/`)를 Cloud Run 서울에 배포했다(GCP 프로젝트 `malkong`).
-  `POST /v1/ask` 는 아직 목업 답변을 돌려준다 — https://malkong-server-481623022922.asia-northeast3.run.app/docs
-- **모델**: 운영 모델을 Gemini 3.5 Flash-Lite 로 정했다([decisions/008](docs/decisions/008-model-choice.md)).
-  모델 어댑터, 말콩이 프롬프트, 질문 30개 채점 장치(`server/eval/`)가 있지만 `/v1/ask` 에는 아직 붙이지 않았다
-- 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다. 가장 최근은
-  [common/003](docs/task/common/003-model-compare.md)
+- **지식(L1)**: 승인된 73건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호(미국 CDC).
+  남은 일은 출처 1곳 라이선스 확인과 국내 출처 보강([common/001](docs/task/common/001-l1-knowledge-build.md))
+- **서버**: `POST /v1/ask` 가 로컬에서 실제로 답한다 — 위험 신호 규칙 필터 → L1 검색 → Gemini 3.5 Flash-Lite →
+  답 검사([common/004](docs/task/common/004-real-answer.md)). Cloud Run 에 배포된 판은 아직 목업이다
+  (배포는 gcloud 로그인이 필요해 Julian 과 함께). 지금 키는 무료 티어라 아기 기록은 모델로 보내지 않는다
+- 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
 ## 다음 시작점
 
-1. **`docs/task/common/004` task 를 만든다** — `/v1/ask` 를 목업에서 실제 답변으로 바꾸는 일.
-   범위 메모는 [common/003](docs/task/common/003-model-compare.md)과
-   [common/002](docs/task/common/002-server.md)의 「이 task 다음」에 있다. 먼저 정할 것:
-   - 한 task 로 할지 나눌지 — 실제 답변(L1 검색 + 모델 + 판단 질문의 안심 표현 검사) / 위험 신호 규칙 필터 /
-     디바이스 키·일일 한도·Neon / 캐시
-   - 위험 신호 규칙 필터는 L1 의 red_flag 항목이 먼저 있어야 한다(common/001 4단계, 기준 수치는 출처에서만)
-   - 디바이스 키 발급 API 는 [api-contract](docs/architecture/api-contract.md)에 먼저 적어야 한다
-2. 그다음 `ask/002` — 앱 물어보기 화면을 예시 고정값에서 실제 서버 호출로 바꾼다
+1. **배포** — 이 판을 Cloud Run 에 올린다. gcloud 로그인(Julian 개인 구글 계정)이 필요하다.
+   모델은 환경변수 `MALKONG_LLM_PROVIDER=gemini`, `MALKONG_LLM_MODEL=gemini-3.5-flash-lite` 로, 키는 Secret Manager 로
+2. **`ask/002`** — 앱 물어보기 화면을 예시 고정값에서 실제 서버 호출로 바꾼다. 응답의 `level` 과 빈 `sources`
+   ("공공 지식 근거 없음 · 일반 정보" 표시)를 화면에 반영한다
+3. **`common/005`** — 디바이스 키 발급·일일 한도·Neon·같은 clientMessageId 재시도. Neon 계정은 Julian 이 만든다.
+   디바이스 키 발급 API 는 [api-contract](docs/architecture/api-contract.md)에 먼저 적어야 한다
+4. **실사용 전** — Gemini 를 유료 티어로 바꾸고 지출 한도 예산을 건다(그때 `MALKONG_LLM_PAID_TIER=true`)
 
 ## 다른 PC 에서 시작하기
 

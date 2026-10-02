@@ -8,6 +8,7 @@ import json
 import time
 
 from google import genai
+from google.genai import types
 
 from app.infra.llm.base import LlmError, LlmRequest, LlmResult
 
@@ -15,8 +16,10 @@ from app.infra.llm.base import LlmError, LlmRequest, LlmResult
 class GeminiClient:
     provider = "gemini"
 
-    def __init__(self, api_key: str, model: str) -> None:
-        self._client = genai.Client(api_key=api_key)
+    def __init__(self, api_key: str, model: str, *, timeout_s: float | None = None) -> None:
+        # SDK 기본은 시간 제한이 없다 — 서버에서는 꼭 건다(api-contract: 시간 초과면 503)
+        http_options = types.HttpOptions(timeout=int(timeout_s * 1000)) if timeout_s else None
+        self._client = genai.Client(api_key=api_key, http_options=http_options)
         self.model = model
 
     def generate(self, req: LlmRequest) -> LlmResult:
@@ -35,7 +38,8 @@ class GeminiClient:
         try:
             data = json.loads(text)
         except json.JSONDecodeError as exc:
-            raise LlmError(f"JSON 이 아닌 답: {text[:200]!r}") from exc
+            # 메시지에 모델 출력을 넣지 않는다 — 로그로 새면 아기 데이터를 되풀이한 문장이 남는다
+            raise LlmError(f"JSON 이 아닌 답 (길이 {len(text)})") from exc
 
         usage = interaction.usage
         return LlmResult(

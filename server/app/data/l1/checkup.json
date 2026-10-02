@@ -1,0 +1,47 @@
+[
+  {
+    "id": "k-chk-0001",
+    "months": [0, 1],
+    "kind": "검진",
+    "title": "영유아 건강검진 1차 (생후 14~35일)",
+    "body": "생후 14일에서 35일 사이에 받는 첫 영유아 건강검진이에요. 문진과 진찰, 키·몸무게 같은 신체계측, 건강교육을 받아요. 검진 비용은 따로 내지 않아요.",
+    "source": {
+      "name": "국민건강보험공단",
+      "url": "https://www.nhis.or.kr/nhis/healthin/wbhaca04800m01.do",
+      "checked": "2026-10-01"
+    },
+    "confidence": "표준",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-chk-0401",
+    "months": [4, 5, 6],
+    "kind": "검진",
+    "title": "영유아 건강검진 2차 (생후 4~6개월)",
+    "body": "생후 4~6개월에 받는 두 번째 검진이에요. 문진과 진찰, 신체계측, 건강교육으로 이뤄져요. 검진 비용은 따로 내지 않아요.",
+    "source": {
+      "name": "국민건강보험공단",
+      "url": "https://www.nhis.or.kr/nhis/healthin/wbhaca04800m01.do",
+      "checked": "2026-10-01"
+    },
+    "confidence": "표준",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-chk-0901",
+    "months": [9, 10, 11, 12],
+    "kind": "검진",
+    "title": "영유아 건강검진 3차 (생후 9~12개월)",
+    "body": "생후 9~12개월에 받는 세 번째 검진이에요. 앞의 두 번과 같은 항목에 발달선별검사와 상담이 더해져요. 검진 비용은 따로 내지 않아요.",
+    "source": {
+      "name": "국민건강보험공단",
+      "url": "https://www.nhis.or.kr/nhis/healthin/wbhaca04800m01.do",
+      "checked": "2026-10-01"
+    },
+    "confidence": "표준",
+    "red_flag": false,
+    "status": "approved"
+  }
+]

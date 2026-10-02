@@ -19,6 +19,12 @@ uv run ruff check .
 uv run ruff format --check .                     # 고칠 때는 --check 를 빼고 돌린다
 uv run pytest
 
+# 실제 모델로 로컬 실행 — 모델은 환경변수로만 고른다(코드에 적지 않는다). 무료 티어 키면 아기 기록은 안 간다
+MALKONG_LLM_PROVIDER=gemini MALKONG_LLM_MODEL=gemini-3.5-flash-lite uv run uvicorn app.main:app --port 8000
+
+# L1 을 고친 뒤 — 서버 사본(app/data/l1/)을 원본(src/data/l1/)과 맞춘다. 어긋나면 tests/test_l1_copy.py 가 실패한다
+uv run python -m scripts.sync_l1
+
 # 모델 비교 (task common/003) — 실제 API 를 부르므로 돈이 든다. 모델 id 는 인자로 넘긴다
 uv run python -m eval.run --model gemini:<id> [--model anthropic:<id> --vertex-project malkong]
 uv run python -m eval.score eval/results/<날짜>
@@ -67,9 +73,14 @@ app/
     schema.py
     service.py
   domain/ask/prompt.py 말콩이 시스템 프롬프트(system_prompt.txt)와 모델 출력 JSON 모양
+  domain/ask/redflag.py 위험 신호 문장 매칭 규칙 — 모델보다 먼저(SPEC-ASK-02)
+  domain/ask/retrieval.py L1 검색 — 질문에 맞는 승인된 항목을 골라 모델에 건넨다
+  domain/knowledge/repository.py 승인된 L1 만 읽는 저장소
+  data/l1/             L1 사본 — scripts/sync_l1.py 가 만든다. 손으로 고치지 않는다
   infra/               바깥 시스템에 닿는 것
     llm/               모델 어댑터 — 각 회사 공식 SDK 를 base.py 계약 뒤에 둔다(decisions/007)
-                       저장소(Neon) 접근은 common/004 에서 infra/ 아래에 만든다
+                       저장소(Neon) 접근은 common/005 에서 infra/ 아래에 만든다
+scripts/               손으로 돌리는 도구(sync_l1). 서버 이미지에는 들어가지 않는다
 tests/
 eval/                  모델 비교 장치 — 질문 세트, 실행, 채점, 결과. 서버 이미지에는 들어가지 않는다
 ```
