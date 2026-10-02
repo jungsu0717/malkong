@@ -60,8 +60,9 @@
 
 ## 서버 · DB · LLM
 
-[backend](backend.md)에 있다 — FastAPI 경량 서버(클라우드 scale-to-zero) · DB 2단계(기기 sqlite,
-가족 공유부터 관리형 Postgres) · LLM 질문 라우팅(규칙 → 캐시 → 소형 모델 → 승급) + 일일 한도.
+[backend](backend.md)에 있다 — FastAPI 경량 서버(Cloud Run, scale-to-zero) · 아기 데이터는 기기
+sqlite 에 두고 운영 데이터(사용량·집계·피드백·캐시)만 Neon(서버리스 Postgres)에 · LLM 질문 라우팅
+(규칙 → 캐시 → 고정한 모델 하나) + 일일 한도.
 기기 DB 스키마도 같은 문서에 있다. 앱과 서버 사이 API 는 [api-contract](api-contract.md),
 L1 지식의 실체(항목 스키마·출처 화이트리스트·구축 절차)는 [l1-knowledge-base](l1-knowledge-base.md)가 정본이다.
 
