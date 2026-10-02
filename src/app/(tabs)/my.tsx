@@ -136,19 +136,21 @@ export default function MyScreen() {
             </View>
           ))}
 
-          {/* 구축 중에만 두는 칸 — 로딩 모션 시안과 L1 지식 쌓인 정도. 완성되면 통째로 뺀다 */}
-          <View style={styles.section}>
-            <ThemedText type="small" style={{ color: colors.textSecondary }}>
-              구축 현황 (임시)
-            </ThemedText>
-            <ThemedView type="backgroundElement" style={[styles.menuCard, styles.loadingPreview]}>
-              <BabyRunLoading label="말콩이가 달려오고 있어요…" />
+          {/* 구축 중에만 두는 칸 — 로딩 모션 시안과 L1 지식 쌓인 정도. 개발 빌드에서만 보인다 */}
+          {__DEV__ && (
+            <View style={styles.section}>
               <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                지식 유닛 {units.length}건 — 표준 {standardCount}건(승인 대기 {pendingReviewCount()}건) ·
-                우리 아기 {units.length - standardCount}건 · 판 {L1_VERSION}
+                구축 현황 (임시)
               </ThemedText>
-            </ThemedView>
-          </View>
+              <ThemedView type="backgroundElement" style={[styles.menuCard, styles.loadingPreview]}>
+                <BabyRunLoading label="말콩이가 달려오고 있어요…" />
+                <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                  지식 유닛 {units.length}건 — 표준 {standardCount}건(승인 대기 {pendingReviewCount()}건) ·
+                  우리 아기 {units.length - standardCount}건 · 판 {L1_VERSION}
+                </ThemedText>
+              </ThemedView>
+            </View>
+          )}
 
           <Pressable
             onLongPress={async () => setDeviceKey((await storedDeviceKey()) || '아직 없어요')}
