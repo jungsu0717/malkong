@@ -16,10 +16,17 @@ import { allItems, L1_VERSION, pendingReviewCount } from '@/data/l1';
 import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
 
-const MENU_SECTIONS: { title: string; items: string[] }[] = [
-  { title: '내 정보', items: ['알림 설정'] },
-  { title: '소식', items: ['공지사항', '자주 묻는 질문'] },
-  { title: '약관', items: ['이용약관', '개인정보 처리방침', '의학 정보 출처와 한계 고지'] },
+// 본문은 src/data/legal.ts (SPEC-MY-03). 알림 설정·공지사항은 그 기능이 생길 때 다시 넣는다
+const MENU_SECTIONS: { title: string; items: { label: string; doc: string }[] }[] = [
+  { title: '도움말', items: [{ label: '자주 묻는 질문', doc: 'faq' }] },
+  {
+    title: '약관',
+    items: [
+      { label: '이용약관', doc: 'terms' },
+      { label: '개인정보 처리방침', doc: 'privacy' },
+      { label: '의학 정보 출처와 한계 고지', doc: 'medical' },
+    ],
+  },
 ];
 
 export default function MyScreen() {
@@ -88,15 +95,13 @@ export default function MyScreen() {
             </Pressable>
           )}
 
-          {/* 로그인 유도 카드 */}
+          {/* 로그인 유도 카드 — 로그인은 가족 공유·기기 이전과 함께 들인다(SPEC-MY-04). 그 전엔 누를 단추를 두지 않는다 */}
           <View style={[styles.loginCard, { backgroundColor: colors.accentSoft }]}>
-            <ThemedText type="subtitle">로그인하고 시작하세요</ThemedText>
+            <ThemedText type="subtitle">가족과 함께 보기 · 준비 중</ThemedText>
             <ThemedText type="small" style={{ color: colors.textSecondary }}>
-              아기 프로필과 질문 기록을 안전하게 보관해요
+              로그인하면 기기를 바꿔도 기록을 옮기고, 가족과 같은 아기를 함께 볼 수 있게 할 거예요. 지금은
+              로그인 없이 모든 기능을 쓸 수 있어요.
             </ThemedText>
-            <Pressable style={[styles.loginButton, { backgroundColor: colors.accent }]}>
-              <ThemedText style={styles.loginButtonText}>로그인 · 가입</ThemedText>
-            </Pressable>
           </View>
 
           {/* 설정 — 홈 「챙길 것」에서 생활 항목을 뺄 수 있다 (SPEC-HOME-02 생활 항목) */}
@@ -128,8 +133,11 @@ export default function MyScreen() {
               </ThemedText>
               <ThemedView type="backgroundElement" style={styles.menuCard}>
                 {section.items.map((item) => (
-                  <Pressable key={item} style={styles.menuRow}>
-                    <ThemedText>{item}</ThemedText>
+                  <Pressable
+                    key={item.doc}
+                    style={styles.menuRow}
+                    onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: item.doc } })}>
+                    <ThemedText>{item.label}</ThemedText>
                     <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
                   </Pressable>
                 ))}
@@ -182,13 +190,6 @@ const styles = StyleSheet.create({
     padding: Spacing.four,
     gap: Spacing.two,
   },
-  loginButton: {
-    marginTop: Spacing.two,
-    borderRadius: Spacing.three,
-    paddingVertical: Spacing.three,
-    alignItems: 'center',
-  },
-  loginButtonText: { color: '#ffffff', fontWeight: '600' },
   section: { gap: Spacing.two },
   menuCard: {
     borderRadius: 20,

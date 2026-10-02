@@ -54,6 +54,7 @@ export default function RootLayout() {
                     name="records"
                     options={{ headerShown: true, title: '우리 아기 기록', headerBackTitle: '마이' }}
                   />
+                  <Stack.Screen name="legal/[doc]" options={{ headerShown: true, headerBackTitle: '마이' }} />
                 </Stack>
               </ChatProvider>
             </RecordsProvider>
