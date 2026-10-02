@@ -8,7 +8,7 @@
 
 import type { AnswerLevel, Followup, Source } from './api';
 import { ageFrom } from './baby';
-import { insertChatRow, readChatRows } from './db';
+import { insertChatRow, readChatRows, updateChatMetaRow } from './db';
 
 /** 처리 현황을 접었을 때 다시 펼쳐 볼 단계와 한 줄 결과(SPEC-ASK-05) */
 export type TraceStep = { id: string; title: string; brief?: string };
@@ -33,6 +33,8 @@ export type MalkongMeta =
       /** 이 답에서 저장한 L2 기록 — 「기록됨」 칩 */
       recordIds: string[];
       trace: TraceStep[];
+      /** 남긴 피드백(SPEC-ASK-06) — 다시 열어도 눌렀던 쪽이 보인다 */
+      feedback?: 'up' | 'down';
     }
   | {
       type: 'followup';
@@ -65,6 +67,10 @@ export async function loadMessages(): Promise<ChatMessage[]> {
 
 export async function saveMessage(message: ChatMessage): Promise<void> {
   await insertChatRow(message);
+}
+
+export async function saveMessageMeta(id: string, meta: ChatMessage['meta']): Promise<void> {
+  await updateChatMetaRow(id, meta);
 }
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];

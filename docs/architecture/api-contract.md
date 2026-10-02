@@ -75,8 +75,24 @@ AdMob 의 서버 측 검증(SSV) 콜백. 서명 검증 후 해당 디바이스 �
 
 ## POST /v1/feedback — 답변 피드백 (SPEC-ASK-06)
 
-요청: `{ "answerId": "...", "rating": "up" | "down", "comment": "선택" }` → 204.
-서버는 기기 식별자와 분리해 저장한다.
+요청 머리 `X-Device-Key`. 요청:
+```json
+{
+  "answerId": "앱의 답변 말풍선 id",
+  "rating": "up",
+  "comment": "선택 — 500자까지",
+  "answer": { "level": "일반", "sourceIds": ["k-feed-0001"], "eco": true },
+  "shared": { "question": "선택", "answer": "선택" }
+}
+```
+→ 204.
+
+```
+평시     ▸ 서버는 기기 키와 분리해 저장한다 — 피드백 행에 키(해시 포함)를 넣지 않는다.
+평시     ▸ 서버는 답을 저장하지 않으므로, 품질을 고치는 데 쓸 정보(수위 · 인용 id · 절약 모드)를 앱이 함께 보낸다.
+동의     ▸ 질문과 답 원문(shared)은 사용자가 그 피드백에서 「질문과 답도 함께 보내기」를 골랐을 때만 온다.
+조건 위반 ▸ 같은 기기에서 하루 50건을 넘으면 429 { code: "TOO_MANY_FEEDBACK" }. 같은 answerId 는 마지막 것만 남긴다.
+```
 
 ## GET /v1/cohort/faq?months=<월령> — 또래 질문 묶음 (SPEC-GROW-05)
 
@@ -95,4 +111,5 @@ AdMob 의 서버 측 검증(SSV) 콜백. 서명 검증 후 해당 디바이스 �
 
 - 2026-09-30 최초 작성 (v0)
 - 2026-10-02 `/v1/ask` 응답에 level, 일반 정보일 때만 빈 sources, 지어낸 id 금지, 503 MODEL_UNAVAILABLE (task common/004)
+- 2026-10-03 `/v1/feedback` 요청 모양(answer 정보 · 동의한 원문만 shared · 기기 키와 분리) (task ask/003)
 - 2026-10-03 `POST /v1/devices`, `X-Device-Key` 필수(위험 신호는 예외)·401 DEVICE_KEY_INVALID, entitlements 에 remaining, usage.remaining 은 운영자 기기에서 null (task common/005)

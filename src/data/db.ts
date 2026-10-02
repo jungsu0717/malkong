@@ -200,3 +200,9 @@ export async function updateRecordLabelRow(id: string, label: string): Promise<v
     id,
   );
 }
+
+/** 말풍선의 곁 정보 고치기 — 피드백을 남겼다는 표시처럼 원문은 그대로 두고 meta 만 바꾼다 */
+export async function updateChatMetaRow(id: string, meta: ChatMessage['meta']): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE chat_message SET meta_json = ? WHERE id = ?', JSON.stringify(meta), id);
+}

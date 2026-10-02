@@ -106,3 +106,14 @@ export async function updateRecordLabelRow(id: string, label: string): Promise<v
     (await readRecordRows()).map((r) => (r.id === id ? { ...r, label, stale: false } : r)),
   );
 }
+
+export async function updateChatMetaRow(id: string, meta: ChatMessage['meta']): Promise<void> {
+  const messages = (await readChatRows()).map((m) =>
+    m.id === id ? ({ ...m, meta } as ChatMessage) : m,
+  );
+  try {
+    globalThis.localStorage?.setItem(CHAT_KEY, JSON.stringify(messages));
+  } catch {
+    // 위와 같다
+  }
+}

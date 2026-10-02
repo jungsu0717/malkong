@@ -172,3 +172,16 @@ export function postAsk(req: AskRequest): Promise<AskResponse> {
 export function getEntitlements(): Promise<Entitlements> {
   return withDeviceKey<Entitlements>('GET', '/v1/entitlements', undefined, SHORT_TIMEOUT_MS);
 }
+
+export type FeedbackRequest = {
+  answerId: string;
+  rating: 'up' | 'down';
+  comment?: string;
+  answer: { level: AnswerLevel; sourceIds: string[]; eco: boolean };
+  /** 사용자가 「질문과 답도 함께 보내기」를 골랐을 때만 */
+  shared?: { question: string; answer: string };
+};
+
+export function postFeedback(req: FeedbackRequest): Promise<void> {
+  return withDeviceKey<void>('POST', '/v1/feedback', req, SHORT_TIMEOUT_MS);
+}

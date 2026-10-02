@@ -122,6 +122,16 @@ export default function AskScreen() {
 
   // 타임라인 — 날짜가 바뀌는 자리마다 구분선(SPEC-ASK-10)
   const rows: React.ReactNode[] = [];
+  // 답 → 그 답이 답한 원래 질문(되묻기 답을 거쳤으면 되묻기가 기억한 질문) — 피드백에 함께 보낼 때 쓴다
+  const textOf = new Map(messages.map((m) => [m.id, m.content]));
+  const questionOf = (questionId: string): string | null => {
+    const asked = messages.find((m) => m.id === questionId);
+    if (asked?.role === 'user' && asked.meta.replyTo) {
+      const followup = messages.find((m) => m.id === asked.meta.replyTo);
+      if (followup?.role === 'malkong' && followup.meta.type === 'followup') return followup.meta.question;
+    }
+    return textOf.get(questionId) ?? null;
+  };
   let lastDay = '';
   for (const m of messages) {
     const day = dayKey(m.createdAt);
@@ -150,7 +160,13 @@ export default function AskScreen() {
     rows.push(<DoneTrace key={`t-${m.id}`} trace={m.meta.trace} />);
     rows.push(
       m.meta.type === 'answer' ? (
-        <AnswerBubble key={m.id} message={m} records={records} onRemoveRecord={remove} />
+        <AnswerBubble
+          key={m.id}
+          message={m}
+          question={questionOf(m.meta.questionId)}
+          records={records}
+          onRemoveRecord={remove}
+        />
       ) : (
         <FollowupBubble
           key={m.id}

@@ -8,6 +8,7 @@ import * as Linking from 'expo-linking';
 import { useState } from 'react';
 import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
 
+import { AnswerFeedback } from '@/components/answer-feedback';
 import { ExternalLink } from '@/components/external-link';
 import { ThemedText } from '@/components/themed-text';
 import { ThinkingStatus } from '@/components/thinking-status';
@@ -100,10 +101,13 @@ function SavedRecordChip({
 
 export function AnswerBubble({
   message,
+  question,
   records,
   onRemoveRecord,
 }: {
   message: MalkongMessage;
+  /** 이 답이 답한 질문 — 피드백에 「함께 보내기」를 고르면 같이 간다 */
+  question: string | null;
   records: BabyRecord[];
   onRemoveRecord: (id: string) => void;
 }) {
@@ -137,6 +141,7 @@ export function AnswerBubble({
           ))}
         </View>
       )}
+      <AnswerFeedback message={message} question={question} />
     </View>
   );
 }

@@ -4,13 +4,15 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { loadMessages, saveMessage, type ChatMessage } from './chat';
+import { loadMessages, saveMessage, saveMessageMeta, type ChatMessage } from './chat';
 
 type ChatContextValue = {
   messages: ChatMessage[];
   /** 기기에서 읽어오는 중 */
   loading: boolean;
   append: (message: ChatMessage) => Promise<void>;
+  /** 말풍선의 곁 정보만 바꾼다(피드백 표시 등) */
+  updateMeta: (id: string, meta: ChatMessage['meta']) => Promise<void>;
 };
 
 const ChatContext = createContext<ChatContextValue | null>(null);
@@ -39,7 +41,15 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
     await saveMessage(message);
   }, []);
 
-  const value = useMemo(() => ({ messages, loading, append }), [messages, loading, append]);
+  const updateMeta = useCallback(async (id: string, meta: ChatMessage['meta']) => {
+    setMessages((prev) => prev.map((m) => (m.id === id ? ({ ...m, meta } as ChatMessage) : m)));
+    await saveMessageMeta(id, meta);
+  }, []);
+
+  const value = useMemo(
+    () => ({ messages, loading, append, updateMeta }),
+    [messages, loading, append, updateMeta],
+  );
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 }
