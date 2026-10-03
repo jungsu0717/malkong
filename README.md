@@ -19,7 +19,7 @@
 
 **Julian 이 할 일이 먼저다** — 계정·결제·법률이라 Claude 가 대신할 수 없다. 목록과 순서는
 [common/008 「Julian 이 할 일」](docs/task/common/008-first-release-check.md): ~~서버 배포~~ → Neon → Expo 계정과 개발 빌드 →
-앱 식별자 → AdMob → 스토어 계정 → RevenueCat → 약관 정보 → Gemini 유료 → 답변 완성도 → L1 출처.
+~~앱 식별자~~ → AdMob → 스토어 계정 → RevenueCat → 약관 정보 → Gemini 유료 → 답변 완성도 → L1 출처.
 
 그다음 Claude 몫: 개발 빌드 실기기 시험, 답변 완성도 다듬기(위험 신호 — Julian 승인), 스토어 등록 준비
 (스크린샷 · 소개 문구는 [product-brief](docs/product/product-brief.md) · 개인정보 처리방침 웹 주소).

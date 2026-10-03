@@ -7,8 +7,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "malkong",
     "userInterfaceStyle": "automatic",
-    "ios": {},
+    "ios": {
+      "bundleIdentifier": "kr.malkong.app"
+    },
     "android": {
+      "package": "kr.malkong.app",
       "adaptiveIcon": {
         "backgroundColor": "#3182F6",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
