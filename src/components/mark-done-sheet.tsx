@@ -1,11 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Spacing } from '@/constants/theme';
+import { Button } from '@/components/ui';
+import { Radius, Spacing } from '@/constants/theme';
 import { isLifeGroup, type GapGroup, type L1Item } from '@/data/timeline';
+import { useTheme } from '@/hooks/use-theme';
 
 /**
  * 「챙길 것」 한 줄의 완료 알리기 (SPEC-HOME-02 완료 알림).
@@ -24,8 +26,7 @@ export function MarkDoneSheet({
   onClose: () => void;
   onConfirm: (items: L1Item[]) => void;
 }) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const colors = useTheme();
   const insets = useSafeAreaInsets();
   // 처음에는 모두 골라져 있다 — 하지 않은 것만 끈다
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
@@ -48,7 +49,7 @@ export function MarkDoneSheet({
     <Modal visible={group !== null} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.wrap}>
         <Pressable
-          style={[StyleSheet.absoluteFill, styles.backdrop]}
+          style={[StyleSheet.absoluteFill, { backgroundColor: colors.scrim }]}
           onPress={onClose}
           accessibilityLabel="닫기"
         />
@@ -57,6 +58,7 @@ export function MarkDoneSheet({
             styles.sheet,
             { backgroundColor: colors.background, paddingBottom: Spacing.four + insets.bottom },
           ]}>
+          <View style={[styles.grabber, { backgroundColor: colors.surfaceStrong }]} />
           <ThemedText type="title">{life ? '확인했나요?' : '완료했나요?'}</ThemedText>
           <ThemedText type="small" style={{ color: colors.textSecondary }}>
             {life
@@ -72,16 +74,18 @@ export function MarkDoneSheet({
                   key={item.id}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: on }}
-                  style={[styles.itemRow, { backgroundColor: colors.surface }]}
+                  style={[styles.itemRow, { borderColor: on ? colors.text : colors.border }]}
                   onPress={() => toggle(item.id)}>
                   <Ionicons
-                    name={on ? 'checkbox' : 'square-outline'}
+                    name={on ? 'checkmark-circle' : 'ellipse-outline'}
                     size={22}
-                    color={on ? colors.accent : colors.textSecondary}
+                    color={on ? colors.text : colors.textTertiary}
                   />
                   <View style={styles.itemText}>
-                    <ThemedText>{item.title}</ThemedText>
-                    <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                    <ThemedText type="body" style={{ fontWeight: 600 }}>
+                      {item.title}
+                    </ThemedText>
+                    <ThemedText type="caption" style={{ color: colors.textSecondary }}>
                       {item.body}
                     </ThemedText>
                   </View>
@@ -90,26 +94,14 @@ export function MarkDoneSheet({
             })}
           </ScrollView>
 
-          <Pressable
-            style={[
-              styles.button,
-              { backgroundColor: chosen.length > 0 ? colors.accent : colors.surfaceStrong },
-            ]}
+          <Button
+            size="lg"
+            style={styles.button}
+            label={chosen.length > 1 ? `${chosen.length}건 ${verb}했어요` : `${verb}했어요`}
             disabled={chosen.length === 0}
-            onPress={() => onConfirm(chosen)}>
-            <ThemedText
-              style={[
-                styles.buttonText,
-                { color: chosen.length > 0 ? '#ffffff' : colors.textSecondary },
-              ]}>
-              {chosen.length > 1 ? `${chosen.length}건 ${verb}했어요` : `${verb}했어요`}
-            </ThemedText>
-          </Pressable>
-          <Pressable style={styles.cancel} onPress={onClose}>
-            <ThemedText type="small" style={{ color: colors.textSecondary }}>
-              취소
-            </ThemedText>
-          </Pressable>
+            onPress={() => onConfirm(chosen)}
+          />
+          <Button variant="ghost" size="sm" label="취소" onPress={onClose} />
         </View>
       </View>
     </Modal>
@@ -118,30 +110,25 @@ export function MarkDoneSheet({
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'flex-end' },
-  backdrop: { backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: {
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    padding: Spacing.four,
+    paddingHorizontal: Spacing.four,
+    paddingTop: 10,
     gap: Spacing.two,
     maxHeight: '85%',
   },
+  grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, marginBottom: Spacing.two },
   list: { marginTop: Spacing.two },
   listContent: { gap: Spacing.two },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: Spacing.three,
-    borderRadius: Spacing.three,
-    padding: Spacing.three,
+    gap: 12,
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    padding: 14,
   },
   itemText: { flex: 1, gap: Spacing.half },
-  button: {
-    marginTop: Spacing.two,
-    borderRadius: Spacing.three,
-    paddingVertical: Spacing.four,
-    alignItems: 'center',
-  },
-  buttonText: { fontWeight: '600', fontSize: 16 },
-  cancel: { alignItems: 'center', paddingVertical: Spacing.two },
+  button: { marginTop: Spacing.two },
 });

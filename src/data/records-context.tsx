@@ -17,6 +17,8 @@ import {
 
 type RecordsContextValue = {
   records: BabyRecord[];
+  /** 기기에서 읽어오는 중 — 다 읽기 전에 브리핑을 만들면 이미 한 일이 다시 올라온다 */
+  loading: boolean;
   add: (
     input: Pick<BabyRecord, 'kind' | 'label' | 'covers' | 'whenLabel'> &
       Partial<Pick<BabyRecord, 'sourceMessageId'>>,
@@ -30,12 +32,17 @@ const RecordsContext = createContext<RecordsContextValue | null>(null);
 
 export function RecordsProvider({ children }: { children: React.ReactNode }) {
   const [records, setRecords] = useState<BabyRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    loadRecords().then((stored) => {
-      if (!cancelled) setRecords(stored);
-    });
+    loadRecords()
+      .then((stored) => {
+        if (!cancelled) setRecords(stored);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -58,8 +65,8 @@ export function RecordsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ records, add, remove, update }),
-    [records, add, remove, update],
+    () => ({ records, loading, add, remove, update }),
+    [records, loading, add, remove, update],
   );
 
   return <RecordsContext.Provider value={value}>{children}</RecordsContext.Provider>;

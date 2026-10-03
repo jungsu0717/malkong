@@ -7,6 +7,7 @@
  */
 
 import type { AnswerLevel, Followup, Source } from './api';
+import type { BriefingItem } from './briefing';
 import { ageFrom } from './baby';
 import { insertChatRow, readChatRows, updateChatMetaRow } from './db';
 
@@ -46,7 +47,15 @@ export type MalkongMeta =
       followup: Followup;
       trace: TraceStep[];
     }
-  | { type: 'redflag'; questionId: string; sources: Source[] };
+  | { type: 'redflag'; questionId: string; sources: Source[] }
+  | {
+      /** 아침 브리핑 — 그날 처음 열면 말콩이가 먼저 건넨다(SPEC-HOME-06). 질문 없이 생긴다 */
+      type: 'briefing';
+      day: string;
+      greeting: string;
+      headline: string;
+      items: BriefingItem[];
+    };
 
 export type MalkongMessage = {
   id: string;

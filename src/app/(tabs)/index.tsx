@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MalkongMark } from '@/components/brand';
+import { BriefingCard } from '@/components/briefing-card';
 import {
   AnswerBubble,
   DateDivider,
@@ -27,7 +28,7 @@ import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ThinkingStatus, type ThinkingStep } from '@/components/thinking-status';
-import { Chip, tap } from '@/components/ui';
+import { Chip, IconButton, tap } from '@/components/ui';
 import { FontFamily, Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { canOfferRewardedAd } from '@/data/ads';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
@@ -36,7 +37,9 @@ import { dayKey, dayLabel } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { useRecords } from '@/data/records-context';
+import { useDailyBriefing } from '@/hooks/use-daily-briefing';
 import { useMalkong, type AskFailure } from '@/hooks/use-malkong';
+import { useMarkDone } from '@/hooks/use-mark-done';
 import { useTheme } from '@/hooks/use-theme';
 
 /** 입력창 위의 빠른 질문 — 누르면 입력창에 담긴다(SPEC-ASK-04). 고쳐서 보낼 수 있게 바로 보내지 않는다 */
@@ -68,6 +71,9 @@ export default function ChatScreen() {
   const { age, baby, loading: babyLoading } = useBaby();
   const { records, remove } = useRecords();
   const { loading } = useChat();
+  // 그날 처음 열면 브리핑이 첫 메시지로 생긴다(SPEC-HOME-06)
+  const today = useDailyBriefing();
+  const { pick, justSaved, undo, sheet } = useMarkDone();
   const {
     messages,
     pendingId,
@@ -137,8 +143,12 @@ export default function ChatScreen() {
   let lastDay = '';
   for (const m of messages) {
     const day = dayKey(m.createdAt);
+    const briefing = m.role === 'malkong' && m.meta.type === 'briefing';
     if (day !== lastDay) {
-      rows.push(<DateDivider key={`d-${day}`} label={dayLabel(m.createdAt, baby?.birthDate ?? null)} />);
+      // 하루가 브리핑으로 시작하면 브리핑이 날짜를 말하므로 구분선을 따로 긋지 않는다
+      if (!briefing) {
+        rows.push(<DateDivider key={`d-${day}`} label={dayLabel(m.createdAt, baby?.birthDate ?? null)} />);
+      }
       lastDay = day;
     }
     if (m.role === 'user') {
@@ -157,6 +167,24 @@ export default function ChatScreen() {
     }
     if (m.meta.type === 'redflag') {
       rows.push(<RedflagCard key={m.id} message={m} />);
+      continue;
+    }
+    if (m.meta.type === 'briefing') {
+      const isToday = m.meta.day === today;
+      rows.push(
+        <BriefingCard
+          key={m.id}
+          message={m}
+          today={isToday}
+          onPick={pick}
+          onPrompt={(text) => {
+            setInput(text);
+            inputRef.current?.focus();
+          }}
+          justSaved={isToday ? justSaved : null}
+          onUndo={undo}
+        />,
+      );
       continue;
     }
     rows.push(
@@ -232,6 +260,7 @@ export default function ChatScreen() {
                 </ThemedText>
               </View>
             )}
+            <IconButton icon="file-tray-full-outline" label="지난 브리핑" onPress={() => router.push('/briefings')} />
           </View>
 
           <ScrollView
@@ -306,6 +335,7 @@ export default function ChatScreen() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      {sheet}
     </ThemedView>
   );
 }
