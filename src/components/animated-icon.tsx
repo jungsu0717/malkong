@@ -26,7 +26,17 @@ export function AnimatedSplashOverlay() {
     20: { opacity: 1 },
     100: { opacity: 0, easing: Easing.out(Easing.ease) },
   });
-  const image = <Image style={styles.image} source={require('@/assets/images/splash-icon.png')} />;
+  // app.json 의 expo-splash-screen 과 같은 그림 — 다크 모드는 밝은 선의 그림
+  const image = (
+    <Image
+      style={styles.image}
+      source={
+        scheme === 'dark'
+          ? require('@/assets/images/splash-icon-dark.png')
+          : require('@/assets/images/splash-icon.png')
+      }
+    />
+  );
 
   return animate ? (
     <Animated.View

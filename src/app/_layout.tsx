@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
@@ -68,6 +69,8 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={theme}>
+      {/* 흰 바탕에는 검은 글씨, 다크 모드에는 흰 글씨 */}
+      <StatusBar style="auto" />
       <AnimatedSplashOverlay />
       <QueryClientProvider client={queryClient}>
         <EntitlementsProvider>

@@ -1,11 +1,11 @@
 /**
- * 시안 B 공용 부품 (task common/009) — 카드 · 단추 · 칩 · 아이콘 단추 · 보기 전환 · 목록 줄 · 빈 화면 · 스켈레톤.
+ * 시안 B 공용 부품 (task common/009) — 카드 · 단추 · 칩 · 표시 · 아이콘 단추 · 보기 전환 · 목록 줄 · 섹션 머리 · 빈 화면.
  * 모양의 정본은 docs/app-design 「디자인 원칙」. 화면은 이 부품을 쓰고 모양을 새로 만들지 않는다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useEffect, type ComponentProps, type ReactNode } from 'react';
+import { type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -15,12 +15,6 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
 
 import { MalkongAvatar } from '@/components/brand';
 import { ThemedText } from '@/components/themed-text';
@@ -355,17 +349,6 @@ export function EmptyState({
       {action && <Button label={action.label} onPress={action.onPress} size="sm" variant="secondary" />}
     </View>
   );
-}
-
-/** 콘텐츠 자리 — 스피너 대신 숨 쉬는 회색 막대(app-design 「로딩과 모션」) */
-export function Skeleton({ width, height = 14, radius = 6 }: { width: number | `${number}%`; height?: number; radius?: number }) {
-  const c = useTheme();
-  const pulse = useSharedValue(0.5);
-  useEffect(() => {
-    pulse.value = withRepeat(withTiming(1, { duration: 800 }), -1, true);
-  }, [pulse]);
-  const animated = useAnimatedStyle(() => ({ opacity: pulse.value }));
-  return <Animated.View style={[{ width, height, borderRadius: radius, backgroundColor: c.surfaceStrong }, animated]} />;
 }
 
 const styles = StyleSheet.create({

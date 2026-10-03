@@ -48,8 +48,9 @@
   우리 아기=아기 얼굴 · 마이=곰돌이
 - **보조 UI 아이콘은 Ionicons**(`@expo/vector-icons`, MIT) — 외곽선. 다른 벡터 패밀리를 더 섞지 않는다
 - 붉은 말을 탄 아기(`RidingBabyIcon`)는 큰 로딩과 시작 화면의 모션으로만 쓴다
-- **런처 아이콘(홈 화면)은 브랜드 자산** — 1024×1024 원본 + Android adaptive icon 레이어(전경/배경)를
-  직접 만들어 `app.json` 에 넣는다. 자리는 `assets/images/`
+- **런처 아이콘(홈 화면)은 브랜드 자산** — 붉은 말 색(#C64536) 바탕에 흰 말콩이 얼굴. 1024×1024 원본 +
+  Android adaptive icon 레이어(전경/배경/단색)를 직접 만들어 `app.json` 에 넣는다. 자리는 `assets/images/`
+- **시작 화면** — 흰 바탕에 먹색 아기를 태운 붉은 말(`splash-icon.png`), 다크 모드는 밝은 선 그림(`splash-icon-dark.png`)
 
 ## 로딩과 모션
 

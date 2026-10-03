@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { StyleSheet, useColorScheme, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { adsModule, adUnit, useAdsReady } from '@/data/ads';
 import { useEntitlements } from '@/data/entitlements-context';
+import { useTheme } from '@/hooks/use-theme';
 
 /**
  * 배너 광고 (SPEC-HOME-05 · SPEC-GROW-04, task common/006).
@@ -17,8 +18,7 @@ import { useEntitlements } from '@/data/entitlements-context';
  * 전면 광고는 main-design 「다음」이라 첫 출시에 넣지 않는다.
  */
 export function AdBanner({ anchored = false }: { anchored?: boolean }) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const colors = useTheme();
   const { ads } = useEntitlements();
   const ready = useAdsReady(ads);
   const [loaded, setLoaded] = useState(false);
@@ -28,11 +28,11 @@ export function AdBanner({ anchored = false }: { anchored?: boolean }) {
   const module = adsModule();
   if (!module) {
     return (
-      <View style={[styles.banner, { borderColor: colors.surfaceStrong }]}>
-        <ThemedText type="small" style={{ color: colors.textSecondary }}>
+      <View style={[styles.banner, { borderColor: colors.border }]}>
+        <ThemedText type="caption" style={{ color: colors.textSecondary, fontWeight: 600 }}>
           광고
         </ThemedText>
-        <ThemedText type="small" style={{ color: colors.textSecondary }}>
+        <ThemedText type="caption" style={{ color: colors.textSecondary }}>
           배너 광고 자리 · 앱 빌드에서 나와요
         </ThemedText>
       </View>
@@ -46,10 +46,10 @@ export function AdBanner({ anchored = false }: { anchored?: boolean }) {
   return (
     <View
       style={
-        loaded ? [styles.banner, { borderColor: colors.surfaceStrong }] : styles.collapsed
+        loaded ? [styles.banner, { borderColor: colors.border }] : styles.collapsed
       }>
       {loaded && (
-        <ThemedText type="small" style={{ color: colors.textSecondary }}>
+        <ThemedText type="caption" style={{ color: colors.textSecondary, fontWeight: 600 }}>
           광고
         </ThemedText>
       )}
@@ -70,7 +70,7 @@ export function AdBanner({ anchored = false }: { anchored?: boolean }) {
 const styles = StyleSheet.create({
   banner: {
     alignSelf: 'stretch',
-    borderRadius: Spacing.three,
+    borderRadius: Radius.lg,
     borderWidth: 1,
     paddingVertical: Spacing.two,
     alignItems: 'center',

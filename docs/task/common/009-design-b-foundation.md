@@ -15,7 +15,7 @@ Julian 이 고른 시안 B(단정한 비서)를 앱 전체에 깔 바탕을 만�
 2. **글꼴** — IBM Plex Sans KR 넷. 루트에서 `useFonts` 로 읽는 동안 시작 화면을 유지한다. `ThemedText` 가 굵기를 보고
    글꼴을 고른다(안드로이드는 굵기만으로 다른 파일을 찾지 못한다)
 3. **글자 크기 단계** — display 28 · title 22 · heading 17 · default 16 · body 15 · small 14 · caption 12 · label 13
-4. **공용 부품** `src/components/ui/` — Card · Button · Chip · IconButton · Segmented · ListRow · EmptyState · Skeleton
+4. **공용 부품** `src/components/ui/` — Card · Button · Chip · Tag · IconButton · Segmented · ListRow · SectionHeader · EmptyState
 5. **탭 셋** — 말콩(`index`) · 우리 아기(`baby`) · 마이. 플로팅 질문 버튼(`ask-fab`)은 지운다(SPEC-ASK-07 폐기)
 6. **탭 아이콘은 자체 베이비 세트** — 말콩=말풍선 속 쪽쪽이 · 우리 아기=아기 얼굴 · 마이=곰돌이. 흔한 앱과 갈리는
    몇 안 되는 자리라 Ionicons 로 바꾸지 않는다. 보조 아이콘은 Ionicons
