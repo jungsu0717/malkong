@@ -1,6 +1,6 @@
 # 004 답을 쓸모 있게 — "소아과 가 보세요"만 하지 않기
 
-> 상태: 진행 (2026-10-03) — 코드·시험 완료. 서버 배포 뒤 Julian 이 아이폰으로 다시 써 본다
+> 상태: 진행 (2026-10-03) — 코드·시험 완료, Cloud Run revision 00004 로 배포. Julian 이 아이폰으로 다시 써 본다
 > 근거: SPEC-ASK-08 · [decisions/011](../../decisions/011-useful-general-answers.md) · common/004 「알려진 문제」
 
 ## 목표
