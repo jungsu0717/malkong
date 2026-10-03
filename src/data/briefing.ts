@@ -2,13 +2,15 @@
  * 아침 브리핑 (SPEC-HOME-06, task home/004) — 하루 처음 앱을 열면 버디가 먼저 건네는 말.
  *
  * 기기 안에서 만든다(backend 「능동 브리핑」 1단계 온디바이스) — 모델을 부르지 않으니 할당량을 쓰지 않고,
- * 아기 기록이 기기 밖으로 나가지 않는다. 대화 타임라인에 그날의 첫 메시지로 저장되고, 지난 것은 보관함에서 다시 본다.
+ * 아기 기록이 기기 밖으로 나가지 않는다. 대화 타임라인에 그날의 첫 메시지로 저장되고, 지난 것은 브리핑함에서 다시 본다.
  *
- * 저장하는 것은 그날 고른 항목의 목록뿐이다. 했는지 안 했는지는 볼 때마다 기록(L2)에서 다시 센다 —
+ * 두 묶음이다 — ① 챙길 것(할 일) ② 하루 기록(`daily-log.ts`). 저장하는 것은 그날 고른 ①의 목록뿐이고,
+ * ②는 날마다 같은 넷이라 저장하지 않는다. 했는지 안 했는지는 볼 때마다 기록(L2)에서 다시 센다 —
  * 브리핑에서 완료해도, 우리 아기 탭에서 완료해도 같은 결과가 보인다(SPEC-HOME-06 「어긋나지 않아야」).
  */
 
 import { ageFrom, DEFAULT_BABY_NAME, type Baby } from './baby';
+import { logsFor } from './daily-log';
 import type { BabyRecord } from './records';
 import { getGaps, groupGaps, isLifeGroup, type GapGroup, type GapStatus } from './timeline';
 
@@ -18,9 +20,6 @@ const MAX_TODOS = 3;
 /** 아침 브리핑 알림 시각 고르기 — 온보딩과 마이가 같은 넷을 쓴다 */
 export const BRIEFING_TIMES = ['07:00', '08:00', '09:00', '10:00'];
 export const timeLabel = (t: string) => `오전 ${Number(t.split(':')[0])}시`;
-
-/** 몸무게 기록이 이보다 오래되면 가볍게 묻는다(SPEC-HOME-06 ③ 아기 상태 확인) */
-const WEIGHT_STALE_DAYS = 14;
 
 export type BriefingTodo = {
   kind: 'todo';
@@ -37,16 +36,10 @@ export type BriefingTodo = {
   category: string;
 };
 
-export type BriefingCheck = {
-  kind: 'check';
-  key: string;
-  label: string;
-  detail: string;
-  /** 누르면 입력창에 담기는 말 */
-  prompt: string;
-};
+/** 예전 브리핑에 남은 「몸무게를 알려 주세요」 줄 — 이제 하루 기록이 맡아서 그리지 않는다 */
+type LegacyCheck = { kind: 'check'; key: string };
 
-export type BriefingItem = BriefingTodo | BriefingCheck;
+export type BriefingItem = BriefingTodo | LegacyCheck;
 
 export type Briefing = {
   /** 그날의 dayKey — 하루 하나 */
@@ -100,7 +93,7 @@ export function buildBriefing(
 ): Briefing {
   const name = baby.name ?? DEFAULT_BABY_NAME;
   const { month } = ageFrom(baby.birthDate, now);
-  const todos: BriefingItem[] = groupGaps(getGaps(month, records, { scheduleOnly }))
+  const items: BriefingItem[] = groupGaps(getGaps(month, records, { scheduleOnly }))
     .slice(0, MAX_TODOS)
     .map((g) => ({
       kind: 'todo',
@@ -113,23 +106,26 @@ export function buildBriefing(
       category: g.items[0].kind,
     }));
 
-  const items: BriefingItem[] = [...todos];
-  const weights = records.filter((r) => /몸무게|체중|\d\s*kg/i.test(r.label));
-  const lastWeight = weights.at(-1);
-  const staleDays = lastWeight
-    ? Math.floor((now.getTime() - new Date(lastWeight.createdAt).getTime()) / 86_400_000)
-    : null;
-  if (staleDays === null || staleDays >= WEIGHT_STALE_DAYS) {
-    items.push({
-      kind: 'check',
-      key: 'weight',
-      label: staleDays === null ? '몸무게를 알려 주세요' : `몸무게 잰 지 ${staleDays}일 됐어요`,
-      detail: '말로 알려 주면 기록해 두고 다음 답에 반영해요',
-      prompt: '오늘 몸무게는 ',
-    });
-  }
-
   return { day, greeting: greetingAt(now.getHours()), headline: headlineFor(name, baby.birthDate, now), items };
+}
+
+export const todosOf = (items: BriefingItem[]) =>
+  items.filter((i): i is BriefingTodo => i.kind === 'todo');
+
+/** 묶인 항목을 모두 기록으로 닫았으면 한 것 */
+export function todoDone(todo: BriefingTodo, records: BabyRecord[]): boolean {
+  const covered = new Set(records.flatMap((r) => r.covers));
+  return todo.itemIds.every((id) => covered.has(id));
+}
+
+/**
+ * 그날 브리핑에서 아직 안 한 것의 수 — 버디 탭 오른쪽 위 브리핑함의 배지.
+ * 다가오는 일정(D-day)은 오늘 할 일이 아니라 세지 않는다. 독촉하지 않으려 앱 밖(홈 화면 아이콘)에는 띄우지 않는다.
+ */
+export function openCount(items: BriefingItem[], day: Date, records: BabyRecord[]): number {
+  const todos = todosOf(items).filter((t) => t.status !== 'soon' && !todoDone(t, records)).length;
+  const logs = logsFor(day, records).filter((l) => !l.record).length;
+  return todos + logs;
 }
 
 /** 그 월령이 시작하는 날 — 「4개월 · 10월 28일 무렵」 */

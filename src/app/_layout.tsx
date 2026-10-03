@@ -86,7 +86,7 @@ export default function RootLayout() {
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-                    <Stack.Screen name="briefings" options={{ ...header, title: '지난 브리핑' }} />
+                    <Stack.Screen name="briefings" options={{ ...header, title: '브리핑함' }} />
                     <Stack.Screen name="records" options={{ ...header, title: '우리 아기 기록' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>

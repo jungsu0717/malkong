@@ -38,8 +38,10 @@ import { useChat } from '@/data/chat-context';
 import { useDraft } from '@/data/draft-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { useRecords } from '@/data/records-context';
+import { openCount } from '@/data/briefing';
 import { useDailyBriefing } from '@/hooks/use-daily-briefing';
 import { useMalkong, type AskFailure } from '@/hooks/use-malkong';
+import { useDailyLog } from '@/hooks/use-daily-log';
 import { useMarkDone } from '@/hooks/use-mark-done';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -75,6 +77,7 @@ export default function ChatScreen() {
   // 그날 처음 열면 브리핑이 첫 메시지로 생긴다(SPEC-HOME-06)
   const today = useDailyBriefing();
   const { pick, justSaved, undo, sheet } = useMarkDone();
+  const { openLog, sheet: logSheet } = useDailyLog();
   const {
     messages,
     pendingId,
@@ -92,6 +95,12 @@ export default function ChatScreen() {
   const { dailyLimit, remaining } = useEntitlements();
   // 기록 화면의 「대화 보기」에서 넘어온 질문 말풍선 id. ft 는 같은 줄을 다시 눌렀을 때의 구분값이다
   const { focus, ft } = useLocalSearchParams<{ focus?: string; ft?: string }>();
+  // 브리핑함 배지 — 오늘 브리핑에서 아직 안 한 것(챙길 것 · 하루 기록)의 수
+  const todayBriefing = messages.find((m) => m.role === 'malkong' && m.meta.type === 'briefing' && m.meta.day === today);
+  const inboxCount =
+    todayBriefing?.role === 'malkong' && todayBriefing.meta.type === 'briefing'
+      ? openCount(todayBriefing.meta.items, new Date(todayBriefing.createdAt), records)
+      : 0;
   // 입력창 글은 다른 탭이 말머리를 담을 수 있게 한곳에 둔다(draft-context)
   const { draft: input, setDraft: setInput, focusRequest } = useDraft();
   const inputRef = useRef<TextInput>(null);
@@ -184,10 +193,7 @@ export default function ChatScreen() {
           message={m}
           today={isToday}
           onPick={pick}
-          onPrompt={(text) => {
-            setInput(text);
-            inputRef.current?.focus();
-          }}
+          onLog={openLog}
           justSaved={isToday ? justSaved : null}
           onUndo={undo}
         />,
@@ -267,7 +273,12 @@ export default function ChatScreen() {
                 </ThemedText>
               </View>
             )}
-            <IconButton icon="file-tray-full-outline" label="지난 브리핑" onPress={() => router.push('/briefings')} />
+            <IconButton
+              icon="file-tray-full-outline"
+              label="브리핑함"
+              badge={inboxCount}
+              onPress={() => router.push('/briefings')}
+            />
           </View>
 
           <ScrollView
@@ -345,6 +356,7 @@ export default function ChatScreen() {
         </KeyboardAvoidingView>
       </SafeAreaView>
       {sheet}
+      {logSheet}
     </ThemedView>
   );
 }

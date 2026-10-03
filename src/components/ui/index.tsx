@@ -12,6 +12,7 @@ import {
   Pressable,
   StyleSheet,
   Switch,
+  Text,
   View,
   type StyleProp,
   type ViewStyle,
@@ -19,7 +20,7 @@ import {
 
 import { BuddyAvatar } from '@/components/brand';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
+import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -189,14 +190,15 @@ export function IconButton({
   /** 화면 읽기용 이름 — 아이콘만 있는 단추라 꼭 단다 */
   label: string;
   onPress: () => void;
-  /** 새 것이 있다는 작은 점 */
-  badge?: boolean;
+  /** 새 것이 있다는 작은 점(true) 또는 남은 수(숫자 — 0 이면 숨김) */
+  badge?: boolean | number;
 }) {
   const c = useTheme();
+  const count = typeof badge === 'number' ? badge : 0;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={count > 0 ? `${label}, ${count}개 남음` : label}
       onPress={() => {
         tap();
         onPress();
@@ -204,7 +206,12 @@ export function IconButton({
       hitSlop={6}
       style={({ pressed }) => [styles.iconButton, { borderColor: c.border, backgroundColor: pressed ? c.surface : c.background }]}>
       <Ionicons name={icon} size={20} color={c.text} />
-      {badge && <View style={[styles.badge, { backgroundColor: c.accent, borderColor: c.background }]} />}
+      {badge === true && <View style={[styles.badge, { backgroundColor: c.accent, borderColor: c.background }]} />}
+      {count > 0 && (
+        <View style={[styles.countBadge, { backgroundColor: c.accent, borderColor: c.background }]}>
+          <Text style={styles.countText}>{count > 9 ? '9+' : count}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -401,6 +408,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badge: { position: 'absolute', top: 7, right: 7, width: 9, height: 9, borderRadius: 5, borderWidth: 2 },
+  countBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // 강조색 위 글씨는 단추(accent)와 같이 흰색
+  countText: { fontFamily: FontFamily.bold, fontSize: 11, lineHeight: 13, color: '#FFFFFF' },
   segmented: { flexDirection: 'row', gap: 20, borderBottomWidth: 1 },
   segment: { paddingTop: 8, paddingBottom: 10, borderBottomWidth: 2, marginBottom: -1 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, minHeight: 56 },

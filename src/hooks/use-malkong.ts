@@ -30,6 +30,7 @@ import {
 } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useEntitlements } from '@/data/entitlements-context';
+import { recordsForQuestion } from '@/data/daily-log';
 import type { BabyRecord } from '@/data/records';
 import { useRecords } from '@/data/records-context';
 
@@ -95,7 +96,7 @@ export function useMalkong() {
       if (!age) return;
       setFailure(null);
       setPendingId(attempt.questionId);
-      const sent = known.slice(-MAX_RECORDS_SENT).map((r) => ({ kind: r.kind, label: r.label }));
+      const sent = recordsForQuestion(known, MAX_RECORDS_SENT).map((r) => ({ kind: r.kind, label: r.label }));
       try {
         const response = await askServer({
           question: attempt.question,

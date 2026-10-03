@@ -83,7 +83,7 @@ src/app/(tabs)/baby.tsx      우리 아기 — 버디가 아는 것(지식 지�
 src/app/(tabs)/growth.tsx    성장 — 이번 달 · 타임라인
 src/app/records.tsx          기록 보기·고치기
 src/app/(tabs)/my.tsx        마이
-src/app/briefings.tsx        지난 브리핑 보관함
+src/app/briefings.tsx        브리핑함 — 오늘 것 + 지난 브리핑
 src/app/onboarding.tsx       탭 밖 전체 화면. `?edit=1` 이면 프로필 수정으로 쓰인다
 src/app/legal/[doc].tsx      약관·고지
 ```
