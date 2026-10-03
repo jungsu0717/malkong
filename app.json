@@ -1,17 +1,17 @@
 {
   "expo": {
-    "name": "말콩",
+    "name": "육아버디",
     "slug": "malkong",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "malkong",
+    "scheme": "yugabuddy",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "kr.malkong.app"
+      "bundleIdentifier": "com.yugabuddy.app"
     },
     "android": {
-      "package": "kr.malkong.app",
+      "package": "com.yugabuddy.app",
       "adaptiveIcon": {
         "backgroundColor": "#C64536",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -48,13 +48,13 @@
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
           "iosAppId": "ca-app-pub-3940256099942544~1458002511",
           "delayAppMeasurementInit": true,
-          "userTrackingUsageDescription": "맞춤형 광고를 보여 드리는 데만 써요. 허용하지 않아도 말콩은 그대로 쓸 수 있어요."
+          "userTrackingUsageDescription": "맞춤형 광고를 보여 드리는 데만 써요. 허용하지 않아도 육아버디는 그대로 쓸 수 있어요."
         }
       ],
       [
         "expo-tracking-transparency",
         {
-          "userTrackingPermission": "맞춤형 광고를 보여 드리는 데만 써요. 허용하지 않아도 말콩은 그대로 쓸 수 있어요."
+          "userTrackingPermission": "맞춤형 광고를 보여 드리는 데만 써요. 허용하지 않아도 육아버디는 그대로 쓸 수 있어요."
         }
       ]
     ],

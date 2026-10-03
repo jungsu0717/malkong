@@ -1,5 +1,5 @@
 /**
- * 말콩 서버와 이야기하는 자리 — 모양의 정본은 docs/architecture/api-contract.md 다.
+ * 육아버디 서버와 이야기하는 자리 — 모양의 정본은 docs/architecture/api-contract.md 다.
  *
  * 서버 주소는 빌드 때 박히는 `EXPO_PUBLIC_API_URL` 이고, 없으면 배포된 Cloud Run 이다.
  * 로컬 서버로 시험할 때는 `.env.local` 에 `EXPO_PUBLIC_API_URL=http://localhost:8000` 을 둔다.

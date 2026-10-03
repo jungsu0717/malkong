@@ -1,6 +1,6 @@
-# 말콩 서버 — 코드 작업 규칙
+# 육아버디 서버(코드명 malkong) — 코드 작업 규칙
 
-이 폴더는 말콩 agent 서버(FastAPI)다. 서버가 무엇을 하고 무엇을 저장하는지는
+이 폴더는 육아버디 agent 서버(FastAPI)다. 서버가 무엇을 하고 무엇을 저장하는지는
 [backend](../docs/architecture/backend.md) 서버 절이, API 모양은 [api-contract](../docs/architecture/api-contract.md)가
 정본이다. 이 파일은 코드를 어떻게 쓰는지만 다룬다.
 
@@ -91,7 +91,7 @@ app/
     router.py
     schema.py
     service.py
-  domain/ask/prompt.py 말콩이 시스템 프롬프트(system_prompt.txt)와 모델 출력 JSON 모양
+  domain/ask/prompt.py 버디 시스템 프롬프트(system_prompt.txt)와 모델 출력 JSON 모양
   domain/ask/redflag.py 위험 신호 문장 매칭 규칙 — 모델보다 먼저(SPEC-ASK-02)
   domain/ask/retrieval.py L1 검색 — 질문에 맞는 승인된 항목을 골라 모델에 건넨다
   domain/knowledge/repository.py 승인된 L1 만 읽는 저장소

@@ -38,7 +38,7 @@ export function RecordsView() {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       <ThemedText type="small" style={{ color: c.textSecondary }}>
-        말콩이가 대화와 챙길 것에서 모은 기록이에요. 다음 답에 반영되고, 이 기기 안에만 저장돼요.
+        버디가 대화와 챙길 것에서 모은 기록이에요. 다음 답에 반영되고, 이 기기 안에만 저장돼요.
       </ThemedText>
 
       <View style={[styles.addRow, { backgroundColor: c.surface }]}>
@@ -66,8 +66,8 @@ export function RecordsView() {
       {newestFirst.length === 0 ? (
         <EmptyState
           title="아직 기록이 없어요"
-          detail="말콩이에게 물어보거나 챙길 것을 완료하면 여기에 쌓여요"
-          action={{ label: '말콩이에게 물어보기', onPress: () => router.navigate('/') }}
+          detail="버디에게 물어보거나 챙길 것을 완료하면 여기에 쌓여요"
+          action={{ label: '버디에게 물어보기', onPress: () => router.navigate('/') }}
         />
       ) : (
         <View style={styles.list}>

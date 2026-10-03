@@ -8,7 +8,7 @@ import { Spacing } from '@/constants/theme';
 export function ScreenLoading() {
   return (
     <ThemedView style={styles.container}>
-      <BabyRunLoading label="말콩이가 달려오고 있어요…" />
+      <BabyRunLoading label="버디가 달려오고 있어요…" />
     </ThemedView>
   );
 }

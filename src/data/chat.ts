@@ -49,7 +49,7 @@ export type MalkongMeta =
     }
   | { type: 'redflag'; questionId: string; sources: Source[] }
   | {
-      /** 아침 브리핑 — 그날 처음 열면 말콩이가 먼저 건넨다(SPEC-HOME-06). 질문 없이 생긴다 */
+      /** 아침 브리핑 — 그날 처음 열면 버디가 먼저 건넨다(SPEC-HOME-06). 질문 없이 생긴다 */
       type: 'briefing';
       day: string;
       greeting: string;

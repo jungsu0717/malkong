@@ -5,7 +5,7 @@ import { BabyFaceIcon, ChatBubbleIcon, RattleIcon, TeddyIcon } from '@/component
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 탭 넷 — 말콩(대화, 첫 화면) · 우리 아기(말콩이가 아는 것) · 성장 · 마이 (decisions/012 · 013) */
+/** 탭 넷 — 버디(대화, 첫 화면) · 우리 아기(버디가 아는 것) · 성장 · 마이 (decisions/012 · 013 · 014) */
 export default function TabLayout() {
   const c = useTheme();
 
@@ -25,7 +25,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: '말콩',
+          title: '버디',
           tabBarIcon: ({ color, size }) => <ChatBubbleIcon size={size} color={color} />,
         }}
       />

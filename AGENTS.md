@@ -40,7 +40,10 @@ Docs: https://docs.expo.dev/eas/index.md
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
 
-## 말콩(malkong) 하네스 — 설계와 작업의 정본
+## 육아버디(코드명 malkong) 하네스 — 설계와 작업의 정본
+
+서비스 이름은 **육아버디**, 대화하는 AI 는 **버디**, 마스코트는 **말콩이**다(decisions/014). 코드·저장소·GCP·EAS 의
+코드명은 malkong 그대로 둔다.
 
 설계 문서가 `docs/` 에 있고, 코드보다 먼저 읽는다. 흐름은 한 방향이다:
 **architecture(전체 WHAT) → menu-spec(메뉴별 SPEC + HOW) → task(작업 단위) → 코드.**

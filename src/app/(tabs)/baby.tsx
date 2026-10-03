@@ -47,7 +47,7 @@ function useCountUp(target: number, replay: number, duration = 1300) {
 }
 
 /**
- * 우리 아기 탭 — 말콩이가 아는 우리 아기 (SPEC-BABY-01~06, decisions/013, task baby/001).
+ * 우리 아기 탭 — 버디가 아는 우리 아기 (SPEC-BABY-01~06, decisions/013, task baby/001).
  * 지식 지도(3D) · 아는 정도 · 영역 · 한눈에 보는 프로필 · 알려 주면 좋아지는 것 · 함께 쌓아 온 것 · 기록.
  */
 export default function BabyScreen() {
@@ -116,7 +116,7 @@ export default function BabyScreen() {
             />
             <View pointerEvents="none" style={styles.overlayTop}>
               <ThemedText type="label" style={{ color: c.onSpaceDim }}>
-                말콩이가 아는 {name}
+                버디가 아는 {name}
               </ThemedText>
               <ThemedText style={[styles.percent, { color: c.onSpace }]}>{shown}%</ThemedText>
               <View style={styles.levelChip}>
@@ -251,7 +251,7 @@ export default function BabyScreen() {
                 <Sparkline points={growth} color={c.accent} />
               ) : (
                 <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                  {topic(name)} 기록이 쌓이면 말콩이가 알게 된 흐름이 여기 그려져요
+                  {topic(name)} 기록이 쌓이면 버디가 알게 된 흐름이 여기 그려져요
                 </ThemedText>
               )}
             </Card>

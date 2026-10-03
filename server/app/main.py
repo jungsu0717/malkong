@@ -1,4 +1,4 @@
-"""말콩 agent 서버 진입점.
+"""육아버디(코드명 malkong) agent 서버 진입점.
 
 구성과 정책의 정본은 docs/architecture/backend.md, API 형태는 docs/architecture/api-contract.md,
 코드 구조와 규칙은 server/AGENTS.md.

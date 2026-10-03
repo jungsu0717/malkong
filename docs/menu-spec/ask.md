@@ -234,7 +234,7 @@ task/common/001 6단계에 있다.
 
 ### 현재 구현
 
-- 화면: `src/app/(tabs)/index.tsx`(말콩 탭, 첫 화면) — 날짜 구분선이 있는 하나의 타임라인 + 빠른 질문 칩 + 입력창.
+- 화면: `src/app/(tabs)/index.tsx`(버디 탭, 첫 화면) — 날짜 구분선이 있는 하나의 타임라인 + 빠른 질문 칩 + 입력창.
   모양은 시안 B(task ask/005): 질문은 오른쪽 회색 말풍선, 답은 말풍선 없는 본문과 아래 표시 한 줄(기록 참고 ·
   수위) · 출처 · 「기록했어요」 줄 · 피드백. 줄들은 `src/components/chat-bubbles.tsx`
 - 흐름: `src/hooks/use-malkong.ts` — `POST /v1/ask`(`src/data/api.ts`)를 부르고, 질문과 답을

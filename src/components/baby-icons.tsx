@@ -2,7 +2,7 @@ import type { ColorValue } from 'react-native';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 
 // 베이비 아이콘 세트 — 탭·브랜드용 자체 아이콘 (정본: docs/app-design 아이콘 절)
-// 탭: 말콩=말풍선 속 쪽쪽이 · 우리 아기=아기 얼굴 · 마이=곰돌이. 말콩이 얼굴(브랜드)=쪽쪽이 문 아기
+// 탭: 버디=말풍선 속 쪽쪽이 · 우리 아기=아기 얼굴 · 성장=딸랑이 · 마이=곰돌이. 마스코트 말콩이 얼굴=쪽쪽이 문 아기
 // 24x24 · 선 1.8 · 끝 둥글게. 네 개가 한 세트로 보이도록 규격을 통일한다.
 // 보조 UI 아이콘(셰브론·링크·전송 등)은 그대로 Ionicons 를 쓴다.
 
@@ -24,7 +24,7 @@ export function BabyFaceIcon({ size = 24, color }: IconProps) {
   );
 }
 
-/** 말콩 탭 — 말풍선 안의 쪽쪽이 (대화) */
+/** 버디 탭 — 말풍선 안의 쪽쪽이 (대화) */
 export function ChatBubbleIcon({ size = 24, color }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

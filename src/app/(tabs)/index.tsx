@@ -61,12 +61,12 @@ const PENDING_STEPS: ThinkingStep[] = [
 
 function failureText(failure: AskFailure): string {
   if (failure.status === 0) return '인터넷 연결이 불안정해서 답을 받지 못했어요. 연결을 확인하고 다시 시도해 주세요.';
-  if (failure.status === 503) return '말콩이가 지금 답을 만들지 못했어요. 잠시 뒤에 다시 시도해 주세요.';
+  if (failure.status === 503) return '버디가 지금 답을 만들지 못했어요. 잠시 뒤에 다시 시도해 주세요.';
   if (failure.status === 422) return '질문을 알아듣지 못했어요. 조금 바꿔서 다시 물어봐 주세요.';
   return '잠깐 문제가 생겼어요. 다시 시도해 주세요.';
 }
 
-/** 말콩 탭 — 대화가 첫 화면이다 (decisions/012, 모양은 task ask/005) */
+/** 버디 탭 — 대화가 첫 화면이다 (decisions/012, 모양은 task ask/005) */
 export default function ChatScreen() {
   const c = useTheme();
   const { age, baby, loading: babyLoading } = useBaby();
@@ -257,7 +257,7 @@ export default function ChatScreen() {
           <View style={styles.header}>
             <MalkongMark size={24} />
             <ThemedText type="heading" style={styles.brand}>
-              말콩
+              육아버디
             </ThemedText>
             {/* 남은 정밀 답변 — 평소엔 숨기고 3회 이하일 때만 조용히(ask.md 한도 표시) */}
             {remaining !== null && remaining <= 3 && (
@@ -283,7 +283,7 @@ export default function ChatScreen() {
             {messages.length === 0 && (
               <View style={styles.hello}>
                 <ThemedText type="display">
-                  안녕하세요,{'\n'}말콩이예요
+                  안녕하세요,{'\n'}버디예요
                 </ThemedText>
                 <ThemedText type="body" style={{ color: c.textSecondary }}>
                   만 {age.month}개월 {name} 기준으로 답해요. 이야기해 주신 건 기록해 두고, 다음 답에 반영할게요.

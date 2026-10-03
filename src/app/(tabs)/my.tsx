@@ -203,7 +203,7 @@ export default function MyScreen() {
             onLongPress={async () => setDeviceKey((await storedDeviceKey()) || '아직 없어요')}
             delayLongPress={800}>
             <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
-              말콩 v1.0.0
+              육아버디 v1.0.0
             </ThemedText>
           </Pressable>
           {deviceKey && (

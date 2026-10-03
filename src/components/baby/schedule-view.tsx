@@ -118,7 +118,7 @@ export function ScheduleView({ onShowGrowth }: { onShowGrowth: () => void }) {
         </View>
 
         <ThemedText type="caption" style={[styles.disclaimer, { color: c.textSecondary }]}>
-          말콩의 정보는 공공 의료·육아 지식을 근거로 한 참고 자료예요
+          육아버디의 정보는 공공 의료·육아 지식을 근거로 한 참고 자료예요
         </ThemedText>
       </ScrollView>
       {sheet}

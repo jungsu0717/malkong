@@ -109,7 +109,7 @@ export function BriefingCard({
             {today ? '오늘의 브리핑' : `${made.getMonth() + 1}월 ${made.getDate()}일 브리핑`}
           </ThemedText>
           <ThemedText type="caption" style={{ color: c.textSecondary }}>
-            {today ? '말콩이가 정리했어요' : headline}
+            {today ? '버디가 정리했어요' : headline}
           </ThemedText>
         </View>
         {shown.length > 0 ? (
