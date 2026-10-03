@@ -317,6 +317,8 @@ export default function ChatScreen() {
                 submitBehavior="submit"
                 returnKeyType="send"
                 multiline
+                // 웹의 textarea 는 기본 두 줄 높이라 한 줄로 시작하게 한다
+                {...(Platform.OS === 'web' ? { numberOfLines: 1 } : {})}
                 maxLength={500}
               />
               <Pressable

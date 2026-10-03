@@ -182,7 +182,7 @@ export function RedflagCard({ message }: { message: MalkongMessage }) {
   if (message.meta.type !== 'redflag') return null;
   return (
     <View style={[styles.redflag, { borderColor: c.danger, backgroundColor: c.background }]}>
-      <View style={[styles.redflagHead, { backgroundColor: c.danger }]}>
+      <View style={[styles.redflagHead, { backgroundColor: c.dangerFill }]}>
         <Ionicons name="warning" size={18} color={c.onDanger} />
         <ThemedText type="heading" style={{ color: c.onDanger, fontSize: 15 }}>
           바로 진료가 필요할 수 있어요

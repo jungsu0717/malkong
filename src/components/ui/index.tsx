@@ -11,6 +11,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Switch,
   View,
   type StyleProp,
   type ViewStyle,
@@ -83,7 +84,7 @@ export function Button({
     accent: c.accent,
     secondary: c.surface,
     ghost: 'transparent',
-    danger: c.danger,
+    danger: c.dangerFill,
   }[variant];
   const fg = {
     primary: c.onInk,
@@ -304,6 +305,25 @@ export function ListRow({
     </Pressable>
   ) : (
     <View style={rowStyle}>{body}</View>
+  );
+}
+
+/** 켜고 끄기 — 붉은 말 색 길, 흰 손잡이(웹의 기본 청록 손잡이를 덮는다) */
+export function Toggle({ value, onChange, label }: { value: boolean; onChange: (on: boolean) => void; label: string }) {
+  const c = useTheme();
+  return (
+    <Switch
+      accessibilityLabel={label}
+      value={value}
+      onValueChange={(on) => {
+        tap();
+        onChange(on);
+      }}
+      trackColor={{ true: c.accent, false: c.surfaceStrong }}
+      thumbColor="#FFFFFF"
+      ios_backgroundColor={c.surfaceStrong}
+      {...(Platform.OS === 'web' ? ({ activeThumbColor: '#FFFFFF' } as object) : {})}
+    />
   );
 }
 

@@ -30,6 +30,8 @@ export const Colors = {
     horse: '#DE5A4B',
     danger: '#D92D3F', // 위험 신호·오류 — 이 색은 경고에만 쓴다
     dangerSoft: '#FDECEE',
+    /** 흰 글씨를 얹는 경고 바탕(119 단추·경고 머리) — 다크 모드에서도 흰 글씨가 읽히게 따로 둔다 */
+    dangerFill: '#D92D3F',
     onDanger: '#FFFFFF',
     /** 시트 뒤를 덮는 막 */
     scrim: 'rgba(22, 22, 26, 0.4)',
@@ -51,6 +53,7 @@ export const Colors = {
     horse: '#E57365',
     danger: '#F2606E',
     dangerSoft: '#3B1D22',
+    dangerFill: '#C8303F',
     onDanger: '#FFFFFF',
     scrim: 'rgba(0, 0, 0, 0.6)',
   },

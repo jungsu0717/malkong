@@ -1,14 +1,14 @@
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { AppState, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BabyFaceIcon } from '@/components/baby-icons';
 import { NoAdsCard } from '@/components/no-ads-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Button, Card, Chip, ListRow, SectionHeader } from '@/components/ui';
+import { Button, Card, Chip, ListRow, SectionHeader, Toggle } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { storedDeviceKey } from '@/data/api';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
@@ -83,7 +83,7 @@ export default function MyScreen() {
                 <View style={styles.flex}>
                   <ThemedText type="heading">{baby.name ?? DEFAULT_BABY_NAME}</ThemedText>
                   <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                    {baby.birthDate.replace(/-/g, '. ')} · 태어난 지 {age.days}일 · 만 {age.month}개월
+                    {baby.birthDate.replace(/-/g, '. ')}생 · 만 {age.month}개월
                   </ThemedText>
                 </View>
                 <ThemedText type="label" style={{ color: c.textSecondary }}>
@@ -123,11 +123,7 @@ export default function MyScreen() {
                 }
                 right={
                   supported ? (
-                    <Switch
-                      value={briefingOn}
-                      onValueChange={(on) => void toggleBriefing(on)}
-                      trackColor={{ true: c.accent, false: c.surfaceStrong }}
-                    />
+                    <Toggle label="아침 브리핑 알림" value={briefingOn} onChange={(on) => void toggleBriefing(on)} />
                   ) : null
                 }
               />
@@ -159,11 +155,7 @@ export default function MyScreen() {
                 title="챙길 것에 생활 항목도 보기"
                 detail="끄면 접종·검진만 보여요"
                 right={
-                  <Switch
-                    value={!scheduleOnly}
-                    onValueChange={(on) => void setScheduleOnly(!on)}
-                    trackColor={{ true: c.accent, false: c.surfaceStrong }}
-                  />
+                  <Toggle label="챙길 것에 생활 항목도 보기" value={!scheduleOnly} onChange={(on) => void setScheduleOnly(!on)} />
                 }
               />
             </Card>
