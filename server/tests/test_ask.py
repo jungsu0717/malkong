@@ -377,13 +377,19 @@ def test_eco_mode_strips_records_even_on_paid_tier(app, client: TestClient) -> N
         "괜찮을 거예요",
         "정상이에요",
         "문제없어요",
-        "아기마다 발달 속도가 달라서 그럴 수 있어요",
     ],
 )
 def test_reassurance_phrases_are_caught(answer: str) -> None:
     from app.domain.ask.service import REASSURANCE
 
     assert REASSURANCE.search(answer)
+
+
+def test_individual_difference_is_not_reassurance() -> None:
+    # 판정이 아니라 사실이다 — 이것까지 잡으면 판단 답이 고정 문장으로 떨어진다(task ask/004)
+    from app.domain.ask.service import REASSURANCE
+
+    assert not REASSURANCE.search("아기마다 발달 속도에 차이가 있어요")
 
 
 # --- 코드 리뷰에서 나온 경로 ---
