@@ -42,7 +42,7 @@ from app.domain.ask.schema import (
 )
 from app.domain.entitlements.service import EntitlementsService
 from app.domain.knowledge.repository import L1Item, L1Repository
-from app.infra.llm.base import LlmClient, LlmError, LlmRequest
+from app.infra.llm.base import LlmClient, LlmError, LlmRequest, LlmUnavailable
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -225,6 +225,14 @@ class AskService:
         request = LlmRequest(system=SYSTEM_PROMPT, user=user, schema=MODEL_OUTPUT_SCHEMA)
         try:
             return ModelOutput.model_validate(self._llm.generate(request).data)
+        except LlmUnavailable as exc:
+            # 요금·호출 한도나 키 문제 — 다시 불러도 같다. 기다리게 하지 않고 바로 알린다
+            logger.warning("ask: 모델 회사가 요청을 받지 않음 (%s)", exc)
+            raise ApiException(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                "MODEL_UNAVAILABLE",
+                "지금은 답변을 만들 수 없어요. 잠시 뒤 다시 물어봐 주세요",
+            ) from exc
         except MODEL_FAILURES as exc:
             # 예외 종류만 남긴다 — 메시지에 모델 출력이나 질문이 섞일 수 있다
             logger.warning("ask: 모델이 답하지 못함 (%s)", type(exc).__name__)

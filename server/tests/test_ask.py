@@ -22,7 +22,7 @@ from app.domain.ask.schema import (
 from app.domain.entitlements.router import get_entitlements_service
 from app.domain.entitlements.service import EntitlementsService
 from app.infra.db.usage_store import MemoryUsageStore
-from app.infra.llm.base import LlmError, LlmRequest, LlmResult
+from app.infra.llm.base import LlmError, LlmRequest, LlmResult, LlmUnavailable
 from app.main import create_app
 
 VALID = {
@@ -267,6 +267,16 @@ def test_fact_without_citation_is_retried_then_refused(app, client: TestClient) 
     assert res.json()["code"] == "MODEL_UNAVAILABLE"
     assert len(llm.requests) == 2
     assert "다시 답하기" in llm.requests[1].user
+
+
+def test_refused_by_provider_fails_fast_without_retry(app, client: TestClient) -> None:
+    # 요금 한도 초과(429) 같은 거절은 다시 불러도 같다 — 한 번만 부르고 바로 503
+    llm = FakeLlm(LlmUnavailable("RateLimitError 429"), model_out())
+    use(app, llm)
+    res = client.post("/v1/ask", json=VALID)
+    assert res.status_code == 503
+    assert res.json()["code"] == "MODEL_UNAVAILABLE"
+    assert len(llm.requests) == 1
 
 
 def test_general_answer_is_marked(app, client: TestClient) -> None:

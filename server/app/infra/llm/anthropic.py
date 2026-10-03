@@ -16,7 +16,7 @@ from typing import Any
 
 import anthropic
 
-from app.infra.llm.base import LlmError, LlmRequest, LlmResult
+from app.infra.llm.base import UNAVAILABLE_STATUS, LlmError, LlmRequest, LlmResult, LlmUnavailable
 
 
 class AnthropicClient:
@@ -56,14 +56,19 @@ class AnthropicClient:
             "output_config": {"format": {"type": "json_schema", "schema": req.schema}},
         }
         started = time.perf_counter()
-        if self._fallbacks:
-            # 안전 분류기가 거절하면 서버 쪽에서 대체 모델로 다시 돌린다.
-            # 답한 모델은 result.model 에 남는다
-            response = self._client.beta.messages.create(
-                **params, betas=["server-side-fallback-2026-07-01"], fallbacks="default"
-            )
-        else:
-            response = self._client.messages.create(**params)
+        try:
+            if self._fallbacks:
+                # 안전 분류기가 거절하면 서버 쪽에서 대체 모델로 다시 돌린다.
+                # 답한 모델은 result.model 에 남는다
+                response = self._client.beta.messages.create(
+                    **params, betas=["server-side-fallback-2026-07-01"], fallbacks="default"
+                )
+            else:
+                response = self._client.messages.create(**params)
+        except anthropic.APIStatusError as exc:
+            if exc.status_code in UNAVAILABLE_STATUS:
+                raise LlmUnavailable(f"{type(exc).__name__} {exc.status_code}") from exc
+            raise
         latency_ms = round((time.perf_counter() - started) * 1000)
 
         if response.stop_reason == "refusal":

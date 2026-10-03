@@ -30,6 +30,7 @@
           일반 정보"를 표시한다. level 이 "사실"이면 sources 는 반드시 있다.
 평시     ▸ sources 의 id 는 서버가 모델에 건넨 L1 조각의 id 여야 한다. 모델이 지어낸 id 는 내보내지 않는다.
 조건 위반 ▸ 모델이 답하지 못하면(거절·형식 오류·시간 초과) 503 { code: "MODEL_UNAVAILABLE" } 를 반환한다.
+          모델 회사가 요금·호출 한도나 키 문제로 요청을 받지 않으면 다시 부르지 않고 곧바로 같은 503 을 돌려준다.
 조건 위반 ▸ 일일 한도 초과면 429 { code: "LIMIT_EXCEEDED", resetAt, rewardAvailable, ecoAvailable }
           를 반환하고, 앱은 광고 충전(정밀)과 절약 모드(일반 기준) 선택지를 제시한다.
 평시     ▸ 요청에 "mode": "eco" 가 오면 서버는 L2 기록 없이 무료 경로로 답하고, 응답에
@@ -118,6 +119,7 @@ AdMob 의 서버 측 검증(SSV) 콜백. AdMob 은 GET 쿼리로 부른다(`user
 
 - 2026-09-30 최초 작성 (v0)
 - 2026-10-02 `/v1/ask` 응답에 level, 일반 정보일 때만 빈 sources, 지어낸 id 금지, 503 MODEL_UNAVAILABLE (task common/004)
+- 2026-10-04 모델 회사가 한도로 거절하면 곧바로 503 (task ask/006)
 - 2026-10-03 `/v1/reward/ssv` 를 GET 으로 바로잡고 검증·적립 규칙(user_id = 기기 키 해시) (task common/006)
 - 2026-10-03 `/v1/feedback` 요청 모양(answer 정보 · 동의한 원문만 shared · 기기 키와 분리) (task ask/003)
 - 2026-10-03 `POST /v1/devices`, `X-Device-Key` 필수(위험 신호는 예외)·401 DEVICE_KEY_INVALID, entitlements 에 remaining, usage.remaining 은 운영자 기기에서 null (task common/005)

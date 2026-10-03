@@ -38,6 +38,15 @@ class LlmError(Exception):
     """모델이 답하지 못했다 — 거절, 잘린 출력, 형식이 깨진 JSON."""
 
 
+class LlmUnavailable(LlmError):
+    """모델 회사가 요청을 받지 않는다 — 요금 한도·호출 한도(429), 키·권한(401·403).
+    바로 다시 불러도 같은 답이므로 되풀이하지 않는다."""
+
+
+# 이 상태 코드면 LlmUnavailable — 그 밖의 API 오류는 잠깐의 장애로 보고 한 번 더 불러 본다
+UNAVAILABLE_STATUS = frozenset({401, 403, 429})
+
+
 class LlmClient(Protocol):
     provider: str
     model: str

@@ -14,7 +14,7 @@ from app.domain.ask.prompt import (
     build_user_message,
 )
 from app.infra.llm.anthropic import AnthropicClient
-from app.infra.llm.base import LlmError, LlmRequest
+from app.infra.llm.base import LlmError, LlmRequest, LlmUnavailable
 from app.infra.llm.gemini import GeminiClient
 
 SAMPLE = {
@@ -197,3 +197,47 @@ def test_anthropic_on_vertex_skips_fallback_but_keeps_format_and_cache() -> None
 def test_anthropic_needs_a_way_in() -> None:
     with pytest.raises(ValueError):
         AnthropicClient("claude-test")
+
+
+class StatusError(Exception):
+    """SDK 의 API 오류 흉내 — 상태 코드만 싣는다."""
+
+    def __init__(self, status_code: int) -> None:
+        super().__init__("spend cap")
+        self.status_code = status_code
+
+
+class Raiser:
+    def __init__(self, exc: Exception) -> None:
+        self.exc = exc
+
+    def create(self, **kwargs):
+        raise self.exc
+
+
+@pytest.mark.parametrize("status", [401, 403, 429])
+def test_gemini_maps_refusal_status_to_unavailable(status: int) -> None:
+    client = GeminiClient(api_key="test", model="gemini-test")
+    client._client = SimpleNamespace(interactions=Raiser(StatusError(status)))
+    with pytest.raises(LlmUnavailable):
+        client.generate(REQ)
+
+
+def test_gemini_maps_other_api_errors_to_llm_error() -> None:
+    client = GeminiClient(api_key="test", model="gemini-test")
+    client._client = SimpleNamespace(interactions=Raiser(StatusError(500)))
+    with pytest.raises(LlmError) as info:
+        client.generate(REQ)
+    assert not isinstance(info.value, LlmUnavailable)
+    # 메시지에 요청·응답 내용을 싣지 않는다
+    assert "spend cap" not in str(info.value)
+
+
+def test_gemini_sdk_does_not_retry_refusals() -> None:
+    # SDK 가 429 를 되풀이하면 앱이 90초 넘게 기다렸다 — 다시 부르는 것은 5xx 뿐이어야 한다
+    from google.genai._gaos.google_genai import _translate_retry_config
+
+    client = GeminiClient(api_key="test", model="gemini-test", timeout_s=20)
+    config = _translate_retry_config(client._client._api_client._http_options)
+    assert config.max_retries <= 1
+    assert set(config.status_codes_override or []) == {"500", "502", "503", "504"}
