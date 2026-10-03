@@ -1,6 +1,6 @@
 # 011 이름 바꾸기 — 육아버디 · 버디 · 마스코트 말콩이
 
-> 상태: 진행 (2026-10-03) — 앱·서버 코드와 문서 반영 완료. 서버 배포(버디 말투)는 Julian 허락 뒤
+> 상태: 진행 (2026-10-03) — 앱·서버·문서 반영, Cloud Run revision 00005 배포. 상표·주소는 출시 전 Julian(선택)
 > 근거: [decisions/014](../../decisions/014-name-yugabuddy.md)
 
 ## 바꾼 것
@@ -15,5 +15,6 @@
 ## 완료 조건
 
 - [x] tsc · lint · ruff · pytest(316)
-- [ ] 서버 배포 — 버디라는 이름으로 답한다
-- [ ] Julian: `yugabuddy.com` · `yugabuddy.kr` 구입, KIPRIS 「육아버디」 검색 · 변리사 상담
+- [x] 서버 배포(revision 00005) — /health · 기기 키 · 위험 신호 확인, Gemini 는 부르지 않음
+- [ ] (선택) Julian: `yugabuddy.com` · `yugabuddy.kr` 구입 — 개인정보 처리방침 주소는 무료로도 올릴 수 있다
+- [ ] (출시 전) Julian: KIPRIS 「육아버디」 검색 · 변리사 상담 · 출원

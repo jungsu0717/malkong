@@ -13,7 +13,7 @@
 - **Expo 계정** `@julian-malkong/malkong` 연결, 앱 식별자 `kr.malkong.app`. Julian 아이폰(Expo Go)으로 볼 수 있다
 - **지식(L1)**: 승인된 73건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호(미국 CDC)
 - **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 하루 한도, 재시도 안전,
-  피드백, 보상형 광고 확인(SSV). Cloud Run 에 새 판(revision 00004, 2026-10-03 — 답 개선 ask/004 포함)이 올라가 있다 — 하루 한도는 아직
+  피드백, 보상형 광고 확인(SSV). Cloud Run 에 새 판(revision 00005, 2026-10-03 — 답 개선 · 이름 버디)이 올라가 있다 — 하루 한도는 아직
   메모리에 세어서 서버가 다시 시작되면 0 으로 돌아간다(Neon 을 붙이면 풀린다)
 - 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
