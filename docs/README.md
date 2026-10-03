@@ -18,14 +18,15 @@ constitution (불변 원칙)
 | `constitution.md` | 불변 원칙 — 제품 5 + 개발 4. 모든 SPEC 위에 있다 | 거의 안 바뀜. 바꾸면 changelog |
 | `product/` | 제품 브리프 — 계기·컨셉·차별성·스토어 문구의 원천 | 포지셔닝이 바뀔 때 |
 | `architecture/` | 제품 전체의 방향(main-design) · 지식층(knowledge-layers) · 서버/DB/LLM/기기 DB 스키마(backend) · L1 지식베이스 실체(l1-knowledge-base) · 앱↔서버 API(api-contract) | 방향이 바뀔 때만 |
-| `menu-spec/` | 하단 탭 4개 각각의 상세 설계. SPEC 문장(WHAT)과 구현 방법(HOW) | 기능이 정해지거나 바뀔 때 |
+| `menu-spec/` | 메뉴별 상세 설계(탭 넷 — main-design 「구조」). SPEC 문장(WHAT)과 구현 방법(HOW) | 기능이 정해지거나 바뀔 때 |
 | `app-design/` | 디자인 시스템 · 기술 스택 · 코딩 스타일. 최신(SOTA) 근거 포함 | 스택·스타일 결정이 바뀔 때 |
 | `decisions/` | 결정 기록(ADR) — 대안을 기각한 이유. 정의는 다른 문서가 소유 | 무게 있는 선택마다 |
 | `task/` | spec을 코드로 만드는 작업 단위. 메뉴별 폴더에 누적 | 작업 시작·진행·완료마다 |
 
 ## SPEC ID 규칙
 
-`SPEC-<메뉴>-NN` — 메뉴 코드는 `HOME` · `ASK` · `GROW` · `MY`. 번호는 메뉴 안에서 이어진다.
+`SPEC-<메뉴>-NN` — 메뉴 코드는 `HOME` · `ASK` · `BABY` · `GROW` · `MY`. 번호는 메뉴 안에서 이어진다.
+(`HOME` 은 홈 탭이 없어진 뒤에도 그 SPEC 이 말콩 탭의 브리핑과 성장 탭의 이번 달로 이어져 코드를 그대로 쓴다)
 task 는 반드시 하나 이상의 SPEC 을 근거로 가리킨다. 근거 없는 task 는 만들지 않는다.
 
 ## 문서 작성 규칙 (핵심 여덟)

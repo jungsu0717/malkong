@@ -35,6 +35,7 @@ import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { dayKey, dayLabel } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
+import { useDraft } from '@/data/draft-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { useRecords } from '@/data/records-context';
 import { useDailyBriefing } from '@/hooks/use-daily-briefing';
@@ -91,7 +92,8 @@ export default function ChatScreen() {
   const { dailyLimit, remaining } = useEntitlements();
   // 기록 화면의 「대화 보기」에서 넘어온 질문 말풍선 id. ft 는 같은 줄을 다시 눌렀을 때의 구분값이다
   const { focus, ft } = useLocalSearchParams<{ focus?: string; ft?: string }>();
-  const [input, setInput] = useState('');
+  // 입력창 글은 다른 탭이 말머리를 담을 수 있게 한곳에 둔다(draft-context)
+  const { draft: input, setDraft: setInput, focusRequest } = useDraft();
   const inputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
   /** 줄 위치 — 「대화 보기」로 넘어오면 그 자리로 스크롤한다 */
@@ -114,6 +116,11 @@ export default function ChatScreen() {
   useEffect(() => {
     if (focus) scrollToFocus(focus);
   });
+
+  // 다른 탭에서 말머리를 담아 넘어오면 입력창에 커서를 둔다
+  useEffect(() => {
+    if (focusRequest) setTimeout(() => inputRef.current?.focus(), 300);
+  }, [focusRequest]);
 
   if (babyLoading || !age || loading) return <ScreenLoading />;
 

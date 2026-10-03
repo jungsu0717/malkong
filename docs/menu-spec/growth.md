@@ -5,7 +5,7 @@
 0개월부터 가로로 흐르는 월령 시퀀스에서 표준(L1)과 우리 아기(L2)를 교차해 본다.
 홈이 "지금"이라면 여기는 "전체 흐름"이다. 매거진·읽을거리는 두지 않는다.
 
-**자리** — 2026-10-03 부터 「우리 아기」 탭의 「성장」 보기다([decisions/012](../decisions/012-chat-first-three-tabs.md)).
+**자리** — 2026-10-03 부터 「성장」 탭의 「타임라인」 보기다([decisions/013](../decisions/013-four-tabs-knowledge.md)).
 
 ## SPEC
 
@@ -61,7 +61,7 @@
 
 ## HOW (현재 구현)
 
-- 화면: 「우리 아기」 탭(`src/app/(tabs)/baby.tsx`)의 「성장」 보기 — `src/components/baby/growth-view.tsx`.
+- 화면: 「성장」 탭(`src/app/(tabs)/growth.tsx`)의 「타임라인」 보기 — `src/components/baby/growth-view.tsx`.
   View 기반(스냅 스크롤·현재월 자동 시작·두 트랙·범례).
   현재 월은 저장된 생일에서 계산한 월령으로 잡는다.
 - **현재 월에서 시작하기**: `contentOffset` 은 iOS 에서만 먹으므로, 내용이 깔린 뒤(`onContentSizeChange`)

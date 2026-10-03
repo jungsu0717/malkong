@@ -100,7 +100,7 @@ export default function MyScreen() {
                 icon="document-text-outline"
                 title="우리 아기 기록"
                 detail={records.length > 0 ? `${records.length}건 · 보고 고치거나 지울 수 있어요` : '대화와 챙길 것에서 모은 기록이 여기 쌓여요'}
-                onPress={() => router.navigate({ pathname: '/baby', params: { view: 'records' } })}
+                onPress={() => router.push('/records')}
               />
             </Card>
           </View>

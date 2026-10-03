@@ -5,7 +5,7 @@
 홈은 "지금"만 다룬다. 시간축 전체는 성장의 몫이다.
 
 **자리** — 2026-10-03 탭이 셋으로 바뀌면서([decisions/012](../decisions/012-chat-first-three-tabs.md)) 홈 탭은 없어지고
-SPEC 은 두 자리로 나뉘었다. 아기 카드·챙길 것·발달 포인트·배너(01·02·03·05)는 **「우리 아기」 탭의 「일정」**,
+SPEC 은 두 자리로 나뉘었다. 아기 카드·챙길 것·발달 포인트·배너(01·02·03·05)는 **「성장」 탭의 「이번 달」**(탭 넷, decisions/013),
 아침 브리핑(06)은 **「말콩」 탭 대화의 하루 첫 메시지와 보관함**이다. 아래 SPEC 의 "홈"은 이 자리를 뜻한다.
 
 ## SPEC
@@ -77,8 +77,8 @@ SPEC 은 두 자리로 나뉘었다. 아기 카드·챙길 것·발달 포인트
 
 ## HOW (현재 구현)
 
-- 화면: 「우리 아기」 탭(`src/app/(tabs)/baby.tsx`) — 머리에 아기 카드(이름 · 태어난 지 N일 · 만 N개월 · 생일 ·
-  월 한 줄), 「일정」 보기(`src/components/baby/schedule-view.tsx`)에 챙길 것 → 배너 → 발달 포인트 → 고지.
+- 화면: 「성장」 탭(`src/app/(tabs)/growth.tsx`) — 머리에 「성장」과 태어난 지 N일 · 만 N개월 · 월 한 줄,
+  「이번 달」 보기(`src/components/baby/schedule-view.tsx`)에 챙길 것 → 배너 → 발달 포인트 → 고지.
   줄 모양은 브리핑과 같은 `src/components/todo-row.tsx`(다가오는 것은 D-day, 지금·놓친 것은 단추).
   월령·일수·이번 달 발달 포인트는 저장된 생일에서 계산한 값으로
   나오고(`useBaby()`), 추천은 `src/data/timeline.ts` 의 `getGaps(월령)`(covers 차집합)을
@@ -89,7 +89,7 @@ SPEC 은 두 자리로 나뉘었다. 아기 카드·챙길 것·발달 포인트
 - 이번 달 발달 포인트: 그 월령의 `발달` 항목 제목 — 이정표 요약과 조기 상담 안내(`k-dev-0202`) 두 줄.
   첫 이정표보다 어리면(CDC 첫 체크리스트가 2개월) 「첫 발달 이정표는 2개월이에요」.
 - 완료 알림: 줄을 누르면 `src/components/mark-done-sheet.tsx` 가 항목을 모두 고른 채 열린다(흐름은
-  `src/hooks/use-mark-done.tsx` — 브리핑과 우리 아기 탭이 같이 쓴다).
+  `src/hooks/use-mark-done.tsx` — 브리핑과 성장 탭이 같이 쓴다).
   저장하면 `기록` 하나가 생기고(`covers` = 고른 항목 id, `whenLabel` = "D+N에 알림") 카드 위에
   「…로 기록했어요 · 되돌리기」가 뜬다. 되돌리기는 그 기록을 지운다.
 - 광고: `src/components/ad-banner.tsx` placeholder.

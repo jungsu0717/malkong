@@ -9,11 +9,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Colors, FontFamily } from '@/constants/theme';
 import { BabyProvider, useBaby } from '@/data/baby-context';
 import { ChatProvider } from '@/data/chat-context';
+import { DraftProvider } from '@/data/draft-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
 import { PreferencesProvider } from '@/data/preferences-context';
 import { RecordsProvider } from '@/data/records-context';
@@ -68,6 +70,7 @@ export default function RootLayout() {
   };
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <ThemeProvider value={theme}>
       {/* 흰 바탕에는 검은 글씨, 다크 모드에는 흰 글씨 */}
       <StatusBar style="auto" />
@@ -78,13 +81,16 @@ export default function RootLayout() {
             <BabyProvider>
               <RecordsProvider>
                 <ChatProvider>
+                  <DraftProvider>
                   <OnboardingGate />
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
                     <Stack.Screen name="briefings" options={{ ...header, title: '지난 브리핑' }} />
+                    <Stack.Screen name="records" options={{ ...header, title: '우리 아기 기록' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
+                  </DraftProvider>
                 </ChatProvider>
               </RecordsProvider>
             </BabyProvider>
@@ -92,5 +98,6 @@ export default function RootLayout() {
         </EntitlementsProvider>
       </QueryClientProvider>
     </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }
