@@ -15,6 +15,10 @@ import { getGaps, groupGaps, isLifeGroup, type GapGroup, type GapStatus } from '
 /** 브리핑에 올리는 「챙길 것」 수 — 홈과 같은 기준(SPEC-HOME-02 분량) */
 const MAX_TODOS = 3;
 
+/** 아침 브리핑 알림 시각 고르기 — 온보딩과 마이가 같은 넷을 쓴다 */
+export const BRIEFING_TIMES = ['07:00', '08:00', '09:00', '10:00'];
+export const timeLabel = (t: string) => `오전 ${Number(t.split(':')[0])}시`;
+
 /** 몸무게 기록이 이보다 오래되면 가볍게 묻는다(SPEC-HOME-06 ③ 아기 상태 확인) */
 const WEIGHT_STALE_DAYS = 14;
 

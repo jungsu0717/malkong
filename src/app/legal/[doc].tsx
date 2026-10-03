@@ -1,15 +1,15 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Spacing } from '@/constants/theme';
+import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { DRAFT, legalDoc } from '@/data/legal';
+import { useTheme } from '@/hooks/use-theme';
 
 /** 약관·개인정보 처리방침·의학 정보 고지·자주 묻는 질문 (SPEC-MY-03, task my/003). 본문 정본은 src/data/legal.ts */
 export default function LegalScreen() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const c = useTheme();
   const { doc: id } = useLocalSearchParams<{ doc: string }>();
   const doc = legalDoc(id);
 
@@ -22,17 +22,17 @@ export default function LegalScreen() {
         ) : (
           <>
             {DRAFT && doc.id !== 'faq' && (
-              <View style={[styles.draft, { backgroundColor: colors.accentSoft }]}>
-                <ThemedText type="small" style={{ color: colors.accent }}>
+              <View style={[styles.draft, { backgroundColor: c.surface }]}>
+                <ThemedText type="caption" style={{ color: c.textSecondary }}>
                   초안이에요 — 출시 전에 검토해 확정해요
                 </ThemedText>
               </View>
             )}
             {doc.sections.map((section) => (
               <View key={section.heading} style={styles.section}>
-                <ThemedText type="label">{section.heading}</ThemedText>
+                <ThemedText type="heading">{section.heading}</ThemedText>
                 {section.body.map((p) => (
-                  <ThemedText key={p} type="small" style={{ color: colors.textSecondary }}>
+                  <ThemedText key={p} type="body" style={{ color: c.textSecondary }}>
                     {p}
                   </ThemedText>
                 ))}
@@ -47,7 +47,14 @@ export default function LegalScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { padding: Spacing.four, gap: Spacing.four, paddingBottom: Spacing.six },
-  draft: { borderRadius: 12, padding: Spacing.three },
+  scroll: {
+    padding: Gutter,
+    gap: Spacing.four,
+    paddingBottom: Spacing.six,
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+  },
+  draft: { borderRadius: Radius.md, padding: 12 },
   section: { gap: Spacing.two },
 });

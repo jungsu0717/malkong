@@ -1,23 +1,26 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, useColorScheme, View } from 'react-native';
+import * as Linking from 'expo-linking';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { AppState, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BabyRunLoading } from '@/components/baby-loading';
+import { BabyFaceIcon } from '@/components/baby-icons';
 import { NoAdsCard } from '@/components/no-ads-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors, Spacing } from '@/constants/theme';
-import { DEFAULT_BABY_NAME } from '@/data/baby';
+import { Button, Card, Chip, ListRow, SectionHeader } from '@/components/ui';
+import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { storedDeviceKey } from '@/data/api';
+import { DEFAULT_BABY_NAME } from '@/data/baby';
+import { BRIEFING_TIMES, timeLabel } from '@/data/briefing';
 import { useBaby } from '@/data/baby-context';
-import { unitFromL1, unitFromRecord } from '@/data/knowledge';
 import { allItems, L1_VERSION, pendingReviewCount } from '@/data/l1';
-import { usePreferences } from '@/data/preferences-context';
+import { askNotifications, notificationsAllowed, notificationsSupported } from '@/data/notifications';
+import { DEFAULT_BRIEFING_TIME, usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
+import { useTheme } from '@/hooks/use-theme';
 
-// 본문은 src/data/legal.ts (SPEC-MY-03). 알림 설정·공지사항은 그 기능이 생길 때 다시 넣는다
+// 본문은 src/data/legal.ts (SPEC-MY-03)
 const MENU_SECTIONS: { title: string; items: { label: string; doc: string }[] }[] = [
   { title: '도움말', items: [{ label: '자주 묻는 질문', doc: 'faq' }] },
   {
@@ -30,136 +33,189 @@ const MENU_SECTIONS: { title: string; items: { label: string; doc: string }[] }[
   },
 ];
 
+/** 마이 — 프로필 · 알림 · 설정 · 광고 없이 쓰기 · 약관 (task my/005) */
 export default function MyScreen() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const router = useRouter();
+  const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { scheduleOnly, setScheduleOnly } = usePreferences();
+  const { scheduleOnly, setScheduleOnly, briefingTime, setBriefingTime } = usePreferences();
   /** 버전을 길게 누르면 보이는 기기 키 — 운영자(가족) 기기로 등록할 때 쓴다(backend 「운영자 기기」) */
   const [deviceKey, setDeviceKey] = useState<string | null>(null);
+  /** 기기 알림 허락 — 설정 앱에서 바꾸고 돌아오면 다시 읽는다 */
+  const [allowed, setAllowed] = useState<boolean | null>(null);
+  const supported = notificationsSupported();
 
-  // 두 층을 같은 겉모양으로 본다 (src/data/knowledge.ts 유닛 계약)
-  const units = [...allItems().map(unitFromL1), ...records.map(unitFromRecord)];
-  const standardCount = units.filter((u) => u.layer === 'L1').length;
+  useEffect(() => {
+    if (!supported) return;
+    const read = () => void notificationsAllowed().then(setAllowed);
+    read();
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') read();
+    });
+    return () => sub.remove();
+  }, [supported]);
+
+  const briefingOn = briefingTime !== null && allowed === true;
+
+  const toggleBriefing = async (on: boolean) => {
+    if (!on) return setBriefingTime(null);
+    const ok = await askNotifications();
+    setAllowed(ok);
+    if (ok) await setBriefingTime(briefingTime ?? DEFAULT_BRIEFING_TIME);
+  };
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.flex} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <ThemedText type="display">마이</ThemedText>
 
           {/* 아기 프로필 — 저장된 생일과 거기서 계산한 월령 (SPEC-MY-02) */}
           {baby && age && (
             <Pressable
-              style={[styles.profileCard, { backgroundColor: colors.surface }]}
+              accessibilityRole="button"
+              accessibilityHint="아기 정보를 고쳐요"
               onPress={() => router.push('/onboarding?edit=1')}>
-              <View style={styles.profileText}>
-                <ThemedText type="title">{baby.name ?? DEFAULT_BABY_NAME}</ThemedText>
-                <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                  {baby.birthDate.replace(/-/g, '. ')} · 태어난 지 {age.days}일 · 만 {age.month}개월
+              <Card style={styles.profile}>
+                <View style={[styles.avatar, { backgroundColor: c.surface }]}>
+                  <BabyFaceIcon size={30} color={c.text} />
+                </View>
+                <View style={styles.flex}>
+                  <ThemedText type="heading">{baby.name ?? DEFAULT_BABY_NAME}</ThemedText>
+                  <ThemedText type="caption" style={{ color: c.textSecondary }}>
+                    {baby.birthDate.replace(/-/g, '. ')} · 태어난 지 {age.days}일 · 만 {age.month}개월
+                  </ThemedText>
+                </View>
+                <ThemedText type="label" style={{ color: c.textSecondary }}>
+                  고치기
                 </ThemedText>
-              </View>
-              <ThemedText type="small" style={{ color: colors.accent }}>
-                수정
-              </ThemedText>
+              </Card>
             </Pressable>
           )}
 
-          {/* 우리 아기 기록(L2) 보기·고치기 (SPEC-MY-02) */}
-          <Pressable
-            style={[styles.profileCard, { backgroundColor: colors.surface }]}
-            onPress={() => router.navigate({ pathname: '/baby', params: { view: 'records' } })}>
-            <View style={styles.profileText}>
-              <ThemedText type="title">우리 아기 기록</ThemedText>
-              <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                {records.length > 0
-                  ? `${records.length}건 — 보고 고치거나 지울 수 있어요`
-                  : '대화와 홈에서 모은 기록이 여기 쌓여요'}
-              </ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-          </Pressable>
+          <View style={styles.section}>
+            <SectionHeader title="우리 아기" />
+            <Card style={styles.rows}>
+              <ListRow
+                icon="document-text-outline"
+                title="우리 아기 기록"
+                detail={records.length > 0 ? `${records.length}건 · 보고 고치거나 지울 수 있어요` : '대화와 챙길 것에서 모은 기록이 여기 쌓여요'}
+                onPress={() => router.navigate({ pathname: '/baby', params: { view: 'records' } })}
+              />
+            </Card>
+          </View>
+
+          {/* 아침 브리핑 알림 (SPEC-HOME-06) — 꺼도 브리핑은 앱을 열면 생긴다 */}
+          <View style={styles.section}>
+            <SectionHeader title="알림" />
+            <Card style={styles.rows}>
+              <ListRow
+                icon="notifications-outline"
+                title="아침 브리핑 알림"
+                detail={
+                  !supported
+                    ? '이 기기에서는 알림을 쓸 수 없어요'
+                    : allowed === false && briefingTime !== null
+                      ? '휴대폰 설정에서 알림이 꺼져 있어요'
+                      : briefingOn
+                        ? `매일 ${timeLabel(briefingTime!)}에 알려 드려요`
+                        : '꺼도 브리핑은 앱을 열면 그대로 생겨요'
+                }
+                right={
+                  supported ? (
+                    <Switch
+                      value={briefingOn}
+                      onValueChange={(on) => void toggleBriefing(on)}
+                      trackColor={{ true: c.accent, false: c.surfaceStrong }}
+                    />
+                  ) : null
+                }
+              />
+              {briefingOn && (
+                <View style={styles.times}>
+                  {BRIEFING_TIMES.map((t) => (
+                    <Chip key={t} label={timeLabel(t)} selected={t === briefingTime} onPress={() => void setBriefingTime(t)} />
+                  ))}
+                </View>
+              )}
+              {supported && allowed === false && briefingTime !== null && (
+                <Button
+                  label="설정 열기"
+                  size="sm"
+                  variant="secondary"
+                  style={styles.settingsButton}
+                  onPress={() => void Linking.openSettings()}
+                />
+              )}
+            </Card>
+          </View>
+
+          {/* 챙길 것에서 생활 항목을 뺄 수 있다 (SPEC-HOME-02 생활 항목) */}
+          <View style={styles.section}>
+            <SectionHeader title="설정" />
+            <Card style={styles.rows}>
+              <ListRow
+                icon="leaf-outline"
+                title="챙길 것에 생활 항목도 보기"
+                detail="끄면 접종·검진만 보여요"
+                right={
+                  <Switch
+                    value={!scheduleOnly}
+                    onValueChange={(on) => void setScheduleOnly(!on)}
+                    trackColor={{ true: c.accent, false: c.surfaceStrong }}
+                  />
+                }
+              />
+            </Card>
+          </View>
 
           {/* 광고 없이 쓰기 — 구매·복원 (SPEC-MY-06) */}
           <NoAdsCard />
 
-          {/* 로그인 유도 카드 — 로그인은 가족 공유·기기 이전과 함께 들인다(SPEC-MY-04). 그 전엔 누를 단추를 두지 않는다 */}
-          <View style={[styles.loginCard, { backgroundColor: colors.accentSoft }]}>
-            <ThemedText type="title">가족과 함께 보기 · 준비 중</ThemedText>
-            <ThemedText type="small" style={{ color: colors.textSecondary }}>
-              로그인하면 기기를 바꿔도 기록을 옮기고, 가족과 같은 아기를 함께 볼 수 있게 할 거예요. 지금은
-              로그인 없이 모든 기능을 쓸 수 있어요.
+          {/* 로그인은 가족 공유·기기 이전과 함께 들인다(SPEC-MY-04). 그 전엔 누를 단추를 두지 않는다 */}
+          <Card tone="filled" style={styles.soon}>
+            <ThemedText type="heading" style={{ fontSize: 15 }}>
+              가족과 함께 보기 · 준비 중
             </ThemedText>
-          </View>
-
-          {/* 설정 — 홈 「챙길 것」에서 생활 항목을 뺄 수 있다 (SPEC-HOME-02 생활 항목) */}
-          <View style={styles.section}>
-            <ThemedText type="small" style={{ color: colors.textSecondary }}>
-              설정
+            <ThemedText type="caption" style={{ color: c.textSecondary }}>
+              로그인하면 기기를 바꿔도 기록을 옮기고, 가족과 같은 아기를 함께 볼 수 있게 할 거예요. 지금은 로그인 없이
+              모든 기능을 쓸 수 있어요.
             </ThemedText>
-            <ThemedView type="surface" style={styles.menuCard}>
-              <View style={styles.menuRow}>
-                <View style={styles.profileText}>
-                  <ThemedText>「챙길 것」에 생활 항목도 보기</ThemedText>
-                  <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                    끄면 접종·검진만 보여요
-                  </ThemedText>
-                </View>
-                <Switch
-                  value={!scheduleOnly}
-                  onValueChange={(on) => void setScheduleOnly(!on)}
-                  trackColor={{ true: colors.accent }}
-                />
-              </View>
-            </ThemedView>
-          </View>
+          </Card>
 
           {MENU_SECTIONS.map((section) => (
             <View key={section.title} style={styles.section}>
-              <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                {section.title}
-              </ThemedText>
-              <ThemedView type="surface" style={styles.menuCard}>
-                {section.items.map((item) => (
-                  <Pressable
+              <SectionHeader title={section.title} />
+              <Card style={styles.rows}>
+                {section.items.map((item, i) => (
+                  <ListRow
                     key={item.doc}
-                    style={styles.menuRow}
-                    onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: item.doc } })}>
-                    <ThemedText>{item.label}</ThemedText>
-                    <Ionicons name="chevron-forward" size={16} color={colors.textSecondary} />
-                  </Pressable>
+                    divider={i > 0}
+                    title={item.label}
+                    onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: item.doc } })}
+                  />
                 ))}
-              </ThemedView>
+              </Card>
             </View>
           ))}
 
-          {/* 구축 중에만 두는 칸 — 로딩 모션 시안과 L1 지식 쌓인 정도. 개발 빌드에서만 보인다 */}
+          {/* 구축 중에만 두는 칸 — L1 지식이 쌓인 정도. 개발 빌드에서만 보인다 */}
           {__DEV__ && (
-            <View style={styles.section}>
-              <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                구축 현황 (임시)
-              </ThemedText>
-              <ThemedView type="surface" style={[styles.menuCard, styles.loadingPreview]}>
-                <BabyRunLoading label="말콩이가 달려오고 있어요…" />
-                <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                  지식 유닛 {units.length}건 — 표준 {standardCount}건(승인 대기 {pendingReviewCount()}건) ·
-                  우리 아기 {units.length - standardCount}건 · 판 {L1_VERSION}
-                </ThemedText>
-              </ThemedView>
-            </View>
+            <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
+              개발 빌드 · 표준 지식 {allItems().length}건(승인 대기 {pendingReviewCount()}건) · 기록 {records.length}건 · 판{' '}
+              {L1_VERSION}
+            </ThemedText>
           )}
 
           <Pressable
             onLongPress={async () => setDeviceKey((await storedDeviceKey()) || '아직 없어요')}
             delayLongPress={800}>
-            <ThemedText type="small" style={[styles.version, { color: colors.textSecondary }]}>
+            <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
               말콩 v1.0.0
             </ThemedText>
           </Pressable>
           {deviceKey && (
-            <ThemedText selectable type="small" style={[styles.version, { color: colors.textSecondary }]}>
+            <ThemedText selectable type="caption" style={[styles.center, { color: c.textSecondary }]}>
               기기 키 {deviceKey}
             </ThemedText>
           )}
@@ -171,36 +227,22 @@ export default function MyScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  safeArea: { flex: 1 },
+  flex: { flex: 1 },
   scroll: {
-    padding: Spacing.four,
-    gap: Spacing.three,
-    paddingBottom: Spacing.five * 2,
+    paddingHorizontal: Gutter,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.six,
+    gap: Spacing.four,
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
   },
-  profileCard: {
-    borderRadius: 20,
-    padding: Spacing.four,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-  },
-  profileText: { flex: 1, gap: Spacing.half },
-  loginCard: {
-    borderRadius: 20,
-    padding: Spacing.four,
-    gap: Spacing.two,
-  },
-  section: { gap: Spacing.two },
-  menuCard: {
-    borderRadius: 20,
-    paddingHorizontal: Spacing.four,
-  },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.three + Spacing.one,
-  },
-  loadingPreview: { paddingVertical: Spacing.three },
-  version: { textAlign: 'center' },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
+  section: { gap: 10 },
+  rows: { paddingVertical: 2 },
+  times: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingBottom: 14 },
+  settingsButton: { alignSelf: 'flex-start', marginBottom: 14 },
+  soon: { gap: 6 },
+  center: { textAlign: 'center' },
 });

@@ -4,10 +4,10 @@
  */
 
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Spacing } from '@/constants/theme';
+import { Button, Card } from '@/components/ui';
 import { useEntitlements } from '@/data/entitlements-context';
 import {
   buyNoAds,
@@ -16,10 +16,10 @@ import {
   restoreNoAds,
   type NoAdsOffer,
 } from '@/data/purchases';
+import { useTheme } from '@/hooks/use-theme';
 
 export function NoAdsCard() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const c = useTheme();
   const { ads, adsRemoved, applyAdsRemoved } = useEntitlements();
   const [offer, setOffer] = useState<NoAdsOffer | null>(null);
   const [busy, setBusy] = useState(false);
@@ -39,12 +39,14 @@ export function NoAdsCard() {
 
   if (adsRemoved) {
     return (
-      <View style={[styles.card, { backgroundColor: colors.surface }]}>
-        <ThemedText type="title">광고 없이 쓰는 중이에요</ThemedText>
-        <ThemedText type="small" style={{ color: colors.textSecondary }}>
+      <Card tone="filled" style={styles.card}>
+        <ThemedText type="heading" style={{ fontSize: 15 }}>
+          광고 없이 쓰는 중이에요
+        </ThemedText>
+        <ThemedText type="caption" style={{ color: c.textSecondary }}>
           함께해 주셔서 고마워요
         </ThemedText>
-      </View>
+      </Card>
     );
   }
   // 운영자(가족) 기기는 이미 광고가 없다 — 살 것이 없다
@@ -70,46 +72,43 @@ export function NoAdsCard() {
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface }]}>
-      <ThemedText type="title">광고 없이 쓰기</ThemedText>
-      <ThemedText type="small" style={{ color: colors.textSecondary }}>
+    <Card style={styles.card}>
+      <ThemedText type="heading" style={{ fontSize: 15 }}>
+        광고 없이 쓰기
+      </ThemedText>
+      <ThemedText type="caption" style={{ color: c.textSecondary }}>
         한 번 결제하면 광고가 모두 사라져요. 질문 횟수와 답변은 그대로예요
       </ThemedText>
       {!available ? (
-        <ThemedText type="small" style={{ color: colors.textSecondary }}>
+        <ThemedText type="caption" style={{ color: c.textSecondary }}>
           준비 중이에요
         </ThemedText>
       ) : (
         <View style={styles.actions}>
-          <Pressable
-            style={[
-              styles.button,
-              { backgroundColor: offer && !busy ? colors.accent : colors.surfaceStrong },
-            ]}
-            disabled={!offer || busy}
-            onPress={buy}>
-            <ThemedText type="label" style={{ color: offer && !busy ? '#ffffff' : colors.textSecondary }}>
-              {offer ? `${offer.price} 결제하기` : '가격을 불러오는 중…'}
-            </ThemedText>
-          </Pressable>
-          <Pressable disabled={busy} onPress={restore} hitSlop={8}>
-            <ThemedText type="small" style={{ color: colors.accent }}>
+          <Button
+            label={offer ? `${offer.price} 결제하기` : '가격을 불러오는 중…'}
+            size="sm"
+            disabled={!offer}
+            busy={busy}
+            onPress={buy}
+          />
+          <Pressable disabled={busy} onPress={restore} hitSlop={10} accessibilityRole="button">
+            <ThemedText type="label" style={{ color: c.textSecondary, textDecorationLine: 'underline' }}>
               구매 복원
             </ThemedText>
           </Pressable>
         </View>
       )}
       {note && (
-        <ThemedText type="small" style={{ color: colors.textSecondary }}>
+        <ThemedText type="caption" style={{ color: c.textSecondary }}>
           {note}
         </ThemedText>
       )}
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 20, padding: Spacing.four, gap: Spacing.two },
-  actions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, marginTop: Spacing.one },
-  button: { borderRadius: 12, paddingVertical: Spacing.two, paddingHorizontal: Spacing.three },
+  card: { gap: 6 },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 6 },
 });
