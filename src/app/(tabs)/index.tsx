@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -8,11 +8,11 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
-  useColorScheme,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { MalkongMark } from '@/components/brand';
 import {
   AnswerBubble,
   DateDivider,
@@ -27,31 +27,33 @@ import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ThinkingStatus, type ThinkingStep } from '@/components/thinking-status';
-import { Colors, Spacing } from '@/constants/theme';
+import { Chip, tap } from '@/components/ui';
+import { FontFamily, Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { canOfferRewardedAd } from '@/data/ads';
+import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { dayKey, dayLabel } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { useRecords } from '@/data/records-context';
-import { canOfferRewardedAd } from '@/data/ads';
 import { useMalkong, type AskFailure } from '@/hooks/use-malkong';
+import { useTheme } from '@/hooks/use-theme';
 
-const SUGGESTED = [
-  '밤중 수유는 언제부터 줄여도 되나요?',
+/** 입력창 위의 빠른 질문 — 누르면 입력창에 담긴다(SPEC-ASK-04). 고쳐서 보낼 수 있게 바로 보내지 않는다 */
+const QUICK = [
   '이번 달 예방접종 뭐가 있죠?',
+  '밤중 수유는 언제부터 줄여도 되나요?',
+  '낮잠을 30분밖에 안 자요',
   '열이 38도예요. 병원에 가야 하나요?',
   '수면 교육은 언제부터 시작하나요?',
 ];
 
-// 기다리는 동안의 단계 — 서버가 단계를 보내 주기 전까지는 순환 문구가 헤더를 맡는다(ask.md 처리 현황 블록)
+// 기다리는 동안의 단계 — 서버가 단계를 보내 주기 전까지는 순환 문구가 머리를 맡는다(ask.md 처리 현황 블록)
 const PENDING_STEPS: ThinkingStep[] = [
   { id: 'l2', title: '우리 아기 기록 확인', done: false },
   { id: 'l1', title: '표준 지식 찾기', done: false },
   { id: 'compose', title: '답변 정리', done: false },
 ];
-
-/** 플로팅 버튼에서 넘어온 주소가 이보다 오래됐으면 새로 고침으로 남은 것이라 다시 보내지 않는다 */
-const PARAM_FRESH_MS = 30_000;
 
 function failureText(failure: AskFailure): string {
   if (failure.status === 0) return '인터넷 연결이 불안정해서 답을 받지 못했어요. 연결을 확인하고 다시 시도해 주세요.';
@@ -60,12 +62,12 @@ function failureText(failure: AskFailure): string {
   return '잠깐 문제가 생겼어요. 다시 시도해 주세요.';
 }
 
-export default function AskScreen() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const { age, baby } = useBaby();
-  const { loading } = useChat();
+/** 말콩 탭 — 대화가 첫 화면이다 (decisions/012, 모양은 task ask/005) */
+export default function ChatScreen() {
+  const c = useTheme();
+  const { age, baby, loading: babyLoading } = useBaby();
   const { records, remove } = useRecords();
+  const { loading } = useChat();
   const {
     messages,
     pendingId,
@@ -77,25 +79,19 @@ export default function AskScreen() {
     answerInEco,
     refillWithAd,
   } = useMalkong();
-  /** 광고를 보는 중 — 한도 말풍선의 단추를 잠근다 */
+  /** 광고를 보는 중 — 한도 줄의 단추를 잠근다 */
   const [watching, setWatching] = useState(false);
   const [refillMissed, setRefillMissed] = useState(false);
   const { dailyLimit, remaining } = useEntitlements();
-  // 다른 탭의 플로팅 버튼에서 넘어온 질문 (SPEC-ASK-07). t 는 같은 질문을 다시 보냈을 때의 구분값이다
-  const { q, t, focus, ft } = useLocalSearchParams<{
-    q?: string;
-    t?: string;
-    /** 홈의 최근 질문에서 넘어온 질문 말풍선 id (SPEC-HOME-04) */
-    focus?: string;
-    ft?: string;
-  }>();
+  // 기록 화면의 「대화 보기」에서 넘어온 질문 말풍선 id. ft 는 같은 줄을 다시 눌렀을 때의 구분값이다
+  const { focus, ft } = useLocalSearchParams<{ focus?: string; ft?: string }>();
   const [input, setInput] = useState('');
+  const inputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
-  const handledParam = useRef<string | null>(null);
-  /** 말풍선 위치 — 최근 질문에서 넘어오면 그 자리로 스크롤한다 */
+  /** 줄 위치 — 「대화 보기」로 넘어오면 그 자리로 스크롤한다 */
   const positions = useRef<Record<string, number>>({});
   const focusedKey = useRef<string | null>(null);
-  /** 새 말풍선이 붙을 때 맨 끝을 따라갈지. 지난 질문 자리로 가 있는 동안은 끌어내리지 않는다 */
+  /** 새 줄이 붙을 때 맨 끝을 따라갈지. 지난 질문 자리로 가 있는 동안은 끌어내리지 않는다 */
   const stickToEnd = useRef(true);
 
   const scrollToFocus = (id: string) => {
@@ -113,22 +109,14 @@ export default function AskScreen() {
     if (focus) scrollToFocus(focus);
   });
 
-  // 넘어온 질문은 한 번만 보낸다 — 보낸 뒤 주소에서 지워 새로 고침해도 다시 나가지 않게 한다
-  useEffect(() => {
-    if (!q || loading || !age) return;
-    const key = t ?? q;
-    if (handledParam.current === key) return;
-    handledParam.current = key;
-    router.setParams({ q: undefined, t: undefined });
-    if (t && Date.now() - Number(t) > PARAM_FRESH_MS) return;
-    stickToEnd.current = true;
-    void send(q);
-  }, [q, t, loading, age, send]);
+  if (babyLoading || !age || loading) return <ScreenLoading />;
 
-  if (!age || loading) return <ScreenLoading />;
+  const name = baby?.name ?? DEFAULT_BABY_NAME;
+  const canSend = !!input.trim() && !pendingId;
 
   const submit = () => {
-    if (!input.trim() || pendingId) return;
+    if (!canSend) return;
+    tap();
     stickToEnd.current = true;
     void send(input);
     setInput('');
@@ -171,27 +159,27 @@ export default function AskScreen() {
       rows.push(<RedflagCard key={m.id} message={m} />);
       continue;
     }
-    rows.push(<DoneTrace key={`t-${m.id}`} trace={m.meta.trace} />);
     rows.push(
-      m.meta.type === 'answer' ? (
-        <AnswerBubble
-          key={m.id}
-          message={m}
-          question={questionOf(m.meta.questionId)}
-          records={records}
-          onRemoveRecord={remove}
-        />
-      ) : (
-        <FollowupBubble
-          key={m.id}
-          message={m}
-          open={m.id === openFollowup?.id && !pendingId}
-          onChip={(chip) => {
-            stickToEnd.current = true;
-            void reply(m, chip);
-          }}
-        />
-      ),
+      <View key={m.id} style={styles.malkong}>
+        <DoneTrace trace={m.meta.trace} />
+        {m.meta.type === 'answer' ? (
+          <AnswerBubble
+            message={m}
+            question={questionOf(m.meta.questionId)}
+            records={records}
+            onRemoveRecord={remove}
+          />
+        ) : (
+          <FollowupBubble
+            message={m}
+            open={m.id === openFollowup?.id && !pendingId}
+            onChip={(chip) => {
+              stickToEnd.current = true;
+              void reply(m, chip);
+            }}
+          />
+        )}
+      </View>,
     );
   }
   if (pendingId) {
@@ -225,91 +213,97 @@ export default function AskScreen() {
     rows.push(<ErrorBubble key="error" text={failureText(failure)} onRetry={() => void retry()} />);
   }
 
+  const showQuick = !input && !pendingId && !openFollowup;
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <KeyboardAvoidingView
-          style={styles.safeArea}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <SafeAreaView style={styles.flex} edges={['top']}>
+        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.header}>
-            <ThemedText type="display">말콩이</ThemedText>
-            <ThemedText type="small" style={{ color: colors.textSecondary }}>
-              만 {age.month}개월 아기 기준으로 답해요
+            <MalkongMark size={24} />
+            <ThemedText type="heading" style={styles.brand}>
+              말콩
             </ThemedText>
+            {/* 남은 정밀 답변 — 평소엔 숨기고 3회 이하일 때만 조용히(ask.md 한도 표시) */}
+            {remaining !== null && remaining <= 3 && (
+              <View style={[styles.pill, { backgroundColor: c.surface }]}>
+                <ThemedText type="caption" style={{ color: c.textSecondary, fontWeight: 500 }}>
+                  {remaining > 0 ? `정밀 답변 ${remaining}회 남음` : '오늘 정밀 답변 끝 · 0시에 채워져요'}
+                </ThemedText>
+              </View>
+            )}
           </View>
 
           <ScrollView
             ref={scrollRef}
+            style={styles.flex}
             contentContainerStyle={styles.scroll}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             onContentSizeChange={() => {
               if (messages.length && stickToEnd.current) scrollRef.current?.scrollToEnd({ animated: true });
             }}>
-            {/* 말콩이 인사 말풍선 */}
-            <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
-              <ThemedText>
-                안녕하세요, 말콩이예요 🌱{'\n'}만 {age.month}개월에 맞춰서 답해드릴게요. 무엇이든
-                물어보세요.
-              </ThemedText>
-            </View>
-
             {messages.length === 0 && (
-              <>
-                <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                  이런 걸 많이 물어봐요 — 누르면 입력창에 담겨요
+              <View style={styles.hello}>
+                <ThemedText type="display">
+                  안녕하세요,{'\n'}말콩이예요
                 </ThemedText>
-                <View style={styles.chipWrap}>
-                  {SUGGESTED.map((s) => (
-                    <Pressable
-                      key={s}
-                      style={[styles.chip, { backgroundColor: colors.accentSoft }]}
-                      onPress={() => setInput(s)}>
-                      <ThemedText type="small" style={{ color: colors.accent }}>
-                        {s}
-                      </ThemedText>
-                    </Pressable>
-                  ))}
-                </View>
-              </>
+                <ThemedText type="body" style={{ color: c.textSecondary }}>
+                  만 {age.month}개월 {name} 기준으로 답해요. 이야기해 주신 건 기록해 두고, 다음 답에 반영할게요.
+                </ThemedText>
+              </View>
             )}
-
             {rows}
           </ScrollView>
 
-          {/* 남은 정밀 답변 — 평소엔 숨기고 3회 이하일 때만 조용히(ask.md 한도 표시) */}
-          {remaining !== null && remaining <= 3 && (
-            <ThemedText type="small" style={[styles.remaining, { color: colors.textSecondary }]}>
-              {remaining > 0
-                ? `오늘 정밀 답변 ${remaining}번 남았어요`
-                : '오늘 정밀 답변을 다 썼어요 · 내일 0시에 다시 채워져요'}
+          <View style={styles.composer}>
+            {showQuick && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
+                contentContainerStyle={styles.quick}>
+                {QUICK.map((q) => (
+                  <Chip
+                    key={q}
+                    label={q}
+                    onPress={() => {
+                      setInput(q);
+                      inputRef.current?.focus();
+                    }}
+                  />
+                ))}
+              </ScrollView>
+            )}
+            <View style={[styles.inputBox, { backgroundColor: c.surface }]}>
+              <TextInput
+                ref={inputRef}
+                style={[styles.input, { color: c.text }]}
+                placeholder={openFollowup ? '답을 입력하거나 위에서 골라 주세요' : `${name}에 대해 무엇이든 물어보세요`}
+                placeholderTextColor={c.textTertiary}
+                value={input}
+                onChangeText={setInput}
+                onSubmitEditing={submit}
+                submitBehavior="submit"
+                returnKeyType="send"
+                multiline
+                maxLength={500}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="보내기"
+                accessibilityState={{ disabled: !canSend }}
+                style={[styles.send, { backgroundColor: canSend ? c.ink : c.surfaceStrong }]}
+                disabled={!canSend}
+                onPress={submit}>
+                <Ionicons name="arrow-up" size={20} color={canSend ? c.onInk : c.textTertiary} />
+              </Pressable>
+            </View>
+            <ThemedText type="caption" style={[styles.disclaimer, { color: c.textSecondary }]}>
+              답변은 참고용이에요 · 응급 상황은 119 또는 병원으로
             </ThemedText>
-          )}
-
-          {/* 입력 바 */}
-          <View style={[styles.inputBar, { backgroundColor: colors.surface }]}>
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder={openFollowup ? '답을 입력하거나 위에서 골라 주세요' : '말콩이에게 물어보세요'}
-              placeholderTextColor={colors.textSecondary}
-              value={input}
-              onChangeText={setInput}
-              onSubmitEditing={submit}
-              returnKeyType="send"
-            />
-            <Pressable
-              style={[
-                styles.sendButton,
-                { backgroundColor: colors.accent, opacity: pendingId || !input.trim() ? 0.4 : 1 },
-              ]}
-              disabled={!!pendingId || !input.trim()}
-              onPress={submit}>
-              <Ionicons name="arrow-up" size={18} color="#fff" />
-            </Pressable>
           </View>
-          <ThemedText type="small" style={[styles.disclaimer, { color: colors.textSecondary }]}>
-            답변은 참고용이에요. 응급 상황은 119 또는 병원으로 연락하세요.
-          </ThemedText>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ThemedView>
@@ -318,55 +312,50 @@ export default function AskScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  safeArea: { flex: 1 },
+  flex: { flex: 1 },
   header: {
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.three,
-    gap: Spacing.half,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingHorizontal: Gutter,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.two,
+    minHeight: 52,
   },
+  brand: { flex: 1, fontWeight: 700 },
+  pill: { borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 6 },
   scroll: {
-    padding: Spacing.four,
-    gap: Spacing.three,
+    paddingHorizontal: Gutter,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.four,
+    gap: 20,
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
   },
-  bubble: {
-    borderRadius: 20,
-    borderTopLeftRadius: Spacing.one,
-    padding: Spacing.four,
-    alignSelf: 'flex-start',
-    maxWidth: '90%',
-  },
-  chipWrap: {
+  hello: { gap: Spacing.two, paddingTop: Spacing.four, paddingBottom: Spacing.two },
+  malkong: { gap: 6 },
+  composer: { paddingTop: Spacing.one, gap: Spacing.two },
+  quick: { paddingHorizontal: Gutter - 4, gap: 6 },
+  inputBox: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'flex-end',
+    marginHorizontal: Spacing.three,
+    borderRadius: Radius.lg,
+    paddingLeft: Spacing.three,
+    paddingRight: 6,
+    paddingVertical: 6,
     gap: Spacing.two,
   },
-  chip: {
-    borderRadius: 999,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+  input: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: FontFamily.regular,
+    lineHeight: 22,
+    maxHeight: 120,
+    paddingTop: 9,
+    paddingBottom: 9,
   },
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: Spacing.four,
-    borderRadius: 999,
-    paddingLeft: Spacing.four,
-    paddingRight: Spacing.one,
-    paddingVertical: Spacing.one,
-    gap: Spacing.two,
-  },
-  input: { flex: 1, fontSize: 16, paddingVertical: Spacing.two },
-  sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  remaining: { textAlign: 'center', paddingBottom: Spacing.two },
-  disclaimer: {
-    textAlign: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.two,
-  },
+  send: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
+  disclaimer: { textAlign: 'center', paddingBottom: Spacing.two },
 });

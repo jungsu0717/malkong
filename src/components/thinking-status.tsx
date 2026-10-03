@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, useColorScheme, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 
-import { PacifierBabyIcon } from '@/components/baby-icons';
+import { MalkongMark } from '@/components/brand';
 import { ThemedText } from '@/components/themed-text';
-import { Colors, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 // SPEC-ASK-05 처리 현황 블록.
 // 표시 계약은 selvas 통합 chat(neuro-frontend packages/chat)의 ThinkingIndicator·ChatTrace 를 따른다:
@@ -35,8 +36,7 @@ type ThinkingStatusProps = {
 };
 
 export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
+  const colors = useTheme();
   const [open, setOpen] = useState(false);
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [elapsed, setElapsed] = useState(0);
@@ -88,8 +88,12 @@ export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
   const headerText = done ? `${doneCount}단계 확인했어요` : (label ?? WAITING_PHRASES[phraseIndex]);
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface }]}>
-      <Pressable style={styles.headerRow} onPress={() => setOpen((o) => !o)}>
+    <View style={styles.card}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        style={styles.headerRow}
+        onPress={() => setOpen((o) => !o)}>
         <Animated.View
           style={[
             styles.orb,
@@ -103,16 +107,16 @@ export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
                   ],
                 },
           ]}>
-          <PacifierBabyIcon size={18} color={colors.accent} />
+          <MalkongMark size={18} />
         </Animated.View>
         <ThemedText
-          type="small"
+          type={done ? 'caption' : 'small'}
           numberOfLines={1}
           style={[styles.headerLabel, { color: done ? colors.textSecondary : colors.text }]}>
           {headerText}
         </ThemedText>
         {!done && (
-          <ThemedText type="small" style={[styles.elapsed, { color: colors.textSecondary }]}>
+          <ThemedText type="caption" style={[styles.elapsed, { color: colors.textSecondary }]}>
             {elapsed}s
           </ThemedText>
         )}
@@ -142,10 +146,10 @@ export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
                   />
                 </View>
               )}
-              <ThemedText type="small">{step.title}</ThemedText>
+              <ThemedText type="caption">{step.title}</ThemedText>
               {step.brief && (
                 <ThemedText
-                  type="small"
+                  type="caption"
                   numberOfLines={1}
                   style={[styles.stepBrief, { color: colors.textSecondary }]}>
                   {step.brief}
@@ -161,22 +165,18 @@ export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    alignSelf: 'flex-start',
-    maxWidth: '90%',
-    minWidth: '72%',
+    alignSelf: 'stretch',
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.two,
+    minHeight: 32,
   },
   orb: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   elapsed: { fontVariant: ['tabular-nums'] },
   steps: {
     marginTop: Spacing.two,
-    marginLeft: Spacing.two,
+    marginLeft: 34,
     gap: Spacing.two,
     paddingBottom: Spacing.one,
   },

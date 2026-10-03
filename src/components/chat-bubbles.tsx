@@ -1,42 +1,45 @@
 /**
- * 물어보기 타임라인의 말풍선들 — 질문 · 답변 · 되묻기 · 위험 신호 · 오류 · 날짜 구분선 (task ask/002).
+ * 대화 타임라인의 줄들 — 질문 · 답 · 되묻기 · 위험 신호 · 오류 · 한도 · 날짜 구분선 (task ask/002, 모양은 ask/005).
  * 무엇을 보일지의 규칙은 docs/menu-spec/ask.md 의 SPEC 이 정본이다.
+ *
+ * 시안 B: 질문은 오른쪽 회색 말풍선, 말콩이의 답은 말풍선 없는 본문 + 아래 표시 한 줄.
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import * as Linking from 'expo-linking';
 import { useState } from 'react';
-import { Pressable, StyleSheet, useColorScheme, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AnswerFeedback } from '@/components/answer-feedback';
 import { ExternalLink } from '@/components/external-link';
 import { ThemedText } from '@/components/themed-text';
 import { ThinkingStatus } from '@/components/thinking-status';
-import { Colors, Spacing } from '@/constants/theme';
+import { Button, Chip, Tag } from '@/components/ui';
+import { Radius, Spacing } from '@/constants/theme';
 import type { Source } from '@/data/api';
 import type { MalkongMessage, TraceStep } from '@/data/chat';
 import type { BabyRecord } from '@/data/records';
-
-function useColors() {
-  const scheme = useColorScheme();
-  return Colors[scheme === 'dark' ? 'dark' : 'light'];
-}
+import { useTheme } from '@/hooks/use-theme';
 
 export function UserBubble({ text }: { text: string }) {
-  const colors = useColors();
+  const c = useTheme();
   return (
-    <View style={[styles.userBubble, { backgroundColor: colors.accent }]}>
-      <ThemedText style={styles.userBubbleText}>{text}</ThemedText>
+    <View style={[styles.userBubble, { backgroundColor: c.surface }]}>
+      <ThemedText type="body">{text}</ThemedText>
     </View>
   );
 }
 
 export function DateDivider({ label }: { label: string }) {
-  const colors = useColors();
+  const c = useTheme();
   return (
-    <ThemedText type="small" style={[styles.divider, { color: colors.textSecondary }]}>
-      {label}
-    </ThemedText>
+    <View style={styles.divider} accessibilityRole="header">
+      <View style={[styles.dividerLine, { backgroundColor: c.divider }]} />
+      <ThemedText type="caption" style={{ color: c.textSecondary }}>
+        {label}
+      </ThemedText>
+      <View style={[styles.dividerLine, { backgroundColor: c.divider }]} />
+    </View>
   );
 }
 
@@ -48,7 +51,7 @@ export function DoneTrace({ trace }: { trace: TraceStep[] }) {
 
 /** 같은 출처가 여러 항목에 걸쳐 오면(접종 다섯 건이 모두 질병관리청) 한 번만 보인다 */
 function SourceList({ sources }: { sources: Source[] }) {
-  const colors = useColors();
+  const c = useTheme();
   const unique = sources.filter(
     (s, i) => sources.findIndex((o) => o.name === s.name && o.url === s.url) === i,
   );
@@ -57,8 +60,8 @@ function SourceList({ sources }: { sources: Source[] }) {
       {unique.map((s) => (
         <ExternalLink key={`${s.name}-${s.url}`} href={s.url as `https://${string}`}>
           <View style={styles.sourceRow}>
-            <Ionicons name="link-outline" size={13} color={colors.textSecondary} />
-            <ThemedText type="small" style={{ color: colors.textSecondary }}>
+            <Ionicons name="document-text-outline" size={14} color={c.textSecondary} />
+            <ThemedText type="caption" style={{ color: c.textSecondary, textDecorationLine: 'underline' }}>
               {s.name}
             </ThemedText>
           </View>
@@ -68,29 +71,25 @@ function SourceList({ sources }: { sources: Source[] }) {
   );
 }
 
-/** 「기록됨」 칩 — 누르면 지우기를 고를 수 있다(자동이되 투명하게, ask.md L2 추출 규칙) */
-function SavedRecordChip({
-  record,
-  onRemove,
-}: {
-  record: BabyRecord;
-  onRemove: (id: string) => void;
-}) {
-  const colors = useColors();
+/** 「기록했어요」 줄 — 누르면 지우기를 고를 수 있다(자동이되 투명하게, ask.md L2 추출 규칙) */
+function SavedRecordRow({ record, onRemove }: { record: BabyRecord; onRemove: (id: string) => void }) {
+  const c = useTheme();
   const [open, setOpen] = useState(false);
   return (
     <View style={styles.savedRow}>
       <Pressable
-        style={[styles.savedChip, { backgroundColor: colors.background }]}
+        accessibilityRole="button"
+        accessibilityHint="누르면 이 기록을 지울 수 있어요"
+        style={styles.savedChip}
         onPress={() => setOpen((o) => !o)}>
-        <Ionicons name="checkmark-circle" size={14} color={colors.accent} />
-        <ThemedText type="small" style={{ color: colors.text }}>
-          기록됨 · {record.label}
+        <Ionicons name="checkmark-circle" size={16} color={c.accent} />
+        <ThemedText type="small" style={{ color: c.textSecondary }}>
+          기록했어요 · <ThemedText type="small">{record.label}</ThemedText>
         </ThemedText>
       </Pressable>
       {open && (
         <Pressable onPress={() => onRemove(record.id)} hitSlop={8}>
-          <ThemedText type="small" style={{ color: colors.danger }}>
+          <ThemedText type="label" style={{ color: c.danger }}>
             지우기
           </ThemedText>
         </Pressable>
@@ -111,33 +110,31 @@ export function AnswerBubble({
   records: BabyRecord[];
   onRemoveRecord: (id: string) => void;
 }) {
-  const colors = useColors();
   if (message.meta.type !== 'answer') return null;
-  const { sources, eco, recordIds } = message.meta;
-  // 지운 기록은 칩도 사라진다
+  const { sources, eco, recordIds, usedRecords = 0 } = message.meta;
+  // 지운 기록은 줄도 사라진다
   const saved = recordIds
     .map((id) => records.find((r) => r.id === id))
     .filter((r): r is BabyRecord => !!r);
 
   return (
-    <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
-      <ThemedText>{message.content}</ThemedText>
-      {sources.length > 0 ? (
-        <SourceList sources={sources} />
-      ) : (
-        <ThemedText type="small" style={[styles.note, { color: colors.textSecondary }]}>
-          공공 지식 근거 없음 · 일반 정보
-        </ThemedText>
-      )}
-      {eco && (
-        <ThemedText type="small" style={[styles.note, { color: colors.textSecondary }]}>
-          우리 아기 기록 없이 일반 기준으로 답했어요
-        </ThemedText>
-      )}
+    <View style={styles.answer}>
+      <ThemedText type="body" style={styles.answerText}>
+        {message.content}
+      </ThemedText>
+      <View style={styles.tags}>
+        {usedRecords > 0 && <Tag tone="accent" label={`우리 아기 기록 ${usedRecords}건 참고`} />}
+        {sources.length > 0 ? (
+          <Tag label="공공 기준" />
+        ) : (
+          <Tag label={eco ? '일반 기준 · 기록 없이' : '일반 정보'} />
+        )}
+      </View>
+      {sources.length > 0 && <SourceList sources={sources} />}
       {saved.length > 0 && (
         <View style={styles.savedList}>
           {saved.map((r) => (
-            <SavedRecordChip key={r.id} record={r} onRemove={onRemoveRecord} />
+            <SavedRecordRow key={r.id} record={r} onRemove={onRemoveRecord} />
           ))}
         </View>
       )}
@@ -152,31 +149,26 @@ export function FollowupBubble({
   onChip,
 }: {
   message: MalkongMessage;
-  /** 마지막 말풍선이고 기다리는 중이 아닐 때만 칩을 누를 수 있다 */
+  /** 마지막 줄이고 기다리는 중이 아닐 때만 칩을 누를 수 있다 */
   open: boolean;
   onChip: (chip: string) => void;
 }) {
-  const colors = useColors();
+  const c = useTheme();
   if (message.meta.type !== 'followup') return null;
   return (
-    <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
-      <ThemedText>{message.content}</ThemedText>
+    <View style={styles.answer}>
+      <ThemedText type="body" style={styles.answerText}>
+        {message.content}
+      </ThemedText>
       {open && (
         <>
-          <View style={styles.quickChips}>
-            {message.meta.followup.chips.map((c) => (
-              <Pressable
-                key={c}
-                style={[styles.chip, { backgroundColor: colors.accentSoft }]}
-                onPress={() => onChip(c)}>
-                <ThemedText type="small" style={{ color: colors.accent }}>
-                  {c}
-                </ThemedText>
-              </Pressable>
+          <View style={styles.chips}>
+            {message.meta.followup.chips.map((chip) => (
+              <Chip key={chip} label={chip} onPress={() => onChip(chip)} />
             ))}
           </View>
-          <ThemedText type="small" style={[styles.note, { color: colors.textSecondary }]}>
-            알려주시면 기록해 두고, 같은 건 다시 묻지 않아요
+          <ThemedText type="caption" style={{ color: c.textSecondary }}>
+            알려 주시면 기록해 두고, 같은 건 다시 묻지 않아요
           </ThemedText>
         </>
       )}
@@ -184,45 +176,40 @@ export function FollowupBubble({
   );
 }
 
-/** 위험 신호 고정 응답(SPEC-ASK-02) — 일반 답과 다른 모양으로, 바로 전화할 수 있게 */
+/** 위험 신호 고정 응답(SPEC-ASK-02) — 채운 경고 머리와 119 단추로, 포인트 색과 모양부터 다르게 */
 export function RedflagCard({ message }: { message: MalkongMessage }) {
-  const colors = useColors();
+  const c = useTheme();
   if (message.meta.type !== 'redflag') return null;
   return (
-    <View style={[styles.bubble, styles.redflag, { backgroundColor: colors.dangerSoft, borderColor: colors.danger }]}>
-      <View style={styles.redflagHead}>
-        <Ionicons name="warning" size={18} color={colors.danger} />
-        <ThemedText type="label" style={{ color: colors.danger }}>
+    <View style={[styles.redflag, { borderColor: c.danger, backgroundColor: c.background }]}>
+      <View style={[styles.redflagHead, { backgroundColor: c.danger }]}>
+        <Ionicons name="warning" size={18} color={c.onDanger} />
+        <ThemedText type="heading" style={{ color: c.onDanger, fontSize: 15 }}>
           바로 진료가 필요할 수 있어요
         </ThemedText>
       </View>
-      <ThemedText>{message.content}</ThemedText>
-      <Pressable
-        style={[styles.callButton, { backgroundColor: colors.danger }]}
-        onPress={() => Linking.openURL('tel:119')}>
-        <Ionicons name="call" size={16} color="#ffffff" />
-        <ThemedText type="label" style={styles.callText}>
-          119 전화하기
-        </ThemedText>
-      </Pressable>
-      {message.meta.sources.length > 0 && <SourceList sources={message.meta.sources} />}
+      <View style={styles.redflagBody}>
+        <ThemedText type="body">{message.content}</ThemedText>
+        <Button label="119 전화하기" icon="call" variant="danger" onPress={() => Linking.openURL('tel:119')} />
+        {message.meta.sources.length > 0 && <SourceList sources={message.meta.sources} />}
+      </View>
     </View>
   );
 }
 
 export function ErrorBubble({ text, onRetry }: { text: string; onRetry: () => void }) {
-  const colors = useColors();
+  const c = useTheme();
   return (
-    <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
-      <ThemedText>{text}</ThemedText>
-      <Pressable
-        style={[styles.chip, styles.retry, { backgroundColor: colors.accentSoft }]}
-        onPress={onRetry}>
-        <Ionicons name="refresh" size={14} color={colors.accent} />
-        <ThemedText type="small" style={{ color: colors.accent }}>
-          다시 시도
+    <View style={styles.answer}>
+      <View style={styles.inline}>
+        <Ionicons name="cloud-offline-outline" size={18} color={c.textSecondary} />
+        <ThemedText type="body" style={[styles.answerText, { color: c.textSecondary }]}>
+          {text}
         </ThemedText>
-      </Pressable>
+      </View>
+      <View style={styles.chips}>
+        <Chip icon="refresh" label="다시 시도" onPress={onRetry} />
+      </View>
     </View>
   );
 }
@@ -246,37 +233,30 @@ export function LimitBubble({
   onEco: () => void;
   onReward?: () => void;
 }) {
-  const colors = useColors();
+  const c = useTheme();
   return (
-    <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
-      <ThemedText>
-        오늘 우리 아기 기록을 반영한 정밀 답변{dailyLimit ? ` ${dailyLimit}회` : ''}를 다 썼어요.
-        {onReward
-          ? ' 광고 1편을 보면 정밀 답변 1회가 충전돼요(오늘 3편까지). 아니면 지금 바로 일반 기준으로 답해 드릴 수 있어요.'
-          : ' 지금 바로 일반 기준으로 답해 드릴 수 있어요. 정밀 답변은 내일 0시에 다시 채워져요.'}
+    <View style={[styles.limit, { backgroundColor: c.surface }]}>
+      <ThemedText type="heading" style={{ fontSize: 15 }}>
+        오늘 정밀 답변{dailyLimit ? ` ${dailyLimit}회` : ''}를 다 썼어요
       </ThemedText>
-      <View style={styles.quickChips}>
+      <ThemedText type="small" style={{ color: c.textSecondary }}>
+        {onReward
+          ? '광고 1편을 보면 우리 아기 기록을 반영한 답변 1회가 채워져요(하루 3편까지). 지금 바로 일반 기준으로 답해 드릴 수도 있어요.'
+          : '지금 바로 일반 기준으로 답해 드릴 수 있어요. 정밀 답변은 내일 0시에 다시 채워져요.'}
+      </ThemedText>
+      <View style={styles.limitActions}>
         {onReward && (
-          <Pressable
-            style={[styles.chip, { backgroundColor: colors.accent, opacity: busy ? 0.5 : 1 }]}
-            disabled={busy}
-            onPress={onReward}>
-            <ThemedText type="small" style={styles.callText}>
-              {busy ? '광고를 불러오는 중…' : '광고 보고 정밀 답변'}
-            </ThemedText>
-          </Pressable>
+          <Button
+            label={busy ? '광고를 불러오는 중…' : '광고 보고 정밀 답변'}
+            icon="play-circle-outline"
+            busy={busy}
+            onPress={onReward}
+          />
         )}
-        <Pressable
-          style={[styles.chip, { backgroundColor: colors.accentSoft }]}
-          disabled={busy}
-          onPress={onEco}>
-          <ThemedText type="small" style={{ color: colors.accent }}>
-            일반 기준으로 바로 답변
-          </ThemedText>
-        </Pressable>
+        <Button label="일반 기준으로 바로 답변" variant="secondary" disabled={busy} onPress={onEco} />
       </View>
       {note && (
-        <ThemedText type="small" style={{ color: colors.textSecondary }}>
+        <ThemedText type="caption" style={{ color: c.textSecondary }}>
           {note}
         </ThemedText>
       )}
@@ -285,52 +265,29 @@ export function LimitBubble({
 }
 
 const styles = StyleSheet.create({
-  bubble: {
-    borderRadius: 20,
-    borderTopLeftRadius: Spacing.one,
-    padding: Spacing.four,
-    alignSelf: 'flex-start',
-    maxWidth: '90%',
-    gap: Spacing.two,
-  },
   userBubble: {
-    borderRadius: 20,
-    borderTopRightRadius: Spacing.one,
-    padding: Spacing.three,
     alignSelf: 'flex-end',
-    maxWidth: '85%',
+    maxWidth: '84%',
+    borderRadius: 18,
+    borderBottomRightRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  userBubbleText: { color: '#ffffff' },
-  divider: { textAlign: 'center', marginVertical: Spacing.one },
-  note: { marginTop: Spacing.half },
-  sources: { gap: Spacing.one, marginTop: Spacing.one },
-  sourceRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
-  savedList: { gap: Spacing.one, marginTop: Spacing.one },
-  savedRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, flexWrap: 'wrap' },
-  savedChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    borderRadius: 999,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-  },
-  quickChips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  chip: {
-    borderRadius: 999,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-  },
-  retry: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, alignSelf: 'flex-start' },
-  redflag: { borderWidth: 1, maxWidth: '95%' },
-  redflagHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
-  callButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing.one,
-    borderRadius: 12,
-    paddingVertical: Spacing.two,
-  },
-  callText: { color: '#ffffff' },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginVertical: Spacing.one },
+  dividerLine: { flex: 1, height: 1 },
+  answer: { gap: 10 },
+  answerText: { lineHeight: 25 },
+  inline: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-start' },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  sources: { gap: 6 },
+  sourceRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  savedList: { gap: 4 },
+  savedRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, flexWrap: 'wrap' },
+  savedChip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 28 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  redflag: { borderWidth: 1.5, borderRadius: Radius.lg, overflow: 'hidden' },
+  redflagHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingHorizontal: 14, paddingVertical: 10 },
+  redflagBody: { padding: 14, gap: 12 },
+  limit: { borderRadius: Radius.lg, padding: Spacing.three, gap: 10 },
+  limitActions: { gap: Spacing.two, marginTop: Spacing.one },
 });

@@ -137,6 +137,7 @@ export function useMalkong() {
               sources: response.sources,
               eco: response.eco,
               recordIds: savedIds,
+              usedRecords: response.eco ? 0 : sent.length,
               trace,
             },
           };

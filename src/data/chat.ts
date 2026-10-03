@@ -30,8 +30,10 @@ export type MalkongMeta =
       level: AnswerLevel;
       sources: Source[];
       eco: boolean;
-      /** 이 답에서 저장한 L2 기록 — 「기록됨」 칩 */
+      /** 이 답에서 저장한 L2 기록 — 「기록했어요」 줄 */
       recordIds: string[];
+      /** 모델에 보낸 우리 아기 기록 수 — 「우리 아기 기록 N건 참고」 표시. 예전 답에는 없다 */
+      usedRecords?: number;
       trace: TraceStep[];
       /** 남긴 피드백(SPEC-ASK-06) — 다시 열어도 눌렀던 쪽이 보인다 */
       feedback?: 'up' | 'down';
