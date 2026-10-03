@@ -68,7 +68,7 @@ Gemini 는 2번(진짜 답 · 일반 기준 답) 불렀다. 스크립트는 임�
 6. **스토어 개발자 계정** — Apple(연 $99) · Google Play(한 번 $25), 광고 제거 상품과 가격
 7. **RevenueCat** — 두 스토어 연결, entitlement `no_ads`, 공개 SDK 키 두 개([my/004](../my/004-no-ads-purchase.md))
 8. **약관·개인정보** — 운영자 이름 · 문의 이메일 · 시행일 · 보관 기간 확인 · 법률 검토 여부([my/003](../my/003-legal-docs.md))
-9. ~~**Gemini 유료 전환과 지출 한도**~~ — 2026-10-03 Malkong 프로젝트 키로 바꾸고 선불 충전 · 월 한도 10달러(Julian),
+9. ~~**Gemini 유료 전환과 지출 한도**~~ — 2026-10-03 Malkong 프로젝트 키로 바꾸고 선불 충전 · 월 한도 1만 원(Julian, 10-04 에 10원 → 1만 원으로 고침),
    `MALKONG_LLM_PAID_TIER=true` 로 revision 00006 배포. 지어낸 기록으로 확인: `eco: false`, 분유 기록을 짚은 답
 10. **답변 완성도와 위험 신호 승인** — 앱을 직접 써 보며([common/004](004-real-answer.md) 「알려진 문제」)
 11. **L1** — 중앙육아종합지원센터 라이선스 확인, 국내 출처 보강([common/001](001-l1-knowledge-build.md))

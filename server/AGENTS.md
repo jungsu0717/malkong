@@ -69,7 +69,8 @@ gcloud run deploy malkong-server --source . --region asia-northeast3 \
   --set-env-vars MALKONG_LLM_PROVIDER=gemini,MALKONG_LLM_MODEL=gemini-3.5-flash-lite,MALKONG_LLM_PAID_TIER=true \
   --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest
 
-# Gemini 키는 Malkong 프로젝트의 키(유료 · 선불 충전 · 월 한도 10달러, AI Studio 에서 Julian 이 관리)다.
+# Gemini 키는 Malkong 프로젝트의 키(유료 · 선불 충전 · 월 한도 1만 원, AI Studio Spend 화면에서 Julian 이 관리)다.
+# 한도를 넘으면 Gemini 가 429 「monthly spending cap」으로 모든 호출을 거절한다 — 앱에는 곧바로 503 이 간다(task ask/006).
 # MALKONG_LLM_PAID_TIER=true 는 그 키가 유료 등급일 때만 켠다 — 무료 등급이면 구글이 입력을 학습·사람 검토에 쓰므로
 # 아기 기록을 보내지 않는다(Gemini API 약관 「Unpaid Services」). 키를 바꿀 때는 Julian 이:
 #   gcloud services api-keys get-key-string $(gcloud services api-keys list --project=malkong --format="value(name)" --limit=1) \
