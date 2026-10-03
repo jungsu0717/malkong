@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
   legend: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dotFilled: { width: 8, height: 8, borderRadius: 4 },
   dotHollow: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.2, marginLeft: 8 },
-  domainChips: { gap: 6, marginTop: -Spacing.two },
+  domainChips: { gap: 6, paddingVertical: 2 },
   domainChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 10, paddingHorizontal: 12, minHeight: 36 },
   colorDot: { width: 8, height: 8, borderRadius: 4 },
   bigDot: { width: 12, height: 12, borderRadius: 6 },
