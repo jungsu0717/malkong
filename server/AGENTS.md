@@ -66,8 +66,14 @@ gcloud secrets add-iam-policy-binding malkong-gemini-key --condition=None \
 # 배포 (server/ 에서) — 모델은 환경변수로, 키는 Secret Manager 에서
 gcloud run deploy malkong-server --source . --region asia-northeast3 \
   --allow-unauthenticated --min-instances 0 --max-instances 2 \
-  --set-env-vars MALKONG_LLM_PROVIDER=gemini,MALKONG_LLM_MODEL=gemini-3.5-flash-lite \
+  --set-env-vars MALKONG_LLM_PROVIDER=gemini,MALKONG_LLM_MODEL=gemini-3.5-flash-lite,MALKONG_LLM_PAID_TIER=true \
   --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest
+
+# Gemini 키는 Malkong 프로젝트의 키(유료 · 선불 충전 · 월 한도 10달러, AI Studio 에서 Julian 이 관리)다.
+# MALKONG_LLM_PAID_TIER=true 는 그 키가 유료 등급일 때만 켠다 — 무료 등급이면 구글이 입력을 학습·사람 검토에 쓰므로
+# 아기 기록을 보내지 않는다(Gemini API 약관 「Unpaid Services」). 키를 바꿀 때는 Julian 이:
+#   gcloud services api-keys get-key-string $(gcloud services api-keys list --project=malkong --format="value(name)" --limit=1) \
+#     --format="value(keyString)" | tr -d '\n' | gcloud secrets versions add malkong-gemini-key --data-file=- --project=malkong
 
 # Neon 과 운영자 기기를 넣은 뒤에는 --set-secrets 를 이렇게 늘린다(비밀값 이름은 task common/005)
 #   --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest,MALKONG_DATABASE_URL=malkong-database-url:latest,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest
