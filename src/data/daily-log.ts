@@ -7,29 +7,19 @@
  * 했는지는 브리핑에 저장하지 않고 볼 때마다 기록에서 다시 센다 — 그래서 예전 브리핑에도 같은 넷이 붙는다.
  */
 
+import { monthDay as md, type QuickAsk } from './quick-ask';
 import type { BabyRecord } from './records';
 
 export type LogKey = 'feed-total' | 'feed-interval' | 'weight' | 'note';
 
-export type LogDef = {
+/** 하루 기록 한 줄 — 묻는 모양(QuickAsk)에 「했는지 세는 법」을 더한다. 어제 하루를 묻는 것은 기록에 어제 날짜를 붙인다 */
+export type LogDef = QuickAsk & {
   key: LogKey;
-  title: string;
-  /** 아직 안 적었을 때 줄 아래 한 줄 */
-  hint: string;
-  /** 숫자 기록의 단위 — 없으면 글로 적는다 */
-  unit: 'ml' | '시간' | 'kg' | null;
-  placeholder: string;
-  /** 눌러서 바로 넣는 값 */
-  quick: string[];
   /** 이 말이 든 기록이면 적은 것으로 본다 — 대화에서 생긴 기록도 */
   match: RegExp;
   /** 브리핑 날부터 며칠 전까지의 기록을 셀까 — 하루 기록은 그날만(0), 몸무게는 일주일 */
   withinDays: number;
-  /** 저장할 기록 문구. 어제 하루를 묻는 것은 어제 날짜를 붙인다 — 다음 답에서 언제 일인지 알 수 있게 */
-  label: (value: string, today: Date) => string;
 };
-
-const md = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
 const yesterday = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
 
 export const DAILY_LOGS: LogDef[] = [
@@ -39,7 +29,7 @@ export const DAILY_LOGS: LogDef[] = [
     hint: '모유·분유 합쳐 대략이면 돼요',
     unit: 'ml',
     placeholder: '800',
-    quick: [],
+    options: [],
     match: /수유량|총\s*\d+\s*(ml|cc)|하루\s*\S*\s*\d+\s*(ml|cc)/i,
     withinDays: 0,
     label: (v, today) => `${md(yesterday(today))} 하루 수유량 ${v}ml`,
@@ -50,7 +40,7 @@ export const DAILY_LOGS: LogDef[] = [
     hint: '어제 보통 몇 시간마다 먹었나요',
     unit: '시간',
     placeholder: '3',
-    quick: ['2', '2.5', '3', '3.5', '4'],
+    options: ['2', '2.5', '3', '3.5', '4'],
     match: /수유\s*(텀|간격)|\d+(\.\d+)?\s*시간\s*(마다|간격|텀)/,
     withinDays: 0,
     label: (v, today) => `${md(yesterday(today))} 수유 간격 평균 ${v}시간`,
@@ -61,7 +51,7 @@ export const DAILY_LOGS: LogDef[] = [
     hint: '일주일에 한 번이면 충분해요',
     unit: 'kg',
     placeholder: '6.4',
-    quick: [],
+    options: [],
     match: /몸무게|체중|\d+(\.\d+)?\s*(kg|킬로)/i,
     withinDays: 6,
     label: (v, today) => `몸무게 ${v}kg (${md(today)})`,
@@ -72,7 +62,7 @@ export const DAILY_LOGS: LogDef[] = [
     hint: '열·변·잠투정처럼 평소와 달랐던 것',
     unit: null,
     placeholder: '예: 낮잠을 거의 안 잤어요',
-    quick: ['특별한 일 없었어요', '평소보다 덜 먹었어요', '많이 보챘어요'],
+    options: ['특별한 일 없었어요', '평소보다 덜 먹었어요', '많이 보챘어요'],
     match: /특이\s*사항/,
     withinDays: 0,
     label: (v, today) => `${md(yesterday(today))} 특이사항: ${v}`,

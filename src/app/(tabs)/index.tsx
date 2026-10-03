@@ -13,7 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BuddyMark } from '@/components/brand';
-import { BriefingCard } from '@/components/briefing-card';
+import { AdBanner } from '@/components/ad-banner';
+import { BriefingSummary } from '@/components/briefing-card';
 import {
   AnswerBubble,
   DateDivider,
@@ -40,9 +41,8 @@ import { useEntitlements } from '@/data/entitlements-context';
 import { useRecords } from '@/data/records-context';
 import { openCount } from '@/data/briefing';
 import { useDailyBriefing } from '@/hooks/use-daily-briefing';
+import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
 import { useMalkong, type AskFailure } from '@/hooks/use-malkong';
-import { useDailyLog } from '@/hooks/use-daily-log';
-import { useMarkDone } from '@/hooks/use-mark-done';
 import { useTheme } from '@/hooks/use-theme';
 
 /** 입력창 위의 빠른 질문 — 누르면 입력창에 담긴다(SPEC-ASK-04). 고쳐서 보낼 수 있게 바로 보내지 않는다 */
@@ -76,8 +76,6 @@ export default function ChatScreen() {
   const { loading } = useChat();
   // 그날 처음 열면 브리핑이 첫 메시지로 생긴다(SPEC-HOME-06)
   const today = useDailyBriefing();
-  const { pick, justSaved, undo, sheet } = useMarkDone();
-  const { openLog, sheet: logSheet } = useDailyLog();
   const {
     messages,
     pendingId,
@@ -93,6 +91,7 @@ export default function ChatScreen() {
   const [watching, setWatching] = useState(false);
   const [refillMissed, setRefillMissed] = useState(false);
   const { dailyLimit, remaining } = useEntitlements();
+  const typing = useKeyboardVisible();
   // 기록 화면의 「대화 보기」에서 넘어온 질문 말풍선 id. ft 는 같은 줄을 다시 눌렀을 때의 구분값이다
   const { focus, ft } = useLocalSearchParams<{ focus?: string; ft?: string }>();
   // 브리핑함 배지 — 오늘 브리핑에서 아직 안 한 것(챙길 것 · 하루 기록)의 수
@@ -188,15 +187,8 @@ export default function ChatScreen() {
     if (m.meta.type === 'briefing') {
       const isToday = m.meta.day === today;
       rows.push(
-        <BriefingCard
-          key={m.id}
-          message={m}
-          today={isToday}
-          onPick={pick}
-          onLog={openLog}
-          justSaved={isToday ? justSaved : null}
-          onUndo={undo}
-        />,
+        // 대화에는 요약만 — 자세한 것은 브리핑함에서(task home/006)
+        <BriefingSummary key={m.id} message={m} today={isToday} onOpen={() => router.push('/briefings')} />,
       );
       continue;
     }
@@ -352,11 +344,11 @@ export default function ChatScreen() {
             <ThemedText type="caption" style={[styles.disclaimer, { color: c.textSecondary }]}>
               답변은 참고용이에요 · 응급 상황은 119 또는 병원으로
             </ThemedText>
+            {/* 배너는 입력창 아래 바닥에 — 말풍선 사이에는 두지 않고, 글을 쓰는 동안은 숨긴다(app-design 광고 자리) */}
+            {!typing && <AdBanner anchored />}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-      {sheet}
-      {logSheet}
     </ThemedView>
   );
 }

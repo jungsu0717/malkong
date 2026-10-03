@@ -15,16 +15,18 @@ import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { topic } from '@/data/briefing';
 import { useChat } from '@/data/chat-context';
-import { useDraft } from '@/data/draft-context';
 import {
   buildProfile,
+  factOf,
   factValue,
   knowledgeGrowth,
   suggestions,
   type Domain,
   type DomainId,
+  type Fact,
 } from '@/data/knowledge-profile';
 import { useRecords } from '@/data/records-context';
+import { useQuickAsk } from '@/hooks/use-quick-ask';
 import { useTheme } from '@/hooks/use-theme';
 
 const GALAXY_HEIGHT = 360;
@@ -55,7 +57,8 @@ export default function BabyScreen() {
   const { baby, age } = useBaby();
   const { records } = useRecords();
   const { messages } = useChat();
-  const { setDraft, requestFocus } = useDraft();
+  // 「알려 주기」는 대화 탭으로 넘어가지 않고 이 자리에서 묻는다(task baby/002)
+  const { ask, sheet } = useQuickAsk();
   const [selected, setSelected] = useState<DomainId | null>(null);
   /** 탭에 올 때마다 등장 모션을 다시 */
   const [visit, setVisit] = useState(0);
@@ -76,11 +79,15 @@ export default function BabyScreen() {
   const name = baby.name ?? DEFAULT_BABY_NAME;
   const domain = profile.domains.find((d) => d.id === selected) ?? null;
 
-  const askAbout = (prompt: string) => {
+  const askFact = (fact: Fact | null) => {
+    if (!fact?.ask) return;
     tap();
-    setDraft(prompt);
-    requestFocus();
-    router.navigate('/');
+    ask(fact.ask, fact.record, fact.value);
+  };
+  /** 묶인 칸(수유 · 잠) — 아직 모르는 것부터 묻는다 */
+  const askFirst = (...ids: string[]) => {
+    const facts = ids.map((id) => factOf(profile, id));
+    askFact(facts.find((f) => f && f.score === 0) ?? facts[0]);
   };
 
   const questions = messages.filter((m) => m.role === 'user' && !m.meta.replyTo).length;
@@ -169,7 +176,7 @@ export default function BabyScreen() {
           </ScrollView>
 
           {domain ? (
-            <DomainCard domain={domain} onAsk={askAbout} />
+            <DomainCard domain={domain} onAsk={askFact} />
           ) : (
             <Card style={styles.bars}>
               {profile.domains.map((d) => (
@@ -199,19 +206,19 @@ export default function BabyScreen() {
           <View style={styles.section}>
             <SectionHeader title={`한눈에 보는 ${name}`} />
             <View style={styles.grid}>
-              <Tile icon="trending-up-outline" label="몸무게" value={factValue(profile, 'weight')} onAsk={() => askAbout('오늘 몸무게는 ')} />
-              <Tile icon="resize-outline" label="키" value={factValue(profile, 'height')} onAsk={() => askAbout('최근에 잰 키는 ')} />
+              <Tile icon="trending-up-outline" label="몸무게" value={factValue(profile, 'weight')} onAsk={() => askFirst('weight')} />
+              <Tile icon="resize-outline" label="키" value={factValue(profile, 'height')} onAsk={() => askFirst('height')} />
               <Tile
                 icon="nutrition-outline"
                 label="먹기"
                 value={factValue(profile, 'feed-type') ?? factValue(profile, 'feed-interval')}
-                onAsk={() => askAbout('우리 아기는 수유를 ')}
+                onAsk={() => askFirst('feed-type', 'feed-interval')}
               />
               <Tile
                 icon="moon-outline"
                 label="잠"
                 value={factValue(profile, 'night') ?? factValue(profile, 'nap')}
-                onAsk={() => askAbout('요즘 밤잠은 ')}
+                onAsk={() => askFirst('night', 'nap')}
               />
               <Tile icon="medkit-outline" label="예방접종" value={vaccines ? `${vaccines} 완료` : null} ratio={vaccines} onAsk={() => router.navigate('/growth')} askLabel="성장 탭에서" />
               <Tile icon="clipboard-outline" label="영유아 검진" value={checkups ? `${checkups} 완료` : null} ratio={checkups} onAsk={() => router.navigate('/growth')} askLabel="성장 탭에서" />
@@ -231,7 +238,7 @@ export default function BabyScreen() {
                     iconTone="accent"
                     title={f.label}
                     detail={f.benefit}
-                    onPress={() => askAbout(f.prompt!)}
+                    onPress={() => askFact(f)}
                   />
                 ))}
               </Card>
@@ -271,11 +278,12 @@ export default function BabyScreen() {
           </ThemedText>
         </ScrollView>
       </SafeAreaView>
+      {sheet}
     </ThemedView>
   );
 }
 
-function DomainCard({ domain, onAsk }: { domain: Domain; onAsk: (prompt: string) => void }) {
+function DomainCard({ domain, onAsk }: { domain: Domain; onAsk: (fact: Fact) => void }) {
   const c = useTheme();
   return (
     <Card style={styles.domainCard}>
@@ -308,7 +316,12 @@ function DomainCard({ domain, onAsk }: { domain: Domain; onAsk: (prompt: string)
                 {f.value ?? `아직 몰라요 · ${f.benefit}`}
               </ThemedText>
             </View>
-            {!known && f.prompt && <Button label="알려 주기" size="sm" variant="secondary" onPress={() => onAsk(f.prompt!)} />}
+            {f.ask &&
+              (known ? (
+                <Button label="고치기" size="sm" variant="ghost" onPress={() => onAsk(f)} />
+              ) : (
+                <Button label="알려 주기" size="sm" variant="secondary" onPress={() => onAsk(f)} />
+              ))}
           </View>
         );
       })}

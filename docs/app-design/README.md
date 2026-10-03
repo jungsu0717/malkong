@@ -13,7 +13,7 @@
 | 커스텀 그래픽 | **@shopify/react-native-skia** (필요 시점에 도입 — 지식 지도에 썼다가 Expo Go 에서 앱이 꺼져 걷어 냄, task baby/001) | 타임라인 연결 곡선·다수 요소 애니메이션처럼 View 로는 버거운 그림만. **하이브리드가 정석** — 레이아웃·콘텐츠는 RN View, 그림만 Skia 캔버스 |
 | 서버 데이터 | **TanStack Query** (ask/002 에서 도입) | 캐싱·재시도 표준. 묻기(`/v1/ask`)는 모델 호출이 다시 나가므로 자동 재시도하지 않는다 |
 | 로컬 저장 | **expo-sqlite** (기기) + **localStorage** (웹 미리보기) | 스키마는 [backend](../architecture/backend.md) 기기 DB 절이 정본. expo-sqlite 의 웹 지원이 알파(Metro WASM 설정·COOP/COEP 헤더 필요)라 브라우저 검토가 깨지므로, `src/data/db.ts`(sqlite)와 `src/data/db.web.ts`(localStorage)로 플랫폼을 나눈다. 웹은 검토용이고 출시 대상은 iOS·Android 다 |
-| 광고 | **Google AdMob + react-native-google-mobile-ads** (v17, task common/006) | 첫 출시는 배너(성장 탭)와 보상형(한도 충전), 전면은 「다음」. 네이티브 모듈이라 Expo Go·웹에서는 모듈을 읽지 않고 자리만 보인다(`src/data/ads.ts` · `ads.web.ts`) — 실제 광고는 **EAS 개발 빌드**(`eas.json`, expo-dev-client)부터. 시작 순서는 유럽 동의(UMP) → iOS 추적 허용(expo-tracking-transparency) → SDK 시작, 광고 등급 PG. 개발 빌드는 Google 시험 단위, 출시 빌드는 `EXPO_PUBLIC_ADMOB_*` 단위가 없으면 광고를 내지 않는다. **개발·가족 기기는 광고 면제(운영자 기기) 또는 시험 단위** — 실광고 자기 클릭은 AdMob 계정 정지 사유([backend](../architecture/backend.md) 운영자 절) |
+| 광고 | **Google AdMob + react-native-google-mobile-ads** (v17, task common/006) | 첫 출시는 배너(버디 탭 바닥 · 브리핑함 · 성장 탭 — 아래 「광고 자리」)와 보상형(한도 충전), 전면은 「다음」. 네이티브 모듈이라 Expo Go·웹에서는 모듈을 읽지 않고 자리만 보인다(`src/data/ads.ts` · `ads.web.ts`) — 실제 광고는 **EAS 개발 빌드**(`eas.json`, expo-dev-client)부터. 시작 순서는 유럽 동의(UMP) → iOS 추적 허용(expo-tracking-transparency) → SDK 시작, 광고 등급 PG. 개발 빌드는 Google 시험 단위, 출시 빌드는 `EXPO_PUBLIC_ADMOB_*` 단위가 없으면 광고를 내지 않는다. **개발·가족 기기는 광고 면제(운영자 기기) 또는 시험 단위** — 실광고 자기 클릭은 AdMob 계정 정지 사유([backend](../architecture/backend.md) 운영자 절) |
 | 글꼴 | **IBM Plex Sans KR**(`@expo-google-fonts/ibm-plex-sans-kr`, `expo-font` 의 `useFonts`) | 시안 B. 굵기 넷(400·500·600·700)만 싣는다 — 한글 글꼴이라 굵기 하나가 약 2.8MB |
 | 알림 | **expo-notifications** 로컬 알림(아침 브리핑, home/004) | 서버 푸시가 아니라 기기가 매일 정한 시각에 스스로 띄운다 — 서버에 기기 토큰을 두지 않는다. Expo Go 에서도 된다. 웹은 알림 없음 |
 | 햅틱 | **expo-haptics** | 보내기 · 완료 · 확인 같은 주요 행동에 가볍게 |
@@ -70,7 +70,10 @@
 - **성장 · 이번 달**: 「챙길 것」 → **배너** → 나머지. 스크롤하지 않아도 보이되 첫인상과 핵심
   카드보다 앞서지 않는다(SPEC-HOME-05)
 - **성장 · 타임라인**: 바닥에 둔다. 가로 타임라인이 화면을 채우는 것이 이 보기의 값이라, 위를 잘라내지 않는다(SPEC-GROW-04)
-- **버디(대화) · 우리 아기(지식 지도)**: 두지 않는다. 대화 흐름을 끊고, 되묻기·답변 사이에 광고가 끼면 신뢰가 깎인다. 지식 지도는 이 앱의 얼굴이라 광고와 섞지 않는다
+- **버디(대화)**: 입력창과 고지 **아래 바닥**에 화면 너비 띠 배너(`AdBanner anchored`). 말풍선 사이에는 두지 않는다 — 되묻기·답변 사이에
+  광고가 끼면 신뢰가 깎인다. 글을 쓰는 동안(키보드)은 숨긴다 — 입력창 바로 밑이라 잘못 눌리기 쉽다(2026-10-04 Julian: 수익에 중요한 첫 화면)
+- **브리핑함**: 목록 맨 아래(`AdBanner`)
+- **우리 아기(지식 지도)**: 두지 않는다. 지식 지도는 이 앱의 얼굴이라 광고와 섞지 않는다
 - 광고를 없앤 사용자에게는 `AdBanner` 가 아무것도 그리지 않아 자리까지 사라진다(SPEC-MY-06)
 
 ## 라우트 구조
