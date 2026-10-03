@@ -18,14 +18,16 @@
 - 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점
+## 다음 시작점 (2026-10-03 저녁)
 
-**Julian 이 할 일이 먼저다** — 계정·결제·법률이라 Claude 가 대신할 수 없다. 목록과 순서는
-[common/008 「Julian 이 할 일」](docs/task/common/008-first-release-check.md): ~~서버 배포~~ → Neon → ~~Expo 계정~~ · 개발 빌드(Apple 개발자 $99 먼저) →
-~~앱 식별자~~ → AdMob → 스토어 계정 → RevenueCat → 약관 정보 → Gemini 유료 → 답변 완성도 → L1 출처.
-
-그다음 Claude 몫: Julian 이 Expo Go 로 써 본 시안 B 피드백 반영, 개발 빌드 실기기 시험, 답변 완성도 다듬기(위험 신호 — Julian 승인), 스토어 등록 준비
-(스크린샷 · 소개 문구는 [product-brief](docs/product/product-brief.md) · 개인정보 처리방침 웹 주소).
+1. **Julian 이 아이폰(Expo Go)으로 며칠 써 본다** — 답 · 브리핑 · 지식 지도 · 디자인에서 걸리는 것을 모은다
+2. **Gemini 유료 전환을 정한다** — 무료 등급이라 지금은 기록을 안 보내고 되묻지 않는다. 「우리 아기를 아는 AI」와
+   지식 지도가 차오르는 경험은 유료에서 켜진다(답 하나 약 2~3원). 정하면 Claude 가 `MALKONG_LLM_PAID_TIER=true` 로 배포
+3. Claude 몫: 써 본 피드백 반영 → 답변 완성도 다듬기(위험 신호 — Julian 승인) → 스토어 등록 준비(스크린샷 · 소개 문구는
+   [product-brief](docs/product/product-brief.md) · 개인정보 처리방침 웹 주소)
+4. 출시 전 Julian 몫(계정·결제·법률): Apple 개발자($99) → 개발 빌드로 아이콘·광고·결제 확인 → Neon · AdMob · 스토어 계정 ·
+   RevenueCat · 약관 정보 → 「육아버디」 상표 출원(변리사) · 주소(선택). 목록은
+   [common/008](docs/task/common/008-first-release-check.md) · [common/011](docs/task/common/011-rename-yugabuddy.md)
 
 ## 다른 PC 에서 시작하기
 
