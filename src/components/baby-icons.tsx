@@ -3,6 +3,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 
 // 베이비 아이콘 세트 — 탭·브랜드용 자체 아이콘 (정본: docs/app-design 아이콘 절)
 // 탭: 버디=말풍선 속 쪽쪽이 · 우리 아기=아기 얼굴 · 성장=딸랑이 · 마이=곰돌이. 캐릭터 버디는 그림(brand.tsx)
+// 큰 로딩(baby-loading.tsx)은 소품 넷 — 쪽쪽이 · 젖병 · 딸랑이 · 곰돌이 — 을 차례로 보인다
 // 24x24 · 선 1.8 · 끝 둥글게. 네 개가 한 세트로 보이도록 규격을 통일한다.
 // 보조 UI 아이콘(셰브론·링크·전송 등)은 그대로 Ionicons 를 쓴다.
 
@@ -46,6 +47,23 @@ export function PacifierIcon({ size = 24, color }: IconProps) {
       <Circle cx={12} cy={10} r={6.2} stroke={color} {...stroke} />
       <Circle cx={12} cy={10} r={2.1} stroke={color} {...thin} />
       <Path d="M9.2 16.9 Q12 20.4 14.8 16.9" stroke={color} {...stroke} />
+    </Svg>
+  );
+}
+
+/** 젖병 — 젖꼭지 · 고리 · 눈금 두 줄 */
+export function BottleIcon({ size = 24, color }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M10.4 6 V4.7 Q10.4 2.7 12 2.7 Q13.6 2.7 13.6 4.7 V6" stroke={color} {...stroke} />
+      <Path d="M8.4 6 H15.6 V8.6 H8.4 Z" stroke={color} {...stroke} />
+      <Path
+        d="M9 8.6 H15 Q16.4 8.6 16.4 10 V19.4 Q16.4 21.2 14.6 21.2 H9.4 Q7.6 21.2 7.6 19.4 V10 Q7.6 8.6 9 8.6 Z"
+        stroke={color}
+        {...stroke}
+      />
+      <Path d="M10.2 12.6 H12.4" stroke={color} {...thin} />
+      <Path d="M10.2 15.6 H12.4" stroke={color} {...thin} />
     </Svg>
   );
 }

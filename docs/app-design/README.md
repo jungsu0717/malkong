@@ -43,10 +43,10 @@
 ## 아이콘 — 캐릭터 「버디」 하나, 나머지는 선 아이콘
 
 - **캐릭터 버디**(쪽쪽이 문 아기, [decisions/015](../decisions/015-character-buddy.md)) — 원본은 캐릭터 시트 한 장
-  `assets/brand/buddy-sheet.jpg`, 잘라 낸 그림은 `assets/images/mascot/`(얼굴 · 서 있는 모습 · 달리기 몸통 · 「@」 다리 · 물결).
+  `assets/brand/buddy-sheet.jpg`, 잘라 낸 그림은 `assets/images/mascot/`(얼굴 · 서 있는 모습).
   앱 안에서는 `BuddyMark`(얼굴) · `BuddyAvatar`(동그란 바탕 위 얼굴, `src/components/brand.tsx`)로만 쓴다
 - **탭 아이콘은 자체 베이비 세트**(`baby-icons.tsx`, 24×24 · 선 1.8 · 끝 둥글게) — 버디=말풍선 속 쪽쪽이 ·
-  우리 아기=아기 얼굴 · 성장=딸랑이 · 마이=곰돌이
+  우리 아기=아기 얼굴 · 성장=딸랑이 · 마이=곰돌이. 같은 규격의 소품 아이콘 쪽쪽이 · 젖병은 큰 로딩에 쓴다
 - **보조 UI 아이콘은 Ionicons**(`@expo/vector-icons`, MIT) — 외곽선. 다른 벡터 패밀리를 더 섞지 않는다
 - **런처 아이콘** — 우주복 노랑(#FDD686) 바탕에 버디 얼굴. Android adaptive 전경(안전 영역 안 얼굴) · 배경(노랑) ·
   단색(테마 아이콘, 흰 실루엣). **알림 아이콘**(Android 상태 표시줄) — 흰 실루엣 96px, `expo-notifications` 플러그인.
@@ -59,7 +59,7 @@
 |---|---|
 | 콘텐츠 로딩 (카드·리스트) | **스켈레톤** + shimmer (Reanimated) — 스피너를 깔지 않는다 (Toss 방식) |
 | 생각 중 (답변 대기) | **처리 현황 블록** (`thinking-status.tsx`, SPEC-ASK-05) — 대기 문구 3.2초 순환 + 접이식 생각 과정, selvas 통합 chat(neuro-frontend `packages/chat` ThinkingIndicator·ChatTrace) 이식. Orb 자리 = 버디 얼굴(`BuddyMark`) 맥동 |
-| 큰 로딩 (초기 구동·화면 단위) | **버디가 「@」 다리로 결연하게 달려온다** — 다리 없는 달리기 몸통(통통 튐) + 「@」 다리(빙글빙글) + 뒤로 흐르는 물결을 겹쳐 칸을 가로지른다(`baby-loading.tsx`, Reanimated) |
+| 큰 로딩 (초기 구동·화면 단위) | **육아 소품 아이콘이 톡톡 바뀐다** — 동그란 accentSoft 바탕 안에서 쪽쪽이 → 젖병 → 딸랑이 → 곰돌이(베이비 아이콘 세트)가 0.7초마다 뿅 커지며 바뀌고, 바뀔 때 바탕이 살짝 튄다(`baby-loading.tsx`, Reanimated). 캐릭터 그림은 쓰지 않는다 |
 | 짧은 차단 동작 (1초 미만) | 기본 ActivityIndicator |
 | 스플래시 | expo-splash-screen(흰 바탕 · 서 있는 버디) → 글꼴과 기기 저장을 읽는 동안 같은 그림을 유지 → `AnimatedSplashOverlay` 가 흐리며 걷힌다 |
 | 빈 화면 | 버디 얼굴 + 한 줄 안내 + 할 수 있는 행동 하나(`EmptyState`) |

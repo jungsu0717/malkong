@@ -10,8 +10,10 @@
   물결은 흰색으로 흐려지는 그라디언트라 초록 채널로 알파를 만든다)
 - `scripts/brand/make_assets.py` — 아이콘(노랑 바탕 + 얼굴) · Android adaptive 전경 · 배경 · 시작 화면 · 웹 아이콘 · 앱 안 그림.
   단색 · 알림 아이콘은 `silhouette-*.html`(도형)을 headless Chrome 으로 찍었다
-- 앱: `brand.tsx`(`BuddyMark` · `BuddyAvatar`), `baby-loading.tsx`(몸통 · 「@」 다리 · 물결), `animated-icon.tsx`(서 있는 버디),
+- 앱: `brand.tsx`(`BuddyMark` · `BuddyAvatar`), `animated-icon.tsx`(서 있는 버디),
   지식 지도 가운데 얼굴, app.json(아이콘 · 시작 화면 · `expo-notifications` 알림 아이콘과 색)
+- 큰 로딩: 처음엔 「@」 다리로 달리는 버디를 겹쳐 움직였으나 Julian 이 "짜치다"로 뺐다. `baby-loading.tsx` 는 소품 선 아이콘
+  넷(쪽쪽이 · 젖병 · 딸랑이 · 곰돌이)이 톡톡 바뀌는 로딩으로 바꾸고 `BottleIcon` 을 더했다. 달리기 그림 셋(`run-*.png`)은 지웠다
 - 지운 것: 붉은 말 러너 · 쪽쪽이 얼굴 SVG(`RidingBabyIcon` · `PacifierBabyIcon`), `horse` 토큰, 다크 모드 시작 화면 그림
 
 ## 완료 조건

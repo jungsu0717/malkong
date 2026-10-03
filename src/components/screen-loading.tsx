@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { BabyRunLoading } from '@/components/baby-loading';
+import { BabyLoading } from '@/components/baby-loading';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 
@@ -8,7 +8,7 @@ import { Spacing } from '@/constants/theme';
 export function ScreenLoading() {
   return (
     <ThemedView style={styles.container}>
-      <BabyRunLoading label="버디가 달려오고 있어요…" />
+      <BabyLoading label="버디가 준비하고 있어요…" />
     </ThemedView>
   );
 }

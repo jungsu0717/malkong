@@ -84,9 +84,6 @@ fit(stand, 600).save(f'{OUT}/splash-icon.png')
 mascot = 'assets/mascot'; os.makedirs(mascot, exist_ok=True)
 fit(face, 384).save(f'{mascot}/face.png')
 fit(stand, 360).save(f'{mascot}/standing.png')
-fit(Image.open('cut/run-body.png'), 300).save(f'{mascot}/run-body.png')
-fit(swirl, 200).save(f'{mascot}/run-swirl.png')
-fit(Image.open('cut/run-waves.png'), 240).save(f'{mascot}/run-waves.png')
 for root, _, files in os.walk(OUT):
     for fn in sorted(files):
         p = os.path.join(root, fn); print(p, Image.open(p).size, os.path.getsize(p) // 1024, 'KB')
