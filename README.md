@@ -5,23 +5,25 @@
 
 ## 지금 상태 (2026-10-03)
 
-- **앱**: 첫 출시판 기능이 다 들어갔다 — 온보딩, 홈(아기 카드 · 「챙길 것」 접종·검진·생활 항목 · 발달 포인트 · 최근 질문),
-  물어보기(서버의 진짜 답 · 하나로 이어지는 대화 · 되묻기와 기록 쌓기 · 위험 신호 카드 · 피드백 · 하루 한도),
-  성장 타임라인, 마이(기록 보기·고치기 · 설정 · 광고 없이 쓰기 · 약관 초안), 광고(AdMob 배너·보상형), 임시 아이콘
+- **앱**: 시안 B 「단정한 비서」로 다시 짰다([decisions/012](docs/decisions/012-chat-first-three-tabs.md)). 탭 셋 —
+  **말콩**(첫 화면 · 아침 브리핑이 하루 첫 메시지 · 지난 브리핑 보관함 · 서버의 진짜 답 · 되묻기와 기록 쌓기 ·
+  위험 신호 카드 · 피드백 · 하루 한도) · **우리 아기**(아기 카드 · 일정 · 성장 타임라인 · 기록) · **마이**(알림 시각 ·
+  설정 · 광고 없이 쓰기 · 약관 초안). 온보딩은 생일 → 브리핑 알림 시각. 광고(AdMob 배너·보상형), 붉은 말 아이콘
+- **Expo 계정** `@julian-malkong/malkong` 연결, 앱 식별자 `kr.malkong.app`. Julian 아이폰(Expo Go)으로 볼 수 있다
 - **지식(L1)**: 승인된 73건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호(미국 CDC)
 - **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 하루 한도, 재시도 안전,
   피드백, 보상형 광고 확인(SSV). Cloud Run 에 새 판(revision 00004, 2026-10-03 — 답 개선 ask/004 포함)이 올라가 있다 — 하루 한도는 아직
   메모리에 세어서 서버가 다시 시작되면 0 으로 돌아간다(Neon 을 붙이면 풀린다)
-- 웹 화면 몰아 시험 통과([common/008](docs/task/common/008-first-release-check.md)). 실기기 시험은 개발 빌드부터
+- 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
 ## 다음 시작점
 
 **Julian 이 할 일이 먼저다** — 계정·결제·법률이라 Claude 가 대신할 수 없다. 목록과 순서는
-[common/008 「Julian 이 할 일」](docs/task/common/008-first-release-check.md): ~~서버 배포~~ → Neon → Expo 계정과 개발 빌드 →
+[common/008 「Julian 이 할 일」](docs/task/common/008-first-release-check.md): ~~서버 배포~~ → Neon → ~~Expo 계정~~ · 개발 빌드(Apple 개발자 $99 먼저) →
 ~~앱 식별자~~ → AdMob → 스토어 계정 → RevenueCat → 약관 정보 → Gemini 유료 → 답변 완성도 → L1 출처.
 
-그다음 Claude 몫: 개발 빌드 실기기 시험, 답변 완성도 다듬기(위험 신호 — Julian 승인), 스토어 등록 준비
+그다음 Claude 몫: Julian 이 Expo Go 로 써 본 시안 B 피드백 반영, 개발 빌드 실기기 시험, 답변 완성도 다듬기(위험 신호 — Julian 승인), 스토어 등록 준비
 (스크린샷 · 소개 문구는 [product-brief](docs/product/product-brief.md) · 개인정보 처리방침 웹 주소).
 
 ## 다른 PC 에서 시작하기
