@@ -15,19 +15,21 @@ import {
   Picture,
   Skia,
   TileMode,
-  useFont,
 } from '@shopify/react-native-skia';
 import { useEffect, useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import {
+import Animated, {
   Easing,
+  useAnimatedStyle,
   useDerivedValue,
   useFrameCallback,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
 
+import { FontFamily } from '@/constants/theme';
 import type { Domain, DomainId } from '@/data/knowledge-profile';
 
 export type GalaxyProps = {
@@ -92,9 +94,9 @@ export default function KnowledgeGalaxyCanvas({
   coreColor,
 }: GalaxyProps) {
   const [width, setWidth] = useState(0);
-  const font = useFont(require('@expo-google-fonts/ibm-plex-sans-kr/600SemiBold/IBMPlexSansKR_600SemiBold.ttf'), 12);
-  const fontSmall = useFont(require('@expo-google-fonts/ibm-plex-sans-kr/500Medium/IBMPlexSansKR_500Medium.ttf'), 10);
 
+  /** 그리다 오류가 났는지 — 한 번만 알린다 */
+  const failed = useSharedValue(0);
   const time = useSharedValue(0);
   const intro = useSharedValue(0);
   const dragYaw = useSharedValue(0);
@@ -166,7 +168,8 @@ export default function KnowledgeGalaxyCanvas({
   const picture = useDerivedValue(() => {
     const w = width;
     const h = height;
-    return createPicture(
+    try {
+    const pic = createPicture(
       (canvas) => {
         if (!w) return;
         const cx = w / 2;
@@ -349,20 +352,20 @@ export default function KnowledgeGalaxyCanvas({
             stroke.setStrokeWidth(1.5);
             canvas.drawCircle(q.x, q.y, r + 6 + Math.sin(t * 4) * 1.5, stroke);
           }
-
-          // 이름과 아는 정도
-          if (font && fontSmall) {
-            fill.setColor(Skia.Color('#FFFFFF'));
-            fill.setAlphaf(Math.min(1, 0.3 + near) * k);
-            canvas.drawText(pl.name, q.x + r + 7, q.y - 1, fill, font);
-            fill.setAlphaf(0.6 * near * k);
-            canvas.drawText(`${pl.percent}%`, q.x + r + 7, q.y + 12, fill, fontSmall);
-          }
         }
       },
       { width: w, height: h },
     );
-  }, [width, height, scene, font, fontSmall, selectedIndex, core]);
+    return pic;
+    } catch (e) {
+      // 그리다 오류가 나도 앱을 끄지 않고 빈 그림을 낸다 — 개발 중에는 한 번 알린다
+      if (__DEV__ && !failed.value) {
+        console.warn('[지식 지도] 그리지 못함', String(e));
+        failed.value = 1;
+      }
+      return createPicture(() => {}, { width: 1, height: 1 });
+    }
+  }, [width, height, scene, selectedIndex, core]);
 
   // 끌어서 돌리기 · 눌러서 고르기. 고르기는 지금 화면에 그려진 행성 자리로 가장 가까운 것을 찾는다
   const pan = Gesture.Pan()
@@ -406,11 +409,82 @@ export default function KnowledgeGalaxyCanvas({
             <Picture picture={picture} />
           </Canvas>
         )}
+        {width > 0 &&
+          scene.planets.map((pl) => (
+            <PlanetLabel
+              key={pl.id}
+              name={pl.name}
+              percent={pl.percent}
+              pos={pl.pos}
+              score={pl.score}
+              width={width}
+              height={height}
+              intro={intro}
+              yaw={autoYaw}
+              dragYaw={dragYaw}
+              pitch={pitch}
+            />
+          ))}
       </View>
     </GestureDetector>
   );
 }
 
+/**
+ * 행성 이름과 아는 정도 — 그림판(Skia)에 글씨를 쓰면 아이폰에서 앱이 꺼져서(글꼴을 UI 스레드로 넘길 때),
+ * 앱의 글씨를 행성 옆에 띄우고 같은 투영 계산으로 UI 스레드에서 따라다니게 한다.
+ */
+function PlanetLabel({
+  name,
+  percent,
+  pos,
+  score,
+  width,
+  height,
+  intro,
+  yaw,
+  dragYaw,
+  pitch,
+}: {
+  name: string;
+  percent: number;
+  pos: V3;
+  score: number;
+  width: number;
+  height: number;
+  intro: SharedValue<number>;
+  yaw: SharedValue<number>;
+  dragYaw: SharedValue<number>;
+  pitch: SharedValue<number>;
+}) {
+  const style = useAnimatedStyle(() => {
+    const k = intro.value;
+    const q = project(
+      [pos[0] * k, pos[1] * k, pos[2] * k],
+      yaw.value + dragYaw.value,
+      pitch.value,
+      width / 2,
+      height / 2 + 6,
+      Math.min(width, height) * 1.05,
+    );
+    const r = q.scale * (0.07 + 0.075 * score) * (0.3 + 0.7 * k);
+    const near = Math.max(0.35, Math.min(1, (CAMERA + 1.3 - q.depth) / 2.2));
+    return {
+      opacity: Math.min(1, 0.3 + near) * k,
+      transform: [{ translateX: q.x + r + 6 }, { translateY: q.y - 16 }],
+    };
+  });
+  return (
+    <Animated.View pointerEvents="none" style={[styles.label, style]}>
+      <Text style={styles.labelName}>{name}</Text>
+      <Text style={styles.labelPercent}>{percent}%</Text>
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
   wrap: { width: '100%' },
+  label: { position: 'absolute', left: 0, top: 0 },
+  labelName: { color: '#FFFFFF', fontSize: 12, lineHeight: 16, fontFamily: FontFamily.semibold },
+  labelPercent: { color: 'rgba(255,255,255,0.62)', fontSize: 10, lineHeight: 13, fontFamily: FontFamily.medium },
 });

@@ -59,7 +59,9 @@
   단계: 0~14 처음 만났어요 · 15~34 알아 가는 중 · 35~54 꽤 잘 알아요 · 55~74 단짝이에요 · 75~ 박사.
 - 지식 지도: `src/components/knowledge-galaxy.tsx` — Skia `Picture` 를 Reanimated `useDerivedValue` 로 매 프레임 UI 스레드에서
   그린다. 3D 좌표를 회전(자동 + 끌기)하고 원근 투영해 깊이 순으로 그린다 — 별 · 가운데 아기 · 영역 행성(점수만큼 크고 밝게,
-  빛 번짐) · 사실 점(아는 것은 채운 점, 모르는 것은 빈 고리). 웹은 `knowledge-galaxy.web.tsx` 가 CanvasKit 을 불러 같은 것을 그린다.
+  빛 번짐은 가장자리가 투명해지는 원) · 사실 점(아는 것은 채운 점, 모르는 것은 빈 고리). 행성 이름과 %는 그림판에 쓰지 않고
+  앱 글씨를 같은 투영으로 띄운다 — 그림판에 글꼴을 넘기면 아이폰에서 앱이 꺼졌다(task baby/001).
+  웹은 `knowledge-galaxy.web.tsx` 가 CanvasKit 을 불러 같은 것을 그린다.
 - 알려 주기: 사실마다 말머리(예: 「요즘 낮잠은 」)가 있고, 누르면 말콩 탭 입력창에 담는다(`src/data/draft-context.tsx`).
 
 ## changelog
