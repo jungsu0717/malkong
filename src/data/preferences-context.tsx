@@ -15,6 +15,10 @@ const SCHEDULE_ONLY_KEY = 'todo_schedule_only';
 const BRIEFING_TIME_KEY = 'briefing_time';
 export const DEFAULT_BRIEFING_TIME = '08:00';
 
+/** 하루 기록이 비었을 때 묻는 알림과 카드 (SPEC-BABY-07) — 'on' · 'off', 정한 적이 없으면 켜짐 */
+const NUDGE_PUSH_KEY = 'record_nudge_push';
+const NUDGE_CARD_KEY = 'record_nudge_card';
+
 type PreferencesValue = {
   /** 기기에서 읽어오는 중 */
   loading: boolean;
@@ -24,6 +28,12 @@ type PreferencesValue = {
   briefingTime: string | null;
   /** 바꾸면 알림을 다시 건다 — 허락은 부르는 쪽이 먼저 받는다 */
   setBriefingTime: (time: string | null) => Promise<void>;
+  /** 기록 요청 알림 — 거는 것은 record-nudge.tsx 가 이 값을 보고 한다. 허락은 부르는 쪽이 먼저 받는다 */
+  nudgePush: boolean;
+  setNudgePush: (on: boolean) => Promise<void>;
+  /** 기록 요청 카드 — 앱을 열 때 저절로 띄우기 */
+  nudgeCard: boolean;
+  setNudgeCard: (on: boolean) => Promise<void>;
 };
 
 const PreferencesContext = createContext<PreferencesValue | null>(null);
@@ -31,14 +41,23 @@ const PreferencesContext = createContext<PreferencesValue | null>(null);
 export function PreferencesProvider({ children }: { children: React.ReactNode }) {
   const [scheduleOnly, setValue] = useState(false);
   const [briefingTime, setTime] = useState<string | null>(DEFAULT_BRIEFING_TIME);
+  const [nudgePush, setPush] = useState(true);
+  const [nudgeCard, setCard] = useState(true);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([readSetting(SCHEDULE_ONLY_KEY), readSetting(BRIEFING_TIME_KEY)])
-      .then(([only, time]) => {
+    Promise.all([
+      readSetting(SCHEDULE_ONLY_KEY),
+      readSetting(BRIEFING_TIME_KEY),
+      readSetting(NUDGE_PUSH_KEY),
+      readSetting(NUDGE_CARD_KEY),
+    ])
+      .then(([only, time, push, card]) => {
         if (cancelled) return;
         setValue(only === 'true');
+        setPush(push !== 'off');
+        setCard(card !== 'off');
         const t = time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME);
         setTime(t);
         // 시작할 때마다 다시 건다 — 허락을 설정 앱에서 나중에 켰어도 따라오게. 허락이 없으면 아무 일도 없다
@@ -63,9 +82,29 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     await scheduleBriefing(time).catch(() => undefined);
   }, []);
 
+  const setNudgePush = useCallback(async (on: boolean) => {
+    setPush(on);
+    await writeSetting(NUDGE_PUSH_KEY, on ? 'on' : 'off');
+  }, []);
+
+  const setNudgeCard = useCallback(async (on: boolean) => {
+    setCard(on);
+    await writeSetting(NUDGE_CARD_KEY, on ? 'on' : 'off');
+  }, []);
+
   const value = useMemo(
-    () => ({ loading, scheduleOnly, setScheduleOnly, briefingTime, setBriefingTime }),
-    [loading, scheduleOnly, setScheduleOnly, briefingTime, setBriefingTime],
+    () => ({
+      loading,
+      scheduleOnly,
+      setScheduleOnly,
+      briefingTime,
+      setBriefingTime,
+      nudgePush,
+      setNudgePush,
+      nudgeCard,
+      setNudgeCard,
+    }),
+    [loading, scheduleOnly, setScheduleOnly, briefingTime, setBriefingTime, nudgePush, setNudgePush, nudgeCard, setNudgeCard],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;

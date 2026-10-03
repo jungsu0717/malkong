@@ -94,11 +94,11 @@ export default function ChatScreen() {
   const typing = useKeyboardVisible();
   // 기록 화면의 「대화 보기」에서 넘어온 질문 말풍선 id. ft 는 같은 줄을 다시 눌렀을 때의 구분값이다
   const { focus, ft } = useLocalSearchParams<{ focus?: string; ft?: string }>();
-  // 브리핑함 배지 — 오늘 브리핑에서 아직 안 한 것(챙길 것 · 하루 기록)의 수
+  // 브리핑함 배지 — 오늘 브리핑에서 아직 안 한 챙길 것의 수
   const todayBriefing = messages.find((m) => m.role === 'malkong' && m.meta.type === 'briefing' && m.meta.day === today);
   const inboxCount =
     todayBriefing?.role === 'malkong' && todayBriefing.meta.type === 'briefing'
-      ? openCount(todayBriefing.meta.items, new Date(todayBriefing.createdAt), records)
+      ? openCount(todayBriefing.meta.items, records)
       : 0;
   // 입력창 글은 다른 탭이 말머리를 담을 수 있게 한곳에 둔다(draft-context)
   const { draft: input, setDraft: setInput, focusRequest } = useDraft();

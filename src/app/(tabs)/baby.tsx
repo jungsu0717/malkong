@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { KnowledgeGalaxy } from '@/components/knowledge-galaxy';
+import { LOG_ICONS } from '@/components/record-nudge-card';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -15,6 +16,7 @@ import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { topic } from '@/data/briefing';
 import { useChat } from '@/data/chat-context';
+import { DAILY_LOGS, latestLog, valueOf, writtenAgo } from '@/data/daily-log';
 import {
   buildProfile,
   factOf,
@@ -49,8 +51,8 @@ function useCountUp(target: number, replay: number, duration = 1300) {
 }
 
 /**
- * 우리 아기 탭 — 버디가 아는 우리 아기 (SPEC-BABY-01~06, decisions/013, task baby/001).
- * 지식 지도(3D) · 아는 정도 · 영역 · 한눈에 보는 프로필 · 알려 주면 좋아지는 것 · 함께 쌓아 온 것 · 기록.
+ * 우리 아기 탭 — 버디가 아는 우리 아기 (SPEC-BABY-01~07, decisions/013, task baby/001 · 003).
+ * 지식 지도(3D) · 아는 정도 · 영역 · 한눈에 보는 프로필 · 하루 기록 · 알려 주면 좋아지는 것 · 함께 쌓아 온 것 · 기록.
  */
 export default function BabyScreen() {
   const c = useTheme();
@@ -223,6 +225,26 @@ export default function BabyScreen() {
               <Tile icon="medkit-outline" label="예방접종" value={vaccines ? `${vaccines} 완료` : null} ratio={vaccines} onAsk={() => router.navigate('/growth')} askLabel="성장 탭에서" />
               <Tile icon="clipboard-outline" label="영유아 검진" value={checkups ? `${checkups} 완료` : null} ratio={checkups} onAsk={() => router.navigate('/growth')} askLabel="성장 탭에서" />
             </View>
+          </View>
+
+          {/* 하루 기록 (SPEC-BABY-07) — 매일이 아니어도 생각날 때. 며칠 비면 버디가 카드로 한 번 묻는다 */}
+          <View style={styles.section}>
+            <SectionHeader title="하루 기록" aside="생각날 때 적어요" />
+            <Card style={styles.rows}>
+              {DAILY_LOGS.map((def, i) => {
+                const last = latestLog(def, records);
+                return (
+                  <ListRow
+                    key={def.key}
+                    divider={i > 0}
+                    icon={LOG_ICONS[def.key]}
+                    title={def.title}
+                    detail={last ? `${valueOf(def, last)} · ${writtenAgo(last)} 적음` : def.hint}
+                    right={<Button label="적기" size="sm" variant="secondary" onPress={() => ask(def)} />}
+                  />
+                );
+              })}
+            </Card>
           </View>
 
           {/* 알려 주면 좋아지는 것 (SPEC-BABY-04) — 경고가 아니라 제안으로 */}

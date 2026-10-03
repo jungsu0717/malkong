@@ -12,6 +12,7 @@ import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { RecordNudge } from '@/components/record-nudge';
 import { Colors, FontFamily } from '@/constants/theme';
 import { BabyProvider, useBaby } from '@/data/baby-context';
 import { ChatProvider } from '@/data/chat-context';
@@ -90,6 +91,8 @@ export default function RootLayout() {
                     <Stack.Screen name="records" options={{ ...header, title: '우리 아기 기록' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
+                  {/* 하루 기록이 며칠 비면 묻는 카드와 알림 (SPEC-BABY-07) */}
+                  <RecordNudge />
                   </DraftProvider>
                 </ChatProvider>
               </RecordsProvider>

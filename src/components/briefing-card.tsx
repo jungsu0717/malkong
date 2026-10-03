@@ -1,7 +1,7 @@
 /**
- * 아침 브리핑 (SPEC-HOME-06, task home/004 · 005 · 006).
+ * 아침 브리핑 (SPEC-HOME-06, task home/004 · 005 · 006 · baby/003).
  * - `BriefingSummary` — 대화 속에는 요약만: 「오늘의 브리핑이 도착했어요」 + 남은 수 + 「확인하러 가기」
- * - `BriefingCard` — 브리핑함의 자세한 카드. 두 묶음: ① 챙길 것(할 일) ② 하루 기록(어제 수유량 · 수유 간격 · 몸무게 · 특이사항)
+ * - `BriefingCard` — 브리핑함의 자세한 카드. 챙길 것(할 일)만 — 하루 기록은 우리 아기 탭(SPEC-BABY-07, decisions/016)
  * 했는지는 저장된 목록이 아니라 지금의 기록(L2)으로 센다 — 어디서 완료해도 같은 모습이 보인다.
  */
 
@@ -10,12 +10,11 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { TodoRow } from '@/components/todo-row';
-import { Button, Card, ListRow, type IconName } from '@/components/ui';
+import { Button, Card, type IconName } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { ageFrom } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { todoDone, todosOf, type BriefingTodo } from '@/data/briefing';
-import { logsFor, valueOf, type LogEntry, type LogKey } from '@/data/daily-log';
 import type { MalkongMessage } from '@/data/chat';
 import { itemById } from '@/data/l1';
 import type { BabyRecord } from '@/data/records';
@@ -25,13 +24,6 @@ import { useTheme } from '@/hooks/use-theme';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
-const LOG_ICONS: Record<LogKey, IconName> = {
-  'feed-total': 'water-outline',
-  'feed-interval': 'time-outline',
-  weight: 'trending-up-outline',
-  note: 'create-outline',
-};
-
 export function groupOf(todo: BriefingTodo): GapGroup {
   return {
     key: todo.key,
@@ -40,34 +32,6 @@ export function groupOf(todo: BriefingTodo): GapGroup {
     label: todo.label,
     items: todo.itemIds.map((id) => itemById(id)).filter((i): i is L1Item => !!i),
   };
-}
-
-/** 하루 기록 한 줄 — 적었으면 값, 아직이면 「적기」. 글 기록(특이사항)은 값을 줄 아래에 */
-function LogRow({ entry, divider, onPress }: { entry: LogEntry; divider: boolean; onPress?: () => void }) {
-  const c = useTheme();
-  const { def, record } = entry;
-  const value = record ? valueOf(def, record) : null;
-  const text = def.unit === null;
-  return (
-    <ListRow
-      divider={divider}
-      icon={record ? 'checkmark' : LOG_ICONS[def.key]}
-      title={def.title}
-      detail={value === null ? def.hint : text ? value : null}
-      onPress={onPress}
-      right={
-        value !== null ? (
-          text ? undefined : (
-            <ThemedText type="body" style={{ fontWeight: 700, color: c.text }}>
-              {value}
-            </ThemedText>
-          )
-        ) : onPress ? (
-          <Button label="적기" size="sm" variant="secondary" onPress={onPress} />
-        ) : null
-      }
-    />
-  );
 }
 
 function SectionHead({ title, note, first }: { title: string; note?: string | null; first: boolean }) {
@@ -105,8 +69,6 @@ export function BriefingSummary({
   const { month } = ageFrom(baby.birthDate, made);
   const todos = todosOf(items);
   const left = todos.filter((t) => !todoDone(t, records));
-  const logs = logsFor(made, records);
-  const logged = logs.filter((l) => l.record).length;
 
   if (!today) {
     return (
@@ -116,8 +78,7 @@ export function BriefingSummary({
         style={({ pressed }) => [styles.pastRow, { borderColor: c.border, backgroundColor: pressed ? c.surface : c.background }]}>
         <Ionicons name="file-tray-outline" size={18} color={c.textSecondary} />
         <ThemedText type="small" style={[styles.flex, { color: c.textSecondary }]}>
-          {made.getMonth() + 1}월 {made.getDate()}일 브리핑 · 챙길 것 {todos.length - left.length}/{todos.length} · 하루 기록{' '}
-          {logged}/{logs.length}
+          {made.getMonth() + 1}월 {made.getDate()}일 브리핑 · 챙길 것 {todos.length - left.length}/{todos.length}
         </ThemedText>
         <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
       </Pressable>
@@ -165,13 +126,6 @@ export function BriefingSummary({
             detail={todoLine}
             done={left.length === 0}
           />
-          <SummaryLine
-            icon="create-outline"
-            title="하루 기록"
-            value={`${logged}/${logs.length}`}
-            detail={logged === logs.length ? '오늘 기록 끝!' : '어제 수유량 · 수유 간격 · 몸무게 · 특이사항'}
-            done={logged === logs.length}
-          />
         </View>
         <Button label="확인하러 가기" icon="arrow-forward" onPress={onOpen} />
       </Card>
@@ -215,16 +169,13 @@ export function BriefingCard({
   message,
   today,
   onPick,
-  onLog,
   justSaved,
   onUndo,
 }: {
   message: MalkongMessage;
-  /** 오늘 것 — 하루 기록을 적을 수 있다. 지난 것은 적은 기록만 보인다 */
+  /** 오늘 것 — 머리에 「오늘의 브리핑」. 지난 것은 날짜와 그날의 한 줄 */
   today: boolean;
   onPick: (group: GapGroup) => void;
-  /** 하루 기록 줄을 누르면 */
-  onLog?: (entry: LogEntry) => void;
   justSaved?: BabyRecord | null;
   onUndo?: () => void;
 }) {
@@ -236,9 +187,6 @@ export function BriefingCard({
   const made = new Date(message.createdAt);
   const todos = todosOf(items);
   const doneTodos = todos.filter((t) => todoDone(t, records)).length;
-  // 하루 기록은 그날만 적는다 — 지난 브리핑에는 적어 둔 것만 남는다
-  const logs = logsFor(made, records).filter((l) => today || l.record);
-  const logsLeft = logs.filter((l) => !l.record).length;
 
   return (
     <View style={styles.wrap}>
@@ -282,23 +230,6 @@ export function BriefingCard({
               </Pressable>
             )}
           </View>
-        )}
-        {logs.length > 0 && (
-          <>
-            <SectionHead
-              title="하루 기록"
-              note={today ? (logsLeft > 0 ? '적어 두면 버디가 되묻지 않고 바로 답해요' : '오늘 기록 끝!') : null}
-              first={false}
-            />
-            {logs.map((entry, i) => (
-              <LogRow
-                key={entry.def.key}
-                entry={entry}
-                divider={i > 0}
-                onPress={today && onLog ? () => onLog(entry) : undefined}
-              />
-            ))}
-          </>
         )}
       </Card>
     </View>

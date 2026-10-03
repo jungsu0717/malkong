@@ -13,3 +13,9 @@ export async function askNotifications(): Promise<boolean> {
 }
 
 export async function scheduleBriefing(_time: string | null): Promise<void> {}
+
+export async function scheduleRecordNudge(_at: Date | null): Promise<void> {}
+
+export function onRecordNudgeOpened(_listener: () => void): () => void {
+  return () => undefined;
+}

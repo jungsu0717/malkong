@@ -1,10 +1,9 @@
 /**
- * 하루 기록 (SPEC-HOME-06 ② 하루 기록, task home/005) — 브리핑이 매일 가볍게 묻는 넷.
+ * 하루 기록 (SPEC-BABY-07, task home/005 → baby/003) — 어제 총 수유량 · 평균 수유 간격 · 몸무게 · 특이사항.
  *
- * 적으면 기기 안의 기록(L2) 한 줄이 된다 — 모델을 부르지 않는다. 대화에서 버디에게 말해 생긴 기록도 같은 말이 들어
- * 있으면 적은 것으로 센다. 안 적어도 불이익은 없다 — 답에 필요해지면 버디가 대화 중에 되묻는다(SPEC-ASK 되묻기).
- *
- * 했는지는 브리핑에 저장하지 않고 볼 때마다 기록에서 다시 센다 — 그래서 예전 브리핑에도 같은 넷이 붙는다.
+ * 적으면 기기 안의 기록(L2) 한 줄이 된다 — 모델을 부르지 않는다. 우리 아기 탭에서 언제든 적고, 며칠 비었을 때만
+ * 버디가 카드로 묻는다(`record-nudge.ts`). 대화에서 버디에게 말해 생긴 기록도 같은 말이 들어 있으면 적은 것으로 센다.
+ * 안 적어도 불이익은 없다 — 답에 필요해지면 버디가 대화 중에 되묻는다(SPEC-ASK-03).
  */
 
 import { monthDay as md, type QuickAsk } from './quick-ask';
@@ -12,13 +11,11 @@ import type { BabyRecord } from './records';
 
 export type LogKey = 'feed-total' | 'feed-interval' | 'weight' | 'note';
 
-/** 하루 기록 한 줄 — 묻는 모양(QuickAsk)에 「했는지 세는 법」을 더한다. 어제 하루를 묻는 것은 기록에 어제 날짜를 붙인다 */
+/** 하루 기록 한 줄 — 묻는 모양(QuickAsk)에 「적었는지 알아보는 법」을 더한다. 어제 하루를 묻는 것은 기록에 어제 날짜를 붙인다 */
 export type LogDef = QuickAsk & {
   key: LogKey;
   /** 이 말이 든 기록이면 적은 것으로 본다 — 대화에서 생긴 기록도 */
   match: RegExp;
-  /** 브리핑 날부터 며칠 전까지의 기록을 셀까 — 하루 기록은 그날만(0), 몸무게는 일주일 */
-  withinDays: number;
 };
 const yesterday = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
 
@@ -31,7 +28,6 @@ export const DAILY_LOGS: LogDef[] = [
     placeholder: '800',
     options: [],
     match: /수유량|총\s*\d+\s*(ml|cc)|하루\s*\S*\s*\d+\s*(ml|cc)/i,
-    withinDays: 0,
     label: (v, today) => `${md(yesterday(today))} 하루 수유량 ${v}ml`,
   },
   {
@@ -42,7 +38,6 @@ export const DAILY_LOGS: LogDef[] = [
     placeholder: '3',
     options: ['2', '2.5', '3', '3.5', '4'],
     match: /수유\s*(텀|간격)|\d+(\.\d+)?\s*시간\s*(마다|간격|텀)/,
-    withinDays: 0,
     label: (v, today) => `${md(yesterday(today))} 수유 간격 평균 ${v}시간`,
   },
   {
@@ -53,7 +48,6 @@ export const DAILY_LOGS: LogDef[] = [
     placeholder: '6.4',
     options: [],
     match: /몸무게|체중|\d+(\.\d+)?\s*(kg|킬로)/i,
-    withinDays: 6,
     label: (v, today) => `몸무게 ${v}kg (${md(today)})`,
   },
   {
@@ -64,32 +58,26 @@ export const DAILY_LOGS: LogDef[] = [
     placeholder: '예: 낮잠을 거의 안 잤어요',
     options: ['특별한 일 없었어요', '평소보다 덜 먹었어요', '많이 보챘어요'],
     match: /특이\s*사항/,
-    withinDays: 0,
     label: (v, today) => `${md(yesterday(today))} 특이사항: ${v}`,
   },
 ];
 
-const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-
-export type LogEntry = { def: LogDef; record: BabyRecord | null };
-
-/** 그날(`day`) 브리핑의 하루 기록 넷과, 적었으면 그 기록 — 가장 최근 것 */
-export function logsFor(day: Date, records: BabyRecord[]): LogEntry[] {
-  const end = startOf(day) + 86_400_000;
-  return DAILY_LOGS.map((def) => {
-    const from = startOf(day) - def.withinDays * 86_400_000;
-    const record =
-      records
-        .filter((r) => {
-          const t = new Date(r.createdAt).getTime();
-          return t >= from && t < end && def.match.test(r.label);
-        })
-        .at(-1) ?? null;
-    return { def, record };
-  });
+/** 이 하루 기록의 가장 최근 것 — 없으면 null */
+export function latestLog(def: LogDef, records: BabyRecord[]): BabyRecord | null {
+  let latest: BabyRecord | null = null;
+  for (const r of records) {
+    if (def.match.test(r.label) && (!latest || r.createdAt > latest.createdAt)) latest = r;
+  }
+  return latest;
 }
 
-/** 줄 오른쪽에 보일 값 — 「820ml」 「6.4kg」, 글 기록은 그 내용 */
+/** 넷 가운데 아무것이나 마지막으로 적은 때 — 기록 요청이 여기서부터 날을 센다 */
+export function lastLogAt(records: BabyRecord[]): Date | null {
+  const times = DAILY_LOGS.map((def) => latestLog(def, records)?.createdAt).filter((t): t is string => !!t);
+  return times.length > 0 ? new Date(times.sort().at(-1)!) : null;
+}
+
+/** 줄에 보일 값 — 「820ml」 「6.4kg」, 글 기록은 그 내용 */
 export function valueOf(def: LogDef, record: BabyRecord): string {
   if (def.unit === null) return record.label.split(/특이\s*사항\s*:?\s*/).at(-1)?.trim() || record.label;
   const hit = record.label.match(/(\d+(?:\.\d+)?)\s*(ml|cc|kg|킬로|시간)/i);
@@ -125,4 +113,18 @@ export function recordsForQuestion(records: BabyRecord[], max: number): BabyReco
   }
   for (const r of others.slice(0, Math.max(0, max - kept.size))) kept.add(r.id);
   return records.filter((r) => kept.has(r.id)).slice(-max);
+}
+
+/** 언제 적었나 — 「오늘」 「어제」 「3일 전」, 일주일이 넘으면 날짜 */
+export function writtenAgo(record: BabyRecord, now = new Date()): string {
+  const at = new Date(record.createdAt);
+  const days = Math.round(
+    (new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
+      new Date(at.getFullYear(), at.getMonth(), at.getDate()).getTime()) /
+      86_400_000,
+  );
+  if (days <= 0) return '오늘';
+  if (days === 1) return '어제';
+  if (days < 7) return `${days}일 전`;
+  return md(at);
 }

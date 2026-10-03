@@ -33,12 +33,21 @@ const MENU_SECTIONS: { title: string; items: { label: string; doc: string }[] }[
   },
 ];
 
-/** 마이 — 프로필 · 알림 · 설정 · 광고 없이 쓰기 · 약관 (task my/005) */
+/** 마이 — 프로필 · 알림 · 설정 · 광고 없이 쓰기 · 약관 (task my/005 · baby/003) */
 export default function MyScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { scheduleOnly, setScheduleOnly, briefingTime, setBriefingTime } = usePreferences();
+  const {
+    scheduleOnly,
+    setScheduleOnly,
+    briefingTime,
+    setBriefingTime,
+    nudgePush,
+    setNudgePush,
+    nudgeCard,
+    setNudgeCard,
+  } = usePreferences();
   /** 버전을 길게 누르면 보이는 기기 키 — 운영자(가족) 기기로 등록할 때 쓴다(backend 「운영자 기기」) */
   const [deviceKey, setDeviceKey] = useState<string | null>(null);
   /** 기기 알림 허락 — 설정 앱에서 바꾸고 돌아오면 다시 읽는다 */
@@ -63,6 +72,17 @@ export default function MyScreen() {
     setAllowed(ok);
     if (ok) await setBriefingTime(briefingTime ?? DEFAULT_BRIEFING_TIME);
   };
+
+  // 기록 요청 알림(SPEC-BABY-07) — 거는 것은 record-nudge.tsx 가 이 값을 보고 한다
+  const nudgePushOn = nudgePush && allowed === true;
+  const toggleNudgePush = async (on: boolean) => {
+    if (!on) return setNudgePush(false);
+    const ok = await askNotifications();
+    setAllowed(ok);
+    if (ok) await setNudgePush(true);
+  };
+  /** 켜 두었는데 휴대폰 설정에서 막혀 있으면 「설정 열기」 */
+  const blocked = supported && allowed === false && (briefingTime !== null || nudgePush);
 
   return (
     <ThemedView style={styles.container}>
@@ -105,7 +125,7 @@ export default function MyScreen() {
             </Card>
           </View>
 
-          {/* 아침 브리핑 알림 (SPEC-HOME-06) — 꺼도 브리핑은 앱을 열면 생긴다 */}
+          {/* 아침 브리핑 알림(SPEC-HOME-06 — 꺼도 브리핑은 앱을 열면 생긴다) · 기록 요청 알림과 카드(SPEC-BABY-07) */}
           <View style={styles.section}>
             <SectionHeader title="알림" />
             <Card style={styles.rows}>
@@ -134,7 +154,33 @@ export default function MyScreen() {
                   ))}
                 </View>
               )}
-              {supported && allowed === false && briefingTime !== null && (
+              <ListRow
+                divider
+                icon="create-outline"
+                title="기록이 비면 알림"
+                detail={
+                  !supported
+                    ? '이 기기에서는 알림을 쓸 수 없어요'
+                    : allowed === false && nudgePush
+                      ? '휴대폰 설정에서 알림이 꺼져 있어요'
+                      : nudgePushOn
+                        ? '하루 기록이 사흘째 비면 저녁 8시에 한 번 알려 드려요'
+                        : '꺼도 우리 아기 탭에서 언제든 적을 수 있어요'
+                }
+                right={
+                  supported ? (
+                    <Toggle label="기록이 비면 알림" value={nudgePushOn} onChange={(on) => void toggleNudgePush(on)} />
+                  ) : null
+                }
+              />
+              <ListRow
+                divider
+                icon="albums-outline"
+                title="기록이 비면 카드 띄우기"
+                detail={nudgeCard ? '앱을 열 때 적을 칸을 모아 보여 드려요' : '적지 않은 것은 대화하다 버디가 물어봐요'}
+                right={<Toggle label="기록이 비면 카드 띄우기" value={nudgeCard} onChange={(on) => void setNudgeCard(on)} />}
+              />
+              {blocked && (
                 <Button
                   label="설정 열기"
                   size="sm"

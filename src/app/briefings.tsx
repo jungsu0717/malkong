@@ -9,19 +9,16 @@ import { EmptyState } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { dayKey, type MalkongMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
-import { valueOf } from '@/data/daily-log';
 import { useMarkDone } from '@/hooks/use-mark-done';
-import { useQuickAsk } from '@/hooks/use-quick-ask';
 
 /**
- * 브리핑함 (SPEC-HOME-06, task home/004 · 005 · 006) — 버디 탭 오른쪽 위에서 연다. 배지는 오늘 아직 안 한 것의 수.
- * 대화에는 요약만 두고 자세한 것은 여기서 본다 — 맨 위가 오늘 브리핑이고 할 일을 끝내고 하루 기록을 적는다.
+ * 브리핑함 (SPEC-HOME-06, task home/004 · 005 · 006) — 버디 탭 오른쪽 위에서 연다. 배지는 오늘 아직 안 한 챙길 것의 수.
+ * 대화에는 요약만 두고 자세한 것은 여기서 본다 — 맨 위가 오늘 브리핑이고 여기서 할 일을 끝낸다.
  * 그 아래는 지난 브리핑을 날짜 거꾸로, 맨 아래 배너(app-design 광고 자리).
  */
 export default function BriefingsScreen() {
   const { messages } = useChat();
   const { pick, justSaved, undo, sheet } = useMarkDone();
-  const { ask, sheet: askSheet } = useQuickAsk();
   const [today] = useState(() => dayKey(new Date().toISOString()));
   const briefings = messages
     .filter((m): m is MalkongMessage => m.role === 'malkong' && m.meta.type === 'briefing')
@@ -45,7 +42,6 @@ export default function BriefingsScreen() {
                 message={m}
                 today={isToday}
                 onPick={pick}
-                onLog={(e) => ask(e.def, e.record, e.record ? valueOf(e.def, e.record) : null)}
                 justSaved={isToday ? justSaved : null}
                 onUndo={undo}
               />
@@ -55,7 +51,6 @@ export default function BriefingsScreen() {
         <AdBanner />
       </ScrollView>
       {sheet}
-      {askSheet}
     </ThemedView>
   );
 }

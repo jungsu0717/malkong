@@ -1,9 +1,10 @@
 /**
- * 아침 브리핑 알림 (SPEC-HOME-06, task home/004) — 기기가 매일 정한 시각에 스스로 띄우는 로컬 알림.
+ * 기기가 스스로 띄우는 로컬 알림 둘 — 아침 브리핑(SPEC-HOME-06, task home/004)과 기록 요청(SPEC-BABY-07, task baby/003).
  *
- * 서버 푸시가 아니다 — 기기 토큰을 서버에 두지 않는다. 알림을 누르면 앱이 열리고, 그날 첫 화면에서
- * 브리핑이 만들어진다(use-daily-briefing). 알림 본문에는 아기 정보를 넣지 않는다 — 잠금 화면에 보이므로.
- * 독촉 알림은 보내지 않는다(SPEC-HOME-06) — 하루 한 번뿐이다. 웹은 notifications.web.ts.
+ * 서버 푸시가 아니다 — 기기 토큰을 서버에 두지 않는다. 브리핑 알림을 누르면 앱이 열리고 그날 첫 화면에서
+ * 브리핑이 만들어진다(use-daily-briefing). 기록 요청 알림을 누르면 적을 카드가 열린다(record-nudge.tsx).
+ * 알림 본문에는 아기 정보를 넣지 않는다 — 잠금 화면에 보이므로.
+ * 브리핑은 하루 한 번, 기록 요청은 하루 기록이 비었을 때 사흘에 한 번까지(`record-nudge.ts`). 웹은 notifications.web.ts.
  */
 
 import * as Notifications from 'expo-notifications';
@@ -11,6 +12,10 @@ import { Platform } from 'react-native';
 
 const BRIEFING_ID = 'morning-briefing';
 const CHANNEL_ID = 'briefing';
+const NUDGE_ID = 'record-nudge';
+const NUDGE_CHANNEL_ID = 'record-nudge';
+/** 알림의 data.type — 누르면 이것으로 알아보고 카드를 연다 */
+const NUDGE_TYPE = 'record-nudge';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -61,4 +66,45 @@ export async function scheduleBriefing(time: string | null): Promise<void> {
       channelId: CHANNEL_ID,
     },
   });
+}
+
+/** 기록 요청 알림 — 정한 때 한 번. null 이면 끈다. 허락이 없으면 걸지 않는다 */
+export async function scheduleRecordNudge(at: Date | null): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(NUDGE_ID).catch(() => undefined);
+  if (!at || !(await notificationsAllowed())) return;
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(NUDGE_CHANNEL_ID, {
+      name: '기록 요청',
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  }
+  await Notifications.scheduleNotificationAsync({
+    identifier: NUDGE_ID,
+    content: {
+      title: '요 며칠 기록이 비었어요',
+      body: '생각나는 것만 적어 주면 버디 답이 더 정확해져요',
+      data: { type: NUDGE_TYPE },
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: NUDGE_CHANNEL_ID },
+  });
+}
+
+/**
+ * 기록 요청 알림을 눌러 앱이 열리면 `listener` 를 부른다 — 앱이 꺼져 있다가 그 알림으로 열린 경우도.
+ * 한 번 받은 누름은 지워 다시 열지 않는다. 돌려주는 함수로 듣기를 그만둔다.
+ */
+export function onRecordNudgeOpened(listener: () => void): () => void {
+  const handle = (response: Notifications.NotificationResponse | null) => {
+    if (
+      response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER ||
+      response.notification.request.content.data?.type !== NUDGE_TYPE
+    ) {
+      return;
+    }
+    Notifications.clearLastNotificationResponse();
+    listener();
+  };
+  handle(Notifications.getLastNotificationResponse());
+  const sub = Notifications.addNotificationResponseReceivedListener(handle);
+  return () => sub.remove();
 }

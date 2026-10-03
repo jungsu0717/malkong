@@ -15,7 +15,7 @@
 | 로컬 저장 | **expo-sqlite** (기기) + **localStorage** (웹 미리보기) | 스키마는 [backend](../architecture/backend.md) 기기 DB 절이 정본. expo-sqlite 의 웹 지원이 알파(Metro WASM 설정·COOP/COEP 헤더 필요)라 브라우저 검토가 깨지므로, `src/data/db.ts`(sqlite)와 `src/data/db.web.ts`(localStorage)로 플랫폼을 나눈다. 웹은 검토용이고 출시 대상은 iOS·Android 다 |
 | 광고 | **Google AdMob + react-native-google-mobile-ads** (v17, task common/006) | 첫 출시는 배너(버디 탭 바닥 · 브리핑함 · 성장 탭 — 아래 「광고 자리」)와 보상형(한도 충전), 전면은 「다음」. 네이티브 모듈이라 Expo Go·웹에서는 모듈을 읽지 않고 자리만 보인다(`src/data/ads.ts` · `ads.web.ts`) — 실제 광고는 **EAS 개발 빌드**(`eas.json`, expo-dev-client)부터. 시작 순서는 유럽 동의(UMP) → iOS 추적 허용(expo-tracking-transparency) → SDK 시작, 광고 등급 PG. 개발 빌드는 Google 시험 단위, 출시 빌드는 `EXPO_PUBLIC_ADMOB_*` 단위가 없으면 광고를 내지 않는다. **개발·가족 기기는 광고 면제(운영자 기기) 또는 시험 단위** — 실광고 자기 클릭은 AdMob 계정 정지 사유([backend](../architecture/backend.md) 운영자 절) |
 | 글꼴 | **IBM Plex Sans KR**(`@expo-google-fonts/ibm-plex-sans-kr`, `expo-font` 의 `useFonts`) | 시안 B. 굵기 넷(400·500·600·700)만 싣는다 — 한글 글꼴이라 굵기 하나가 약 2.8MB |
-| 알림 | **expo-notifications** 로컬 알림(아침 브리핑, home/004) | 서버 푸시가 아니라 기기가 매일 정한 시각에 스스로 띄운다 — 서버에 기기 토큰을 두지 않는다. Expo Go 에서도 된다. 웹은 알림 없음 |
+| 알림 | **expo-notifications** 로컬 알림(아침 브리핑 home/004 · 기록 요청 baby/003) | 서버 푸시가 아니라 기기가 정한 때에 스스로 띄운다 — 서버에 기기 토큰을 두지 않는다. 브리핑은 매일, 기록 요청은 하루 기록이 비었을 때 한 번짜리를 앱을 열 때마다 다시 건다. Expo Go 에서도 된다. 웹은 알림 없음 |
 | 햅틱 | **expo-haptics** | 보내기 · 완료 · 확인 같은 주요 행동에 가볍게 |
 | 결제 (광고 제거) | **RevenueCat `react-native-purchases`** (Expo 권장, 도입은 나중) | 한 번 사면 광고가 사라지는 비소모성 상품. 네이티브 모듈이라 AdMob 과 같은 EAS 개발 빌드 단계에서 함께 붙인다. 구매 사실의 정본은 스토어이고 기기 저장은 복원용 사본 — 자리는 `src/data/entitlements.ts` |
 
@@ -79,10 +79,10 @@
 ## 라우트 구조
 
 ```
-src/app/_layout.tsx          루트 Stack — 글꼴 · 테마 · 데이터 Provider · 온보딩 게이트
+src/app/_layout.tsx          루트 Stack — 글꼴 · 테마 · 데이터 Provider · 온보딩 게이트 · 기록 요청 카드
 src/app/(tabs)/_layout.tsx   하단 탭 4개 (그룹이라 URL 에는 (tabs) 가 나타나지 않는다)
 src/app/(tabs)/index.tsx     말콩 — 대화(첫 화면)
-src/app/(tabs)/baby.tsx      우리 아기 — 버디가 아는 것(지식 지도 · 프로필 · 제안)
+src/app/(tabs)/baby.tsx      우리 아기 — 버디가 아는 것(지식 지도 · 프로필 · 하루 기록 · 제안)
 src/app/(tabs)/growth.tsx    성장 — 이번 달 · 타임라인
 src/app/records.tsx          기록 보기·고치기
 src/app/(tabs)/my.tsx        마이
@@ -105,3 +105,4 @@ src/app/legal/[doc].tsx      약관·고지
 - 2026-09-30 최초 작성 — 스택 확정, NativeWind 미도입 결정, Skia 하이브리드 경로
 - 2026-10-04 캐릭터 버디(쪽쪽이 문 아기, AI 시트 한 장) — 아이콘 · 시작 화면 · 로딩 · 알림 아이콘 (decisions/015)
 - 2026-10-03 시안 B 로 다시 짬 — 토큰·글꼴·아이콘·광고 자리·라우트(탭 셋) 갱신 (decisions/012, task common/009)
+- 2026-10-04 기록 요청 로컬 알림(한 번짜리, 하루 기록이 비었을 때) — task baby/003
