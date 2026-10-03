@@ -305,11 +305,11 @@ CREATE TABLE settings (                    -- 작은 설정값 (광고 제거 �
   key    TEXT PRIMARY KEY,
   value  TEXT NOT NULL
 );
-CREATE TABLE inbox_card (                  -- 아침 브리핑 등 능동 카드 (SPEC-HOME-06)
-  id           TEXT PRIMARY KEY,
-  kind         TEXT NOT NULL,              -- briefing (후속: reminder 등)
-  payload_json TEXT NOT NULL,              -- 할 일 · 챙기지 못한 것 · 상태 확인 질문
-  read_at      TEXT,
+CREATE TABLE inbox_card (                  -- 알림함 (SPEC-HOME-07) — 브리핑이 온 것 · 앱 알림
+  id           TEXT PRIMARY KEY,           -- daily-<날짜> · weekly-<월요일> · monthly-<월령> · nudge-<날짜>
+  kind         TEXT NOT NULL,              -- daily · weekly · monthly · nudge (나중: family)
+  payload_json TEXT NOT NULL,              -- 제목 · 요약 한 줄 · 가리키는 날짜
+  read_at      TEXT,                       -- 열어 본 때 — 배지는 이것이 빈 줄의 수
   created_at   TEXT NOT NULL
 );
 CREATE INDEX ix_chat_created  ON chat_message(created_at);
