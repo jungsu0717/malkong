@@ -10,7 +10,7 @@ import { Colors } from '@/constants/theme';
 const DURATION = 600;
 
 /**
- * 시작 화면이 걷힐 때 한 번 — 붉은 말을 탄 쪽쪽이 아기(브랜드 러너)가 같은 자리에서 흐려진다.
+ * 시작 화면이 걷힐 때 한 번 — 서 있는 버디가 같은 자리에서 흐려진다.
  * 그림과 바탕색은 app.json 의 expo-splash-screen 설정과 같아야 이음매가 보이지 않는다.
  */
 export function AnimatedSplashOverlay() {
@@ -26,17 +26,8 @@ export function AnimatedSplashOverlay() {
     20: { opacity: 1 },
     100: { opacity: 0, easing: Easing.out(Easing.ease) },
   });
-  // app.json 의 expo-splash-screen 과 같은 그림 — 다크 모드는 밝은 선의 그림
-  const image = (
-    <Image
-      style={styles.image}
-      source={
-        scheme === 'dark'
-          ? require('@/assets/images/splash-icon-dark.png')
-          : require('@/assets/images/splash-icon.png')
-      }
-    />
-  );
+  // app.json 의 expo-splash-screen 과 같은 그림(서 있는 버디) — 밝은 · 어두운 바탕 모두 같은 그림
+  const image = <Image style={styles.image} source={require('@/assets/images/splash-icon.png')} contentFit="contain" />;
 
   return animate ? (
     <Animated.View
@@ -59,7 +50,8 @@ export function AnimatedSplashOverlay() {
 }
 
 const styles = StyleSheet.create({
-  image: { width: 200, height: 200 },
+  // splash-icon.png 600×844 를 app.json imageWidth(160)와 같은 크기로
+  image: { width: 160, height: 225 },
   splashOverlay: {
     ...StyleSheet.absoluteFill,
     alignItems: 'center',

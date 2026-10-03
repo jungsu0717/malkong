@@ -13,7 +13,7 @@
     "android": {
       "package": "com.yugabuddy.app",
       "adaptiveIcon": {
-        "backgroundColor": "#C64536",
+        "backgroundColor": "#FDD686",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -34,10 +34,10 @@
         {
           "backgroundColor": "#ffffff",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "imageWidth": 160,
           "dark": {
             "backgroundColor": "#0E0E11",
-            "image": "./assets/images/splash-icon-dark.png"
+            "image": "./assets/images/splash-icon.png"
           }
         }
       ],
@@ -55,6 +55,13 @@
         "expo-tracking-transparency",
         {
           "userTrackingPermission": "맞춤형 광고를 보여 드리는 데만 써요. 허용하지 않아도 육아버디는 그대로 쓸 수 있어요."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#C64536"
         }
       ]
     ],

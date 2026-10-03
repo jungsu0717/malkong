@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 
-import { MalkongMark } from '@/components/brand';
+import { BuddyMark } from '@/components/brand';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -107,7 +107,7 @@ export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
                   ],
                 },
           ]}>
-          <MalkongMark size={18} />
+          <BuddyMark size={18} />
         </Animated.View>
         <ThemedText
           type={done ? 'caption' : 'small'}

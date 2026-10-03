@@ -17,7 +17,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { MalkongAvatar } from '@/components/brand';
+import { BuddyAvatar } from '@/components/brand';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -357,7 +357,7 @@ export function EmptyState({
   const c = useTheme();
   return (
     <View style={styles.empty}>
-      <MalkongAvatar size={56} />
+      <BuddyAvatar size={56} />
       <ThemedText type="heading" style={{ textAlign: 'center' }}>
         {title}
       </ThemedText>

@@ -40,28 +40,29 @@
 - 다크 모드는 토큰이 자동 처리 — light/dark 두 벌을 항상 같이 채운다
 - 누르는 자리는 44pt 이상, 주요 행동에는 가벼운 햅틱(`expo-haptics`)
 
-## 아이콘 — 브랜드는 말콩이 얼굴 하나, 나머지는 Ionicons
+## 아이콘 — 캐릭터 「버디」 하나, 나머지는 선 아이콘
 
-- **브랜드 표시 = 말콩이 얼굴**(쪽쪽이 문 아기, `MalkongMark` — `src/components/brand.tsx`). 머리 위, 생각 중,
-  빈 화면, 시작 화면, 런처 아이콘에 같은 얼굴을 쓴다
-- **탭 아이콘은 자체 베이비 세트**(`baby-icons.tsx`, 24×24 · 선 1.8 · 끝 둥글게) — 말콩=말풍선 속 쪽쪽이 ·
+- **캐릭터 버디**(쪽쪽이 문 아기, [decisions/015](../decisions/015-character-buddy.md)) — 원본은 캐릭터 시트 한 장
+  `assets/brand/buddy-sheet.jpg`, 잘라 낸 그림은 `assets/images/mascot/`(얼굴 · 서 있는 모습 · 달리기 몸통 · 「@」 다리 · 물결).
+  앱 안에서는 `BuddyMark`(얼굴) · `BuddyAvatar`(동그란 바탕 위 얼굴, `src/components/brand.tsx`)로만 쓴다
+- **탭 아이콘은 자체 베이비 세트**(`baby-icons.tsx`, 24×24 · 선 1.8 · 끝 둥글게) — 버디=말풍선 속 쪽쪽이 ·
   우리 아기=아기 얼굴 · 성장=딸랑이 · 마이=곰돌이
 - **보조 UI 아이콘은 Ionicons**(`@expo/vector-icons`, MIT) — 외곽선. 다른 벡터 패밀리를 더 섞지 않는다
-- 붉은 말을 탄 아기(`RidingBabyIcon`)는 큰 로딩과 시작 화면의 모션으로만 쓴다
-- **런처 아이콘(홈 화면)은 브랜드 자산** — 붉은 말 색(#C64536) 바탕에 흰 말콩이 얼굴. 1024×1024 원본 +
-  Android adaptive icon 레이어(전경/배경/단색)를 직접 만들어 `app.json` 에 넣는다. 자리는 `assets/images/`
-- **시작 화면** — 흰 바탕에 먹색 아기를 태운 붉은 말(`splash-icon.png`), 다크 모드는 밝은 선 그림(`splash-icon-dark.png`)
+- **런처 아이콘** — 우주복 노랑(#FDD686) 바탕에 버디 얼굴. Android adaptive 전경(안전 영역 안 얼굴) · 배경(노랑) ·
+  단색(테마 아이콘, 흰 실루엣). **알림 아이콘**(Android 상태 표시줄) — 흰 실루엣 96px, `expo-notifications` 플러그인.
+  만드는 법은 `scripts/brand/`
+- **시작 화면** — 흰 바탕(다크 모드는 #0E0E11)에 서 있는 버디
 
 ## 로딩과 모션
 
 | 상황 | 방법 |
 |---|---|
 | 콘텐츠 로딩 (카드·리스트) | **스켈레톤** + shimmer (Reanimated) — 스피너를 깔지 않는다 (Toss 방식) |
-| 생각 중 (답변 대기) | **처리 현황 블록** (`thinking-status.tsx`, SPEC-ASK-05) — 대기 문구 3.2초 순환 + 접이식 생각 과정, selvas 통합 chat(neuro-frontend `packages/chat` ThinkingIndicator·ChatTrace) 이식. Orb 자리 = 말콩이 얼굴(`MalkongMark`) 맥동 |
-| 큰 로딩 (초기 구동·화면 단위) | **붉은 말을 탄 쪽쪽이 아기(나폴레옹 포즈) 브랜드 모션** — 말콩의 유래(말띠 해의 콩알이)가 모션이 됨. 말 색은 `horse` 토큰. `baby-loading.tsx`(`RidingBabyIcon` 가로 질주 + 바운스) |
+| 생각 중 (답변 대기) | **처리 현황 블록** (`thinking-status.tsx`, SPEC-ASK-05) — 대기 문구 3.2초 순환 + 접이식 생각 과정, selvas 통합 chat(neuro-frontend `packages/chat` ThinkingIndicator·ChatTrace) 이식. Orb 자리 = 버디 얼굴(`BuddyMark`) 맥동 |
+| 큰 로딩 (초기 구동·화면 단위) | **버디가 「@」 다리로 결연하게 달려온다** — 다리 없는 달리기 몸통(통통 튐) + 「@」 다리(빙글빙글) + 뒤로 흐르는 물결을 겹쳐 칸을 가로지른다(`baby-loading.tsx`, Reanimated) |
 | 짧은 차단 동작 (1초 미만) | 기본 ActivityIndicator |
-| 스플래시 | expo-splash-screen(흰 바탕 · 붉은 말 러너) → 글꼴과 기기 저장을 읽는 동안 같은 그림을 유지 → `AnimatedSplashOverlay` 가 흐리며 걷힌다 |
-| 빈 화면 | 말콩이 얼굴 + 한 줄 안내 + 할 수 있는 행동 하나(`EmptyState`) |
+| 스플래시 | expo-splash-screen(흰 바탕 · 서 있는 버디) → 글꼴과 기기 저장을 읽는 동안 같은 그림을 유지 → `AnimatedSplashOverlay` 가 흐리며 걷힌다 |
+| 빈 화면 | 버디 얼굴 + 한 줄 안내 + 할 수 있는 행동 하나(`EmptyState`) |
 | 화면 전환·미세 반응 | Reanimated |
 
 ## 광고 자리
@@ -99,4 +100,5 @@ src/app/legal/[doc].tsx      약관·고지
 ## changelog
 
 - 2026-09-30 최초 작성 — 스택 확정, NativeWind 미도입 결정, Skia 하이브리드 경로
+- 2026-10-04 캐릭터 버디(쪽쪽이 문 아기, AI 시트 한 장) — 아이콘 · 시작 화면 · 로딩 · 알림 아이콘 (decisions/015)
 - 2026-10-03 시안 B 로 다시 짬 — 토큰·글꼴·아이콘·광고 자리·라우트(탭 셋) 갱신 (decisions/012, task common/009)

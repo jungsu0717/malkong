@@ -23,11 +23,10 @@ export const Colors = {
     /** 주요 단추 바탕 */
     ink: '#16161A',
     onInk: '#FFFFFF',
-    accent: '#C64536', // 붉은 말 — 말콩 브랜드 모티프 (말띠 해)
+    accent: '#C64536', // 버디의 쪽쪽이 코랄을 흰 글씨가 읽히게 진하게 — 브랜드 노랑(#FDD686)은 아이콘 · 시작 화면에
     accentSoft: '#FCEBE8',
     /** accentSoft 위의 글자 */
     accentText: '#8F2E23',
-    horse: '#DE5A4B',
     danger: '#D92D3F', // 위험 신호·오류 — 이 색은 경고에만 쓴다
     dangerSoft: '#FDECEE',
     /** 흰 글씨를 얹는 경고 바탕(119 단추·경고 머리) — 다크 모드에서도 흰 글씨가 읽히게 따로 둔다 */
@@ -54,7 +53,6 @@ export const Colors = {
     accent: '#E5705E',
     accentSoft: '#3A1F1B',
     accentText: '#F3A496',
-    horse: '#E57365',
     danger: '#F2606E',
     dangerSoft: '#3B1D22',
     dangerFill: '#C8303F',

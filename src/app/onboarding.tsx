@@ -3,7 +3,7 @@ import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MalkongAvatar } from '@/components/brand';
+import { BuddyAvatar } from '@/components/brand';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, Chip } from '@/components/ui';
@@ -79,7 +79,7 @@ export default function OnboardingScreen() {
       <ThemedView style={styles.container}>
         <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
           <View style={styles.content}>
-            <MalkongAvatar size={64} />
+            <BuddyAvatar size={64} />
             <View style={styles.heading}>
               <ThemedText type="display">매일 아침,{'\n'}버디가 먼저 챙길게요</ThemedText>
               <ThemedText type="body" style={{ color: c.textSecondary }}>
@@ -111,7 +111,7 @@ export default function OnboardingScreen() {
       <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.content}>
-            {!isEdit && <MalkongAvatar size={64} />}
+            {!isEdit && <BuddyAvatar size={64} />}
             <View style={styles.heading}>
               <ThemedText type="display">{isEdit ? '아기 프로필' : '육아버디를\n시작할게요'}</ThemedText>
               <ThemedText type="body" style={{ color: c.textSecondary }}>

@@ -19,7 +19,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { PacifierBabyIcon } from '@/components/baby-icons';
+import { BuddyMark } from '@/components/brand';
 import { GalaxyBoundary } from '@/components/galaxy-boundary';
 import { FontFamily } from '@/constants/theme';
 import type { Domain, DomainId } from '@/data/knowledge-profile';
@@ -213,8 +213,6 @@ function Galaxy({ domains, replay, active, selected, onSelect, height, coreColor
     .runOnJS(true)
     .onEnd((e) => pick(e.x, e.y));
 
-  const coreLight = shade(coreColor, 0.5);
-  const coreDark = shade(coreColor, -0.4);
 
   return (
     <GestureDetector gesture={Gesture.Exclusive(pan, tapGesture)}>
@@ -256,7 +254,7 @@ function Galaxy({ domains, replay, active, selected, onSelect, height, coreColor
                 />
               )),
             )}
-            <Core color={coreColor} light={coreLight} dark={coreDark} cam={cam} />
+            <Core color={coreColor} cam={cam} />
             {scene.planets.map((pl) => (
               <Planet
                 key={pl.id}
@@ -382,8 +380,8 @@ function FactDot({
   );
 }
 
-/** 가운데 아기 — 숨 쉬는 빛과 쪽쪽이 문 얼굴 */
-function Core({ color, light, dark, cam }: { color: string; light: string; dark: string; cam: Cam }) {
+/** 가운데 아기 — 숨 쉬는 빛과 버디 얼굴 */
+function Core({ color, cam }: { color: string; cam: Cam }) {
   const style = useAnimatedStyle(() => {
     const k = cam.intro.value;
     const q = project([0, 0, 0], cam.yaw.value + cam.dragYaw.value, cam.pitch.value, cam.width, cam.height);
@@ -395,9 +393,8 @@ function Core({ color, light, dark, cam }: { color: string; light: string; dark:
     <Animated.View pointerEvents="none" style={[styles.body, style]}>
       <View style={[styles.halo, styles.haloOuter, { backgroundColor: color }]} />
       <View style={[styles.halo, styles.haloInner, { backgroundColor: color }]} />
-      <Sphere color={color} light={light} dark={dark} />
       <View style={styles.face}>
-        <PacifierBabyIcon size={40} color="#FFFFFF" />
+        <BuddyMark size={64} />
       </View>
     </Animated.View>
   );

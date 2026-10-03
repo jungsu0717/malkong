@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { MalkongMark } from '@/components/brand';
+import { BuddyMark } from '@/components/brand';
 import { BriefingCard } from '@/components/briefing-card';
 import {
   AnswerBubble,
@@ -255,7 +255,7 @@ export default function ChatScreen() {
       <SafeAreaView style={styles.flex} edges={['top']}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.header}>
-            <MalkongMark size={24} />
+            <BuddyMark size={24} />
             <ThemedText type="heading" style={styles.brand}>
               육아버디
             </ThemedText>
