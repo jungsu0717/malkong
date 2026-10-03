@@ -32,7 +32,8 @@ Gemini 는 2번(진짜 답 · 일반 기준 답) 불렀다. 스크립트는 임�
 
 1. ~~**서버 배포**~~ — 2026-10-03 Julian 허락으로 revision 00003 을 올렸다(명령은 server/AGENTS.md 「배포」)
 2. **Neon** — 프로젝트를 만들고 접속 주소를 Secret Manager `malkong-database-url` 로([common/005](005-device-key-and-limit.md))
-3. **Expo 계정** — `eas login` → 개발 빌드로 실기기 시험(이 문서의 남은 시험)
+3. **Expo 계정** — 2026-10-03 가입·로그인 끝, 프로젝트 `@julian-malkong/malkong` 연결(app.json `owner` · `projectId`).
+   남은 것은 개발 빌드로 실기기 시험(이 문서의 남은 시험) — Apple 개발자 계정(6번)이 먼저다
 4. ~~**앱 식별자 정하기**~~ — 2026-10-03 Julian 결정: iOS · Android 모두 `kr.malkong.app`(app.json). 스토어에 올리면 바꿀 수 없다
    - 실기기 시험 폰은 아이폰이다 — 폰에 깔려면 Apple 개발자 계정(6번)이 먼저 있어야 한다
 5. **AdMob** — 앱 등록, 앱 id 두 개(app.json) · 단위 id 네 개(EAS 환경변수) · SSV 콜백 주소([common/006](006-ads.md))
