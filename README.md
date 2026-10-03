@@ -10,17 +10,18 @@
   성장 타임라인, 마이(기록 보기·고치기 · 설정 · 광고 없이 쓰기 · 약관 초안), 광고(AdMob 배너·보상형), 임시 아이콘
 - **지식(L1)**: 승인된 73건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호(미국 CDC)
 - **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 하루 한도, 재시도 안전,
-  피드백, 보상형 광고 확인(SSV). **Cloud Run 에 올라간 판은 아직 기기 키 이전 판이다** — 새 앱은 새 서버가 있어야 답을 받는다
+  피드백, 보상형 광고 확인(SSV). Cloud Run 에 새 판(revision 00003, 2026-10-03)이 올라가 있다 — 하루 한도는 아직
+  메모리에 세어서 서버가 다시 시작되면 0 으로 돌아간다(Neon 을 붙이면 풀린다)
 - 웹 화면 몰아 시험 통과([common/008](docs/task/common/008-first-release-check.md)). 실기기 시험은 개발 빌드부터
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
 ## 다음 시작점
 
 **Julian 이 할 일이 먼저다** — 계정·결제·법률이라 Claude 가 대신할 수 없다. 목록과 순서는
-[common/008 「Julian 이 할 일」](docs/task/common/008-first-release-check.md): 서버 배포 → Neon → Expo 계정과 개발 빌드 →
+[common/008 「Julian 이 할 일」](docs/task/common/008-first-release-check.md): ~~서버 배포~~ → Neon → Expo 계정과 개발 빌드 →
 앱 식별자 → AdMob → 스토어 계정 → RevenueCat → 약관 정보 → Gemini 유료 → 답변 완성도 → L1 출처.
 
-그다음 Claude 몫: 배포 확인, 개발 빌드 실기기 시험, 답변 완성도 다듬기(위험 신호 — Julian 승인), 스토어 등록 준비
+그다음 Claude 몫: 개발 빌드 실기기 시험, 답변 완성도 다듬기(위험 신호 — Julian 승인), 스토어 등록 준비
 (스크린샷 · 소개 문구는 [product-brief](docs/product/product-brief.md) · 개인정보 처리방침 웹 주소).
 
 ## 다른 PC 에서 시작하기

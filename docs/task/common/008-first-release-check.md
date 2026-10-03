@@ -30,8 +30,7 @@ Gemini 는 2번(진짜 답 · 일반 기준 답) 불렀다. 스크립트는 임�
 
 계정·결제·법률처럼 Julian 만 할 수 있는 일이다. 위에서부터 하면 막히는 일이 적다.
 
-1. **서버 배포** — 자동 모드가 운영 배포를 막아 둔 상태다. 새 앱은 새 서버(기기 키 경로)가 있어야 답을 받는다.
-   명령은 server/AGENTS.md 「배포」, 또는 Claude 에게 배포를 허락
+1. ~~**서버 배포**~~ — 2026-10-03 Julian 허락으로 revision 00003 을 올렸다(명령은 server/AGENTS.md 「배포」)
 2. **Neon** — 프로젝트를 만들고 접속 주소를 Secret Manager `malkong-database-url` 로([common/005](005-device-key-and-limit.md))
 3. **Expo 계정** — `eas login` → 개발 빌드로 실기기 시험(이 문서의 남은 시험)
 4. **앱 식별자 정하기** — iOS bundleIdentifier · Android package(예: `kr.malkong.app`). 스토어에 올리면 바꿀 수 없다
@@ -47,4 +46,5 @@ Gemini 는 2번(진짜 답 · 일반 기준 답) 불렀다. 스크립트는 임�
 
 - [x] 웹 화면 시험 — 위 표
 - [ ] 개발 빌드로 실기기 시험(iOS·Android): 저장 · 광고(시험 단위) · 샌드박스 결제 · 아이콘·시작 화면
-- [ ] 배포한 서버에서 `/v1/devices` · `/v1/entitlements` · 위험 신호 확인
+- [x] 배포한 서버에서 `/v1/devices` · `/v1/entitlements` · 위험 신호 확인 — `/health` 200 · 기기 키 201 ·
+      자격 200(남은 10회) · 위험 신호 경고와 출처 · 기기 키 없는 질문 401. Gemini 는 부르지 않았다
