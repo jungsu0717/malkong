@@ -57,10 +57,17 @@ export default function BabyScreen() {
   const { messages } = useChat();
   const { setDraft, requestFocus } = useDraft();
   const [selected, setSelected] = useState<DomainId | null>(null);
-  /** 탭에 올 때마다 등장 모션을 다시 — 지도를 새로 그린다 */
+  /** 탭에 올 때마다 등장 모션을 다시 */
   const [visit, setVisit] = useState(0);
+  const [focused, setFocused] = useState(false);
   const [openedAt] = useState(() => Date.now());
-  useFocusEffect(useCallback(() => setVisit((v) => v + 1), []));
+  useFocusEffect(
+    useCallback(() => {
+      setVisit((v) => v + 1);
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
 
   const profile = useMemo(() => (baby ? buildProfile(baby, records) : null), [baby, records]);
   const shown = useCountUp(profile?.percent ?? 0, visit);
@@ -99,7 +106,8 @@ export default function BabyScreen() {
           {/* 지식 지도 — 아는 정도와 단계를 위에 겹쳐 둔다 (SPEC-BABY-01·02) */}
           <View style={[styles.galaxy, { backgroundColor: c.space }]}>
             <KnowledgeGalaxy
-              key={visit}
+              replay={visit}
+              active={focused}
               domains={profile.domains}
               selected={selected}
               onSelect={setSelected}

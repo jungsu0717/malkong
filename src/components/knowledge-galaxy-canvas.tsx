@@ -9,7 +9,6 @@
  */
 
 import {
-  BlurStyle,
   Canvas,
   createPicture,
   PaintStyle,
@@ -33,6 +32,10 @@ import type { Domain, DomainId } from '@/data/knowledge-profile';
 
 export type GalaxyProps = {
   domains: Domain[];
+  /** 바뀔 때마다 등장 모션을 다시 — 그림판을 새로 만들지 않는다(그리는 도중에 지우면 앱이 꺼질 수 있다) */
+  replay: number;
+  /** 탭이 보일 때만 움직인다 — 안 보이는 동안 매 프레임 그리지 않게 */
+  active: boolean;
   selected: DomainId | null;
   onSelect: (id: DomainId | null) => void;
   height: number;
@@ -79,7 +82,15 @@ function project(p: V3, yaw: number, pitch: number, cx: number, cy: number, foca
   return { x: cx + x1 * scale, y: cy - y2 * scale, scale, depth };
 }
 
-export default function KnowledgeGalaxyCanvas({ domains, selected, onSelect, height, coreColor }: GalaxyProps) {
+export default function KnowledgeGalaxyCanvas({
+  domains,
+  replay,
+  active,
+  selected,
+  onSelect,
+  height,
+  coreColor,
+}: GalaxyProps) {
   const [width, setWidth] = useState(0);
   const font = useFont(require('@expo-google-fonts/ibm-plex-sans-kr/600SemiBold/IBMPlexSansKR_600SemiBold.ttf'), 12);
   const fontSmall = useFont(require('@expo-google-fonts/ibm-plex-sans-kr/500Medium/IBMPlexSansKR_500Medium.ttf'), 10);
@@ -92,16 +103,20 @@ export default function KnowledgeGalaxyCanvas({ domains, selected, onSelect, hei
   const dragging = useSharedValue(0);
   const autoYaw = useSharedValue(0);
 
-  useFrameCallback((frame) => {
-    const dt = (frame.timeSincePreviousFrame ?? 16) / 1000;
+  const ticker = useFrameCallback((frame) => {
+    const dt = Math.min(0.05, (frame.timeSincePreviousFrame ?? 16) / 1000);
     time.value += dt;
     if (!dragging.value) autoYaw.value += dt * 0.16;
-  });
+  }, false);
 
   useEffect(() => {
-    intro.value = 0;
-    intro.value = withTiming(1, { duration: 1600, easing: Easing.out(Easing.cubic) });
-  }, [intro]);
+    ticker.setActive(active);
+  }, [ticker, active]);
+
+  useEffect(() => {
+    intro.set(0);
+    intro.set(withTiming(1, { duration: 1600, easing: Easing.out(Easing.cubic) }));
+  }, [intro, replay]);
 
   // 그림의 뼈대 — 영역 행성 자리, 행성마다 사실 점의 방향, 별. 데이터가 바뀔 때만 다시 만든다
   const scene = useMemo(() => {
@@ -169,6 +184,20 @@ export default function KnowledgeGalaxyCanvas({ domains, selected, onSelect, hei
         sphere.setAntiAlias(true);
         const glow = Skia.Paint();
         glow.setAntiAlias(true);
+        /** 빛 번짐 — 흐림 필터 대신 가장자리로 갈수록 투명해지는 원(가볍고 모든 기기에서 같다) */
+        const halo = (x: number, y: number, r: number, color: string, alpha: number) => {
+          const c = Skia.Color(color);
+          glow.setShader(
+            Skia.Shader.MakeRadialGradient(
+              { x, y },
+              r,
+              [Float32Array.of(c[0], c[1], c[2], alpha), Float32Array.of(c[0], c[1], c[2], 0)],
+              null,
+              TileMode.Clamp,
+            ),
+          );
+          canvas.drawCircle(x, y, r, glow);
+        };
         const stroke = Skia.Paint();
         stroke.setAntiAlias(true);
         stroke.setStyle(PaintStyle.Stroke);
@@ -231,10 +260,7 @@ export default function KnowledgeGalaxyCanvas({ domains, selected, onSelect, hei
             // 가운데 아기 — 숨 쉬는 빛
             const pulse = 1 + 0.06 * Math.sin(t * 2.2);
             const r = coreQ.scale * 0.15 * pulse * (0.4 + 0.6 * k);
-            glow.setColor(Skia.Color(core.color));
-            glow.setAlphaf(0.55);
-            glow.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Normal, r * 0.9, true));
-            canvas.drawCircle(coreQ.x, coreQ.y, r * 1.5, glow);
+            halo(coreQ.x, coreQ.y, r * 2.4, core.color, 0.55);
             sphere.setAlphaf(1);
             sphere.setShader(
               Skia.Shader.MakeRadialGradient(
@@ -291,10 +317,7 @@ export default function KnowledgeGalaxyCanvas({ domains, selected, onSelect, hei
             stroke.setStrokeWidth(0.8);
             canvas.drawLine(q.x, q.y, fq.x, fq.y, stroke);
             if (f.known || f.partial) {
-              glow.setColor(Skia.Color(pl.light));
-              glow.setAlphaf(0.8 * k);
-              glow.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Normal, fr * 1.2, true));
-              canvas.drawCircle(fq.x, fq.y, fr * 1.3, glow);
+              halo(fq.x, fq.y, fr * 3, pl.light, 0.7 * k);
               fill.setColor(Skia.Color('#FFFFFF'));
               fill.setAlphaf((f.known ? 1 : 0.6) * k);
               canvas.drawCircle(fq.x, fq.y, fr, fill);
@@ -307,10 +330,7 @@ export default function KnowledgeGalaxyCanvas({ domains, selected, onSelect, hei
           }
 
           // 행성 — 빛 번짐 + 구처럼 보이는 그라디언트
-          glow.setColor(Skia.Color(pl.color));
-          glow.setAlphaf(0.65 * bright);
-          glow.setMaskFilter(Skia.MaskFilter.MakeBlur(BlurStyle.Normal, r * 0.9, true));
-          canvas.drawCircle(q.x, q.y, r * 1.45, glow);
+          halo(q.x, q.y, r * 2.3, pl.color, 0.6 * bright);
           sphere.setAlphaf(Math.min(1, 0.45 + bright));
           sphere.setShader(
             Skia.Shader.MakeRadialGradient(
