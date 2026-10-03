@@ -6,27 +6,18 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Button, Card, ListRow, type IconName } from '@/components/ui';
+import { TodoRow } from '@/components/todo-row';
+import { Card, ListRow } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { ageFrom } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
-import { whenText, type BriefingItem, type BriefingTodo } from '@/data/briefing';
+import { type BriefingItem, type BriefingTodo } from '@/data/briefing';
 import type { MalkongMessage } from '@/data/chat';
 import { itemById } from '@/data/l1';
 import type { BabyRecord } from '@/data/records';
 import { useRecords } from '@/data/records-context';
 import type { GapGroup, L1Item } from '@/data/timeline';
 import { useTheme } from '@/hooks/use-theme';
-
-const ICONS: Record<string, IconName> = {
-  접종: 'medkit-outline',
-  검진: 'clipboard-outline',
-  수면: 'moon-outline',
-  수유: 'nutrition-outline',
-  안전: 'shield-checkmark-outline',
-  생활: 'happy-outline',
-  발달: 'footsteps-outline',
-};
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -86,28 +77,15 @@ export function BriefingCard({
         />
       );
     }
-    const done = isDone(item, records);
-    const when = whenText(item, baby.birthDate, ageFrom(baby.birthDate).month);
-    const verb = item.life ? '확인' : '완료';
     return (
-      <ListRow
+      <TodoRow
         key={item.key}
+        todo={item}
+        birthDate={baby.birthDate}
+        currentMonth={ageFrom(baby.birthDate).month}
+        done={isDone(item, records)}
         divider={index > 0}
-        icon={done ? 'checkmark' : (ICONS[item.category] ?? 'ellipse-outline')}
-        iconTone={item.status === 'soon' && !done ? 'accent' : 'neutral'}
-        title={item.label}
-        detail={done ? `${verb}했어요` : when.text}
-        muted={done}
-        onPress={done ? undefined : () => onPick(groupOf(item))}
-        right={
-          done ? null : when.dday !== null ? (
-            <ThemedText type="label" style={{ color: c.accentText, fontWeight: 700 }}>
-              {when.dday === 0 ? '오늘' : `D-${when.dday}`}
-            </ThemedText>
-          ) : (
-            <Button label={verb} size="sm" variant="secondary" onPress={() => onPick(groupOf(item))} />
-          )
-        }
+        onPick={() => onPick(groupOf(item))}
       />
     );
   };

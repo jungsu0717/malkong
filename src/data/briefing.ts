@@ -10,7 +10,7 @@
 
 import { ageFrom, DEFAULT_BABY_NAME, type Baby } from './baby';
 import type { BabyRecord } from './records';
-import { getGaps, groupGaps, isLifeGroup, type GapStatus } from './timeline';
+import { getGaps, groupGaps, isLifeGroup, type GapGroup, type GapStatus } from './timeline';
 
 /** 브리핑에 올리는 「챙길 것」 수 — 홈과 같은 기준(SPEC-HOME-02 분량) */
 const MAX_TODOS = 3;
@@ -153,4 +153,18 @@ export function whenText(todo: BriefingTodo, birthDate: string, currentMonth: nu
     return { text: `${todo.month}개월 · ${date}`, dday };
   }
   return { text: todo.month === currentMonth ? `이번 달 · ${date}부터` : `${todo.month}개월부터 챙길 시기예요`, dday: null };
+}
+
+/** 「챙길 것」 묶음을 브리핑 줄 모양으로 — 우리 아기 탭이 브리핑과 같은 줄을 그리게 한다 */
+export function todoOf(group: GapGroup): BriefingTodo {
+  return {
+    kind: 'todo',
+    key: group.key,
+    status: group.status,
+    month: group.month,
+    label: group.label,
+    itemIds: group.items.map((i) => i.id),
+    life: isLifeGroup(group),
+    category: group.items[0]?.kind ?? '',
+  };
 }

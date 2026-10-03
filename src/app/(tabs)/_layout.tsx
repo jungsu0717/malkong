@@ -43,8 +43,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <TeddyIcon size={size} color={color} />,
         }}
       />
-      {/* 성장 타임라인은 growth/001 에서 「우리 아기」의 「성장」 보기로 옮긴다 — 그때까지 탭에서만 숨긴다 */}
-      <Tabs.Screen name="growth" options={{ href: null }} />
     </Tabs>
   );
 }

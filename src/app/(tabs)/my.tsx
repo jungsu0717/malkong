@@ -70,7 +70,7 @@ export default function MyScreen() {
           {/* 우리 아기 기록(L2) 보기·고치기 (SPEC-MY-02) */}
           <Pressable
             style={[styles.profileCard, { backgroundColor: colors.surface }]}
-            onPress={() => router.push('/records')}>
+            onPress={() => router.navigate({ pathname: '/baby', params: { view: 'records' } })}>
             <View style={styles.profileText}>
               <ThemedText type="title">우리 아기 기록</ThemedText>
               <ThemedText type="small" style={{ color: colors.textSecondary }}>

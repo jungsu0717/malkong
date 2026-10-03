@@ -77,7 +77,10 @@ SPEC 은 두 자리로 나뉘었다. 아기 카드·챙길 것·발달 포인트
 
 ## HOW (현재 구현)
 
-- 화면: `src/app/(tabs)/index.tsx`. 월령·일수·이번 달 발달 포인트는 저장된 생일에서 계산한 값으로
+- 화면: 「우리 아기」 탭(`src/app/(tabs)/baby.tsx`) — 머리에 아기 카드(이름 · 태어난 지 N일 · 만 N개월 · 생일 ·
+  월 한 줄), 「일정」 보기(`src/components/baby/schedule-view.tsx`)에 챙길 것 → 배너 → 발달 포인트 → 고지.
+  줄 모양은 브리핑과 같은 `src/components/todo-row.tsx`(다가오는 것은 D-day, 지금·놓친 것은 단추).
+  월령·일수·이번 달 발달 포인트는 저장된 생일에서 계산한 값으로
   나오고(`useBaby()`), 추천은 `src/data/timeline.ts` 의 `getGaps(월령)`(covers 차집합)을
   `groupGaps()` 로 묶어 만든다. 묶음 키는 상태(놓침·지금·다음 달)·시작 월·분류이고, 같은 차수끼리
   이름을 이어 붙인다(「DTaP·폴리오·Hib·폐렴구균·로타바이러스 1차」).
