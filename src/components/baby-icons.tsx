@@ -2,6 +2,7 @@ import type { ColorValue } from 'react-native';
 import Svg, { Circle, Ellipse, Path } from 'react-native-svg';
 
 // 베이비 아이콘 세트 — 탭·브랜드용 자체 아이콘 (정본: docs/app-design 아이콘 절)
+// 탭: 말콩=말풍선 속 쪽쪽이 · 우리 아기=아기 얼굴 · 마이=곰돌이. 말콩이 얼굴(브랜드)=쪽쪽이 문 아기
 // 24x24 · 선 1.8 · 끝 둥글게. 네 개가 한 세트로 보이도록 규격을 통일한다.
 // 보조 UI 아이콘(셰브론·링크·전송 등)은 그대로 Ionicons 를 쓴다.
 
@@ -10,7 +11,7 @@ type IconProps = { size?: number; color: ColorValue };
 const stroke = { strokeWidth: 1.8, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
 const thin = { strokeWidth: 1.6, strokeLinecap: 'round' } as const;
 
-/** 홈 — 아기 얼굴 (배냇머리 한 가닥) */
+/** 우리 아기 탭 — 아기 얼굴 (배냇머리 한 가닥) */
 export function BabyFaceIcon({ size = 24, color }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -23,7 +24,22 @@ export function BabyFaceIcon({ size = 24, color }: IconProps) {
   );
 }
 
-/** 물어보기 — 쪽쪽이 */
+/** 말콩 탭 — 말풍선 안의 쪽쪽이 (대화) */
+export function ChatBubbleIcon({ size = 24, color }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M5.2 4.6 H18.8 Q20.6 4.6 20.6 6.4 V14.6 Q20.6 16.4 18.8 16.4 H10.4 L6.4 19.8 V16.4 H5.2 Q3.4 16.4 3.4 14.6 V6.4 Q3.4 4.6 5.2 4.6 Z"
+        stroke={color}
+        {...stroke}
+      />
+      <Circle cx={12} cy={10.5} r={2.3} stroke={color} {...thin} />
+      <Circle cx={12} cy={10.5} r={0.6} fill={color} />
+    </Svg>
+  );
+}
+
+/** 쪽쪽이 */
 export function PacifierIcon({ size = 24, color }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -34,7 +50,7 @@ export function PacifierIcon({ size = 24, color }: IconProps) {
   );
 }
 
-/** 성장 — 딸랑이 */
+/** 딸랑이 */
 export function RattleIcon({ size = 24, color }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

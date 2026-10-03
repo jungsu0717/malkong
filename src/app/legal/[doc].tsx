@@ -30,7 +30,7 @@ export default function LegalScreen() {
             )}
             {doc.sections.map((section) => (
               <View key={section.heading} style={styles.section}>
-                <ThemedText type="smallBold">{section.heading}</ThemedText>
+                <ThemedText type="label">{section.heading}</ThemedText>
                 {section.body.map((p) => (
                   <ThemedText key={p} type="small" style={{ color: colors.textSecondary }}>
                     {p}

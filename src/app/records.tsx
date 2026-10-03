@@ -40,7 +40,7 @@ export default function RecordsScreen() {
           안에만 저장돼요.
         </ThemedText>
 
-        <View style={[styles.addRow, { backgroundColor: colors.backgroundElement }]}>
+        <View style={[styles.addRow, { backgroundColor: colors.surface }]}>
           <TextInput
             style={[styles.input, { color: colors.text }]}
             placeholder="직접 적기 (예: 몸무게 6.4kg)"
@@ -51,7 +51,7 @@ export default function RecordsScreen() {
             returnKeyType="done"
           />
           <Pressable onPress={addDraft} disabled={!draft.trim()} hitSlop={8}>
-            <ThemedText type="smallBold" style={{ color: draft.trim() ? colors.accent : colors.textSecondary }}>
+            <ThemedText type="label" style={{ color: draft.trim() ? colors.accent : colors.textSecondary }}>
               추가
             </ThemedText>
           </Pressable>
@@ -88,7 +88,7 @@ function RecordRow({ record }: { record: BabyRecord }) {
     .join(' · ');
 
   return (
-    <ThemedView type="backgroundElement" style={styles.card}>
+    <ThemedView type="surface" style={styles.card}>
       {editing !== null ? (
         <TextInput
           style={[styles.editInput, { color: colors.text, borderColor: colors.accent }]}
@@ -129,7 +129,7 @@ function RecordRow({ record }: { record: BabyRecord }) {
                 color={colors.textSecondary}
                 onPress={() =>
                   router.navigate({
-                    pathname: '/ask',
+                    pathname: '/',
                     params: { focus: record.sourceMessageId!, ft: String(Date.now()) },
                   })
                 }
@@ -145,7 +145,7 @@ function RecordRow({ record }: { record: BabyRecord }) {
 function Action({ label, color, onPress }: { label: string; color: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} hitSlop={8}>
-      <ThemedText type="smallBold" style={{ color }}>
+      <ThemedText type="label" style={{ color }}>
         {label}
       </ThemedText>
     </Pressable>

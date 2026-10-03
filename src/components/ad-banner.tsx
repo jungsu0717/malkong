@@ -28,7 +28,7 @@ export function AdBanner({ anchored = false }: { anchored?: boolean }) {
   const module = adsModule();
   if (!module) {
     return (
-      <View style={[styles.banner, { borderColor: colors.backgroundSelected }]}>
+      <View style={[styles.banner, { borderColor: colors.surfaceStrong }]}>
         <ThemedText type="small" style={{ color: colors.textSecondary }}>
           광고
         </ThemedText>
@@ -46,7 +46,7 @@ export function AdBanner({ anchored = false }: { anchored?: boolean }) {
   return (
     <View
       style={
-        loaded ? [styles.banner, { borderColor: colors.backgroundSelected }] : styles.collapsed
+        loaded ? [styles.banner, { borderColor: colors.surfaceStrong }] : styles.collapsed
       }>
       {loaded && (
         <ThemedText type="small" style={{ color: colors.textSecondary }}>

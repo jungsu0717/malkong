@@ -1,246 +1,317 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  useColorScheme,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AdBanner } from '@/components/ad-banner';
-import { AskFab } from '@/components/ask-fab';
-import { MarkDoneSheet } from '@/components/mark-done-sheet';
+import {
+  AnswerBubble,
+  DateDivider,
+  DoneTrace,
+  ErrorBubble,
+  FollowupBubble,
+  LimitBubble,
+  RedflagCard,
+  UserBubble,
+} from '@/components/chat-bubbles';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { ThinkingStatus, type ThinkingStep } from '@/components/thinking-status';
 import { Colors, Spacing } from '@/constants/theme';
-import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
-import type { UserMessage } from '@/data/chat';
+import { dayKey, dayLabel } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
-import { itemsForMonth, itemsOfKind } from '@/data/l1';
-import type { BabyRecord } from '@/data/records';
-import { usePreferences } from '@/data/preferences-context';
+import { useEntitlements } from '@/data/entitlements-context';
 import { useRecords } from '@/data/records-context';
-import {
-  getGaps,
-  groupGaps,
-  groupLabel,
-  headlineOf,
-  isLifeGroup,
-  type GapGroup,
-  type L1Item,
-} from '@/data/timeline';
+import { canOfferRewardedAd } from '@/data/ads';
+import { useMalkong, type AskFailure } from '@/hooks/use-malkong';
 
-/** 홈에 보여주는 최근 질문 수 (SPEC-HOME-04) */
-const RECENT_COUNT = 2;
+const SUGGESTED = [
+  '밤중 수유는 언제부터 줄여도 되나요?',
+  '이번 달 예방접종 뭐가 있죠?',
+  '열이 38도예요. 병원에 가야 하나요?',
+  '수면 교육은 언제부터 시작하나요?',
+];
 
-/** 한 번에 보여주는 「챙길 것」 수 — 빨간 표시가 한꺼번에 쏟아지면 불안만 준다 */
-const VISIBLE_TODOS = 3;
+// 기다리는 동안의 단계 — 서버가 단계를 보내 주기 전까지는 순환 문구가 헤더를 맡는다(ask.md 처리 현황 블록)
+const PENDING_STEPS: ThinkingStep[] = [
+  { id: 'l2', title: '우리 아기 기록 확인', done: false },
+  { id: 'l1', title: '표준 지식 찾기', done: false },
+  { id: 'compose', title: '답변 정리', done: false },
+];
 
-/** 발달 포인트가 비었을 때 — 첫 이정표보다 어리면 그게 언제인지 알려준다 (SPEC-HOME-03 조건) */
-function emptyPointsText(currentMonth: number): string {
-  const starts = itemsOfKind('발달').map((i) => i.months[0]);
-  const first = starts.length > 0 ? Math.min(...starts) : null;
-  if (first !== null && currentMonth < first) return `첫 발달 이정표는 ${first}개월이에요`;
-  return '이 월령의 표준 지식은 아직 준비 중이에요';
+/** 플로팅 버튼에서 넘어온 주소가 이보다 오래됐으면 새로 고침으로 남은 것이라 다시 보내지 않는다 */
+const PARAM_FRESH_MS = 30_000;
+
+function failureText(failure: AskFailure): string {
+  if (failure.status === 0) return '인터넷 연결이 불안정해서 답을 받지 못했어요. 연결을 확인하고 다시 시도해 주세요.';
+  if (failure.status === 503) return '말콩이가 지금 답을 만들지 못했어요. 잠시 뒤에 다시 시도해 주세요.';
+  if (failure.status === 422) return '질문을 알아듣지 못했어요. 조금 바꿔서 다시 물어봐 주세요.';
+  return '잠깐 문제가 생겼어요. 다시 시도해 주세요.';
 }
 
-/** 「챙길 것」 한 줄의 시점 안내. 지난 것은 놓침으로 단정하지 않고 묻는다 (SPEC-HOME-02) */
-function todoWhen(group: GapGroup, currentMonth: number): string {
-  const { status, month } = group;
-  if (isLifeGroup(group)) {
-    // 생활 항목은 마감이 없다 — 언제부터 챙길 것인지만 말한다
-    if (status === 'soon') return `${month}개월부터 알아 두면 좋아요`;
-    return month === currentMonth ? '이번 달부터 알아 두면 좋아요' : '지금 시기에 알아 두면 좋아요';
-  }
-  if (status === 'missed') return `${month}개월 차 항목인데 기록이 없어요 — 완료했다면 알려주세요`;
-  if (status === 'soon') return `${month}개월에 다가와요`;
-  return month === currentMonth ? '이번 달' : `${month}개월부터 챙길 시기예요`;
-}
-
-export default function HomeScreen() {
+export default function AskScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
-  const { baby, age } = useBaby();
-  const { records, add, remove } = useRecords();
-  const { messages } = useChat();
-  const { scheduleOnly } = usePreferences();
-  const [showAllTodos, setShowAllTodos] = useState(false);
-  /** 완료를 알리려고 연 줄 */
-  const [picking, setPicking] = useState<GapGroup | null>(null);
-  /** 방금 만든 기록 — 무엇을 기록했는지 보여주고 되돌릴 수 있게 둔다 (SPEC-HOME-02 저장 표시) */
-  const [justSaved, setJustSaved] = useState<BabyRecord | null>(null);
+  const { age, baby } = useBaby();
+  const { loading } = useChat();
+  const { records, remove } = useRecords();
+  const {
+    messages,
+    pendingId,
+    failure,
+    openFollowup,
+    send,
+    reply,
+    retry,
+    answerInEco,
+    refillWithAd,
+  } = useMalkong();
+  /** 광고를 보는 중 — 한도 말풍선의 단추를 잠근다 */
+  const [watching, setWatching] = useState(false);
+  const [refillMissed, setRefillMissed] = useState(false);
+  const { dailyLimit, remaining } = useEntitlements();
+  // 다른 탭의 플로팅 버튼에서 넘어온 질문 (SPEC-ASK-07). t 는 같은 질문을 다시 보냈을 때의 구분값이다
+  const { q, t, focus, ft } = useLocalSearchParams<{
+    q?: string;
+    t?: string;
+    /** 홈의 최근 질문에서 넘어온 질문 말풍선 id (SPEC-HOME-04) */
+    focus?: string;
+    ft?: string;
+  }>();
+  const [input, setInput] = useState('');
+  const scrollRef = useRef<ScrollView>(null);
+  const handledParam = useRef<string | null>(null);
+  /** 말풍선 위치 — 최근 질문에서 넘어오면 그 자리로 스크롤한다 */
+  const positions = useRef<Record<string, number>>({});
+  const focusedKey = useRef<string | null>(null);
+  /** 새 말풍선이 붙을 때 맨 끝을 따라갈지. 지난 질문 자리로 가 있는 동안은 끌어내리지 않는다 */
+  const stickToEnd = useRef(true);
 
-  if (!age) return <ScreenLoading />;
-
-  // 놓친 것 → 지금 → 다음 달 순서로, 같은 날 챙길 것은 한 줄로. 길면 접어 두고 눌러서 펼친다
-  const todos = groupGaps(getGaps(age.month, records, { scheduleOnly }));
-  const shownTodos = showAllTodos ? todos : todos.slice(0, VISIBLE_TODOS);
-  const hiddenTodoCount = todos.length - shownTodos.length;
-  const headline = headlineOf(age.month);
-
-  const markDone = async (items: L1Item[]) => {
-    const life = picking ? isLifeGroup(picking) : false;
-    setPicking(null);
-    // 날짜는 묻지 않는다 — 기록의 시점은 알린 날이다
-    const record = await add({
-      kind: '기록',
-      label: `${groupLabel(items)} ${life ? '확인' : '완료'}`,
-      covers: items.map((i) => i.id),
-      whenLabel: `D+${age.days}에 알림`,
-    });
-    setJustSaved(record);
+  const scrollToFocus = (id: string) => {
+    const key = `${focus}-${ft}`;
+    if (id !== focus || focusedKey.current === key) return;
+    const y = positions.current[id];
+    if (y === undefined) return;
+    focusedKey.current = key;
+    stickToEnd.current = false;
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - Spacing.four), animated: true });
   };
 
-  const undo = async () => {
-    if (!justSaved) return;
-    await remove(justSaved.id);
-    setJustSaved(null);
+  // 이미 그려진 화면으로 넘어온 경우 — 위치를 알고 있으니 바로 간다. 처음 그려질 때는 onLayout 이 맡는다
+  useEffect(() => {
+    if (focus) scrollToFocus(focus);
+  });
+
+  // 넘어온 질문은 한 번만 보낸다 — 보낸 뒤 주소에서 지워 새로 고침해도 다시 나가지 않게 한다
+  useEffect(() => {
+    if (!q || loading || !age) return;
+    const key = t ?? q;
+    if (handledParam.current === key) return;
+    handledParam.current = key;
+    router.setParams({ q: undefined, t: undefined });
+    if (t && Date.now() - Number(t) > PARAM_FRESH_MS) return;
+    stickToEnd.current = true;
+    void send(q);
+  }, [q, t, loading, age, send]);
+
+  if (!age || loading) return <ScreenLoading />;
+
+  const submit = () => {
+    if (!input.trim() || pendingId) return;
+    stickToEnd.current = true;
+    void send(input);
+    setInput('');
   };
-  // 발달·생활 항목이 이번 달 발달 포인트가 된다 (접종·검진은 위의 「챙길 것」이 맡는다)
-  // 이정표 요약과 조기 상담 안내 (SPEC-HOME-03). 생활 팁은 「챙길 것」의 몫이라 여기 넣지 않는다
-  const points = itemsForMonth(age.month).filter((i) => i.kind === '발달');
-  // 최근 질문 — 되묻기에 고른 답("3시간 · 160ml")은 질문이 아니라서 뺀다
-  const recent = messages
-    .filter((m): m is UserMessage => m.role === 'user' && !m.meta.replyTo)
-    .slice(-RECENT_COUNT)
-    .reverse();
+
+  // 타임라인 — 날짜가 바뀌는 자리마다 구분선(SPEC-ASK-10)
+  const rows: React.ReactNode[] = [];
+  // 답 → 그 답이 답한 원래 질문(되묻기 답을 거쳤으면 되묻기가 기억한 질문) — 피드백에 함께 보낼 때 쓴다
+  const textOf = new Map(messages.map((m) => [m.id, m.content]));
+  const questionOf = (questionId: string): string | null => {
+    const asked = messages.find((m) => m.id === questionId);
+    if (asked?.role === 'user' && asked.meta.replyTo) {
+      const followup = messages.find((m) => m.id === asked.meta.replyTo);
+      if (followup?.role === 'malkong' && followup.meta.type === 'followup') return followup.meta.question;
+    }
+    return textOf.get(questionId) ?? null;
+  };
+  let lastDay = '';
+  for (const m of messages) {
+    const day = dayKey(m.createdAt);
+    if (day !== lastDay) {
+      rows.push(<DateDivider key={`d-${day}`} label={dayLabel(m.createdAt, baby?.birthDate ?? null)} />);
+      lastDay = day;
+    }
+    if (m.role === 'user') {
+      const id = m.id;
+      rows.push(
+        <View
+          key={id}
+          onLayout={(e) => {
+            positions.current[id] = e.nativeEvent.layout.y;
+            scrollToFocus(id);
+          }}>
+          <UserBubble text={m.content} />
+        </View>,
+      );
+      continue;
+    }
+    if (m.meta.type === 'redflag') {
+      rows.push(<RedflagCard key={m.id} message={m} />);
+      continue;
+    }
+    rows.push(<DoneTrace key={`t-${m.id}`} trace={m.meta.trace} />);
+    rows.push(
+      m.meta.type === 'answer' ? (
+        <AnswerBubble
+          key={m.id}
+          message={m}
+          question={questionOf(m.meta.questionId)}
+          records={records}
+          onRemoveRecord={remove}
+        />
+      ) : (
+        <FollowupBubble
+          key={m.id}
+          message={m}
+          open={m.id === openFollowup?.id && !pendingId}
+          onChip={(chip) => {
+            stickToEnd.current = true;
+            void reply(m, chip);
+          }}
+        />
+      ),
+    );
+  }
+  if (pendingId) {
+    rows.push(<ThinkingStatus key={`p-${pendingId}`} steps={PENDING_STEPS} done={false} />);
+  } else if (failure?.code === 'LIMIT_EXCEEDED') {
+    rows.push(
+      <LimitBubble
+        key="limit"
+        dailyLimit={dailyLimit}
+        busy={watching}
+        note={refillMissed ? '충전을 확인하지 못했어요. 광고를 끝까지 봤다면 잠시 뒤 다시 눌러 주세요' : null}
+        onEco={() => {
+          stickToEnd.current = true;
+          void answerInEco();
+        }}
+        onReward={
+          failure.limit?.rewardAvailable && canOfferRewardedAd()
+            ? async () => {
+                setWatching(true);
+                setRefillMissed(false);
+                stickToEnd.current = true;
+                const ok = await refillWithAd();
+                setWatching(false);
+                setRefillMissed(!ok);
+              }
+            : undefined
+        }
+      />,
+    );
+  } else if (failure) {
+    rows.push(<ErrorBubble key="error" text={failureText(failure)} onRetry={() => void retry()} />);
+  }
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <ThemedText type="small" style={{ color: colors.accent, fontWeight: '700' }}>
-            말콩
-          </ThemedText>
-
-          {/* 아기 카드 — 월령은 저장된 생일에서 계산한다 (SPEC-HOME-01) */}
-          <View style={[styles.babyCard, { backgroundColor: colors.accentSoft }]}>
-            <ThemedText type="title">{baby?.name ?? DEFAULT_BABY_NAME}</ThemedText>
-            <ThemedText style={{ color: colors.textSecondary }}>
-              태어난 지 {age.days}일 · 만 {age.month}개월
+        <KeyboardAvoidingView
+          style={styles.safeArea}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.header}>
+            <ThemedText type="display">말콩이</ThemedText>
+            <ThemedText type="small" style={{ color: colors.textSecondary }}>
+              만 {age.month}개월 아기 기준으로 답해요
             </ThemedText>
-            {headline && (
-              <ThemedText type="small" style={{ color: colors.accent, marginTop: Spacing.two }}>
-                {headline}
-              </ThemedText>
-            )}
           </View>
 
-          {/* 지금 챙길 것 — 표준(L1) 대비 우리 아기 기록(L2)의 차집합 */}
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="subtitle">지금 챙길 것</ThemedText>
-            {justSaved && (
-              <View style={[styles.savedNotice, { backgroundColor: colors.accentSoft }]}>
-                <ThemedText type="small" style={styles.savedText}>
-                  「{justSaved.label}」로 기록했어요
+          <ScrollView
+            ref={scrollRef}
+            contentContainerStyle={styles.scroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            onContentSizeChange={() => {
+              if (messages.length && stickToEnd.current) scrollRef.current?.scrollToEnd({ animated: true });
+            }}>
+            {/* 말콩이 인사 말풍선 */}
+            <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
+              <ThemedText>
+                안녕하세요, 말콩이예요 🌱{'\n'}만 {age.month}개월에 맞춰서 답해드릴게요. 무엇이든
+                물어보세요.
+              </ThemedText>
+            </View>
+
+            {messages.length === 0 && (
+              <>
+                <ThemedText type="small" style={{ color: colors.textSecondary }}>
+                  이런 걸 많이 물어봐요 — 누르면 입력창에 담겨요
                 </ThemedText>
-                <Pressable onPress={undo} hitSlop={8}>
-                  <ThemedText type="smallBold" style={{ color: colors.accent }}>
-                    되돌리기
-                  </ThemedText>
-                </Pressable>
-              </View>
-            )}
-            {shownTodos.map((todo) => (
-              <Pressable
-                key={todo.key}
-                accessibilityRole="button"
-                accessibilityHint="완료했다면 눌러서 알려 주세요"
-                style={styles.todoRow}
-                onPress={() => setPicking(todo)}>
-                <ThemedText
-                  style={todo.status === 'missed' ? [styles.missedMark, { color: colors.danger }] : { color: colors.accent }}>
-                  {todo.status === 'missed' ? '!' : '○'}
-                </ThemedText>
-                <View style={styles.todoLabel}>
-                  <ThemedText>{todo.label}</ThemedText>
-                  <ThemedText
-                    type="small"
-                    style={
-                      todo.status === 'missed' ? [styles.missedMark, { color: colors.danger }] : { color: colors.textSecondary }
-                    }>
-                    {todoWhen(todo, age.month)}
-                  </ThemedText>
+                <View style={styles.chipWrap}>
+                  {SUGGESTED.map((s) => (
+                    <Pressable
+                      key={s}
+                      style={[styles.chip, { backgroundColor: colors.accentSoft }]}
+                      onPress={() => setInput(s)}>
+                      <ThemedText type="small" style={{ color: colors.accent }}>
+                        {s}
+                      </ThemedText>
+                    </Pressable>
+                  ))}
                 </View>
-                <View style={[styles.doneChip, { borderColor: colors.accent }]}>
-                  <ThemedText type="small" style={{ color: colors.accent }}>
-                    {isLifeGroup(todo) ? '확인' : '완료'}
-                  </ThemedText>
-                </View>
-              </Pressable>
-            ))}
-            {hiddenTodoCount > 0 && (
-              <Pressable onPress={() => setShowAllTodos(true)}>
-                <ThemedText type="small" style={{ color: colors.accent }}>
-                  {hiddenTodoCount}건 더 보기
-                </ThemedText>
-              </Pressable>
+              </>
             )}
-            {todos.length === 0 && (
-              <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                지금은 챙길 게 없어요 🎉
-              </ThemedText>
-            )}
-          </ThemedView>
 
-          {/* 배너는 첫 화면 안에 보이도록 핵심 카드 바로 뒤에 둔다 — 아기 카드와 「챙길 것」보다
-              위로는 올리지 않는다(첫인상이 광고가 되지 않게) */}
-          <AdBanner />
+            {rows}
+          </ScrollView>
 
-          {/* 이번 달 발달 포인트 (성장 타임라인 요약) */}
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="subtitle">이번 달 발달 포인트</ThemedText>
-            {points.length > 0 ? (
-              points.map((item) => <ThemedText key={item.id}>{item.title}</ThemedText>)
-            ) : (
-              <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                {emptyPointsText(age.month)}
-              </ThemedText>
-            )}
-            <Pressable onPress={() => router.navigate('/growth')} hitSlop={8}>
-              <ThemedText type="small" style={{ color: colors.accent }}>
-                성장 타임라인에서 전체 흐름 보기 →
-              </ThemedText>
+          {/* 남은 정밀 답변 — 평소엔 숨기고 3회 이하일 때만 조용히(ask.md 한도 표시) */}
+          {remaining !== null && remaining <= 3 && (
+            <ThemedText type="small" style={[styles.remaining, { color: colors.textSecondary }]}>
+              {remaining > 0
+                ? `오늘 정밀 답변 ${remaining}번 남았어요`
+                : '오늘 정밀 답변을 다 썼어요 · 내일 0시에 다시 채워져요'}
+            </ThemedText>
+          )}
+
+          {/* 입력 바 */}
+          <View style={[styles.inputBar, { backgroundColor: colors.surface }]}>
+            <TextInput
+              style={[styles.input, { color: colors.text }]}
+              placeholder={openFollowup ? '답을 입력하거나 위에서 골라 주세요' : '말콩이에게 물어보세요'}
+              placeholderTextColor={colors.textSecondary}
+              value={input}
+              onChangeText={setInput}
+              onSubmitEditing={submit}
+              returnKeyType="send"
+            />
+            <Pressable
+              style={[
+                styles.sendButton,
+                { backgroundColor: colors.accent, opacity: pendingId || !input.trim() ? 0.4 : 1 },
+              ]}
+              disabled={!!pendingId || !input.trim()}
+              onPress={submit}>
+              <Ionicons name="arrow-up" size={18} color="#fff" />
             </Pressable>
-          </ThemedView>
-
-          {/* 최근 질문 */}
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="subtitle">말콩이에게 물어본 것</ThemedText>
-            {recent.length > 0 ? (
-              recent.map((m) => (
-                // 누르면 물어보기 타임라인의 그 질문 자리로 (ft 는 같은 질문을 다시 눌렀을 때의 구분값)
-                <Pressable
-                  key={m.id}
-                  accessibilityRole="button"
-                  onPress={() =>
-                    router.navigate({ pathname: '/ask', params: { focus: m.id, ft: String(Date.now()) } })
-                  }>
-                  <ThemedText numberOfLines={1}>💬 {m.content}</ThemedText>
-                </Pressable>
-              ))
-            ) : (
-              <ThemedText type="small" style={{ color: colors.textSecondary }}>
-                아직 물어본 게 없어요. 궁금한 게 생기면 언제든 물어보세요
-              </ThemedText>
-            )}
-            <Pressable onPress={() => router.navigate('/ask')} hitSlop={8}>
-              <ThemedText type="small" style={{ color: colors.accent }}>
-                {recent.length > 0 ? '이어서 물어보기 →' : '말콩이에게 물어보기 →'}
-              </ThemedText>
-            </Pressable>
-          </ThemedView>
-
+          </View>
           <ThemedText type="small" style={[styles.disclaimer, { color: colors.textSecondary }]}>
-            말콩의 정보는 공공 의료·육아 지식을 근거로 제공되는 참고 자료예요
+            답변은 참고용이에요. 응급 상황은 119 또는 병원으로 연락하세요.
           </ThemedText>
-        </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
-      <AskFab />
-      <MarkDoneSheet
-        key={picking?.key ?? 'closed'}
-        group={picking}
-        onClose={() => setPicking(null)}
-        onConfirm={markDone}
-      />
     </ThemedView>
   );
 }
@@ -248,42 +319,54 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
+  header: {
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.three,
+    gap: Spacing.half,
+  },
   scroll: {
     padding: Spacing.four,
     gap: Spacing.three,
-    paddingBottom: Spacing.five * 2,
   },
-  babyCard: {
+  bubble: {
     borderRadius: 20,
+    borderTopLeftRadius: Spacing.one,
     padding: Spacing.four,
-    gap: Spacing.one,
+    alignSelf: 'flex-start',
+    maxWidth: '90%',
   },
-  card: {
-    borderRadius: 20,
-    padding: Spacing.four,
-    gap: Spacing.three,
-  },
-  todoRow: {
+  chipWrap: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: Spacing.two,
-    alignItems: 'flex-start',
   },
-  todoLabel: { flex: 1, gap: Spacing.half },
-  doneChip: {
-    borderWidth: 1,
+  chip: {
     borderRadius: 999,
-    paddingHorizontal: Spacing.two + Spacing.one,
-    paddingVertical: Spacing.half,
-  },
-  savedNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    borderRadius: Spacing.three,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
-  savedText: { flex: 1 },
-  missedMark: { fontWeight: '700' },
-  disclaimer: { textAlign: 'center' },
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: Spacing.four,
+    borderRadius: 999,
+    paddingLeft: Spacing.four,
+    paddingRight: Spacing.one,
+    paddingVertical: Spacing.one,
+    gap: Spacing.two,
+  },
+  input: { flex: 1, fontSize: 16, paddingVertical: Spacing.two },
+  sendButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  remaining: { textAlign: 'center', paddingBottom: Spacing.two },
+  disclaimer: {
+    textAlign: 'center',
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+  },
 });

@@ -68,7 +68,7 @@ export default function OnboardingScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.content}>
             <View style={styles.heading}>
-              <ThemedText type="title">
+              <ThemedText type="display">
                 {isEdit ? '아기 프로필' : '말콩을 시작할게요'}
               </ThemedText>
               <ThemedText style={{ color: colors.textSecondary }}>
@@ -83,7 +83,7 @@ export default function OnboardingScreen() {
                 생일
               </ThemedText>
               <View style={styles.dateRow}>
-                <View style={[styles.dateBox, { backgroundColor: colors.backgroundElement }]}>
+                <View style={[styles.dateBox, { backgroundColor: colors.surface }]}>
                   <TextInput
                     style={[styles.dateInput, { color: colors.text }]}
                     value={year}
@@ -100,7 +100,7 @@ export default function OnboardingScreen() {
                 </View>
                 <ThemedText style={{ color: colors.textSecondary }}>년</ThemedText>
 
-                <View style={[styles.dateBoxSmall, { backgroundColor: colors.backgroundElement }]}>
+                <View style={[styles.dateBoxSmall, { backgroundColor: colors.surface }]}>
                   <TextInput
                     ref={monthRef}
                     style={[styles.dateInput, { color: colors.text }]}
@@ -118,7 +118,7 @@ export default function OnboardingScreen() {
                 </View>
                 <ThemedText style={{ color: colors.textSecondary }}>월</ThemedText>
 
-                <View style={[styles.dateBoxSmall, { backgroundColor: colors.backgroundElement }]}>
+                <View style={[styles.dateBoxSmall, { backgroundColor: colors.surface }]}>
                   <TextInput
                     ref={dayRef}
                     style={[styles.dateInput, { color: colors.text }]}
@@ -143,7 +143,7 @@ export default function OnboardingScreen() {
               <ThemedText type="small" style={{ color: colors.textSecondary }}>
                 이름 (선택)
               </ThemedText>
-              <View style={[styles.nameBox, { backgroundColor: colors.backgroundElement }]}>
+              <View style={[styles.nameBox, { backgroundColor: colors.surface }]}>
                 <TextInput
                   style={[styles.nameInput, { color: colors.text }]}
                   value={name}
@@ -165,7 +165,7 @@ export default function OnboardingScreen() {
             <Pressable
               style={[
                 styles.button,
-                { backgroundColor: canSubmit ? colors.accent : colors.backgroundSelected },
+                { backgroundColor: canSubmit ? colors.accent : colors.surfaceStrong },
               ]}
               disabled={!canSubmit}
               onPress={submit}>

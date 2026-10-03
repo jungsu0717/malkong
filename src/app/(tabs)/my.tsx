@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AskFab } from '@/components/ask-fab';
 import { BabyRunLoading } from '@/components/baby-loading';
 import { NoAdsCard } from '@/components/no-ads-card';
 import { ThemedText } from '@/components/themed-text';
@@ -49,15 +48,15 @@ export default function MyScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <ThemedText type="title">마이</ThemedText>
+          <ThemedText type="display">마이</ThemedText>
 
           {/* 아기 프로필 — 저장된 생일과 거기서 계산한 월령 (SPEC-MY-02) */}
           {baby && age && (
             <Pressable
-              style={[styles.profileCard, { backgroundColor: colors.backgroundElement }]}
+              style={[styles.profileCard, { backgroundColor: colors.surface }]}
               onPress={() => router.push('/onboarding?edit=1')}>
               <View style={styles.profileText}>
-                <ThemedText type="subtitle">{baby.name ?? DEFAULT_BABY_NAME}</ThemedText>
+                <ThemedText type="title">{baby.name ?? DEFAULT_BABY_NAME}</ThemedText>
                 <ThemedText type="small" style={{ color: colors.textSecondary }}>
                   {baby.birthDate.replace(/-/g, '. ')} · 태어난 지 {age.days}일 · 만 {age.month}개월
                 </ThemedText>
@@ -70,10 +69,10 @@ export default function MyScreen() {
 
           {/* 우리 아기 기록(L2) 보기·고치기 (SPEC-MY-02) */}
           <Pressable
-            style={[styles.profileCard, { backgroundColor: colors.backgroundElement }]}
+            style={[styles.profileCard, { backgroundColor: colors.surface }]}
             onPress={() => router.push('/records')}>
             <View style={styles.profileText}>
-              <ThemedText type="subtitle">우리 아기 기록</ThemedText>
+              <ThemedText type="title">우리 아기 기록</ThemedText>
               <ThemedText type="small" style={{ color: colors.textSecondary }}>
                 {records.length > 0
                   ? `${records.length}건 — 보고 고치거나 지울 수 있어요`
@@ -88,7 +87,7 @@ export default function MyScreen() {
 
           {/* 로그인 유도 카드 — 로그인은 가족 공유·기기 이전과 함께 들인다(SPEC-MY-04). 그 전엔 누를 단추를 두지 않는다 */}
           <View style={[styles.loginCard, { backgroundColor: colors.accentSoft }]}>
-            <ThemedText type="subtitle">가족과 함께 보기 · 준비 중</ThemedText>
+            <ThemedText type="title">가족과 함께 보기 · 준비 중</ThemedText>
             <ThemedText type="small" style={{ color: colors.textSecondary }}>
               로그인하면 기기를 바꿔도 기록을 옮기고, 가족과 같은 아기를 함께 볼 수 있게 할 거예요. 지금은
               로그인 없이 모든 기능을 쓸 수 있어요.
@@ -100,7 +99,7 @@ export default function MyScreen() {
             <ThemedText type="small" style={{ color: colors.textSecondary }}>
               설정
             </ThemedText>
-            <ThemedView type="backgroundElement" style={styles.menuCard}>
+            <ThemedView type="surface" style={styles.menuCard}>
               <View style={styles.menuRow}>
                 <View style={styles.profileText}>
                   <ThemedText>「챙길 것」에 생활 항목도 보기</ThemedText>
@@ -122,7 +121,7 @@ export default function MyScreen() {
               <ThemedText type="small" style={{ color: colors.textSecondary }}>
                 {section.title}
               </ThemedText>
-              <ThemedView type="backgroundElement" style={styles.menuCard}>
+              <ThemedView type="surface" style={styles.menuCard}>
                 {section.items.map((item) => (
                   <Pressable
                     key={item.doc}
@@ -142,7 +141,7 @@ export default function MyScreen() {
               <ThemedText type="small" style={{ color: colors.textSecondary }}>
                 구축 현황 (임시)
               </ThemedText>
-              <ThemedView type="backgroundElement" style={[styles.menuCard, styles.loadingPreview]}>
+              <ThemedView type="surface" style={[styles.menuCard, styles.loadingPreview]}>
                 <BabyRunLoading label="말콩이가 달려오고 있어요…" />
                 <ThemedText type="small" style={{ color: colors.textSecondary }}>
                   지식 유닛 {units.length}건 — 표준 {standardCount}건(승인 대기 {pendingReviewCount()}건) ·
@@ -166,7 +165,6 @@ export default function MyScreen() {
           )}
         </ScrollView>
       </SafeAreaView>
-      <AskFab />
     </ThemedView>
   );
 }

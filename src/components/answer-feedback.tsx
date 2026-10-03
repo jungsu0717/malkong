@@ -93,7 +93,7 @@ export function AnswerFeedback({ message, question }: Props) {
         </Pressable>
         <View style={styles.row}>
           <Pressable disabled={sending} onPress={() => send('down')} hitSlop={8}>
-            <ThemedText type="smallBold" style={{ color: colors.accent }}>
+            <ThemedText type="label" style={{ color: colors.accent }}>
               {sending ? '보내는 중…' : '보내기'}
             </ThemedText>
           </Pressable>

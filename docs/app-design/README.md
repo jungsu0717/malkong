@@ -13,7 +13,10 @@
 | 커스텀 그래픽 | **@shopify/react-native-skia** (필요 시점에 도입) | 타임라인 연결 곡선·다수 요소 애니메이션처럼 View 로는 버거운 그림만. **하이브리드가 정석** — 레이아웃·콘텐츠는 RN View, 그림만 Skia 캔버스 |
 | 서버 데이터 | **TanStack Query** (ask/002 에서 도입) | 캐싱·재시도 표준. 묻기(`/v1/ask`)는 모델 호출이 다시 나가므로 자동 재시도하지 않는다 |
 | 로컬 저장 | **expo-sqlite** (기기) + **localStorage** (웹 미리보기) | 스키마는 [backend](../architecture/backend.md) 기기 DB 절이 정본. expo-sqlite 의 웹 지원이 알파(Metro WASM 설정·COOP/COEP 헤더 필요)라 브라우저 검토가 깨지므로, `src/data/db.ts`(sqlite)와 `src/data/db.web.ts`(localStorage)로 플랫폼을 나눈다. 웹은 검토용이고 출시 대상은 iOS·Android 다 |
-| 광고 | **Google AdMob + react-native-google-mobile-ads** (v17, task common/006) | 첫 출시는 배너(홈·성장)와 보상형(한도 충전), 전면은 「다음」. 네이티브 모듈이라 Expo Go·웹에서는 모듈을 읽지 않고 자리만 보인다(`src/data/ads.ts` · `ads.web.ts`) — 실제 광고는 **EAS 개발 빌드**(`eas.json`, expo-dev-client)부터. 시작 순서는 유럽 동의(UMP) → iOS 추적 허용(expo-tracking-transparency) → SDK 시작, 광고 등급 PG. 개발 빌드는 Google 시험 단위, 출시 빌드는 `EXPO_PUBLIC_ADMOB_*` 단위가 없으면 광고를 내지 않는다. **개발·가족 기기는 광고 면제(운영자 기기) 또는 시험 단위** — 실광고 자기 클릭은 AdMob 계정 정지 사유([backend](../architecture/backend.md) 운영자 절) |
+| 광고 | **Google AdMob + react-native-google-mobile-ads** (v17, task common/006) | 첫 출시는 배너(우리 아기 탭)와 보상형(한도 충전), 전면은 「다음」. 네이티브 모듈이라 Expo Go·웹에서는 모듈을 읽지 않고 자리만 보인다(`src/data/ads.ts` · `ads.web.ts`) — 실제 광고는 **EAS 개발 빌드**(`eas.json`, expo-dev-client)부터. 시작 순서는 유럽 동의(UMP) → iOS 추적 허용(expo-tracking-transparency) → SDK 시작, 광고 등급 PG. 개발 빌드는 Google 시험 단위, 출시 빌드는 `EXPO_PUBLIC_ADMOB_*` 단위가 없으면 광고를 내지 않는다. **개발·가족 기기는 광고 면제(운영자 기기) 또는 시험 단위** — 실광고 자기 클릭은 AdMob 계정 정지 사유([backend](../architecture/backend.md) 운영자 절) |
+| 글꼴 | **IBM Plex Sans KR**(`@expo-google-fonts/ibm-plex-sans-kr`, `expo-font` 의 `useFonts`) | 시안 B. 굵기 넷(400·500·600·700)만 싣는다 — 한글 글꼴이라 굵기 하나가 약 2.8MB |
+| 알림 | **expo-notifications** 로컬 알림(아침 브리핑, home/004) | 서버 푸시가 아니라 기기가 매일 정한 시각에 스스로 띄운다 — 서버에 기기 토큰을 두지 않는다. Expo Go 에서도 된다. 웹은 알림 없음 |
+| 햅틱 | **expo-haptics** | 보내기 · 완료 · 확인 같은 주요 행동에 가볍게 |
 | 결제 (광고 제거) | **RevenueCat `react-native-purchases`** (Expo 권장, 도입은 나중) | 한 번 사면 광고가 사라지는 비소모성 상품. 네이티브 모듈이라 AdMob 과 같은 EAS 개발 빌드 단계에서 함께 붙인다. 구매 사실의 정본은 스토어이고 기기 저장은 복원용 사본 — 자리는 `src/data/entitlements.ts` |
 
 동향 근거: [Expo 공식 — NativeWind 고품질 UI](https://expo.dev/blog/building-high-quality-uis-with-expo-and-nativewind) ·
@@ -22,58 +25,70 @@
 [Skia 애니메이션 공식 문서](https://shopify.github.io/react-native-skia/docs/animations/animations/) ·
 [2026 애니메이션 라이브러리 비교](https://www.pkgpulse.com/guides/react-native-reanimated-vs-moti-vs-skia-animation-2026)
 
-## 디자인 원칙 — Toss 를 기준으로
+## 디자인 원칙 — 시안 B 「단정한 비서」 (2026-10-03, [decisions/012](../decisions/012-chat-first-three-tabs.md))
 
-- 흰 배경 + 회색 카드(`backgroundElement`, radius 16~24) + **포인트 색 하나**(`accent` #3182F6)
-- 큰 제목·짧은 한글 라벨 — 탭·버튼은 한 단어(홈·물어보기·성장·마이)
-- 화면당 주요 행동 하나. 설명보다 여백
-- 색은 반드시 `theme.ts` 토큰으로 쓴다 — 화면에 hex 를 직접 적지 않는다. 경고·위험 신호는 `danger`·`dangerSoft` 에만
+- 흰 바탕 + **먹색 글자**(`text` #16161A) + 옅은 회색 면(`surface`)과 가는 선(`border`). 그림자는 쓰지 않는다
+- **붉은 말 색(`accent` #C64536)은 포인트에만** — D-day, 「기록 참고」 표시, 확인 단추, 현재 위치. 넓은 면을
+  칠하지 않는다. 주요 단추는 먹색(`ink`) 바탕에 흰 글자
+- 큰 제목(26~28, 굵게, 자간 -3%) · 짧은 한글 라벨. 탭은 한 단어(말콩 · 우리 아기 · 마이)
+- 글꼴은 **IBM Plex Sans KR** 400 · 500 · 600 · 700(`@expo-google-fonts/ibm-plex-sans-kr`, 굵기마다 파일
+  하나 — 패키지 첫 파일에서 가져오면 일곱 굵기가 다 번들에 들어가므로 굵기별 하위 경로에서 가져온다).
+  `ThemedText` 가 굵기에 맞는 글꼴을 고른다 — 화면에서 `fontFamily` 를 직접 적지 않는다
+- 답은 말풍선이 아니라 **문서처럼** — 질문은 굵은 한 줄, 답은 본문, 그 아래 수위·출처·기록 표시 한 줄
+- 색은 반드시 `theme.ts` 토큰으로 쓴다 — 화면에 hex 를 직접 적지 않는다. 경고·위험 신호는 `danger`·`dangerSoft`
+  에만. 위험 신호 카드는 색만이 아니라 **모양**(채운 경고 머리 · 119 단추)으로 포인트 색과 갈린다
 - 다크 모드는 토큰이 자동 처리 — light/dark 두 벌을 항상 같이 채운다
+- 누르는 자리는 44pt 이상, 주요 행동에는 가벼운 햅틱(`expo-haptics`)
 
-## 아이콘 — 아기자기함은 아이콘이 맡고, 레이아웃은 미니멀을 지킨다
+## 아이콘 — 브랜드는 말콩이 얼굴 하나, 나머지는 Ionicons
 
-- **탭·브랜드 아이콘 = 자체 베이비 아이콘 세트** (`src/components/baby-icons.tsx`, react-native-svg):
-  홈=아기 얼굴 · 물어보기=쪽쪽이 · 성장=딸랑이 · 마이=곰돌이 + 쪽쪽이 문 아기(생각 중·로딩).
-  규격 통일(24×24 · 선 1.8 · 끝 둥글게) — 세트감이 깨지면 안 되므로 새 아이콘도 이 규격으로 그린다.
-- **보조 UI 아이콘(셰브론·링크·전송 등)은 Ionicons 유지** (`@expo/vector-icons`, MIT). 다른 벡터
-  패밀리를 더 섞지 않는다.
-- 아기자기함의 자리는 아이콘·일러스트·모션까지다. 카드 레이아웃·여백·타이포는 토스식 미니멀을
-  유지한다 — 화면 전체를 캐릭터로 채우지 않는다.
+- **브랜드 표시 = 말콩이 얼굴**(쪽쪽이 문 아기, `MalkongMark` — `src/components/brand.tsx`). 머리 위, 생각 중,
+  빈 화면, 시작 화면, 런처 아이콘에 같은 얼굴을 쓴다
+- **탭 아이콘은 자체 베이비 세트**(`baby-icons.tsx`, 24×24 · 선 1.8 · 끝 둥글게) — 말콩=말풍선 속 쪽쪽이 ·
+  우리 아기=아기 얼굴 · 마이=곰돌이
+- **보조 UI 아이콘은 Ionicons**(`@expo/vector-icons`, MIT) — 외곽선. 다른 벡터 패밀리를 더 섞지 않는다
+- 붉은 말을 탄 아기(`RidingBabyIcon`)는 큰 로딩과 시작 화면의 모션으로만 쓴다
 - **런처 아이콘(홈 화면)은 브랜드 자산** — 1024×1024 원본 + Android adaptive icon 레이어(전경/배경)를
-  직접 만들어 `app.json` 에 넣는다. 자리는 `assets/images/android-icon-*.png`.
+  직접 만들어 `app.json` 에 넣는다. 자리는 `assets/images/`
 
 ## 로딩과 모션
 
 | 상황 | 방법 |
 |---|---|
 | 콘텐츠 로딩 (카드·리스트) | **스켈레톤** + shimmer (Reanimated) — 스피너를 깔지 않는다 (Toss 방식) |
-| 생각 중 (답변 대기) | **처리 현황 블록** (`thinking-status.tsx`, SPEC-ASK-05) — 대기 문구 3.2초 순환 + 접이식 생각 과정, selvas 통합 chat(neuro-frontend `packages/chat` ThinkingIndicator·ChatTrace) 이식. Orb 자리 = 쪽쪽이 문 아기 얼굴(`PacifierBabyIcon`) 맥동 |
-| 큰 로딩 (초기 구동·화면 단위) | **붉은 말을 탄 쪽쪽이 아기(나폴레옹 포즈) 브랜드 모션** — 말콩의 유래(말띠 해의 콩알이)가 모션이 됨. 말 색은 `horse` 토큰. 정식은 Lottie 자산 제작(`lottie-react-native`), 그 전 임시 = `baby-loading.tsx`(`RidingBabyIcon` 가로 질주 + 바운스). 미리보기는 마이 탭 하단(시안 전용) |
+| 생각 중 (답변 대기) | **처리 현황 블록** (`thinking-status.tsx`, SPEC-ASK-05) — 대기 문구 3.2초 순환 + 접이식 생각 과정, selvas 통합 chat(neuro-frontend `packages/chat` ThinkingIndicator·ChatTrace) 이식. Orb 자리 = 말콩이 얼굴(`MalkongMark`) 맥동 |
+| 큰 로딩 (초기 구동·화면 단위) | **붉은 말을 탄 쪽쪽이 아기(나폴레옹 포즈) 브랜드 모션** — 말콩의 유래(말띠 해의 콩알이)가 모션이 됨. 말 색은 `horse` 토큰. `baby-loading.tsx`(`RidingBabyIcon` 가로 질주 + 바운스) |
 | 짧은 차단 동작 (1초 미만) | 기본 ActivityIndicator |
-| 스플래시 | expo-splash-screen + AnimatedSplashOverlay (템플릿 그대로) |
+| 스플래시 | expo-splash-screen(흰 바탕 · 붉은 말 러너) → 글꼴과 기기 저장을 읽는 동안 같은 그림을 유지 → `AnimatedSplashOverlay` 가 흐리며 걷힌다 |
+| 빈 화면 | 말콩이 얼굴 + 한 줄 안내 + 할 수 있는 행동 하나(`EmptyState`) |
 | 화면 전환·미세 반응 | Reanimated |
 
 ## 광고 자리
 
-- **홈**: 아기 카드 → 「지금 챙길 것」 → **배너** → 나머지. 스크롤하지 않아도 보이되 첫인상과 핵심
-  카드보다 앞서지 않는다(SPEC-HOME-05). 바닥에 두면 탭바에 눌려 잘 보이지 않는다.
-- **성장**: 바닥에 둔다. 가로 타임라인이 화면을 채우는 것이 이 화면의 값이라, 위를 잘라내지 않는다.
-- **물어보기**: 두지 않는다. 대화 흐름을 끊고, 되묻기·답변 사이에 광고가 끼면 신뢰가 깎인다.
-- 광고를 없앤 사용자에게는 `AdBanner` 가 아무것도 그리지 않아 자리까지 사라진다(SPEC-MY-06).
+- **우리 아기 · 일정**: 아기 카드 → 「챙길 것」 → **배너** → 나머지. 스크롤하지 않아도 보이되 첫인상과 핵심
+  카드보다 앞서지 않는다(SPEC-HOME-05)
+- **우리 아기 · 성장**: 바닥에 둔다. 가로 타임라인이 화면을 채우는 것이 이 보기의 값이라, 위를 잘라내지 않는다(SPEC-GROW-04)
+- **말콩(대화)**: 두지 않는다. 대화 흐름을 끊고, 되묻기·답변 사이에 광고가 끼면 신뢰가 깎인다
+- 광고를 없앤 사용자에게는 `AdBanner` 가 아무것도 그리지 않아 자리까지 사라진다(SPEC-MY-06)
 
 ## 라우트 구조
 
 ```
-src/app/_layout.tsx        루트 Stack — 테마 · BabyProvider · 온보딩 게이트
-src/app/(tabs)/_layout.tsx 하단 탭 4개 (그룹이라 URL 에는 (tabs) 가 나타나지 않는다)
-src/app/(tabs)/*.tsx       홈 · 물어보기 · 성장 · 마이
-src/app/onboarding.tsx     탭 밖 전체 화면. `?edit=1` 이면 프로필 수정으로 쓰인다
+src/app/_layout.tsx          루트 Stack — 글꼴 · 테마 · 데이터 Provider · 온보딩 게이트
+src/app/(tabs)/_layout.tsx   하단 탭 3개 (그룹이라 URL 에는 (tabs) 가 나타나지 않는다)
+src/app/(tabs)/index.tsx     말콩 — 대화(첫 화면)
+src/app/(tabs)/baby.tsx      우리 아기 — 일정 · 성장 · 기록(`?view=`)
+src/app/(tabs)/my.tsx        마이
+src/app/briefings.tsx        지난 브리핑 보관함
+src/app/onboarding.tsx       탭 밖 전체 화면. `?edit=1` 이면 프로필 수정으로 쓰인다
+src/app/legal/[doc].tsx      약관·고지
 ```
 
 ## 코딩 스타일
 
 - `src/app/` 에는 화면(라우트)만. 부품은 `src/components/`, 훅은 `src/hooks/`, 데이터 모형은 `src/data/`
-- 텍스트는 `ThemedText`(type: title·subtitle·default·small·smallBold·code), 배경은 `ThemedView` 로 통일
+- 텍스트는 `ThemedText`(type: display·title·heading·default·body·small·caption·label), 배경은 `ThemedView` 로 통일.
+  카드·단추·칩·빈 화면 같은 공용 부품은 `src/components/ui/`
 - Expo API 는 기억으로 쓰지 않는다 — `package.json` 의 SDK 판을 확인하고 그 판의 문서를 본다 (루트 AGENTS.md)
 - 패키지 추가는 항상 `npx expo install` (SDK 호환 판을 잡아 준다). 설치 직후엔 서버 재시작
 - 끝났다고 하기 전에: `npx tsc --noEmit` + `npx expo lint` 통과
@@ -81,3 +96,4 @@ src/app/onboarding.tsx     탭 밖 전체 화면. `?edit=1` 이면 프로필 수
 ## changelog
 
 - 2026-09-30 최초 작성 — 스택 확정, NativeWind 미도입 결정, Skia 하이브리드 경로
+- 2026-10-03 시안 B 로 다시 짬 — 토큰·글꼴·아이콘·광고 자리·라우트(탭 셋) 갱신 (decisions/012, task common/009)

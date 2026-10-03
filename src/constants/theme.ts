@@ -1,64 +1,87 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * 시안 B 「단정한 비서」의 토큰 — 색 · 글꼴 · 간격 (app-design 「디자인 원칙」, decisions/012).
+ *
+ * 화면에 hex 를 직접 적지 않는다. 붉은 말 색(accent)은 포인트에만 쓰고, 주요 단추는 먹색(ink)이다.
+ * light/dark 두 벌을 언제나 같이 채운다.
  */
-
-import '@/global.css';
 
 import { Platform } from 'react-native';
 
 export const Colors = {
   light: {
-    text: '#191F28',
-    background: '#ffffff',
-    backgroundElement: '#F2F4F6',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#6B7684',
-    accent: '#3182F6',
-    accentSoft: '#E8F3FF',
-    horse: '#DE5A4B', // 붉은 말 — 말콩 브랜드 모티프 (말띠 해)
-    danger: '#F04452', // 위험 신호·오류 — 이 색은 경고에만 쓴다
-    dangerSoft: '#FFEEEE',
+    text: '#16161A',
+    textSecondary: '#5E5E69',
+    /** 장식·아이콘·자리 표시 글 — 본문 글자에는 쓰지 않는다(대비가 모자람) */
+    textTertiary: '#8A8A95',
+    background: '#FFFFFF',
+    /** 옅은 회색 면 — 입력창 · 칩 · 묶음 카드 */
+    surface: '#F4F4F6',
+    /** 눌렀을 때 · 골랐을 때 · 꺼진 단추 */
+    surfaceStrong: '#E9E9EE',
+    border: '#E8E8EC',
+    divider: '#F0F0F3',
+    /** 주요 단추 바탕 */
+    ink: '#16161A',
+    onInk: '#FFFFFF',
+    accent: '#C64536', // 붉은 말 — 말콩 브랜드 모티프 (말띠 해)
+    accentSoft: '#FCEBE8',
+    /** accentSoft 위의 글자 */
+    accentText: '#8F2E23',
+    horse: '#DE5A4B',
+    danger: '#D92D3F', // 위험 신호·오류 — 이 색은 경고에만 쓴다
+    dangerSoft: '#FDECEE',
+    onDanger: '#FFFFFF',
+    /** 시트 뒤를 덮는 막 */
+    scrim: 'rgba(22, 22, 26, 0.4)',
   },
   dark: {
-    text: '#ffffff',
-    background: '#101013',
-    backgroundElement: '#1E2124',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#8B95A1',
-    accent: '#4593FC',
-    accentSoft: '#152B45',
+    text: '#F4F4F6',
+    textSecondary: '#A0A0AB',
+    textTertiary: '#6E6E79',
+    background: '#0E0E11',
+    surface: '#1A1A1F',
+    surfaceStrong: '#26262D',
+    border: '#2A2A31',
+    divider: '#202026',
+    ink: '#F4F4F6',
+    onInk: '#16161A',
+    accent: '#E5705E',
+    accentSoft: '#3A1F1B',
+    accentText: '#F3A496',
     horse: '#E57365',
-    danger: '#F66570',
-    dangerSoft: '#3B1F23',
+    danger: '#F2606E',
+    dangerSoft: '#3B1D22',
+    onDanger: '#FFFFFF',
+    scrim: 'rgba(0, 0, 0, 0.6)',
   },
 } as const;
 
 export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
+export type Palette = { [K in ThemeColor]: string };
+
+/**
+ * IBM Plex Sans KR — 굵기마다 다른 파일이다. 안드로이드는 fontWeight 만으로 다른 파일을 찾지 못하므로
+ * ThemedText 가 굵기를 보고 여기서 이름을 고른다. 이름은 루트 `useFonts` 에 넘긴 열쇠와 같아야 한다.
+ */
+export const FontFamily = {
+  regular: 'IBMPlexSansKR_400Regular',
+  medium: 'IBMPlexSansKR_500Medium',
+  semibold: 'IBMPlexSansKR_600SemiBold',
+  bold: 'IBMPlexSansKR_700Bold',
+} as const;
+
+export function fontFor(weight: string | number | undefined): string {
+  const w = Number(weight === 'bold' ? 700 : weight === 'normal' || weight === undefined ? 400 : weight);
+  if (w >= 700) return FontFamily.bold;
+  if (w >= 600) return FontFamily.semibold;
+  if (w >= 500) return FontFamily.medium;
+  return FontFamily.regular;
+}
 
 export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
+  default: { mono: 'monospace' },
+  ios: { mono: 'ui-monospace' },
+  web: { mono: 'ui-monospace, Menlo, monospace' },
 });
 
 export const Spacing = {
@@ -71,5 +94,15 @@ export const Spacing = {
   six: 64,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+/** 화면 좌우 여백 */
+export const Gutter = 20;
+
+export const Radius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  pill: 999,
+} as const;
+
+export const MaxContentWidth = 640;

@@ -120,7 +120,7 @@ export function AnswerBubble({
     .filter((r): r is BabyRecord => !!r);
 
   return (
-    <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>
+    <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
       <ThemedText>{message.content}</ThemedText>
       {sources.length > 0 ? (
         <SourceList sources={sources} />
@@ -159,7 +159,7 @@ export function FollowupBubble({
   const colors = useColors();
   if (message.meta.type !== 'followup') return null;
   return (
-    <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>
+    <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
       <ThemedText>{message.content}</ThemedText>
       {open && (
         <>
@@ -192,7 +192,7 @@ export function RedflagCard({ message }: { message: MalkongMessage }) {
     <View style={[styles.bubble, styles.redflag, { backgroundColor: colors.dangerSoft, borderColor: colors.danger }]}>
       <View style={styles.redflagHead}>
         <Ionicons name="warning" size={18} color={colors.danger} />
-        <ThemedText type="smallBold" style={{ color: colors.danger }}>
+        <ThemedText type="label" style={{ color: colors.danger }}>
           바로 진료가 필요할 수 있어요
         </ThemedText>
       </View>
@@ -201,7 +201,7 @@ export function RedflagCard({ message }: { message: MalkongMessage }) {
         style={[styles.callButton, { backgroundColor: colors.danger }]}
         onPress={() => Linking.openURL('tel:119')}>
         <Ionicons name="call" size={16} color="#ffffff" />
-        <ThemedText type="smallBold" style={styles.callText}>
+        <ThemedText type="label" style={styles.callText}>
           119 전화하기
         </ThemedText>
       </Pressable>
@@ -213,7 +213,7 @@ export function RedflagCard({ message }: { message: MalkongMessage }) {
 export function ErrorBubble({ text, onRetry }: { text: string; onRetry: () => void }) {
   const colors = useColors();
   return (
-    <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>
+    <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
       <ThemedText>{text}</ThemedText>
       <Pressable
         style={[styles.chip, styles.retry, { backgroundColor: colors.accentSoft }]}
@@ -248,7 +248,7 @@ export function LimitBubble({
 }) {
   const colors = useColors();
   return (
-    <View style={[styles.bubble, { backgroundColor: colors.backgroundElement }]}>
+    <View style={[styles.bubble, { backgroundColor: colors.surface }]}>
       <ThemedText>
         오늘 우리 아기 기록을 반영한 정밀 답변{dailyLimit ? ` ${dailyLimit}회` : ''}를 다 썼어요.
         {onReward

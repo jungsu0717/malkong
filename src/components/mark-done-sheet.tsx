@@ -57,7 +57,7 @@ export function MarkDoneSheet({
             styles.sheet,
             { backgroundColor: colors.background, paddingBottom: Spacing.four + insets.bottom },
           ]}>
-          <ThemedText type="subtitle">{life ? '확인했나요?' : '완료했나요?'}</ThemedText>
+          <ThemedText type="title">{life ? '확인했나요?' : '완료했나요?'}</ThemedText>
           <ThemedText type="small" style={{ color: colors.textSecondary }}>
             {life
               ? '읽고 챙기기로 한 것만 남기고 골라 주세요'
@@ -72,7 +72,7 @@ export function MarkDoneSheet({
                   key={item.id}
                   accessibilityRole="checkbox"
                   accessibilityState={{ checked: on }}
-                  style={[styles.itemRow, { backgroundColor: colors.backgroundElement }]}
+                  style={[styles.itemRow, { backgroundColor: colors.surface }]}
                   onPress={() => toggle(item.id)}>
                   <Ionicons
                     name={on ? 'checkbox' : 'square-outline'}
@@ -93,7 +93,7 @@ export function MarkDoneSheet({
           <Pressable
             style={[
               styles.button,
-              { backgroundColor: chosen.length > 0 ? colors.accent : colors.backgroundSelected },
+              { backgroundColor: chosen.length > 0 ? colors.accent : colors.surfaceStrong },
             ]}
             disabled={chosen.length === 0}
             onPress={() => onConfirm(chosen)}>

@@ -1,40 +1,39 @@
 import { Tabs } from 'expo-router';
-import { useColorScheme } from 'react-native';
+import { Platform } from 'react-native';
 
-import { BabyFaceIcon, PacifierIcon, RattleIcon, TeddyIcon } from '@/components/baby-icons';
-import { Colors } from '@/constants/theme';
+import { BabyFaceIcon, ChatBubbleIcon, TeddyIcon } from '@/components/baby-icons';
+import { FontFamily } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
+/** 탭 셋 — 말콩(대화, 첫 화면) · 우리 아기 · 마이 (decisions/012) */
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
+  const c = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.accent,
-        tabBarInactiveTintColor: colors.textSecondary,
-        tabBarStyle: { backgroundColor: colors.background },
+        tabBarActiveTintColor: c.text,
+        tabBarInactiveTintColor: c.textSecondary,
+        tabBarLabelStyle: { fontFamily: FontFamily.medium, fontSize: 12 },
+        tabBarStyle: {
+          backgroundColor: c.background,
+          borderTopColor: c.divider,
+          ...(Platform.OS === 'web' ? { height: 64, paddingTop: 6 } : {}),
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: '홈',
+          title: '말콩',
+          tabBarIcon: ({ color, size }) => <ChatBubbleIcon size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="baby"
+        options={{
+          title: '우리 아기',
           tabBarIcon: ({ color, size }) => <BabyFaceIcon size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="ask"
-        options={{
-          title: '물어보기',
-          tabBarIcon: ({ color, size }) => <PacifierIcon size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="growth"
-        options={{
-          title: '성장',
-          tabBarIcon: ({ color, size }) => <RattleIcon size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -44,6 +43,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <TeddyIcon size={size} color={color} />,
         }}
       />
+      {/* 성장 타임라인은 growth/001 에서 「우리 아기」의 「성장」 보기로 옮긴다 — 그때까지 탭에서만 숨긴다 */}
+      <Tabs.Screen name="growth" options={{ href: null }} />
     </Tabs>
   );
 }

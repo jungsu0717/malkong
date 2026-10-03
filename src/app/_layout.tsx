@@ -1,10 +1,16 @@
+import { IBMPlexSansKR_400Regular } from '@expo-google-fonts/ibm-plex-sans-kr/400Regular';
+import { IBMPlexSansKR_500Medium } from '@expo-google-fonts/ibm-plex-sans-kr/500Medium';
+import { IBMPlexSansKR_600SemiBold } from '@expo-google-fonts/ibm-plex-sans-kr/600SemiBold';
+import { IBMPlexSansKR_700Bold } from '@expo-google-fonts/ibm-plex-sans-kr/700Bold';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { Colors, FontFamily } from '@/constants/theme';
 import { BabyProvider, useBaby } from '@/data/baby-context';
 import { ChatProvider } from '@/data/chat-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
@@ -36,29 +42,49 @@ function OnboardingGate() {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const c = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
+  // 글꼴을 읽는 동안은 시작 화면이 그대로 남는다 — 시스템 글꼴로 한 번 그렸다가 바뀌는 깜박임을 막는다.
+  // 읽지 못해도(오류) 시스템 글꼴로 연다
+  const [fontsLoaded, fontError] = useFonts({
+    [FontFamily.regular]: IBMPlexSansKR_400Regular,
+    [FontFamily.medium]: IBMPlexSansKR_500Medium,
+    [FontFamily.semibold]: IBMPlexSansKR_600SemiBold,
+    [FontFamily.bold]: IBMPlexSansKR_700Bold,
+  });
+  if (!fontsLoaded && !fontError) return null;
+
+  const base = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+  const theme = {
+    ...base,
+    colors: { ...base.colors, background: c.background, card: c.background, text: c.text, border: c.divider, primary: c.accent },
+  };
+  const header = {
+    headerShown: true,
+    headerShadowVisible: false,
+    headerTintColor: c.text,
+    headerTitleStyle: { fontFamily: FontFamily.semibold, fontSize: 17 },
+    headerBackButtonDisplayMode: 'minimal' as const,
+  };
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={theme}>
       <AnimatedSplashOverlay />
       <QueryClientProvider client={queryClient}>
         <EntitlementsProvider>
           <PreferencesProvider>
-          <BabyProvider>
-            <RecordsProvider>
-              <ChatProvider>
-                <OnboardingGate />
-                <Stack screenOptions={{ headerShown: false }}>
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-                  <Stack.Screen
-                    name="records"
-                    options={{ headerShown: true, title: '우리 아기 기록', headerBackTitle: '마이' }}
-                  />
-                  <Stack.Screen name="legal/[doc]" options={{ headerShown: true, headerBackTitle: '마이' }} />
-                </Stack>
-              </ChatProvider>
-            </RecordsProvider>
-          </BabyProvider>
+            <BabyProvider>
+              <RecordsProvider>
+                <ChatProvider>
+                  <OnboardingGate />
+                  <Stack screenOptions={{ headerShown: false }}>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+                    <Stack.Screen name="records" options={{ ...header, title: '우리 아기 기록' }} />
+                    <Stack.Screen name="legal/[doc]" options={header} />
+                  </Stack>
+                </ChatProvider>
+              </RecordsProvider>
+            </BabyProvider>
           </PreferencesProvider>
         </EntitlementsProvider>
       </QueryClientProvider>

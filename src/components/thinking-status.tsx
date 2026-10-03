@@ -88,7 +88,7 @@ export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
   const headerText = done ? `${doneCount}단계 확인했어요` : (label ?? WAITING_PHRASES[phraseIndex]);
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.backgroundElement }]}>
+    <View style={[styles.card, { backgroundColor: colors.surface }]}>
       <Pressable style={styles.headerRow} onPress={() => setOpen((o) => !o)}>
         <Animated.View
           style={[

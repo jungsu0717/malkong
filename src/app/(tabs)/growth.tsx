@@ -3,7 +3,6 @@ import { ScrollView, StyleSheet, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
-import { AskFab } from '@/components/ask-fab';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -14,8 +13,6 @@ import { buildTimeline, type L1Item, type L2Item } from '@/data/timeline';
 
 const COLUMN_WIDTH = 264;
 const COLUMN_STEP = COLUMN_WIDTH + Spacing.three;
-/** 바닥에 고정된 배너(최소 64) + 위아래 여백 — 플로팅 버튼을 이 위로 올려 광고를 가리지 않게 한다 */
-const AD_FOOTER_HEIGHT = 64 + Spacing.four * 2;
 
 /**
  * 성장 타임라인 — 0개월부터 가로로 흐르는 월령 시퀀스.
@@ -42,7 +39,7 @@ export default function GrowthScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
-          <ThemedText type="title">성장 타임라인</ThemedText>
+          <ThemedText type="display">성장 타임라인</ThemedText>
           <View style={styles.legend}>
             <View style={[styles.legendDot, { backgroundColor: colors.textSecondary }]} />
             <ThemedText type="small" style={{ color: colors.textSecondary }}>
@@ -79,7 +76,7 @@ export default function GrowthScreen() {
                 style={[
                   styles.column,
                   // 달마다 하나의 카드로 묶여 보이게 — 현재 월만 포인트 색으로 두드러진다
-                  { borderColor: isNow ? colors.accent : colors.backgroundElement },
+                  { borderColor: isNow ? colors.accent : colors.surface },
                   isFuture && styles.futureColumn,
                 ]}>
                 {/* 월 헤더 */}
@@ -87,10 +84,10 @@ export default function GrowthScreen() {
                   <View
                     style={[
                       styles.monthBadge,
-                      { backgroundColor: isNow ? colors.accent : colors.backgroundElement },
+                      { backgroundColor: isNow ? colors.accent : colors.surface },
                     ]}>
                     <ThemedText
-                      type="smallBold"
+                      type="label"
                       style={isNow ? styles.monthBadgeTextNow : undefined}>
                       {m.month}개월
                     </ThemedText>
@@ -101,10 +98,10 @@ export default function GrowthScreen() {
                     </ThemedText>
                   )}
                 </View>
-                {m.headline && <ThemedText type="subtitle">{m.headline}</ThemedText>}
+                {m.headline && <ThemedText type="title">{m.headline}</ThemedText>}
 
                 {/* L1 트랙 — 표준 지식 */}
-                <ThemedView type="backgroundElement" style={styles.layerCard}>
+                <ThemedView type="surface" style={styles.layerCard}>
                   <ThemedText type="small" style={{ color: colors.textSecondary }}>
                     표준
                   </ThemedText>
@@ -116,7 +113,7 @@ export default function GrowthScreen() {
                     m.l1.map((item: L1Item) => (
                       <View key={item.id} style={styles.itemRow}>
                         <View
-                          style={[styles.kindTag, { backgroundColor: colors.backgroundSelected }]}>
+                          style={[styles.kindTag, { backgroundColor: colors.surfaceStrong }]}>
                           <ThemedText type="small">{item.kind}</ThemedText>
                         </View>
                         <ThemedText type="small" style={styles.itemLabel}>
@@ -165,7 +162,6 @@ export default function GrowthScreen() {
           <AdBanner anchored />
         </View>
       </SafeAreaView>
-      <AskFab bottom={AD_FOOTER_HEIGHT + Spacing.three} />
     </ThemedView>
   );
 }

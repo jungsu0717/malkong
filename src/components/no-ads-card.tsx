@@ -39,8 +39,8 @@ export function NoAdsCard() {
 
   if (adsRemoved) {
     return (
-      <View style={[styles.card, { backgroundColor: colors.backgroundElement }]}>
-        <ThemedText type="subtitle">광고 없이 쓰는 중이에요</ThemedText>
+      <View style={[styles.card, { backgroundColor: colors.surface }]}>
+        <ThemedText type="title">광고 없이 쓰는 중이에요</ThemedText>
         <ThemedText type="small" style={{ color: colors.textSecondary }}>
           함께해 주셔서 고마워요
         </ThemedText>
@@ -70,8 +70,8 @@ export function NoAdsCard() {
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.backgroundElement }]}>
-      <ThemedText type="subtitle">광고 없이 쓰기</ThemedText>
+    <View style={[styles.card, { backgroundColor: colors.surface }]}>
+      <ThemedText type="title">광고 없이 쓰기</ThemedText>
       <ThemedText type="small" style={{ color: colors.textSecondary }}>
         한 번 결제하면 광고가 모두 사라져요. 질문 횟수와 답변은 그대로예요
       </ThemedText>
@@ -84,11 +84,11 @@ export function NoAdsCard() {
           <Pressable
             style={[
               styles.button,
-              { backgroundColor: offer && !busy ? colors.accent : colors.backgroundSelected },
+              { backgroundColor: offer && !busy ? colors.accent : colors.surfaceStrong },
             ]}
             disabled={!offer || busy}
             onPress={buy}>
-            <ThemedText type="smallBold" style={{ color: offer && !busy ? '#ffffff' : colors.textSecondary }}>
+            <ThemedText type="label" style={{ color: offer && !busy ? '#ffffff' : colors.textSecondary }}>
               {offer ? `${offer.price} 결제하기` : '가격을 불러오는 중…'}
             </ThemedText>
           </Pressable>
