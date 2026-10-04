@@ -57,7 +57,7 @@ export async function scheduleBriefing(time: string | null): Promise<void> {
     identifier: BRIEFING_ID,
     content: {
       title: '오늘의 브리핑',
-      body: '오늘 챙길 것을 버디가 정리해 뒀어요',
+      body: '버디가 오늘 안부와 챙길 것을 정리해 뒀어요',
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,

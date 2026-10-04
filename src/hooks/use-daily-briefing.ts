@@ -62,7 +62,7 @@ export function useDailyBriefing() {
     );
     made.current = today;
     if (exists) return;
-    const briefing = buildBriefing(baby, records, { scheduleOnly, day: today });
+    const briefing = buildBriefing(baby, records, messages, { scheduleOnly, day: today });
     const createdAt = new Date().toISOString();
     void append({
       id: newMessageId(),

@@ -7,7 +7,7 @@
  */
 
 import type { AnswerLevel, Followup, Source } from './api';
-import type { BriefingItem } from './briefing';
+import type { Briefing } from './briefing';
 import { ageFrom } from './baby';
 import { insertChatRow, readChatRows, updateChatMetaRow } from './db';
 
@@ -48,14 +48,10 @@ export type MalkongMeta =
       trace: TraceStep[];
     }
   | { type: 'redflag'; questionId: string; sources: Source[] }
-  | {
-      /** 아침 브리핑 — 그날 처음 열면 버디가 먼저 건넨다(SPEC-HOME-06). 질문 없이 생긴다 */
+  | ({
+      /** 데일리 브리핑 — 그날 처음 열면 버디가 먼저 건넨다(SPEC-HOME-06). 질문 없이 생긴다. 안부에 답하면 answer 가 채워진다 */
       type: 'briefing';
-      day: string;
-      greeting: string;
-      headline: string;
-      items: BriefingItem[];
-    };
+    } & Briefing);
 
 export type MalkongMessage = {
   id: string;

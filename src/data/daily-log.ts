@@ -62,6 +62,22 @@ export const DAILY_LOGS: LogDef[] = [
   },
 ];
 
+/** 체온 — 하루 기록 넷에는 없고, 열 안부가 있는 날 「기록하면 좋을 것」으로만 묻는다(SPEC-HOME-06 ④) */
+export const TEMPERATURE_ASK: QuickAsk = {
+  title: '지금 체온은요?',
+  hint: '잰 그대로 적어 두면 버디가 열의 흐름을 보고 답해요',
+  unit: '도',
+  placeholder: '37.5',
+  options: ['36.5', '37', '37.5', '38', '38.5'],
+  label: (v, today) => `${md(today)} 체온 ${v}도`,
+};
+
+/** 브리핑의 「기록하면 좋을 것」이 여는 질문 */
+export function suggestAsk(key: 'temperature' | 'feed-total' | 'note'): QuickAsk {
+  if (key === 'temperature') return TEMPERATURE_ASK;
+  return DAILY_LOGS.find((d) => d.key === key)!;
+}
+
 /** 이 하루 기록의 가장 최근 것 — 없으면 null */
 export function latestLog(def: LogDef, records: BabyRecord[]): BabyRecord | null {
   let latest: BabyRecord | null = null;

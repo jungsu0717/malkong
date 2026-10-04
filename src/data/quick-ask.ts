@@ -10,7 +10,7 @@ export type QuickAsk = {
   /** 머리 아래 한 줄 — 왜 묻는지, 어떻게 적으면 되는지 */
   hint: string;
   /** 숫자로 받을 때의 단위 — 없으면 고르거나 글로 적는다 */
-  unit: 'ml' | '시간' | 'kg' | 'cm' | null;
+  unit: 'ml' | '시간' | 'kg' | 'cm' | '도' | null;
   placeholder: string;
   /** 눌러서 고르는 답 — 숫자면 값만(「3」), 글이면 그대로 기록에 들어갈 말 */
   options: string[];

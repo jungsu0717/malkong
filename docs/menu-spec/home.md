@@ -122,13 +122,23 @@
   오른다. 마감이 없어 놓침으로 묻지 않고, 줄 이름은 「안전한 잠 5가지」처럼 분류와 개수, 단추는 「확인」이다.
   같은 상태면 접종·검진이 먼저 나온다. 마이 「설정」의 스위치를 끄면 접종·검진만 보인다
   (settings `todo_schedule_only`, `src/data/preferences-context.tsx`).
-- 브리핑(task home/004): `src/hooks/use-daily-briefing.ts` 가 그날 첫 화면에서 `src/data/briefing.ts` 의
-  `buildBriefing()` 으로 만들어 `chat_message` 에 `meta.type = 'briefing'` 으로 넣는다(모델을 부르지 않는다).
-  했는지는 볼 때마다 기록(covers)으로 다시 센다. 대화 속 요약은 `src/components/briefing-card.tsx` 의 `BriefingSummary` —
+- 브리핑(task home/004 · 008): `src/hooks/use-daily-briefing.ts` 가 그날 첫 화면에서 `src/data/briefing.ts` 의
+  `buildBriefing(아기, 기록, 대화)` 으로 만들어 `chat_message` 에 `meta.type = 'briefing'` 으로 넣는다(모델을 부르지 않는다).
+  안부는 `src/data/care-signals.ts` — 어제 0시부터의 내 말과 기록 문구에서 신호(열 · 게움 · 덜 먹음 · 변 · 기침 · 보챔 · 밤잠, 그리고
+  어제 완료를 알린 접종)를 정규식으로 찾고, 신호마다 가장 최근 말에 「내렸 · 괜찮 · 나아 …」가 있으면 끝난 일로 본다.
+  아기 안부는 우선순위(열 > 게움 > 접종 > 덜 먹음 > 변 > 기침)로 하나, 칩 둘~셋(좋아짐 · 그대로 · 아직 모름) — 칩마다 남길 기록
+  (「10월 5일 발열: 내렸어요」, 머리말이 신호 규칙에 걸려 다음 날 끝난 일로 셀 수 있게)과 걱정되는 답이면 입력창에 담을 말.
+  위험 신호 L1(열: 3개월 미만 `k-warn-0001` · 그 뒤 `k-warn-0002`, 게움 `k-warn-0006`, 변 `k-warn-0008`)을 출처와 함께 붙인다.
+  부모 안부는 보챔 · 밤잠이면 잠을, 신호가 없고 아기 안부도 없는 날은 태어난 날부터 센 날이 7로 나눠 1 · 4일 때 끼니 · 컨디션을
+  번갈아 묻고, 칩마다 버디의 한 마디(기록하지 않음). 답하는 흐름은 `src/hooks/use-briefing-answer.ts`.
+  오늘 챙기면 좋을 것은 그 월령의 수유 · 수면 · 생활 · 안전 L1 가운데 확인하지 않은 것을 태어난 날 수로 돌려 둘(최근 브리핑 셋의
+  팁은 다른 게 있으면 피함, 「접종·검진만 보기」면 없음). 기록하면 좋을 것은 열 · 접종 · 기침 → 체온(`TEMPERATURE_ASK`),
+  게움 · 덜 먹음 → 어제 총 수유량, 변 → 특이사항. 이번 주 일정은 일~토에 무렵인 접종 · 검진 가운데 안 한 것.
+  했는지는 볼 때마다 기록(covers)으로 다시 센다. 2026-10-04 전 브리핑의 챙길 것 목록(items)은 그대로 그린다. 대화 속 요약은 `src/components/briefing-card.tsx` 의 `BriefingSummary` —
   「확인하러 가기」는 일정 탭의 그날(`scheduleDayHref()`)로 가고 알림함의 그날 줄을 읽음으로 한다. 자세한 카드
   (`BriefingCard`)는 일정 탭 고른 날에. 하루 기록은 우리 아기 탭(baby.md HOW, task baby/003). 알림은 `src/data/notifications.ts`
-  (expo-notifications 로컬, 매일, 식별자 `morning-briefing`) — 시각은 settings `briefing_time`(`HH:MM` · `off`, 없으면 08:00),
-  앱을 열 때마다 다시 건다
+  (expo-notifications 로컬, 매일, 식별자 `morning-briefing`, 글은 「버디가 오늘 안부와 챙길 것을 정리해 뒀어요」 — 아기 정보 없음)
+  — 시각은 settings `briefing_time`(`HH:MM` · `off`, 없으면 08:00), 앱을 열 때마다 다시 건다
 - 알림함(task home/007): 저장은 기기 `inbox_card`(`db.ts` · 웹은 `db.web.ts` localStorage), 모양은 `src/data/inbox.ts`,
   화면들이 함께 보는 자리는 `inbox-context.tsx`(새것부터 · 읽지 않은 수 · 넣기 · 읽음 · 그날 읽음). 데일리 브리핑을 만들 때
   `daily-<날짜>` 줄(요약은 `briefingSummary()`), 기록 요청이 저절로 뜰 때 `nudge-<물을 날>` 줄(카드를 닫으면 읽음 — 카드를 끄고
