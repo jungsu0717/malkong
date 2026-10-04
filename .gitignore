@@ -55,3 +55,4 @@ __pycache__/
 # 홍보 만화 — 릴스 중간 장면과 mp4 는 ./render.sh reel 로 다시 만든다(용량이 커서 git 에 안 넣음)
 marketing/toon/reel/
 marketing/toon/out/*.mp4
+marketing/toon/out/한눈에.png
