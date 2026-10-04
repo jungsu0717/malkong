@@ -6,7 +6,7 @@
 ## 지금 상태 (2026-10-04)
 
 - **앱**: 시안 B 「단정한 비서」([decisions/012](docs/decisions/012-chat-first-three-tabs.md)), 탭 넷 —
-  **버디**(첫 화면 · 데일리 브리핑(아기 안부 · 부모 안부 · 오늘 챙길 것) · 알림함 · 진짜 답 · 되묻기와 기록 · 위험 신호 · 피드백 · 하루 한도) ·
+  **버디**(첫 화면 · 데일리 브리핑(아기 안부 · 부모 안부 · 오늘 챙길 것) · 알림함 · 진짜 답 · 질문마다 다른 처리 현황 · 되묻기와 기록 · 위험 신호 · 피드백 · 하루 한도) ·
   **우리 아기**(3D 지식 지도 · 버디가 아는 정도와 단계 · 한눈에 보는 프로필 · 하루 기록 · 그 자리에서 알려 주기 · 함께 쌓아 온 것) ·
   **일정**(달력 · 고른 날의 브리핑 · 챙길 것 여정 그래픽 · 주간 · 월간 브리핑, [decisions/017](docs/decisions/017-schedule-tab-and-inbox.md)) ·
   **마이**(알림 시각 · 기록 요청 알림과 카드 · 설정 · 광고 없이 쓰기 · 약관 초안).
@@ -17,35 +17,50 @@
 - **지식(L1)**: 승인된 77건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호·부모 돌봄(미국 CDC)
 - **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 하루 한도, 재시도 안전,
   피드백, 보상형 광고 확인(SSV). Cloud Run 에 새 판(revision 00007, 2026-10-04 — **Gemini 유료**: 기록을 보내고 되묻는다 · 모델 회사가 거절하면 곧바로 503)이 올라가 있다 — 하루 한도는 아직
-  메모리에 세어서 서버가 다시 시작되면 0 으로 돌아간다(Neon 을 붙이면 풀린다)
+  메모리에 세어서 서버가 다시 시작되면 0 으로 돌아간다(Neon 을 붙이면 풀린다).
+  **배포 안 된 서버 변경**: 부모 돌봄 L1 넷 · 검색 분류어 「부모」([common/013](docs/task/common/013-parent-care-l1.md)) — 커밋만 됐고 Julian 승인 뒤 배포
 - 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점 (2026-10-03 저녁)
+## 다음 시작점 (2026-10-04)
 
 1. **Julian 이 아이폰(Expo Go)으로 며칠 써 본다** — 답 · 안부 브리핑 · 일정 탭 · 알림함 · 지식 지도 · 디자인에서 걸리는 것을 모은다.
-   안부 문구(`src/data/care-signals.ts`) 검토는 나중에(Julian)
-2. ~~Gemini 유료 전환~~ — 2026-10-03 완료(Malkong 프로젝트 키, 월 한도 1만 원 — 처음엔 10원으로 잘못 넣어 10-04 에 모든 질문이 거절됐다). 이제 기록을 보내고 되묻는다
-3. Claude 몫: 써 본 피드백 반영 → 답변 완성도 다듬기(위험 신호 — Julian 승인) → 스토어 등록 준비(스크린샷 · 소개 문구는
+   웹으로는 못 본 것: 기록이 사흘 비었을 때 저녁 8시 알림과 그 알림을 누르면 뜨는 카드 · 일정 탭 여정 그래픽의 움직임과 가로 넘기기 ·
+   시트를 열었을 때 키보드. 안부 문구(`src/data/care-signals.ts`) 검토는 나중에(Julian)
+2. **서버 배포는 Julian 이 「올려」 할 때만** — 지금 쌓인 것은 위 「배포 안 된 서버 변경」. 다음 서버 작업과 함께 올려도 된다
+3. **Julian 이 고를 다음 후보** — 서버가 진행 단계를 실시간으로 보내기(SSE, 배포 필요 · 모델 비용 그대로,
+   [ask/007](docs/task/ask/007-question-aware-trace.md) 「정한 것」 4) · 수면 · 수유 · 울음 · 변 같은 일상 주제 L1 늘리기(항목마다 Julian 승인)
+4. Claude 몫: 써 본 피드백 반영 → 답변 완성도 다듬기(위험 신호 — Julian 승인) → 스토어 등록 준비(스크린샷 · 소개 문구는
    [product-brief](docs/product/product-brief.md) · 개인정보 처리방침 웹 주소)
-4. 출시 전 Julian 몫(계정·결제·법률): Apple 개발자($99) → 개발 빌드로 아이콘·광고·결제 확인 → Neon · AdMob · 스토어 계정 ·
+5. 출시 전 Julian 몫(계정·결제·법률): Apple 개발자($99) → 개발 빌드로 아이콘·광고·결제 확인 → Neon · AdMob · 스토어 계정 ·
    RevenueCat · 약관 정보 → 「육아버디」 상표 출원(변리사) · 주소(선택). 목록은
    [common/008](docs/task/common/008-first-release-check.md) · [common/011](docs/task/common/011-rename-yugabuddy.md)
 
 ## 다른 PC 에서 시작하기
 
-Claude Code 의 메모리는 PC 마다 따로라서, 이어받는 기준은 이 README 와 `docs/task/` 다.
-명령어는 [AGENTS.md](AGENTS.md)(앱)와 [server/AGENTS.md](server/AGENTS.md)(서버)에 있다. 아래는 git 에 없어서
-PC 마다 새로 준비해야 하는 것만 적는다.
+Claude Code 의 메모리는 PC 마다 따로라서, 이어받는 기준은 이 README 와 `docs/task/` 다. Julian 과 일하는 방식도
+메모리가 아니라 [AGENTS.md](AGENTS.md) 「Julian 과 일하는 방식」에 둔다. 명령어는 AGENTS.md(앱)와
+[server/AGENTS.md](server/AGENTS.md)(서버)에 있다. 아래는 git 에 없어서 PC 마다 새로 준비해야 하는 것만 적는다.
+새 PC 의 Claude 에게는 "README 다른 PC 에서 시작하기대로 준비해 줘" 라고 하면 된다.
 
-- **git 계정**: 이 repo 는 개인 계정(jungsu0717)으로만 커밋한다. 회사 계정과 섞이지 않게 **repo 로컬 설정**으로
-  `user.name=jungsu0717`, `user.email=6903839+jungsu0717@users.noreply.github.com` 을 둔다.
-  인증도 repo 로컬 `credential.helper` 로 개인 계정 것을 쓰고, 전역 설정은 건드리지 않는다
-- **앱**: Node 를 설치하고 `npm install`
+- **코드 받기**: GitHub CLI(`gh`)를 깔고 `gh auth login`(개인 계정 jungsu0717, Julian 이 직접) →
+  `gh repo clone jungsu0717/malkong`. 이미 받아 둔 PC 면 repo 안에서 `git pull`
+- **git 계정**: 이 repo 는 개인 계정(jungsu0717)으로만 커밋한다. 회사 계정과 섞이지 않게 **repo 로컬 설정**만 쓰고
+  전역 설정은 건드리지 않는다. 받은 repo 안에서:
+  ```bash
+  git config --local user.name jungsu0717
+  git config --local user.email 6903839+jungsu0717@users.noreply.github.com
+  git config --local --add credential.https://github.com.helper ''
+  git config --local --add credential.https://github.com.helper '!gh auth git-credential'
+  ```
+  (빈 helper 줄이 키체인에 남은 다른 계정 자격을 먼저 끊는다)
+- **앱**: Node 22.13 이상을 설치하고 `npm install` (22.8 은 경고가 뜨지만 돈다). 앱은 기본으로 배포된 Cloud Run 서버에
+  묻기 때문에 앱만 고칠 때는 키도 서버도 필요 없다
 - **서버**: uv 를 설치하고 `server/` 에서 `uv sync` (Python 3.13 은 uv 가 받는다)
-- **Gemini 키**: git 에 없다. https://aistudio.google.com/apikey 의 「Default Gemini Project」(결제가 연결되지 않은
-  프로젝트)에서 키를 만들거나 복사해 `server/.env` 에 `MALKONG_GEMINI_API_KEY=...` 한 줄로 둔다.
-  `malkong` 프로젝트의 키는 선불 등급이 되어 402 로 막힌다
+- **Gemini 키(서버를 로컬에서 돌릴 때만)**: git 에 없다. https://aistudio.google.com/apikey 의 「Default Gemini Project」
+  무료 키를 `server/.env` 에 `MALKONG_GEMINI_API_KEY=...` 한 줄로 둔다(Julian 이 직접). 무료 키라
+  `MALKONG_LLM_PAID_TIER` 는 켜지 않는다 — 아기 기록이 안 간다. 유료 키(Malkong 프로젝트, 월 한도 1만 원)는
+  Cloud Run 비밀값에만 있고 Julian 이 관리한다([server/AGENTS.md](server/AGENTS.md) 배포 절)
 - **배포할 때만**: gcloud CLI 설치 → `gcloud auth login`(개인 구글 계정) → `gcloud config set project malkong`
 
 ## 핵심 개념
