@@ -45,7 +45,8 @@ export function TodoRow({
       title={todo.label}
       detail={done ? `${verb}했어요` : when.text}
       muted={done}
-      onPress={done ? undefined : onPick}
+      // 단추가 있는 줄은 단추만 누른다 — 줄 전체까지 누르게 하면 웹에서 단추 안에 단추가 된다
+      onPress={done || when.dday === null ? undefined : onPick}
       right={
         done ? null : when.dday !== null ? (
           <ThemedText type="label" style={{ color: c.accentText, fontWeight: 700 }}>

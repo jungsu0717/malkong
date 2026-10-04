@@ -222,8 +222,8 @@ export default function BabyScreen() {
                 value={factValue(profile, 'night') ?? factValue(profile, 'nap')}
                 onAsk={() => askFirst('night', 'nap')}
               />
-              <Tile icon="medkit-outline" label="예방접종" value={vaccines ? `${vaccines} 완료` : null} ratio={vaccines} onAsk={() => router.navigate('/growth')} askLabel="성장 탭에서" />
-              <Tile icon="clipboard-outline" label="영유아 검진" value={checkups ? `${checkups} 완료` : null} ratio={checkups} onAsk={() => router.navigate('/growth')} askLabel="성장 탭에서" />
+              <Tile icon="medkit-outline" label="예방접종" value={vaccines ? `${vaccines} 완료` : null} ratio={vaccines} onAsk={() => router.navigate('/schedule')} askLabel="일정 탭에서" />
+              <Tile icon="clipboard-outline" label="영유아 검진" value={checkups ? `${checkups} 완료` : null} ratio={checkups} onAsk={() => router.navigate('/schedule')} askLabel="일정 탭에서" />
             </View>
           </View>
 

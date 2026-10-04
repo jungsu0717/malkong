@@ -22,7 +22,7 @@ export type Fact = {
   value: string | null;
   /** 알려 주면 좋아지는 것 — SPEC-BABY-04 */
   benefit: string;
-  /** 그 자리에서 묻는 질문(task baby/002). 표준 완료 비율 사실은 없다(완료는 성장 탭에서) */
+  /** 그 자리에서 묻는 질문(task baby/002). 표준 완료 비율 사실은 없다(완료는 일정 탭에서) */
   ask: QuickAsk | null;
   /** 아는 값의 기록 — 고칠 때 그 기록을 바꾼다 */
   record: BabyRecord | null;

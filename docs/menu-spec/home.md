@@ -106,22 +106,18 @@
 
 ## HOW (현재 구현)
 
-- 화면: 「성장」 탭(`src/app/(tabs)/growth.tsx`) — 머리에 「성장」과 태어난 지 N일 · 만 N개월 · 월 한 줄,
-  「이번 달」 보기(`src/components/baby/schedule-view.tsx`)에 챙길 것 → 배너 → 발달 포인트 → 고지.
-  줄 모양은 브리핑과 같은 `src/components/todo-row.tsx`(다가오는 것은 D-day, 지금·놓친 것은 단추).
-  월령·일수·이번 달 발달 포인트는 저장된 생일에서 계산한 값으로
-  나오고(`useBaby()`), 추천은 `src/data/timeline.ts` 의 `getGaps(월령)`(covers 차집합)을
-  `groupGaps()` 로 묶어 만든다. 묶음 키는 상태(놓침·지금·다음 달)·시작 월·분류이고, 같은 차수끼리
-  이름을 이어 붙인다(「DTaP·폴리오·Hib·폐렴구균·로타바이러스 1차」).
+- 화면: 「일정」 탭(`src/app/(tabs)/schedule.tsx`, growth.md HOW) — 머리에 태어난 지 N일 · 만 N개월 · 월 한 줄(SPEC-HOME-01),
+  달력 · 고른 날 · 챙길 것 여정이 챙길 것(SPEC-HOME-02)을 보인다. 줄 모양은 브리핑과 같은 `src/components/todo-row.tsx`
+  (다가오는 것은 D-day, 지금·놓친 것은 단추 — 단추가 있는 줄은 단추만 누른다).
+  추천은 `src/data/timeline.ts` 의 `getGaps(월령)`(covers 차집합)을 `groupGaps()` 로 묶어 만든다. 묶음 키는 상태(놓침·지금·다음 달)·
+  시작 월·분류이고, 같은 차수끼리 이름을 이어 붙인다(「DTaP·폴리오·Hib·폐렴구균·로타바이러스 1차」).
   표준(L1)은 승인된 지식베이스(접종·검진, 2026-10-01~), 기록(L2)은 기기에 저장된 것이다
   (`src/data/records.ts` · `records-context.tsx`, task/home/001).
-- 이번 달 발달 포인트: 그 월령의 `발달` 항목 제목 — 이정표 요약과 조기 상담 안내(`k-dev-0202`) 두 줄.
-  첫 이정표보다 어리면(CDC 첫 체크리스트가 2개월) 「첫 발달 이정표는 2개월이에요」.
+- 발달 포인트(SPEC-HOME-03)는 월간 브리핑으로 옮긴다(task home/009). 첫 이정표보다 어리면 「첫 발달 이정표는 2개월이에요」.
 - 완료 알림: 줄을 누르면 `src/components/mark-done-sheet.tsx` 가 항목을 모두 고른 채 열린다(흐름은
-  `src/hooks/use-mark-done.tsx` — 브리핑과 성장 탭이 같이 쓴다).
+  `src/hooks/use-mark-done.tsx` — 브리핑함과 일정 탭이 같이 쓴다).
   저장하면 `기록` 하나가 생기고(`covers` = 고른 항목 id, `whenLabel` = "D+N에 알림") 카드 위에
   「…로 기록했어요 · 되돌리기」가 뜬다. 되돌리기는 그 기록을 지운다.
-- 광고: `src/components/ad-banner.tsx` placeholder.
 - 생활 항목(task home/003): 생활·수유·수면·안전 분류의 L1 이 기간 안이거나 다음 달에 시작하면 「챙길 것」에
   오른다. 마감이 없어 놓침으로 묻지 않고, 줄 이름은 「안전한 잠 5가지」처럼 분류와 개수, 단추는 「확인」이다.
   같은 상태면 접종·검진이 먼저 나온다. 마이 「설정」의 스위치를 끄면 접종·검진만 보인다

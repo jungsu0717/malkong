@@ -2,7 +2,7 @@ import type { ColorValue } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 // 베이비 아이콘 세트 — 탭·브랜드용 자체 아이콘 (정본: docs/app-design 아이콘 절)
-// 탭: 버디=말풍선 속 쪽쪽이 · 우리 아기=아기 얼굴 · 성장=딸랑이 · 마이=곰돌이. 캐릭터 버디는 그림(brand.tsx)
+// 탭: 버디=말풍선 속 쪽쪽이 · 우리 아기=아기 얼굴 · 일정=달력 · 마이=곰돌이. 캐릭터 버디는 그림(brand.tsx)
 // 큰 로딩(baby-loading.tsx)은 소품 넷 — 쪽쪽이 · 젖병 · 딸랑이 · 곰돌이 — 을 차례로 보인다
 // 24x24 · 선 1.8 · 끝 둥글게. 네 개가 한 세트로 보이도록 규격을 통일한다.
 // 보조 UI 아이콘(셰브론·링크·전송 등)은 그대로 Ionicons 를 쓴다.
@@ -36,6 +36,23 @@ export function ChatBubbleIcon({ size = 24, color }: IconProps) {
       />
       <Circle cx={12} cy={10.5} r={2.3} stroke={color} {...thin} />
       <Circle cx={12} cy={10.5} r={0.6} fill={color} />
+    </Svg>
+  );
+}
+
+/** 일정 탭 — 달력 (고리 둘 · 머리 줄 · 표시한 날 하나) */
+export function CalendarIcon({ size = 24, color }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 5.2 H18 Q20.4 5.2 20.4 7.6 V18 Q20.4 20.4 18 20.4 H6 Q3.6 20.4 3.6 18 V7.6 Q3.6 5.2 6 5.2 Z"
+        stroke={color}
+        {...stroke}
+      />
+      <Path d="M3.8 9.8 H20.2" stroke={color} {...thin} />
+      <Path d="M8.2 3.2 V6.8" stroke={color} {...stroke} />
+      <Path d="M15.8 3.2 V6.8" stroke={color} {...stroke} />
+      <Circle cx={15.3} cy={15.3} r={1.5} fill={color} />
     </Svg>
   );
 }
