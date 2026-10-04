@@ -11,10 +11,10 @@
   **일정**(달력 · 고른 날의 브리핑 · 챙길 것 여정 그래픽 · 주간 · 월간 브리핑, [decisions/017](docs/decisions/017-schedule-tab-and-inbox.md)) ·
   **마이**(알림 시각 · 기록 요청 알림과 카드 · 설정 · 광고 없이 쓰기 · 약관 초안).
   하루 기록이 사흘째 비면 적을 카드와 저녁 알림 한 번([decisions/016](docs/decisions/016-daily-log-out-of-briefing.md)).
-  브리핑은 기기 안 규칙과 문구 틀로 만든다([decisions/018](docs/decisions/018-daily-care-briefing.md)). 부모 돌봄 L1 넷은 승인 대기(draft).
+  브리핑은 기기 안 규칙과 문구 틀로 만든다([decisions/018](docs/decisions/018-daily-care-briefing.md)). 부모 돌봄 L1 넷 승인(2026-10-04).
   온보딩은 생일 → 브리핑 알림 시각. 광고(AdMob 배너·보상형), 캐릭터 버디 아이콘
 - **Expo 계정** `@julian-malkong/malkong` 연결, 앱 식별자 `kr.malkong.app`. Julian 아이폰(Expo Go)으로 볼 수 있다
-- **지식(L1)**: 승인된 73건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호(미국 CDC)
+- **지식(L1)**: 승인된 77건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호·부모 돌봄(미국 CDC)
 - **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 하루 한도, 재시도 안전,
   피드백, 보상형 광고 확인(SSV). Cloud Run 에 새 판(revision 00007, 2026-10-04 — **Gemini 유료**: 기록을 보내고 되묻는다 · 모델 회사가 거절하면 곧바로 503)이 올라가 있다 — 하루 한도는 아직
   메모리에 세어서 서버가 다시 시작되면 0 으로 돌아간다(Neon 을 붙이면 풀린다)
@@ -24,7 +24,7 @@
 ## 다음 시작점 (2026-10-03 저녁)
 
 1. **Julian 이 아이폰(Expo Go)으로 며칠 써 본다** — 답 · 안부 브리핑 · 일정 탭 · 알림함 · 지식 지도 · 디자인에서 걸리는 것을 모은다.
-   안부 문구(`src/data/care-signals.ts`)와 부모 돌봄 L1 초안([common/013](docs/task/common/013-parent-care-l1.md)) 검토 · 승인
+   안부 문구(`src/data/care-signals.ts`) 검토는 나중에(Julian)
 2. ~~Gemini 유료 전환~~ — 2026-10-03 완료(Malkong 프로젝트 키, 월 한도 1만 원 — 처음엔 10원으로 잘못 넣어 10-04 에 모든 질문이 거절됐다). 이제 기록을 보내고 되묻는다
 3. Claude 몫: 써 본 피드백 반영 → 답변 완성도 다듬기(위험 신호 — Julian 승인) → 스토어 등록 준비(스크린샷 · 소개 문구는
    [product-brief](docs/product/product-brief.md) · 개인정보 처리방침 웹 주소)
