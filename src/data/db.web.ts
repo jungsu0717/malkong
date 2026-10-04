@@ -8,6 +8,7 @@
 
 import type { Baby } from './baby';
 import type { ChatMessage } from './chat';
+import type { InboxCard } from './inbox';
 import type { BabyRecord } from './records';
 
 const KEY = 'malkong.baby';
@@ -116,4 +117,34 @@ export async function updateChatMetaRow(id: string, meta: ChatMessage['meta']): 
   } catch {
     // 위와 같다
   }
+}
+
+const INBOX_KEY = 'malkong.inbox';
+
+export async function readInboxRows(): Promise<InboxCard[]> {
+  try {
+    const raw = globalThis.localStorage?.getItem(INBOX_KEY);
+    return raw ? (JSON.parse(raw) as InboxCard[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeInboxRows(cards: InboxCard[]): void {
+  try {
+    globalThis.localStorage?.setItem(INBOX_KEY, JSON.stringify(cards));
+  } catch {
+    // 저장이 막힌 브라우저에서도 화면은 그대로 동작해야 한다 (이번 실행에만 유지된다)
+  }
+}
+
+export async function insertInboxRow(card: InboxCard): Promise<void> {
+  const cards = await readInboxRows();
+  if (cards.some((c) => c.id === card.id)) return;
+  writeInboxRows([...cards, card]);
+}
+
+export async function markInboxReadRows(ids: string[], at: string): Promise<void> {
+  const wanted = new Set(ids);
+  writeInboxRows((await readInboxRows()).map((c) => (wanted.has(c.id) && !c.readAt ? { ...c, readAt: at } : c)));
 }

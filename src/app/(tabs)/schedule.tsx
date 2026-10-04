@@ -17,6 +17,7 @@ import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { dayKey, type MalkongMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
+import { useInbox } from '@/data/inbox-context';
 import { useRecords } from '@/data/records-context';
 import { coveredIds, dayIndex, fromDayKey, sameDay } from '@/data/schedule';
 import { headlineOf } from '@/data/timeline';
@@ -41,12 +42,21 @@ export default function ScheduleScreen() {
   const [today, setToday] = useState(() => new Date());
   const [selected, setSelected] = useState(() => (day && fromDayKey(day)) || new Date());
   const [replay, setReplay] = useState(0);
+  const { markDayRead } = useInbox();
+  const selectedKey = dayKey(selected.toISOString());
 
   useFocusEffect(
     useCallback(() => {
       setToday(new Date());
       setReplay((r) => r + 1);
     }, []),
+  );
+
+  // 그날을 보면 알림함의 그날 브리핑은 읽은 것(SPEC-HOME-07 읽음)
+  useFocusEffect(
+    useCallback(() => {
+      void markDayRead(selectedKey);
+    }, [markDayRead, selectedKey]),
   );
 
   // 다른 화면에서 날을 정해 넘어오면 그날로 — 그리는 중에 맞춘다

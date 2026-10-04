@@ -70,7 +70,7 @@
 - **일정**: 맨 아래, 챙길 것 여정 뒤(`AdBanner`). 달력 · 고른 날 · 여정보다 앞서지 않는다(SPEC-GROW-04 · SPEC-HOME-05)
 - **버디(대화)**: 입력창과 고지 **아래 바닥**에 화면 너비 띠 배너(`AdBanner anchored`). 말풍선 사이에는 두지 않는다 — 되묻기·답변 사이에
   광고가 끼면 신뢰가 깎인다. 글을 쓰는 동안(키보드)은 숨긴다 — 입력창 바로 밑이라 잘못 눌리기 쉽다(2026-10-04 Julian: 수익에 중요한 첫 화면)
-- **브리핑함**: 목록 맨 아래(`AdBanner`)
+- **알림함**: 목록 맨 아래(`AdBanner`)
 - **우리 아기(지식 지도)**: 두지 않는다. 지식 지도는 이 앱의 얼굴이라 광고와 섞지 않는다
 - 광고를 없앤 사용자에게는 `AdBanner` 가 아무것도 그리지 않아 자리까지 사라진다(SPEC-MY-06)
 
@@ -84,7 +84,7 @@ src/app/(tabs)/baby.tsx      우리 아기 — 버디가 아는 것(지식 지�
 src/app/(tabs)/schedule.tsx  일정 — 달력 · 고른 날 · 챙길 것 여정
 src/app/records.tsx          기록 보기·고치기
 src/app/(tabs)/my.tsx        마이
-src/app/briefings.tsx        브리핑함 — 오늘 것 + 지난 브리핑
+src/app/inbox.tsx            알림함 — 브리핑 · 알림, 새 것 배지
 src/app/onboarding.tsx       탭 밖 전체 화면. `?edit=1` 이면 프로필 수정으로 쓰인다
 src/app/legal/[doc].tsx      약관·고지
 ```

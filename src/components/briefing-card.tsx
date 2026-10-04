@@ -1,7 +1,7 @@
 /**
  * 아침 브리핑 (SPEC-HOME-06, task home/004 · 005 · 006 · baby/003).
  * - `BriefingSummary` — 대화 속에는 요약만: 「오늘의 브리핑이 도착했어요」 + 남은 수 + 「확인하러 가기」
- * - `BriefingCard` — 브리핑함의 자세한 카드. 챙길 것(할 일)만 — 하루 기록은 우리 아기 탭(SPEC-BABY-07, decisions/016)
+ * - `BriefingCard` — 일정 탭 고른 날의 자세한 카드. 챙길 것(할 일)만 — 하루 기록은 우리 아기 탭(SPEC-BABY-07, decisions/016)
  * 했는지는 저장된 목록이 아니라 지금의 기록(L2)으로 센다 — 어디서 완료해도 같은 모습이 보인다.
  */
 
@@ -50,7 +50,7 @@ function SectionHead({ title, note, first }: { title: string; note?: string | nu
   );
 }
 
-/** 대화 속 브리핑 — 요약만. 누르면 브리핑함에서 자세히 본다. 오늘 것은 인사와 함께, 지난 것은 한 줄 */
+/** 대화 속 브리핑 — 요약만. 누르면 일정 탭의 그날에서 자세히 본다. 오늘 것은 인사와 함께, 지난 것은 한 줄 */
 export function BriefingSummary({
   message,
   today,

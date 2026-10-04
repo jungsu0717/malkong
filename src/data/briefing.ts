@@ -2,7 +2,7 @@
  * 아침 브리핑 (SPEC-HOME-06, task home/004) — 하루 처음 앱을 열면 버디가 먼저 건네는 말.
  *
  * 기기 안에서 만든다(backend 「능동 브리핑」 1단계 온디바이스) — 모델을 부르지 않으니 할당량을 쓰지 않고,
- * 아기 기록이 기기 밖으로 나가지 않는다. 대화 타임라인에 그날의 첫 메시지로 저장되고, 지난 것은 브리핑함에서 다시 본다.
+ * 아기 기록이 기기 밖으로 나가지 않는다. 대화 타임라인에 그날의 첫 메시지로 저장되고, 지난 것은 일정 탭 달력의 그날에서 다시 본다.
  *
  * 브리핑은 챙길 것(할 일)만 담는다 — 하루 기록 같은 정보 입력은 우리 아기 탭과 기록 요청 카드의 몫이다
  * (SPEC-BABY-07, decisions/016). 저장하는 것은 그날 고른 목록뿐이고, 했는지 안 했는지는 볼 때마다 기록(L2)에서
@@ -108,6 +108,13 @@ export function buildBriefing(
   return { day, greeting: greetingAt(now.getHours()), headline: headlineFor(name, baby.birthDate, now), items };
 }
 
+/** 알림함 줄에 보일 한 줄(SPEC-HOME-07) */
+export function briefingSummary(briefing: Briefing): string {
+  const todos = todosOf(briefing.items);
+  if (todos.length === 0) return briefing.headline;
+  return todos.length === 1 ? `챙길 것 · ${todos[0].label}` : `챙길 것 ${todos.length}개 · ${todos[0].label} 외`;
+}
+
 export const todosOf = (items: BriefingItem[]) =>
   items.filter((i): i is BriefingTodo => i.kind === 'todo');
 
@@ -115,14 +122,6 @@ export const todosOf = (items: BriefingItem[]) =>
 export function todoDone(todo: BriefingTodo, records: BabyRecord[]): boolean {
   const covered = new Set(records.flatMap((r) => r.covers));
   return todo.itemIds.every((id) => covered.has(id));
-}
-
-/**
- * 그날 브리핑에서 아직 안 한 챙길 것의 수 — 버디 탭 오른쪽 위 브리핑함의 배지.
- * 다가오는 일정(D-day)은 오늘 할 일이 아니라 세지 않는다. 독촉하지 않으려 앱 밖(홈 화면 아이콘)에는 띄우지 않는다.
- */
-export function openCount(items: BriefingItem[], records: BabyRecord[]): number {
-  return todosOf(items).filter((t) => t.status !== 'soon' && !todoDone(t, records)).length;
 }
 
 /** 그 월령이 시작하는 날 — 「4개월 · 10월 28일 무렵」 */

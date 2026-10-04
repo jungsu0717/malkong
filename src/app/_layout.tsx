@@ -18,6 +18,7 @@ import { BabyProvider, useBaby } from '@/data/baby-context';
 import { ChatProvider } from '@/data/chat-context';
 import { DraftProvider } from '@/data/draft-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
+import { InboxProvider } from '@/data/inbox-context';
 import { PreferencesProvider } from '@/data/preferences-context';
 import { RecordsProvider } from '@/data/records-context';
 
@@ -82,18 +83,20 @@ export default function RootLayout() {
             <BabyProvider>
               <RecordsProvider>
                 <ChatProvider>
+                  <InboxProvider>
                   <DraftProvider>
                   <OnboardingGate />
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-                    <Stack.Screen name="briefings" options={{ ...header, title: '브리핑함' }} />
+                    <Stack.Screen name="inbox" options={{ ...header, title: '알림함' }} />
                     <Stack.Screen name="records" options={{ ...header, title: '우리 아기 기록' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
                   {/* 하루 기록이 며칠 비면 묻는 카드와 알림 (SPEC-BABY-07) */}
                   <RecordNudge />
                   </DraftProvider>
+                  </InboxProvider>
                 </ChatProvider>
               </RecordsProvider>
             </BabyProvider>

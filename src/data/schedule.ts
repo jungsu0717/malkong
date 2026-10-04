@@ -161,3 +161,13 @@ export function fromDayKey(key: string): Date | null {
   if (!y || !m || !d) return null;
   return new Date(y, m - 1, d);
 }
+
+let openSeq = 0;
+
+/**
+ * 일정 탭의 그날로 가는 길 — 알림함 · 대화의 「확인하러 가기」가 쓴다. t 는 같은 날을 다시 열어도 다시 고르게 하는 구분값
+ */
+export function scheduleDayHref(day: string) {
+  openSeq += 1;
+  return { pathname: '/schedule' as const, params: { day, t: String(openSeq) } };
+}

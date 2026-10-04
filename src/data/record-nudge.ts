@@ -25,9 +25,14 @@ function countFrom(records: BabyRecord[], since: Date): Date {
   return last && last > since ? last : since;
 }
 
-/** 지금 물을 때인가 — 센 날부터 사흘째 0시가 지났으면 */
+/** 물을 날 0시 — 센 날부터 사흘째. 적거나 건너뛰기 전까지는 같은 날이라 알림함 줄의 열쇠로도 쓴다 */
+export function nudgeDay(records: BabyRecord[], since: Date): Date {
+  return dayAfter(countFrom(records, since), NUDGE_AFTER_DAYS);
+}
+
+/** 지금 물을 때인가 — 물을 날 0시가 지났으면 */
 export function nudgeDue(records: BabyRecord[], since: Date, now = new Date()): boolean {
-  return now >= dayAfter(countFrom(records, since), NUDGE_AFTER_DAYS);
+  return now >= nudgeDay(records, since);
 }
 
 /**

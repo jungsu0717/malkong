@@ -1,8 +1,7 @@
 /**
  * 기기 저장소 — expo-sqlite (iOS · Android).
  *
- * 스키마 정본은 docs/architecture/backend.md 의 「기기 DB 스키마」 절이다. 여기서는 그 중
- * 지금 쓰는 테이블만 만든다 — inbox_card 는 그 기능 task 에서 추가한다.
+ * 스키마 정본은 docs/architecture/backend.md 의 「기기 DB 스키마」 절이다.
  *
  * 웹은 expo-sqlite 의 웹 지원이 알파(Metro WASM 설정·특수 헤더 필요)라 미리보기가 깨지므로,
  * 같은 함수를 localStorage 로 구현한 db.web.ts 가 대신 쓰인다.
@@ -12,6 +11,7 @@ import * as SQLite from 'expo-sqlite';
 
 import type { Baby } from './baby';
 import type { ChatMessage } from './chat';
+import type { InboxCard } from './inbox';
 import type { BabyRecord } from './records';
 
 const DB_NAME = 'malkong.db';
@@ -54,6 +54,14 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           created_at  TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ix_chat_created ON chat_message(created_at);
+        CREATE TABLE IF NOT EXISTS inbox_card (
+          id            TEXT PRIMARY KEY,
+          kind          TEXT NOT NULL,
+          payload_json  TEXT NOT NULL,
+          read_at       TEXT,
+          created_at    TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_inbox_created ON inbox_card(created_at);
       `);
       return db;
     })();
@@ -205,4 +213,41 @@ export async function updateRecordLabelRow(id: string, label: string): Promise<v
 export async function updateChatMetaRow(id: string, meta: ChatMessage['meta']): Promise<void> {
   const db = await getDb();
   await db.runAsync('UPDATE chat_message SET meta_json = ? WHERE id = ?', JSON.stringify(meta), id);
+}
+
+type InboxRow = { id: string; kind: InboxCard['kind']; payload_json: string; read_at: string | null; created_at: string };
+
+/** 알림함 전체 — 오래된 것부터 (SPEC-HOME-07) */
+export async function readInboxRows(): Promise<InboxCard[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<InboxRow>(
+    'SELECT id, kind, payload_json, read_at, created_at FROM inbox_card ORDER BY created_at, rowid',
+  );
+  return rows.map((row) => ({
+    ...(JSON.parse(row.payload_json) as Pick<InboxCard, 'title' | 'summary' | 'day'>),
+    id: row.id,
+    kind: row.kind,
+    readAt: row.read_at,
+    createdAt: row.created_at,
+  }));
+}
+
+/** 같은 id 가 이미 있으면 그대로 둔다 — 읽은 표시가 지워지지 않게 */
+export async function insertInboxRow(card: InboxCard): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT OR IGNORE INTO inbox_card (id, kind, payload_json, read_at, created_at) VALUES (?, ?, ?, ?, ?)',
+    card.id,
+    card.kind,
+    JSON.stringify({ title: card.title, summary: card.summary, day: card.day }),
+    card.readAt,
+    card.createdAt,
+  );
+}
+
+export async function markInboxReadRows(ids: string[], at: string): Promise<void> {
+  const db = await getDb();
+  for (const id of ids) {
+    await db.runAsync('UPDATE inbox_card SET read_at = ? WHERE id = ? AND read_at IS NULL', at, id);
+  }
 }

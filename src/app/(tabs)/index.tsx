@@ -38,8 +38,9 @@ import { dayKey, dayLabel } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useDraft } from '@/data/draft-context';
 import { useEntitlements } from '@/data/entitlements-context';
+import { useInbox } from '@/data/inbox-context';
+import { scheduleDayHref } from '@/data/schedule';
 import { useRecords } from '@/data/records-context';
-import { openCount } from '@/data/briefing';
 import { useDailyBriefing } from '@/hooks/use-daily-briefing';
 import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
 import { useMalkong, type AskFailure } from '@/hooks/use-malkong';
@@ -94,12 +95,13 @@ export default function ChatScreen() {
   const typing = useKeyboardVisible();
   // 기록 화면의 「대화 보기」에서 넘어온 질문 말풍선 id. ft 는 같은 줄을 다시 눌렀을 때의 구분값이다
   const { focus, ft } = useLocalSearchParams<{ focus?: string; ft?: string }>();
-  // 브리핑함 배지 — 오늘 브리핑에서 아직 안 한 챙길 것의 수
-  const todayBriefing = messages.find((m) => m.role === 'malkong' && m.meta.type === 'briefing' && m.meta.day === today);
-  const inboxCount =
-    todayBriefing?.role === 'malkong' && todayBriefing.meta.type === 'briefing'
-      ? openCount(todayBriefing.meta.items, records)
-      : 0;
+  // 알림함 배지 — 아직 열어 보지 않은 브리핑 · 알림의 수(SPEC-HOME-07)
+  const { unread, markDayRead } = useInbox();
+  /** 브리핑 자세히 — 일정 탭의 그날. 열어 봤으니 알림함에서도 읽은 것 */
+  const openDay = (day: string) => {
+    void markDayRead(day);
+    router.navigate(scheduleDayHref(day));
+  };
   // 입력창 글은 다른 탭이 말머리를 담을 수 있게 한곳에 둔다(draft-context)
   const { draft: input, setDraft: setInput, focusRequest } = useDraft();
   const inputRef = useRef<TextInput>(null);
@@ -187,8 +189,8 @@ export default function ChatScreen() {
     if (m.meta.type === 'briefing') {
       const isToday = m.meta.day === today;
       rows.push(
-        // 대화에는 요약만 — 자세한 것은 브리핑함에서(task home/006)
-        <BriefingSummary key={m.id} message={m} today={isToday} onOpen={() => router.push('/briefings')} />,
+        // 대화에는 요약만 — 자세한 것은 일정 탭의 그날에서(SPEC-HOME-06)
+        <BriefingSummary key={m.id} message={m} today={isToday} onOpen={() => openDay(m.meta.type === 'briefing' ? m.meta.day : today)} />,
       );
       continue;
     }
@@ -265,12 +267,7 @@ export default function ChatScreen() {
                 </ThemedText>
               </View>
             )}
-            <IconButton
-              icon="file-tray-full-outline"
-              label="브리핑함"
-              badge={inboxCount}
-              onPress={() => router.push('/briefings')}
-            />
+            <IconButton icon="notifications-outline" label="알림함" badge={unread} onPress={() => router.push('/inbox')} />
           </View>
 
           <ScrollView

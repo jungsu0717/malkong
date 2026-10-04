@@ -198,7 +198,7 @@ export function IconButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={count > 0 ? `${label}, ${count}개 남음` : label}
+      accessibilityLabel={count > 0 ? `${label}, 새 소식 ${count}개` : label}
       onPress={() => {
         tap();
         onPress();

@@ -115,7 +115,7 @@
   (`src/data/records.ts` · `records-context.tsx`, task/home/001).
 - 발달 포인트(SPEC-HOME-03)는 월간 브리핑으로 옮긴다(task home/009). 첫 이정표보다 어리면 「첫 발달 이정표는 2개월이에요」.
 - 완료 알림: 줄을 누르면 `src/components/mark-done-sheet.tsx` 가 항목을 모두 고른 채 열린다(흐름은
-  `src/hooks/use-mark-done.tsx` — 브리핑함과 일정 탭이 같이 쓴다).
+  `src/hooks/use-mark-done.tsx` — 일정 탭의 고른 날 · 여정이 같이 쓴다).
   저장하면 `기록` 하나가 생기고(`covers` = 고른 항목 id, `whenLabel` = "D+N에 알림") 카드 위에
   「…로 기록했어요 · 되돌리기」가 뜬다. 되돌리기는 그 기록을 지운다.
 - 생활 항목(task home/003): 생활·수유·수면·안전 분류의 L1 이 기간 안이거나 다음 달에 시작하면 「챙길 것」에
@@ -124,11 +124,18 @@
   (settings `todo_schedule_only`, `src/data/preferences-context.tsx`).
 - 브리핑(task home/004): `src/hooks/use-daily-briefing.ts` 가 그날 첫 화면에서 `src/data/briefing.ts` 의
   `buildBriefing()` 으로 만들어 `chat_message` 에 `meta.type = 'briefing'` 으로 넣는다(모델을 부르지 않는다).
-  챙길 것은 위 `groupGaps()` 의 앞 3줄. 했는지는 볼 때마다 기록(covers)으로 다시 센다.
-  대화 속 요약은 `src/components/briefing-card.tsx` 의 `BriefingSummary`, 브리핑함은 `src/app/briefings.tsx`
-  (`BriefingCard` — 맨 위 오늘 것에서 완료를 알린다), 배지 수는 `openCount()`. 하루 기록은 우리 아기 탭으로 옮겼다
-  (baby.md HOW, task baby/003). 알림은 `src/data/notifications.ts`(expo-notifications 로컬, 매일, 식별자
-  `morning-briefing`) — 시각은 settings `briefing_time`(`HH:MM` · `off`, 없으면 08:00), 앱을 열 때마다 다시 건다
+  했는지는 볼 때마다 기록(covers)으로 다시 센다. 대화 속 요약은 `src/components/briefing-card.tsx` 의 `BriefingSummary` —
+  「확인하러 가기」는 일정 탭의 그날(`scheduleDayHref()`)로 가고 알림함의 그날 줄을 읽음으로 한다. 자세한 카드
+  (`BriefingCard`)는 일정 탭 고른 날에. 하루 기록은 우리 아기 탭(baby.md HOW, task baby/003). 알림은 `src/data/notifications.ts`
+  (expo-notifications 로컬, 매일, 식별자 `morning-briefing`) — 시각은 settings `briefing_time`(`HH:MM` · `off`, 없으면 08:00),
+  앱을 열 때마다 다시 건다
+- 알림함(task home/007): 저장은 기기 `inbox_card`(`db.ts` · 웹은 `db.web.ts` localStorage), 모양은 `src/data/inbox.ts`,
+  화면들이 함께 보는 자리는 `inbox-context.tsx`(새것부터 · 읽지 않은 수 · 넣기 · 읽음 · 그날 읽음). 데일리 브리핑을 만들 때
+  `daily-<날짜>` 줄(요약은 `briefingSummary()`), 기록 요청이 저절로 뜰 때 `nudge-<물을 날>` 줄(카드를 닫으면 읽음 — 카드를 끄고
+  알림만 둔 사람도 한 번 비었을 때 한 줄). 알림함이 생기기 전의 지난 브리핑은 읽은 줄로 옮겼다.
+  화면 `src/app/inbox.tsx` — 「브리핑」 · 「알림」(새 것 수), 줄마다 아이콘 · 제목 · 요약 · 언제 · 새 것 점, 「모두 읽음」, 맨 아래 배너.
+  누르면 브리핑은 일정 탭의 그날, 기록 요청은 `openRecordNudge()` 로 카드. 일정 탭에서 그날을 보면 그날 줄이 읽음이 된다.
+  배지는 버디 탭 오른쪽 위 `IconButton badge`(읽지 않은 수)
 
 ## changelog
 
