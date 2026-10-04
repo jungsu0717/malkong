@@ -227,8 +227,8 @@ export function babyCheck(
   return { care: null, suggest: null };
 }
 
-/** 부모 안부 칩 하나 — 고르면 버디가 한 마디 답한다. 기록하지 않는다(아기 기록이 아니다) */
-export type ParentOption = { label: string; reply: string };
+/** 부모 안부 칩 하나 — 고르면 버디가 한 마디 답한다. 기록하지 않는다(아기 기록이 아니다). tips 는 함께 보일 부모 돌봄 L1(승인된 것만 보인다) */
+export type ParentOption = { label: string; reply: string; tips?: string[] };
 
 export type ParentCheck = {
   reason: 'fussy' | 'night' | 'routine';
@@ -251,7 +251,11 @@ export function parentCheck(
   const ga = /[가-힣]$/.test(name) && (name.charCodeAt(name.length - 1) - 0xac00) % 28 !== 0 ? '이' : '가';
   const who = `${name}${ga}`;
   const sleepOptions: ParentOption[] = [
-    { label: '거의 못 잤어요', reply: `오늘은 ${who} 잘 때 같이 눈 붙여요. 집안일은 좀 미뤄도 괜찮아요.` },
+    {
+      label: '거의 못 잤어요',
+      reply: `오늘은 ${who} 잘 때 같이 눈 붙여요. 집안일은 좀 미뤄도 괜찮아요.`,
+      tips: keys.has('fussy') ? ['k-parent-0001', 'k-parent-0002'] : ['k-parent-0002'],
+    },
     { label: '조금 잤어요', reply: `조금이라도 다행이에요. 낮에 ${who} 잘 때 잠깐이라도 같이 누워요.` },
     { label: '괜찮아요', reply: '다행이에요. 오늘도 같이 챙길게요.' },
   ];
@@ -278,7 +282,11 @@ export function parentCheck(
       question: `요즘 끼니는 잘 챙겨 드세요? ${name} 챙기다 보면 거르기 쉬워요.`,
       options: [
         { label: '잘 먹고 있어요', reply: '다행이에요. 잘 드셔야 오래 버텨요.' },
-        { label: '자주 걸러요', reply: '한 손으로 먹을 수 있는 걸 곁에 두면 조금 나아요. 부모님 몸도 아기만큼 소중해요.' },
+        {
+          label: '자주 걸러요',
+          reply: '한 손으로 먹을 수 있는 걸 곁에 두면 조금 나아요. 부모님 몸도 아기만큼 소중해요.',
+          tips: ['k-parent-0002'],
+        },
       ],
       answer: null,
     };
@@ -291,6 +299,7 @@ export function parentCheck(
       {
         label: '좀 지쳤어요',
         reply: `많이 애쓰고 계세요. 오늘 하나쯤은 미뤄도 괜찮아요. ${who} 잘 때 같이 쉬고, 혼자 다 하려 하지 말고 주변에 손을 빌려요.`,
+        tips: ['k-parent-0003', 'k-parent-0004'],
       },
     ],
     answer: null,

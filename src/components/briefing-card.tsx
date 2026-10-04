@@ -109,9 +109,23 @@ function ParentCheckView({ parent, onAnswer }: { parent: ParentCheck; onAnswer: 
         </ThemedText>
       </View>
       {chosen ? (
-        <ThemedText type="small" style={{ color: c.accentText }}>
-          {chosen.label} · {chosen.reply}
-        </ThemedText>
+        <>
+          <ThemedText type="small" style={{ color: c.accentText }}>
+            {chosen.label} · {chosen.reply}
+          </ThemedText>
+          {/* 부모 돌봄 L1 — 승인된 것만 나온다(의료 게이트, task common/013) */}
+          {(chosen.tips ?? [])
+            .map((id) => itemById(id))
+            .filter((tip): tip is L1Item => !!tip)
+            .map((tip) => (
+              <View key={tip.id} style={[styles.warn, { borderTopColor: c.border }]}>
+                <Ionicons name={tip.red_flag ? 'alert-circle-outline' : 'leaf-outline'} size={15} color={c.accentText} />
+                <ThemedText type="caption" style={[styles.flex, { color: c.accentText }]}>
+                  {tip.title} · {tip.source.name}
+                </ThemedText>
+              </View>
+            ))}
+        </>
       ) : onAnswer ? (
         <View style={styles.chips}>
           {parent.options.map((o) => (

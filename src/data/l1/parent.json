@@ -1,0 +1,62 @@
+[
+  {
+    "id": "k-parent-0001",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "kind": "부모",
+    "title": "울음이 길어 화가 날 땐 — 아기를 안전한 곳에 눕히고 잠깐 자리를 떠나요",
+    "body": "오래 달래지지 않는 울음도 아기에게는 흔한 일이에요. 마음이 거칠어지면 아기를 아기 침대처럼 안전한 곳에 눕히고 잠시 자리를 떠나 마음을 가라앉혀요. 5~10분마다 아기를 살피고, 가족 · 친구 · 이웃이나 소아과에 도움을 청해요. 어떤 경우에도 아기를 흔들거나 던지거나 때려서는 안 돼요.",
+    "source": {
+      "name": "미국 CDC 영유아 학대성 머리 손상 예방",
+      "url": "https://www.cdc.gov/child-abuse-neglect/about/about-abusive-head-trauma.html",
+      "checked": "2026-10-04"
+    },
+    "confidence": "권고",
+    "red_flag": true,
+    "status": "draft"
+  },
+  {
+    "id": "k-parent-0002",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "kind": "부모",
+    "title": "부모의 몸과 마음도 챙겨요",
+    "body": "아기를 돌보는 일은 고된 일이에요. 부모가 몸과 마음, 감정을 돌봐야 아기와 더 즐겁게 지내고 따뜻하게 돌볼 수 있어요.",
+    "source": {
+      "name": "미국 CDC 긍정 양육 팁(영아)",
+      "url": "https://www.cdc.gov/child-development/positive-parenting-tips/infants.html",
+      "checked": "2026-10-04"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "draft"
+  },
+  {
+    "id": "k-parent-0003",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "kind": "부모",
+    "title": "며칠 울적함과 산후 우울은 달라요 — 세고 오래가면 의사와 이야기해요",
+    "body": "출산 뒤 며칠 울적한 기분은 대개 저절로 지나가요. 슬픔 · 불안 · 막막함이 더 세고 오래가거나, 일상이 버겁거나, 아기와 멀게 느껴지거나, 아기를 돌볼 수 있을지 자꾸 의심이 들면 산후 우울일 수 있어요. 출산 뒤 1년 안에도 생길 수 있어요. 먼저 담당 의사에게 이야기하고 전문가를 소개받아요.",
+    "source": {
+      "name": "미국 CDC 여성의 우울 증상",
+      "url": "https://www.cdc.gov/reproductive-health/depression/index.html",
+      "checked": "2026-10-04"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "draft"
+  },
+  {
+    "id": "k-parent-0004",
+    "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "kind": "부모",
+    "title": "나나 아기를 해칠 생각이 들면 — 혼자 견디지 말고 바로 알려요",
+    "body": "그런 생각이 들면 곁에 있는 사람에게 바로 알리고 도움을 받아요. 위급하면 119 에 연락해요.",
+    "source": {
+      "name": "미국 CDC 여성의 우울 증상",
+      "url": "https://www.cdc.gov/reproductive-health/depression/index.html",
+      "checked": "2026-10-04"
+    },
+    "confidence": "권고",
+    "red_flag": true,
+    "status": "draft"
+  }
+]

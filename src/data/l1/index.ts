@@ -9,6 +9,7 @@
 import care from './care.json';
 import checkup from './checkup.json';
 import development from './development.json';
+import parent from './parent.json';
 import type { KnowledgeItem, KnowledgeKind } from './types';
 import vaccination from './vaccination.json';
 
@@ -17,9 +18,9 @@ export type { Confidence, KnowledgeItem, KnowledgeKind, ReviewStatus, SourceRef 
 /** 번들 판 번호. 항목을 고치면 올리고, 서버의 최신 판과 비교해 갱신받는다 */
 export const L1_VERSION = '2026.10.2';
 
-const BUNDLED = [...vaccination, ...checkup, ...development, ...care] as KnowledgeItem[];
+const BUNDLED = [...vaccination, ...checkup, ...development, ...care, ...parent] as KnowledgeItem[];
 
-const KINDS: KnowledgeKind[] = ['접종', '검진', '발달', '수유', '수면', '생활', '안전', '대응'];
+const KINDS: KnowledgeKind[] = ['접종', '검진', '발달', '수유', '수면', '생활', '안전', '대응', '부모'];
 
 /**
  * 항목이 규칙을 지키는지 본다. 개발 중에만 돌려서, 출처 없는 항목처럼 들어가면 안 되는 것이
