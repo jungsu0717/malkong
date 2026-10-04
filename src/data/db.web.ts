@@ -121,7 +121,8 @@ export async function updateChatMetaRow(id: string, meta: ChatMessage['meta']): 
 
 const INBOX_KEY = 'malkong.inbox';
 
-export async function readInboxRows(): Promise<InboxCard[]> {
+/** 읽고 쓰는 사이에 await 를 두지 않는다 — 브리핑 셋이 한꺼번에 들어올 때 서로 덮어쓰지 않게 */
+function readInboxSync(): InboxCard[] {
   try {
     const raw = globalThis.localStorage?.getItem(INBOX_KEY);
     return raw ? (JSON.parse(raw) as InboxCard[]) : [];
@@ -138,13 +139,17 @@ function writeInboxRows(cards: InboxCard[]): void {
   }
 }
 
+export async function readInboxRows(): Promise<InboxCard[]> {
+  return readInboxSync();
+}
+
 export async function insertInboxRow(card: InboxCard): Promise<void> {
-  const cards = await readInboxRows();
+  const cards = readInboxSync();
   if (cards.some((c) => c.id === card.id)) return;
   writeInboxRows([...cards, card]);
 }
 
 export async function markInboxReadRows(ids: string[], at: string): Promise<void> {
   const wanted = new Set(ids);
-  writeInboxRows((await readInboxRows()).map((c) => (wanted.has(c.id) && !c.readAt ? { ...c, readAt: at } : c)));
+  writeInboxRows(readInboxSync().map((c) => (wanted.has(c.id) && !c.readAt ? { ...c, readAt: at } : c)));
 }

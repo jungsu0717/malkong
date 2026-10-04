@@ -42,7 +42,7 @@ export default function ScheduleScreen() {
   const [today, setToday] = useState(() => new Date());
   const [selected, setSelected] = useState(() => (day && fromDayKey(day)) || new Date());
   const [replay, setReplay] = useState(0);
-  const { markDayRead } = useInbox();
+  const { cards, markDayRead } = useInbox();
   const selectedKey = dayKey(selected.toISOString());
 
   useFocusEffect(
@@ -83,6 +83,8 @@ export default function ScheduleScreen() {
     return byDay;
   }, [messages]);
 
+  const periods = useMemo(() => cards.filter((c) => (c.kind === 'weekly' || c.kind === 'monthly') && c.day), [cards]);
+
   if (!baby || !age || !index) return <ScreenLoading />;
   const name = baby.name ?? DEFAULT_BABY_NAME;
   const headline = headlineOf(age.month);
@@ -92,7 +94,7 @@ export default function ScheduleScreen() {
     return {
       due: (index.due.get(key) ?? []).some((i) => !covered.has(i.id)),
       done: (index.records.get(key) ?? []).length > 0,
-      briefing: false,
+      briefing: periods.some((p) => p.day === key),
     };
   };
 
@@ -120,6 +122,10 @@ export default function ScheduleScreen() {
             <ThemedText type="caption" style={{ color: c.textSecondary }}>
               남긴 기록
             </ThemedText>
+            <View style={[styles.dot, styles.ring, { borderColor: c.textSecondary }]} />
+            <ThemedText type="caption" style={{ color: c.textSecondary }}>
+              주간 · 월간 브리핑
+            </ThemedText>
           </View>
 
           <DayView
@@ -129,7 +135,8 @@ export default function ScheduleScreen() {
             currentMonth={age.month}
             index={index}
             records={records}
-            briefing={briefings.get(dayKey(selected.toISOString())) ?? null}
+            briefing={briefings.get(selectedKey) ?? null}
+            periods={periods.filter((p) => p.day === selectedKey)}
             onPick={pick}
           />
 
@@ -185,6 +192,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two },
   legend: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: -Spacing.three, paddingHorizontal: 4 },
   dot: { width: 6, height: 6, borderRadius: 3 },
+  ring: { backgroundColor: 'transparent', borderWidth: 1 },
   section: { gap: 10 },
   disclaimer: { textAlign: 'center' },
   saved: {

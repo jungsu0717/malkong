@@ -71,7 +71,7 @@ export type Briefing = {
   tips?: string[];
   /** ④ 기록하면 좋을 것 */
   suggest?: SuggestKey | null;
-  /** ⑤ 이번 주(일~토) 무렵인 접종 · 검진 — L1 id */
+  /** ⑤ 다가오는 일정 — 오늘부터 7일 안에 무렵인 접종 · 검진, L1 id */
   week?: string[];
 };
 
@@ -122,10 +122,10 @@ function todayTips(month: number, records: BabyRecord[], recent: Set<string>, da
   return Array.from({ length: Math.min(MAX_TIPS, list.length) }, (_, k) => list[(days + k) % list.length].id);
 }
 
-/** 이번 주(일~토)에 무렵인 접종 · 검진 가운데 아직 안 한 것 */
+/** 오늘부터 7일 안에 무렵인 접종 · 검진 가운데 아직 안 한 것 — 주 단위 정리는 주간 브리핑의 몫 */
 function weekItems(birthDate: string, records: BabyRecord[], now: Date): string[] {
   const covered = new Set(records.flatMap((r) => r.covers));
-  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
   return allItems()
     .filter((i) => (i.kind === '접종' || i.kind === '검진') && !covered.has(i.id))
@@ -179,7 +179,7 @@ export function briefingSummary(briefing: Briefing): string {
     briefing.care ? `${SIGNAL_NAMES[briefing.care.signal]} 안부` : null,
     briefing.parent ? '부모님 안부' : null,
     ...(briefing.tips ?? []).slice(0, 1).map((id) => tipTitle(id)),
-    briefing.week && briefing.week.length > 0 ? `이번 주 일정 ${briefing.week.length}` : null,
+    briefing.week && briefing.week.length > 0 ? `다가오는 일정 ${briefing.week.length}` : null,
   ].filter((t): t is string => !!t);
   return parts.length > 0 ? parts.join(' · ') : briefing.headline;
 }

@@ -128,6 +128,12 @@ export function groupLabel(items: L1Item[]): string {
     .join(' · ');
 }
 
+/** 분류가 섞인 목록의 이름 — 분류마다 따로 이어 붙인다(「DTaP·폴리오 2차 · 영유아 건강검진 2차」). 접종과 검진의 차수가 섞이지 않게 */
+export function labelByKind(items: L1Item[]): string {
+  const kinds = [...new Set(items.map((i) => i.kind))];
+  return kinds.map((kind) => groupLabel(items.filter((i) => i.kind === kind))).join(' · ');
+}
+
 /**
  * 같은 월에 시작하는 같은 분류는 한 줄로 묶는다 (SPEC-HOME-02 묶음) — 한 번의 병원 방문이
  * 다섯 줄로 쪼개져 보이지 않게. 놓친 것 → 지금 → 다음 달 순서.

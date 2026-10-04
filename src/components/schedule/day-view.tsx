@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { BriefingCard } from '@/components/briefing-card';
+import { MonthlyCard, WeeklyCard } from '@/components/schedule/period-cards';
 import { ThemedText } from '@/components/themed-text';
 import { TodoRow } from '@/components/todo-row';
 import { Card, ListRow, Tag } from '@/components/ui';
@@ -8,15 +9,16 @@ import { Spacing } from '@/constants/theme';
 import { ageFrom } from '@/data/baby';
 import { todoOf } from '@/data/briefing';
 import { dayKey, type MalkongMessage } from '@/data/chat';
-import { coveredIds, groupsToMark, type DayIndex } from '@/data/schedule';
+import type { InboxCard } from '@/data/inbox';
+import { coveredIds, fromDayKey, groupsToMark, type DayIndex } from '@/data/schedule';
 import type { BabyRecord } from '@/data/records';
-import { groupLabel, type GapGroup } from '@/data/timeline';
+import { labelByKind, type GapGroup } from '@/data/timeline';
 import { useTheme } from '@/hooks/use-theme';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 /**
- * 달력에서 고른 날 (SPEC-GROW-01 고르기) — 그날의 브리핑 · 그날 무렵인 일정 · 그날 생긴 기록.
+ * 달력에서 고른 날 (SPEC-GROW-01 고르기) — 그날의 데일리 · 주간 · 월간 브리핑 · 그날 무렵인 일정 · 그날 생긴 기록.
  * 지난날은 남은 것만, 앞날은 일정만 보인다. 일정은 거기서 바로 완료를 알린다(SPEC-HOME-02).
  */
 export function DayView({
@@ -27,6 +29,7 @@ export function DayView({
   index,
   records,
   briefing,
+  periods,
   onPick,
 }: {
   date: Date;
@@ -37,6 +40,8 @@ export function DayView({
   records: BabyRecord[];
   /** 그날의 데일리 브리핑 — 앱을 연 날에만 있다 */
   briefing: MalkongMessage | null;
+  /** 그날 온 주간 · 월간 브리핑(알림함 줄) */
+  periods: InboxCard[];
   onPick: (group: GapGroup) => void;
 }) {
   const c = useTheme();
@@ -49,7 +54,7 @@ export function DayView({
   const open = groupsToMark(due, covered, currentMonth);
   const doneDue = due.filter((i) => covered.has(i.id));
   const written = index.records.get(key) ?? [];
-  const nothing = !briefing && due.length === 0 && written.length === 0;
+  const nothing = !briefing && periods.length === 0 && due.length === 0 && written.length === 0;
 
   return (
     <View style={styles.wrap}>
@@ -65,8 +70,13 @@ export function DayView({
         )}
       </View>
 
-      {briefing && (
-        <BriefingCard message={briefing} today={isToday} onPick={onPick} />
+      {briefing && <BriefingCard message={briefing} today={isToday} onPick={onPick} />}
+      {periods.map((card) =>
+        card.kind === 'weekly' && card.day ? (
+          <WeeklyCard key={card.id} monday={fromDayKey(card.day) ?? date} onPick={onPick} />
+        ) : card.kind === 'monthly' ? (
+          <MonthlyCard key={card.id} month={Number(card.id.replace('monthly-', ''))} onPick={onPick} />
+        ) : null,
       )}
 
       {due.length > 0 && (
@@ -79,7 +89,7 @@ export function DayView({
           ))}
           {doneDue.length > 0 && (
             <TodoRow
-              todo={todoOf({ key: `done-${key}`, status: 'open', month: currentMonth, label: groupLabel(doneDue), items: doneDue })}
+              todo={todoOf({ key: `done-${key}`, status: 'open', month: currentMonth, label: labelByKind(doneDue), items: doneDue })}
               birthDate={birthDate}
               currentMonth={currentMonth}
               done

@@ -1,12 +1,14 @@
 /**
  * 데일리 브리핑 (SPEC-HOME-06, task home/004 · 006 · 008).
- * - `BriefingSummary` — 대화 속: 인사 · 안부(칩으로 답하기) · 「오늘의 브리핑이 도착했어요」 요약 · 「확인하러 가기」
- * - `BriefingCard` — 일정 탭 고른 날의 자세한 카드: 안부 · 오늘 챙기면 좋을 것 · 기록하면 좋을 것 · 이번 주 일정
+ * - `BriefingSummary` — 대화 속: 인사 · 안부(칩으로 답하기) · 「오늘의 브리핑이 도착했어요」 요약 · 그날 온 주간 · 월간 브리핑 ·
+ *   「확인하러 가기」
+ * - `BriefingCard` — 일정 탭 고른 날의 자세한 카드: 안부 · 오늘 챙기면 좋을 것 · 기록하면 좋을 것 · 다가오는 일정
  * 했는지는 저장된 목록이 아니라 지금의 기록(L2)으로 센다 — 어디서 완료해도 같은 모습이 보인다.
  * 2026-10-04 전 브리핑은 챙길 것 목록(items)을 들고 있어 그 모양 그대로 그린다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -18,12 +20,13 @@ import { ageFrom } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { briefingSummary, tipTitle, todoDone, todoOf, todosOf, type BriefingTodo } from '@/data/briefing';
 import type { CareCheck, ParentCheck, SuggestKey } from '@/data/care-signals';
-import type { MalkongMessage } from '@/data/chat';
+import { dayKey, type MalkongMessage } from '@/data/chat';
 import { suggestAsk } from '@/data/daily-log';
+import { useInbox } from '@/data/inbox-context';
 import { itemById } from '@/data/l1';
 import { useRecords } from '@/data/records-context';
-import { coveredIds, dueDate, groupsToMark } from '@/data/schedule';
-import { groupLabel, type GapGroup, type L1Item } from '@/data/timeline';
+import { coveredIds, dueDate, groupsToMark, scheduleDayHref } from '@/data/schedule';
+import { labelByKind, type GapGroup, type L1Item } from '@/data/timeline';
 import { useBriefingAnswer } from '@/hooks/use-briefing-answer';
 import { useQuickAsk } from '@/hooks/use-quick-ask';
 import { useTheme } from '@/hooks/use-theme';
@@ -157,12 +160,12 @@ function Checks({ message, answerable }: { message: MalkongMessage; answerable: 
   );
 }
 
-/** 이번 주 일정 한 줄 — 「DTaP·폴리오 2차 · 10월 29일 무렵」 */
+/** 다가오는 일정 한 줄 — 「DTaP·폴리오 2차 · 10월 29일 무렵」 */
 function weekLine(ids: string[], birthDate: string): string | null {
   const items = ids.map((id) => itemById(id)).filter((i): i is L1Item => !!i);
   if (items.length === 0) return null;
   const due = dueDate(birthDate, items[0]);
-  return `${groupLabel(items)} · ${due.getMonth() + 1}월 ${due.getDate()}일 무렵`;
+  return `${labelByKind(items)} · ${due.getMonth() + 1}월 ${due.getDate()}일 무렵`;
 }
 
 /** 대화 속 브리핑 — 인사 · 안부 · 요약. 오늘 것만 크게, 지난 것은 한 줄. 누르면 일정 탭의 그날 */
@@ -178,12 +181,15 @@ export function BriefingSummary({
   const c = useTheme();
   const { baby } = useBaby();
   const { records } = useRecords();
+  const { cards, markRead } = useInbox();
   if (message.meta.type !== 'briefing' || !baby) return null;
   const briefing = message.meta;
   const made = new Date(message.createdAt);
   const { month } = ageFrom(baby.birthDate, made);
   const todos = todosOf(briefing.items);
   const left = todos.filter((t) => !todoDone(t, records));
+  // 그날 함께 온 주간 · 월간 브리핑(SPEC-HOME-08) — 누르면 그 브리핑이 놓인 날로
+  const periods = cards.filter((card) => (card.kind === 'weekly' || card.kind === 'monthly') && dayKey(card.createdAt) === briefing.day);
 
   if (!today) {
     return (
@@ -219,7 +225,7 @@ export function BriefingSummary({
     });
   }
   if (briefing.suggest) lines.push({ icon: 'create-outline', title: '기록하면 좋을 것', detail: SUGGEST_NAMES[briefing.suggest] });
-  if (week) lines.push({ icon: 'calendar-outline', title: '이번 주 일정', detail: week });
+  if (week) lines.push({ icon: 'calendar-outline', title: '다가오는 일정', detail: week });
   const date = `${made.getMonth() + 1}월 ${made.getDate()}일 ${WEEKDAYS[made.getDay()]}요일`;
 
   return (
@@ -267,6 +273,27 @@ export function BriefingSummary({
             오늘은 따로 챙길 게 없어요. 궁금한 게 생기면 언제든 물어보세요
           </ThemedText>
         )}
+        {periods.map((card) => (
+          <Pressable
+            key={card.id}
+            accessibilityRole="button"
+            onPress={() => {
+              void markRead([card.id]);
+              if (card.day) router.navigate(scheduleDayHref(card.day));
+            }}
+            style={({ pressed }) => [styles.period, { borderColor: c.border }, pressed && { opacity: 0.6 }]}>
+            <Ionicons name={card.kind === 'weekly' ? 'calendar-outline' : 'ribbon-outline'} size={18} color={c.accent} />
+            <View style={styles.flex}>
+              <ThemedText type="body" style={{ fontWeight: 600 }}>
+                {card.title}
+              </ThemedText>
+              <ThemedText type="caption" style={{ color: c.textSecondary }} numberOfLines={1}>
+                {card.summary}
+              </ThemedText>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
+          </Pressable>
+        ))}
         <Button label="확인하러 가기" icon="arrow-forward" onPress={onOpen} />
       </Card>
     </View>
@@ -289,7 +316,7 @@ function SectionHead({ title, note, first }: { title: string; note?: string | nu
   );
 }
 
-/** 일정 탭 고른 날의 브리핑 — 안부 · 오늘 챙기면 좋을 것(확인) · 기록하면 좋을 것(적기) · 이번 주 일정(완료 알리기) */
+/** 일정 탭 고른 날의 브리핑 — 안부 · 오늘 챙기면 좋을 것(확인) · 기록하면 좋을 것(적기) · 다가오는 일정(완료 알리기) */
 export function BriefingCard({
   message,
   today,
@@ -388,7 +415,7 @@ export function BriefingCard({
     sections.push(
       <View key="week">
         <SectionHead
-          title="이번 주 일정"
+          title="다가오는 일정 · 7일 안"
           note={weekAll.length > weekLeft.length ? `${weekAll.length - weekLeft.length}/${weekAll.length} 했어요` : null}
           first={sections.length === 0}
         />
@@ -397,7 +424,7 @@ export function BriefingCard({
         ))}
         {groups.length === 0 && (
           <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-            이번 주 일정은 다 챙겼어요
+            다가오는 일정은 다 챙겼어요
           </ThemedText>
         )}
       </View>,
@@ -469,6 +496,7 @@ const styles = StyleSheet.create({
   mailIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   summaryLines: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 4 },
   summaryLine: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9 },
+  period: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
   pastRow: {
     flexDirection: 'row',
     alignItems: 'center',
