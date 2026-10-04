@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>육아버디 릴스 한 장</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@700;900&display=block"
+      rel="stylesheet"
+    />
+    <style>
+      /* 릴스(9:16) 한 장 — 4:5 컷을 가운데 두고 위에 제목, 아래에 이름. 인스타 아래쪽 글자 · 단추 자리는 비워 둔다 */
+      html, body { margin: 0; }
+      #frame {
+        position: relative; width: 1080px; height: 1920px; overflow: hidden;
+        font-family: 'Noto Sans KR', sans-serif; color: #1b1b1b;
+      }
+      .head { position: absolute; left: 0; right: 0; top: 150px; text-align: center; font-weight: 900; font-size: 46px; letter-spacing: -1px; }
+      .head small { font-size: 34px; color: #888; font-weight: 700; margin-left: 10px; }
+      img { position: absolute; left: 54px; top: 250px; width: 972px; border-radius: 28px; box-shadow: 0 0 0 5px #1b1b1b; }
+      .foot { position: absolute; left: 0; right: 0; top: 1500px; text-align: center; font-weight: 900; font-size: 40px; }
+    </style>
+  </head>
+  <body>
+    <div id="frame">
+      <div class="head" id="head"></div>
+      <img id="cut" />
+      <div class="foot">육아버디</div>
+    </div>
+    <script>
+      const p = Number(new URLSearchParams(location.search).get('p') ?? '1');
+      const dark = p === 10;
+      const bg = p >= 11 ? '#FFF6E2' : dark ? '#232838' : '#F4F1EA';
+      document.getElementById('frame').style.background = bg;
+      document.getElementById('frame').style.color = dark ? '#fff' : '#1b1b1b';
+      document.getElementById('head').innerHTML = `아빠가 육아 앱을 만든 이유<small>${p}/12</small>`;
+      document.getElementById('cut').src = `out/${String(p).padStart(2, '0')}.png`;
+    </script>
+  </body>
+</html>
