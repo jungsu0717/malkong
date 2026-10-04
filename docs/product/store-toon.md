@@ -106,4 +106,5 @@
 | `reel.html` · `make-reel.swift` | 릴스 9:16 장면과 mp4. ffmpeg 없이 macOS 기본 기능으로 만든다 |
 | `render.sh` | `./render.sh` 는 12컷 PNG, `./render.sh 3 6` 은 그 컷만, `./render.sh reel` 은 릴스 mp4 |
 
-mp4 와 릴스 중간 장면은 용량이 커서 git 에 넣지 않는다. 필요하면 `./render.sh reel` 로 다시 만든다(1분 안쪽).
+결과물(`out/`의 PNG · `한눈에.png` · `reel.mp4` 약 26MB)은 git 에 넣어 다른 PC 와 GitHub 에서도 본다.
+릴스 중간 장면(`reel/`)만 넣지 않는다. mp4 는 다시 만들 때마다 저장소가 그만큼 커지니 고칠 것을 모아 한 번에 다시 만든다.
