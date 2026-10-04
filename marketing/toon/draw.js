@@ -12,16 +12,83 @@ const C = (x, y, r, w = 5, fill = 'none', stroke = K) => `<circle cx="${x}" cy="
 const DOT = (x, y, r, fill = K) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}"/>`;
 const G = (x, y, s, inner, rot = 0) => `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})">${inner}</g>`;
 
-/** 팔 · 다리 — 굵은 검은 선 위에 조금 가는 흰 선을 겹쳐 테두리 있는 관처럼 */
+/** 굵기가 같은 관 — 굵은 검은 선 위에 조금 가는 선을 겹쳐 테두리 있는 관처럼(돋보기 손잡이) */
 function limb(d, w = 54, fill = '#fff') {
   return `<path d="${d}" fill="none" stroke="${K}" stroke-width="${w + 10}" stroke-linecap="round"/>` +
     `<path d="${d}" fill="none" stroke="${fill}" stroke-width="${w}" stroke-linecap="round"/>`;
 }
 
-/** 주먹 · 손 — 동그란 장갑 모양과 손가락 금 */
-function hand(x, y, r = 30, fill = '#fff', rot = 0) {
-  return G(x, y, 1, C(0, 0, r, 5, fill) + P(`M ${-r * 0.1},${-r * 0.75} Q ${r * 0.6},${-r * 0.55} ${r * 0.35},${-r * 0.05}`, 4), rot);
+/* ───────── 팔 · 손 ─────────
+ * 팔은 어깨 → 팔꿈치 → 손목 두 마디다. 손목으로 갈수록 가늘고 팔꿈치는 둥글다.
+ * 테두리를 굵게 먼저 긋고 그 위를 칠해 마디 사이 금을 지운다. 어깨 쪽 끝은 테두리를 긋지 않아 몸통에 붙어 보인다.
+ * 반팔 티셔츠라 소매(셔츠 색)가 위팔 절반을 덮고 그 아래는 맨팔이다.
+ */
+const SKIN = '#fff';
+const xy = ([x, y]) => `${x.toFixed(1)},${y.toFixed(1)}`;
+
+/** a → b 마디의 네 귀퉁이 [a 한쪽, b 한쪽, b 반대쪽, a 반대쪽] — a 쪽 굵기 wa, b 쪽 굵기 wb */
+function quad([ax, ay], [bx, by], wa, wb) {
+  const l = Math.hypot(bx - ax, by - ay) || 1;
+  const nx = (ay - by) / l, ny = (bx - ax) / l;
+  return [
+    [ax + (nx * wa) / 2, ay + (ny * wa) / 2], [bx + (nx * wb) / 2, by + (ny * wb) / 2],
+    [bx - (nx * wb) / 2, by - (ny * wb) / 2], [ax - (nx * wa) / 2, ay - (ny * wa) / 2],
+  ];
 }
+const along = ([ax, ay], [bx, by], t) => [ax + (bx - ax) * t, ay + (by - ay) * t];
+
+/** 손 모양 — 손목이 (0,0), 손가락은 +x 쪽, 엄지는 -y 쪽. body 는 손목 쪽을 열어 둬서 팔에 이어 붙는다 */
+const HANDS = {
+  /** 주먹 — 엄지가 손가락 위를 감싼다 */
+  fist: {
+    body: 'M -2,-23 C 20,-30 50,-31 64,-20 C 78,-8 77,15 63,24 C 48,32 20,30 -2,23',
+    thumb: 'M 12,-25 C 16,-44 44,-46 52,-29 C 54,-23 48,-19 38,-19',
+    lines: 'M 60,-6 Q 68,-5 72,-1 M 58,9 Q 66,11 70,15',
+    thumbOver: true,
+  },
+  /** 편 손 — 손가락을 붙여 뻗은 장갑 모양 */
+  open: {
+    body: 'M -2,-22 C 28,-28 68,-28 90,-17 C 104,-9 104,10 90,16 C 68,24 28,26 -2,22',
+    thumb: 'M 10,-21 C 18,-48 50,-56 58,-36 C 62,-27 52,-21 42,-21',
+    lines: 'M 62,-5 L 96,-5 M 62,7 L 95,7',
+    thumbOver: false,
+  },
+};
+
+/** 손 — (x,y) 손목에서 deg 방향으로 뻗는다. thumb -1 이면 엄지가 반대쪽 */
+function hand(x, y, deg = 0, { kind = 'fist', thumb = 1, s = 1 } = {}) {
+  const h = HANDS[kind];
+  const th = P(h.thumb, 5, SKIN), body = P(h.body, 5, SKIN);
+  return `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)}) scale(${s} ${s * thumb})">` +
+    (h.thumbOver ? body + th : th + body) + P(h.lines, 4) + '</g>';
+}
+
+/** 팔 하나 — 어깨 sh → 팔꿈치 el → 손목 wr. hand: fist · open · none, handDeg 는 손목을 더 꺾는 각 */
+function arm(sh, el, wr, { fill = '#fff', hand: kind = 'fist', thumb = 1, w = 84, sleeve = 0.5, handDeg = 0, hs = 1 } = {}) {
+  const we = w * 0.84, ww = w * 0.64;
+  const up = quad(sh, el, w, we), fo = quad(el, wr, we * 0.94, ww);
+  const closed = (q) => `M ${q.map(xy).join(' L ')} Z`;
+  const line = `fill="none" stroke="${K}" stroke-width="10" stroke-linejoin="round"`;
+  let s =
+    `<path d="M ${xy(up[0])} L ${xy(up[1])} M ${xy(up[2])} L ${xy(up[3])}" ${line}/>` +
+    `<circle cx="${el[0]}" cy="${el[1]}" r="${we / 2}" ${line}/>` +
+    `<path d="${closed(fo)}" ${line}/>` +
+    `<path d="${closed(up)}" fill="${SKIN}"/><circle cx="${el[0]}" cy="${el[1]}" r="${we / 2}" fill="${SKIN}"/><path d="${closed(fo)}" fill="${SKIN}"/>`;
+  if (sleeve > 0) {
+    const sq = quad(sh, along(sh, el, sleeve), w + 16, w + 10);
+    s += P(`M ${xy(sq[0])} L ${xy(sq[1])} L ${xy(sq[2])} L ${xy(sq[3])}`, 5, fill);
+  }
+  if (kind !== 'none') {
+    const deg = (Math.atan2(wr[1] - el[1], wr[0] - el[0]) * 180) / Math.PI + handDeg;
+    s += hand(wr[0], wr[1], deg, { kind, thumb, s: (hs * w) / 64 });
+  }
+  return s;
+}
+
+/** 폰 — 가운데가 (0,0) */
+const phoneShape = (w, h, screen = '#fff') =>
+  `<rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="${w * 0.15}" ${S(5, '#2a2a2a')}/>` +
+  `<rect x="${-w / 2 + 10}" y="${-h / 2 + 14}" width="${w - 20}" height="${h - 28}" rx="8" fill="${screen}"/>`;
 
 /* ───────── 아빠(Julian 캐리커처): 덥수룩한 머리 · 둥근 안경 ───────── */
 
@@ -156,28 +223,38 @@ function torso(fill = '#fff') {
   );
 }
 
-/** 팔 자세 */
+/** 팔 자세 — 아빠 몸 좌표(얼굴 가운데가 0,0). 어깨는 (±150,250) 언저리, 「왼」「오른」은 보는 쪽 기준 */
+const SH_L = [-150, 250], SH_R = [150, 250];
 const arms = {
   none: () => '',
-  crossed: (fill) =>
-    limb('M -180,290 C -110,320 20,350 120,360', 60, fill) + hand(126, 360, 26) +
-    limb('M 180,290 C 110,320 -20,350 -120,360', 60, fill) + hand(-126, 360, 26),
-  /** 오른손(보는 쪽 기준 오른쪽)으로 가슴 앞에 폰 */
-  phone: (fill, screen = '#fff') =>
-    limb('M 170,470 C 170,420 150,380 110,340', 60, fill) +
-    G(96, 250, 1, `<rect x="-58" y="-98" width="116" height="196" rx="18" ${S(5, '#2a2a2a')}/><rect x="-48" y="-84" width="96" height="168" rx="8" fill="${screen}"/>`, -6) +
-    hand(104, 330, 34, '#fff', -20),
+  /** 두 팔을 옆으로 늘어뜨림 — 상반신 컷에서는 소매와 위팔만 보인다 */
+  down: (f) =>
+    arm(SH_L, [-206, 500], [-214, 730], { fill: f, hand: 'open', thumb: 1 }) +
+    arm(SH_R, [206, 500], [214, 730], { fill: f, hand: 'open', thumb: -1 }),
+  /** 팔짱 — 왼팔이 아래, 오른팔이 위. 왼손은 오른팔 밑에 숨고 오른손은 왼팔 위팔을 쥔다 */
+  crossed: (f) =>
+    arm(SH_L, [-186, 470], [96, 420], { fill: f, hand: 'fist', thumb: -1 }) +
+    arm(SH_R, [186, 470], [-96, 404], { fill: f, hand: 'fist', thumb: 1 }),
+  /** 오른손으로 가슴 앞에 폰, 왼팔은 늘어뜨림 */
+  phone: (f, screen = '#fff') =>
+    arm(SH_L, [-206, 500], [-214, 730], { fill: f, hand: 'open', thumb: 1 }) +
+    G(50, 262, 1, phoneShape(100, 176, screen), -6) +
+    arm(SH_R, [206, 500], [128, 400], { fill: f, hand: 'fist', thumb: 1, handDeg: -10 }),
   /** 두 손으로 폰 — 치는 중 */
-  typing: (fill, screen = '#fff') =>
-    limb('M -170,470 C -160,420 -110,380 -60,350', 56, fill) + limb('M 170,470 C 160,420 110,380 60,350', 56, fill) +
-    G(0, 280, 1, `<rect x="-70" y="-110" width="140" height="210" rx="18" ${S(5, '#2a2a2a')}/><rect x="-58" y="-96" width="116" height="180" rx="8" fill="${screen}"/>`) +
-    hand(-56, 352, 32) + hand(56, 352, 32),
+  typing: (f, screen = '#fff') =>
+    G(0, 300, 1, phoneShape(120, 196, screen)) +
+    arm(SH_L, [-200, 490], [-100, 430], { fill: f, hand: 'fist', thumb: 1, handDeg: -20 }) +
+    arm(SH_R, [200, 490], [100, 430], { fill: f, hand: 'fist', thumb: -1, handDeg: 20 }),
 };
 
-/** 아빠 — x,y 는 얼굴 가운데 */
-function dad(x, y, s, { expr = 'normal', arm = 'none', shirt = '#fff', messy = false, headRot = 0, screen } = {}) {
+/**
+ * 아빠 — x,y 는 얼굴 가운데. arm 은 위 자세 이름이나 (셔츠 색) => SVG 함수(직접 그리는 팔),
+ * front 는 몸통과 팔 사이에 그릴 것(안은 아기 등, 몸 좌표)
+ */
+function dad(x, y, s, { expr = 'normal', arm: pose = 'down', shirt = '#fff', messy = false, headRot = 0, screen, front = '' } = {}) {
   const head = headRot ? `<g transform="rotate(${headRot} 0 100)">${dadHead(expr, { messy })}</g>` : dadHead(expr, { messy });
-  return G(x, y, s, torso(shirt) + head + arms[arm](shirt, screen));
+  const armSvg = typeof pose === 'function' ? pose(shirt) : arms[pose](shirt, screen);
+  return G(x, y, s, torso(shirt) + head + front + armSvg);
 }
 
 /* ───────── 아기(말콩이) ───────── */
@@ -277,5 +354,5 @@ function burst(cx, cy, r1, r2, n = 28, color = K, w = 3) {
   return s;
 }
 
-window.T = { K, P, C, DOT, G, limb, hand, dad, dadHead, baby, babyHead, label, box, book, star, bubble, cloud, magnifier, burst, extras };
+window.T = { K, P, C, DOT, G, limb, hand, arm, phoneShape, SH_L, SH_R, dad, dadHead, baby, babyHead, label, box, book, star, bubble, cloud, magnifier, burst, extras };
 })();

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>육아버디 만화 한눈에</title>
+    <style>
+      /* 컷을 400×500 으로 줄여 세 칸씩 — ./render.sh grid 가 찍는다 */
+      html, body { margin: 0; background: #888; }
+      #grid { display: grid; grid-template-columns: repeat(3, 400px); gap: 8px; padding: 8px; width: max-content; }
+      img { display: block; width: 400px; height: 500px; }
+    </style>
+  </head>
+  <body>
+    <div id="grid"></div>
+    <script>
+      const n = Number(new URLSearchParams(location.search).get('n') ?? '9');
+      document.getElementById('grid').innerHTML = Array.from({ length: n }, (_, i) => `<img src="out/${String(i + 1).padStart(2, '0')}.png" />`).join('');
+    </script>
+  </body>
+</html>

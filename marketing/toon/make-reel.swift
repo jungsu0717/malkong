@@ -1,4 +1,4 @@
-// 릴스 영상 만들기 — reel/01~12.png(1080×1920)를 천천히 당기며 넘기는 mp4.
+// 릴스 영상 만들기 — reel/01~09.png(1080×1920)를 천천히 당기며 넘기는 mp4.
 // ffmpeg 없이 macOS 기본 AVFoundation 으로 만든다. 사용: swiftc -O make-reel.swift -o /tmp/make-reel && /tmp/make-reel
 import AVFoundation
 import CoreGraphics
@@ -9,10 +9,11 @@ let W = 1080, H = 1920, FPS: Int32 = 30
 let dir = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 let outURL = dir.appendingPathComponent("out/reel.mp4")
 
-/// 컷마다 보여 줄 초 — 글이 많은 컷은 길게
-let seconds: [Double] = [3.0, 3.0, 3.6, 3.0, 3.6, 3.6, 4.2, 3.8, 4.6, 3.6, 4.2, 4.4]
-/// 들어올 때 흔들리는 컷 (멘붕 · 속았다 · 또 처음부터)
-let shake: Set<Int> = [2, 5, 8]
+/// 컷마다 보여 줄 초 — 글이 많은 컷은 길게(5컷은 세 칸이라 가장 길다)
+let seconds: [Double] = [3.0, 3.0, 3.6, 3.2, 7.0, 5.0, 3.6, 4.2, 4.4]
+/// 들어올 때 흔들리는 컷 (멘붕 · 속았다 · 또 처음부터), 0부터 센다
+let shake: Set<Int> = [2, 4, 5]
+let count = seconds.count
 let fade = 0.3
 
 func load(_ i: Int) -> CGImage {
@@ -22,7 +23,7 @@ func load(_ i: Int) -> CGImage {
   }
   return img
 }
-let images = (0..<12).map(load)
+let images = (0..<count).map(load)
 
 try? FileManager.default.removeItem(at: outURL)
 let writer = try AVAssetWriter(outputURL: outURL, fileType: .mp4)
@@ -67,7 +68,7 @@ let frames = Int(total * Double(FPS))
 for f in 0..<frames {
   while !input.isReadyForMoreMediaData { usleep(2000) }
   let time = Double(f) / Double(FPS)
-  let i = max(0, min(11, (starts.lastIndex { $0 <= time } ?? 0)))
+  let i = max(0, min(count - 1, (starts.lastIndex { $0 <= time } ?? 0)))
   var buffer: CVPixelBuffer?
   CVPixelBufferPoolCreatePixelBuffer(nil, adaptor.pixelBufferPool!, &buffer)
   guard let pb = buffer else { fatalError("버퍼를 못 만들었어요") }
@@ -81,7 +82,7 @@ for f in 0..<frames {
   // 다음 컷으로 넘어가기 직전 0.3초는 겹쳐서 넘긴다
   draw(ctx, i, t, alpha: 1)
   let left = starts[i + 1] - time
-  if i < 11 && left < fade {
+  if i < count - 1 && left < fade {
     draw(ctx, i + 1, 0, alpha: CGFloat(1 - left / fade))
   }
   CVPixelBufferUnlockBaseAddress(pb, [])
