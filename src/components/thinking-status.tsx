@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 // 대기 문구 3.2초 순환, 기본 접힘 + 헤더 라이브 라벨, 완료되면 같은 모양으로 정지.
 const ROTATION_MS = 3200;
 
+/** 질문을 모를 때만 쓰는 대기 문구 — 보통은 질문으로 만든 문구(`ask-trace.ts`)가 들어온다(task ask/007) */
 const WAITING_PHRASES = [
   '우리 아기 기록을 살펴보고 있어요…',
   '표준 육아 지식을 찾아보고 있어요…',
@@ -33,9 +34,13 @@ type ThinkingStatusProps = {
   done: boolean;
   /** 서버가 현재 단계 라벨을 보내면 순환 문구 대신 이것을 보여준다 */
   label?: string;
+  /** 기다리는 동안 돌릴 문구 — 질문마다 다르다 */
+  phrases?: string[];
+  /** 끝난 뒤 접힌 머리의 한 줄 — 없으면 「N단계 확인했어요」(예전 답) */
+  summary?: string;
 };
 
-export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
+export function ThinkingStatus({ steps, done, label, phrases, summary }: ThinkingStatusProps) {
   const colors = useTheme();
   const [open, setOpen] = useState(false);
   const [phraseIndex, setPhraseIndex] = useState(0);
@@ -74,7 +79,7 @@ export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
   useEffect(() => {
     if (done) return;
     const rotate = setInterval(
-      () => setPhraseIndex((i) => (i + 1) % WAITING_PHRASES.length),
+      () => setPhraseIndex((i) => i + 1),
       ROTATION_MS,
     );
     const tick = setInterval(() => setElapsed((s) => s + 1), 1000);
@@ -85,7 +90,10 @@ export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
   }, [done]);
 
   const doneCount = steps.filter((s) => s.done).length;
-  const headerText = done ? `${doneCount}단계 확인했어요` : (label ?? WAITING_PHRASES[phraseIndex]);
+  const rotating = phrases && phrases.length > 0 ? phrases : WAITING_PHRASES;
+  const headerText = done
+    ? (summary ?? `${doneCount}단계 확인했어요`)
+    : (label ?? rotating[Math.min(phraseIndex, rotating.length - 1)]);
 
   return (
     <View style={styles.card}>
@@ -146,15 +154,15 @@ export function ThinkingStatus({ steps, done, label }: ThinkingStatusProps) {
                   />
                 </View>
               )}
-              <ThemedText type="caption">{step.title}</ThemedText>
-              {step.brief && (
-                <ThemedText
-                  type="caption"
-                  numberOfLines={1}
-                  style={[styles.stepBrief, { color: colors.textSecondary }]}>
-                  {step.brief}
-                </ThemedText>
-              )}
+              {/* 결과 한 줄은 제목 아래에 — 기록 문구 · 출처 이름처럼 길어져도 제목이 꺾이지 않게 */}
+              <View style={styles.stepText}>
+                <ThemedText type="caption">{step.title}</ThemedText>
+                {step.brief && (
+                  <ThemedText type="caption" numberOfLines={2} style={{ color: colors.textSecondary }}>
+                    {step.brief}
+                  </ThemedText>
+                )}
+              </View>
             </View>
           ))}
         </View>
@@ -190,9 +198,10 @@ const styles = StyleSheet.create({
   },
   stepRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: Spacing.two,
   },
+  stepText: { flex: 1, gap: 1 },
   dotSlot: {
     width: 16,
     height: 16,
@@ -204,5 +213,4 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 4,
   },
-  stepBrief: { flexShrink: 1 },
 });

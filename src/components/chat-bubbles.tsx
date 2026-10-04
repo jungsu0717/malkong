@@ -44,9 +44,9 @@ export function DateDivider({ label }: { label: string }) {
 }
 
 /** 접힌 처리 현황 — 누르면 단계와 한 줄 결과(SPEC-ASK-05) */
-export function DoneTrace({ trace }: { trace: TraceStep[] }) {
+export function DoneTrace({ trace, summary }: { trace: TraceStep[]; summary?: string }) {
   if (!trace.length) return null;
-  return <ThinkingStatus done steps={trace.map((s) => ({ ...s, done: true }))} />;
+  return <ThinkingStatus done summary={summary} steps={trace.map((s) => ({ ...s, done: true }))} />;
 }
 
 /** 같은 출처가 여러 항목에 걸쳐 오면(접종 다섯 건이 모두 질병관리청) 한 번만 보인다 */

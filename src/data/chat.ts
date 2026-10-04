@@ -36,6 +36,8 @@ export type MalkongMeta =
       /** 모델에 보낸 우리 아기 기록 수 — 「우리 아기 기록 N건 참고」 표시. 예전 답에는 없다 */
       usedRecords?: number;
       trace: TraceStep[];
+      /** 접힌 처리 현황의 한 줄 — 「콩이 기록 2건과 출처 1곳을 보고 답했어요」(task ask/007). 예전 답에는 없다 */
+      traceSummary?: string;
       /** 남긴 피드백(SPEC-ASK-06) — 다시 열어도 눌렀던 쪽이 보인다 */
       feedback?: 'up' | 'down';
     }
@@ -46,6 +48,7 @@ export type MalkongMeta =
       question: string;
       followup: Followup;
       trace: TraceStep[];
+      traceSummary?: string;
     }
   | { type: 'redflag'; questionId: string; sources: Source[] }
   | ({

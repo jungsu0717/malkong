@@ -28,10 +28,11 @@ import {
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { ThinkingStatus, type ThinkingStep } from '@/components/thinking-status';
+import { ThinkingStatus } from '@/components/thinking-status';
 import { Chip, IconButton, tap } from '@/components/ui';
 import { FontFamily, Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { canOfferRewardedAd } from '@/data/ads';
+import { waitingPhrases, waitingSteps } from '@/data/ask-trace';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { dayKey, dayLabel } from '@/data/chat';
@@ -55,13 +56,6 @@ const QUICK = [
   '수면 교육은 언제부터 시작하나요?',
 ];
 
-// 기다리는 동안의 단계 — 서버가 단계를 보내 주기 전까지는 순환 문구가 머리를 맡는다(ask.md 처리 현황 블록)
-const PENDING_STEPS: ThinkingStep[] = [
-  { id: 'l2', title: '우리 아기 기록 확인', done: false },
-  { id: 'l1', title: '표준 지식 찾기', done: false },
-  { id: 'compose', title: '답변 정리', done: false },
-];
-
 function failureText(failure: AskFailure): string {
   if (failure.status === 0) return '인터넷 연결이 불안정해서 답을 받지 못했어요. 연결을 확인하고 다시 시도해 주세요.';
   if (failure.status === 503) return '버디가 지금 답을 만들지 못했어요. 잠시 뒤에 다시 시도해 주세요.';
@@ -80,6 +74,7 @@ export default function ChatScreen() {
   const {
     messages,
     pendingId,
+    pending,
     failure,
     openFollowup,
     send,
@@ -196,7 +191,7 @@ export default function ChatScreen() {
     }
     rows.push(
       <View key={m.id} style={styles.malkong}>
-        <DoneTrace trace={m.meta.trace} />
+        <DoneTrace trace={m.meta.trace} summary={m.meta.traceSummary} />
         {m.meta.type === 'answer' ? (
           <AnswerBubble
             message={m}
@@ -218,7 +213,16 @@ export default function ChatScreen() {
     );
   }
   if (pendingId) {
-    rows.push(<ThinkingStatus key={`p-${pendingId}`} steps={PENDING_STEPS} done={false} />);
+    // 질문 · 그 주제의 기록 · 월령으로 만든 문구 — 질문마다 다르다(task ask/007)
+    const ctx = { question: pending?.question ?? '', records: pending?.records ?? [], month: age?.month ?? 0, name };
+    rows.push(
+      <ThinkingStatus
+        key={`p-${pendingId}`}
+        steps={waitingSteps(ctx).map((step) => ({ ...step, done: false }))}
+        phrases={waitingPhrases(ctx)}
+        done={false}
+      />,
+    );
   } else if (failure?.code === 'LIMIT_EXCEEDED') {
     rows.push(
       <LimitBubble

@@ -7,27 +7,18 @@
  * - 답변의 기록 제안은 자동 저장하고 답 아래 「기록됨」으로 보인다(ask.md L2 추출 규칙)
  * - 자동 재시도는 하지 않는다 — 서버가 같은 clientMessageId 를 아직 같은 응답으로 돌려주지 못해서,
  *   다시 보내면 모델 호출이 한 번 더 나간다. 사용자가 「다시 시도」를 고른다
+ * - 처리 현황 문구는 질문 · 보낸 기록 · 응답으로 만든다(`ask-trace.ts`, task ask/007) — 기다리는 동안 쓸 재료를 `pending` 으로 내준다
  */
 
 import { useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useState } from 'react';
 
 import { watchRewardedAd } from '@/data/ads';
-import {
-  ApiError,
-  deviceKeyHash,
-  getEntitlements,
-  postAsk,
-  type AskResponse,
-  type LimitInfo,
-} from '@/data/api';
+import { ApiError, deviceKeyHash, getEntitlements, postAsk, type LimitInfo } from '@/data/api';
+import { doneTrace } from '@/data/ask-trace';
+import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
-import {
-  newMessageId,
-  type MalkongMessage,
-  type TraceStep,
-  type UserMessage,
-} from '@/data/chat';
+import { newMessageId, type MalkongMessage, type UserMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { recordsForQuestion } from '@/data/daily-log';
@@ -51,37 +42,17 @@ type Attempt = {
 
 export type AskFailure = Attempt & { status: number; code: string; limit?: LimitInfo };
 
-function traceFor(response: AskResponse, sentRecords: number): TraceStep[] {
-  if (response.type === 'redflag') return [];
-  const eco = response.type === 'answer' && response.eco;
-  const l2: TraceStep = {
-    id: 'l2',
-    title: '우리 아기 기록 확인',
-    brief: eco ? '일반 기준이라 기록은 쓰지 않았어요' : sentRecords ? `기록 ${sentRecords}건` : '아직 기록이 없어요',
-  };
-  if (response.type === 'followup') {
-    return [l2, { id: 'compose', title: '확인할 것 정리', brief: '먼저 여쭤볼 게 있어요' }];
-  }
-  const names = response.sources.map((s) => s.name);
-  return [
-    l2,
-    {
-      id: 'l1',
-      title: '표준 지식 찾기',
-      brief: names.length
-        ? `${names[0]}${names.length > 1 ? ` 외 ${names.length - 1}건` : ''}`
-        : '맞는 표준 지식이 없었어요',
-    },
-    { id: 'compose', title: '답변 정리' },
-  ];
-}
+/** 기다리는 동안 처리 현황 문구를 만들 재료 */
+export type PendingAsk = { question: string; records: string[] };
 
 export function useMalkong() {
-  const { age } = useBaby();
+  const { age, baby } = useBaby();
+  const name = baby?.name ?? DEFAULT_BABY_NAME;
   const { messages, append } = useChat();
   const { records, add } = useRecords();
   const { setRemaining } = useEntitlements();
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingAsk | null>(null);
   const [failure, setFailure] = useState<AskFailure | null>(null);
   const { mutateAsync: askServer } = useMutation({ mutationFn: postAsk, retry: 0 });
 
@@ -97,6 +68,8 @@ export function useMalkong() {
       setFailure(null);
       setPendingId(attempt.questionId);
       const sent = recordsForQuestion(known, MAX_RECORDS_SENT).map((r) => ({ kind: r.kind, label: r.label }));
+      const labels = attempt.mode ? [] : sent.map((r) => r.label);
+      setPending({ question: attempt.question, records: labels });
       try {
         const response = await askServer({
           question: attempt.question,
@@ -104,7 +77,13 @@ export function useMalkong() {
           clientMessageId: attempt.questionId,
           ...(attempt.mode ? { mode: attempt.mode } : {}),
         });
-        const trace = traceFor(response, attempt.mode ? 0 : sent.length);
+        const { steps: trace, summary: traceSummary } = doneTrace(response, {
+          question: attempt.question,
+          records: labels,
+          month: age.month,
+          name,
+          eco: !!attempt.mode,
+        });
         const base = {
           id: newMessageId(),
           role: 'malkong' as const,
@@ -140,6 +119,7 @@ export function useMalkong() {
               recordIds: savedIds,
               usedRecords: response.eco ? 0 : sent.length,
               trace,
+              traceSummary,
             },
           };
         } else if (response.type === 'followup') {
@@ -152,6 +132,7 @@ export function useMalkong() {
               question: attempt.question,
               followup: response.followup,
               trace,
+              traceSummary,
             },
           };
         } else {
@@ -167,9 +148,10 @@ export function useMalkong() {
         setFailure({ ...attempt, status: e.status, code: e.code, limit: e.limit });
       } finally {
         setPendingId(null);
+        setPending(null);
       }
     },
-    [age, askServer, add, append, setRemaining],
+    [age, name, askServer, add, append, setRemaining],
   );
 
   /** 되묻기에 답한다 — 칩을 누르거나, 되묻기가 열려 있을 때 입력창에 친 글 */
@@ -268,6 +250,7 @@ export function useMalkong() {
   return {
     messages,
     pendingId,
+    pending,
     failure,
     openFollowup,
     send,
