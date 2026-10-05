@@ -94,10 +94,15 @@ Claude Code 의 메모리는 PC 마다 따로라서, 이어받는 기준은 이 
 
 ```bash
 npm install
-npx expo start        # 실기기는 Expo Go, 웹 미리보기는 --web
+REACT_NATIVE_PACKAGER_HOSTNAME=<맥 IP> npx expo start --go   # 아이폰 Expo Go — 맥 IP 는 `ipconfig getifaddr en0`
+npx expo start --web  # 웹 미리보기
 npx tsc --noEmit      # 타입 검사
 npx expo lint         # 린트
 ```
+
+`--go` 는 꼭 붙인다 — `expo-dev-client` 가 깔려 있어서 빼면 개발 빌드용으로 켜져 Expo Go 가 열지 못한다.
+`REACT_NATIVE_PACKAGER_HOSTNAME` 은 폰이 찾아올 맥 주소를 정해 둔다(와이파이가 바뀌면 숫자도 바꾼다).
+화면이 이상하거나 고친 것이 안 보일 때만 `--clear` 를 더한다.
 
 ## 스택
 
