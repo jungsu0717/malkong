@@ -8,6 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { useBaby } from '@/data/baby-context';
 import { usePreferences } from '@/data/preferences-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -45,6 +46,7 @@ export default function IntroScreen() {
   const c = useTheme();
   const router = useRouter();
   const { markIntroSeen } = usePreferences();
+  const { baby } = useBaby();
   const { width, height } = useWindowDimensions();
   const scroller = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
@@ -69,12 +71,12 @@ export default function IntroScreen() {
     if (i !== index && i >= 0 && i < CUTS.length) setIndex(i);
   };
 
-  /** 끝까지 봤거나 건너뛰면 다시 띄우지 않는다 */
+  /** 끝까지 봤거나 건너뛰면 다시 띄우지 않는다 — 생일이 없으면 온보딩, 이미 쓰던 사람은 홈으로 */
   const finish = async () => {
     setLeaving(true);
     try {
       await markIntroSeen();
-      router.replace('/onboarding');
+      router.replace(baby ? '/' : '/onboarding');
     } finally {
       setLeaving(false);
     }

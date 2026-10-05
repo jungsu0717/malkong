@@ -28,8 +28,8 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 /**
- * 저장된 생일이 없으면 온보딩으로 보낸다 (SPEC-MY-01).
- * 처음 실행이라 만화를 아직 안 봤으면 그 앞에 만화부터 (SPEC-MY-07).
+ * 만화를 아직 닫지 않았으면 만화부터 — 생일이 있든 없든, 건너뛰거나 끝까지 볼 때까지 (SPEC-MY-07).
+ * 그다음 저장된 생일이 없으면 온보딩으로 보낸다 (SPEC-MY-01).
  */
 function OnboardingGate() {
   const { baby, loading } = useBaby();
@@ -38,9 +38,12 @@ function OnboardingGate() {
   const router = useRouter();
 
   useEffect(() => {
-    if (loading || prefsLoading || baby) return;
-    const target = introSeen ? 'onboarding' : 'intro';
-    if (segments[0] !== target) router.replace(introSeen ? '/onboarding' : '/intro');
+    if (loading || prefsLoading) return;
+    if (!introSeen) {
+      if (segments[0] !== 'intro') router.replace('/intro');
+    } else if (!baby && segments[0] !== 'onboarding') {
+      router.replace('/onboarding');
+    }
   }, [baby, loading, prefsLoading, introSeen, segments, router]);
 
   return null;
