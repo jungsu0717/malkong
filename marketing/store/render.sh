@@ -6,6 +6,7 @@ cd "$(dirname "$0")"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 mkdir -p out
 if [[ -f shots/answer.png ]]; then
+  sips -c 150 1170 --cropOffset 1 0 shots/answer.png --out shots/answer-head.png >/dev/null
   sips -c 930 1170 --cropOffset 950 0 shots/answer.png --out shots/answer-qa.png >/dev/null
 fi
 "$CHROME" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 --window-size=1290,2796 \
