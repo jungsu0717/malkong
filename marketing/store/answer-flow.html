@@ -50,7 +50,7 @@
       .layer li { font-size: 28px; font-weight: 500; display: flex; align-items: center; gap: 12px; }
       .layer li::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--d, var(--ink)); }
       .layer li small { color: var(--mute); font-size: 22px; margin-left: 2px; }
-      .layer .foot { position: absolute; left: 28px; right: 28px; bottom: 22px; border-top: 2px dashed var(--line); padding-top: 14px; font-size: 20px; color: var(--mute); font-weight: 600; }
+      .layer .foot { position: absolute; left: 28px; right: 28px; bottom: 24px; border-top: 2px dashed var(--line); padding-top: 16px; font-size: 24px; color: var(--sub); font-weight: 600; letter-spacing: -0.4px; }
       .check { display: flex; align-items: center; gap: 10px; font-size: 25px; font-weight: 500; color: var(--sub); }
       .check svg { flex: none; stroke: var(--accent); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
       .flag { position: absolute; font-size: 22px; font-weight: 600; color: var(--accent); background: var(--accentSoft); border-radius: 10px; padding: 6px 12px; white-space: nowrap; }
@@ -89,7 +89,6 @@
       const RX = 560, RW = 546, CX = RX + RW / 2; // 파이프라인 칸
 
       put(`<div class="p mono cap" style="left:44px;top:34px">HOW BUDDY ANSWERS</div>`);
-      put(`<div class="p mono" style="right:44px;top:26px;font-size:22px;font-weight:600;padding:6px 16px;border-radius:10px;background:var(--soft);color:var(--sub)">POST /v1/ask</div>`);
       put(`<div class="p" style="left:0;right:0;top:90px;border-top:2px solid var(--soft)"></div>`);
       put(`<div class="p mono cap" style="left:44px;top:122px">KNOWLEDGE LAYERS</div>`);
       put(`<div class="p mono cap" style="left:${RX}px;top:122px">PIPELINE</div>`);
@@ -105,11 +104,11 @@
           <li style="--d:var(--accent)">미국 CDC</li>
           <li style="--d:transparent"><small>접종 · 검진 · 발달 · 수유 · 수면 · 안전</small></li>
         </ul>
-        <div class="foot mono">APPROVED · SOURCED<br><span style="font-family:'IBM Plex Sans KR';letter-spacing:-0.4px">승인 항목만 · 항목마다 출처</span></div></div>`);
+        <div class="foot">승인 항목만 · 항목마다 출처</div></div>`);
       put(`<div class="layer" style="left:44px;top:640px;width:400px;height:300px">
         <div><span class="chip mono" style="background:var(--ink);color:#fff">L2</span><span class="t">우리 아기</span></div>
         <ul><li>대화에서 쌓인 기록</li><li>되묻기에 답한 것</li></ul>
-        <div class="foot mono">ON-DEVICE<br><span style="font-family:'IBM Plex Sans KR';letter-spacing:-0.4px">이 기기에만 저장</span></div></div>`);
+        <div class="foot">이 기기에만 저장</div></div>`);
 
       // 파이프라인 — 서버 /v1/ask 의 순서
       const N = [
