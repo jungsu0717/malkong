@@ -1,4 +1,4 @@
-// 릴스 영상 만들기 — reel/01~09.png(1080×1920)를 천천히 당기며 넘기는 mp4.
+// 릴스 영상 만들기 — reel/01~05.png(1080×1920)를 천천히 당기며 넘기는 mp4.
 // ffmpeg 없이 macOS 기본 AVFoundation 으로 만든다. 사용: swiftc -O make-reel.swift -o /tmp/make-reel && /tmp/make-reel
 import AVFoundation
 import CoreGraphics
@@ -9,10 +9,10 @@ let W = 1080, H = 1920, FPS: Int32 = 30
 let dir = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
 let outURL = dir.appendingPathComponent("out/reel.mp4")
 
-/// 컷마다 보여 줄 초 — 글이 많은 컷은 길게(5컷은 세 칸이라 가장 길다)
-let seconds: [Double] = [3.0, 3.0, 3.6, 3.2, 7.0, 5.0, 3.6, 4.2, 4.4]
-/// 들어올 때 흔들리는 컷 (멘붕 · 속았다 · 또 처음부터), 0부터 센다
-let shake: Set<Int> = [2, 4, 5]
+/// 컷마다 보여 줄 초 — 글이 많은 컷은 길게(3컷은 네 칸이라 가장 길다)
+let seconds: [Double] = [4.0, 6.0, 10.0, 3.6, 6.5]
+/// 들어올 때 흔들리는 컷 (멘붕 · 속았다), 0부터 센다
+let shake: Set<Int> = [1, 2]
 let count = seconds.count
 let fade = 0.3
 

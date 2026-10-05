@@ -3,7 +3,7 @@
 cd "$(dirname "$0")"
 CHROME="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 mkdir -p out
-N=9  # 컷 수 — panels.js · reel.html · make-reel.swift 와 맞춘다
+N=5  # 컷 수 — panels.js · reel.html · make-reel.swift 와 맞춘다
 
 # ./render.sh reel — 컷 PNG(out/)로 릴스 9:16 장면(reel/)을 만들고 mp4 로 잇는다
 if [[ $1 == reel ]]; then

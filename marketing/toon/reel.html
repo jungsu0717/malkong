@@ -28,7 +28,7 @@
     </div>
     <script>
       /* 컷 수 · 밤 컷(어두운 배경) · 버디가 나오는 아침부터(따뜻한 배경) — panels.js 와 맞춘다 */
-      const N = 9, NIGHT = 7, MORNING = 8;
+      const N = 5, NIGHT = 4, MORNING = 5;
       const p = Number(new URLSearchParams(location.search).get('p') ?? '1');
       const dark = p === NIGHT;
       const bg = p >= MORNING ? '#FFF6E2' : dark ? '#232838' : '#F4F1EA';
