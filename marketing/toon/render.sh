@@ -18,6 +18,14 @@ if [[ $1 == reel ]]; then
   exit
 fi
 
+# ./render.sh app — out/ 의 컷을 앱 처음 실행 만화로 옮긴다(assets/images/intro/, SPEC-MY-07)
+if [[ $1 == app ]]; then
+  mkdir -p ../../assets/images/intro
+  for p in {1..$N}; do cp "out/$(printf "%02d" $p).png" ../../assets/images/intro/; done
+  ls ../../assets/images/intro
+  exit
+fi
+
 # ./render.sh grid — out/ 의 컷을 세 칸씩 모은 한눈에 보기(out/한눈에.png)
 if [[ $1 == grid ]]; then
   "$CHROME" --headless=new --disable-gpu --hide-scrollbars --force-device-scale-factor=1 \

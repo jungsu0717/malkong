@@ -19,7 +19,7 @@ import { ChatProvider } from '@/data/chat-context';
 import { DraftProvider } from '@/data/draft-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
 import { InboxProvider } from '@/data/inbox-context';
-import { PreferencesProvider } from '@/data/preferences-context';
+import { PreferencesProvider, usePreferences } from '@/data/preferences-context';
 import { RecordsProvider } from '@/data/records-context';
 
 SplashScreen.preventAutoHideAsync();
@@ -29,18 +29,19 @@ const queryClient = new QueryClient();
 
 /**
  * 저장된 생일이 없으면 온보딩으로 보낸다 (SPEC-MY-01).
- * 반대로 이미 저장돼 있는데 온보딩에 머물러 있으면 홈으로 되돌린다.
+ * 처음 실행이라 만화를 아직 안 봤으면 그 앞에 만화부터 (SPEC-MY-07).
  */
 function OnboardingGate() {
   const { baby, loading } = useBaby();
+  const { introSeen, loading: prefsLoading } = usePreferences();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
-    const onOnboarding = segments[0] === 'onboarding';
-    if (!baby && !onOnboarding) router.replace('/onboarding');
-  }, [baby, loading, segments, router]);
+    if (loading || prefsLoading || baby) return;
+    const target = introSeen ? 'onboarding' : 'intro';
+    if (segments[0] !== target) router.replace(introSeen ? '/onboarding' : '/intro');
+  }, [baby, loading, prefsLoading, introSeen, segments, router]);
 
   return null;
 }
@@ -88,6 +89,7 @@ export default function RootLayout() {
                   <OnboardingGate />
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="intro" options={{ animation: 'fade' }} />
                     <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
                     <Stack.Screen name="inbox" options={{ ...header, title: '알림함' }} />
                     <Stack.Screen name="records" options={{ ...header, title: '우리 아기 기록' }} />

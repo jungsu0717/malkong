@@ -19,6 +19,9 @@ export const DEFAULT_BRIEFING_TIME = '08:00';
 const NUDGE_PUSH_KEY = 'record_nudge_push';
 const NUDGE_CARD_KEY = 'record_nudge_card';
 
+/** 처음 실행 만화를 봤거나 건너뛰었으면 'yes' — 그 뒤로는 다시 띄우지 않는다 (SPEC-MY-07) */
+const INTRO_SEEN_KEY = 'intro_seen';
+
 type PreferencesValue = {
   /** 기기에서 읽어오는 중 */
   loading: boolean;
@@ -34,6 +37,9 @@ type PreferencesValue = {
   /** 기록 요청 카드 — 앱을 열 때 저절로 띄우기 */
   nudgeCard: boolean;
   setNudgeCard: (on: boolean) => Promise<void>;
+  /** 처음 실행 만화를 봤는지 */
+  introSeen: boolean;
+  markIntroSeen: () => Promise<void>;
 };
 
 const PreferencesContext = createContext<PreferencesValue | null>(null);
@@ -43,6 +49,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const [briefingTime, setTime] = useState<string | null>(DEFAULT_BRIEFING_TIME);
   const [nudgePush, setPush] = useState(true);
   const [nudgeCard, setCard] = useState(true);
+  const [introSeen, setIntroSeen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,12 +59,14 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
       readSetting(BRIEFING_TIME_KEY),
       readSetting(NUDGE_PUSH_KEY),
       readSetting(NUDGE_CARD_KEY),
+      readSetting(INTRO_SEEN_KEY),
     ])
-      .then(([only, time, push, card]) => {
+      .then(([only, time, push, card, intro]) => {
         if (cancelled) return;
         setValue(only === 'true');
         setPush(push !== 'off');
         setCard(card !== 'off');
+        setIntroSeen(intro === 'yes');
         const t = time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME);
         setTime(t);
         // 시작할 때마다 다시 건다 — 허락을 설정 앱에서 나중에 켰어도 따라오게. 허락이 없으면 아무 일도 없다
@@ -92,6 +101,11 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     await writeSetting(NUDGE_CARD_KEY, on ? 'on' : 'off');
   }, []);
 
+  const markIntroSeen = useCallback(async () => {
+    setIntroSeen(true);
+    await writeSetting(INTRO_SEEN_KEY, 'yes');
+  }, []);
+
   const value = useMemo(
     () => ({
       loading,
@@ -103,8 +117,10 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
       setNudgePush,
       nudgeCard,
       setNudgeCard,
+      introSeen,
+      markIntroSeen,
     }),
-    [loading, scheduleOnly, setScheduleOnly, briefingTime, setBriefingTime, nudgePush, setNudgePush, nudgeCard, setNudgeCard],
+    [loading, scheduleOnly, setScheduleOnly, briefingTime, setBriefingTime, nudgePush, setNudgePush, nudgeCard, setNudgeCard, introSeen, markIntroSeen],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
