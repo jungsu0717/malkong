@@ -4,49 +4,65 @@
     <meta charset="utf-8" />
     <title>육아버디 스토어 — 근거로 답해요</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=block"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=block"
       rel="stylesheet"
     />
     <style>
       /*
-       * 스토어 첫 장 — 버디가 답을 만드는 순서(서버 /v1/ask)와 진짜 앱 화면. 앱 디자인(시안 B 「단정한 비서」)을 따른다:
-       * 밝은 바탕 · 먹색 글 · 포인트는 코랄 하나 · 글꼴 IBM Plex Sans KR. 글은 짧게.
+       * 스토어 첫 장 — 지식층(L1 공공 지식 · L2 우리 아기)과 답 파이프라인(서버 /v1/ask)을 기술 문서의 흐름도처럼, 그 끝에 진짜 앱 화면.
+       * 앱 디자인(시안 B)을 따른다: 밝은 바탕 · 먹색 · 포인트는 코랄 하나 · IBM Plex Sans KR(+ 이름표는 IBM Plex Mono).
        * ?v=ios 는 1290×2796(앱스토어 6.9"), ?v=play 는 1290×2293 을 0.8372 배로 찍어 1080×1920(구글 플레이 9:16).
        * 실제 동작과 맞춘다 — 출처는 질병관리청 · 국민건강보험공단 · 미국 CDC 뿐, 모델 회사 이름은 쓰지 않는다(store-toon.md).
        */
-      :root { --ink: #16161a; --sub: #5e5e69; --line: #e3e3e8; --soft: #f1f1f4; --accent: #c64536; }
-      html, body { margin: 0; background: #fafaf8; }
+      :root { --ink: #16161a; --sub: #5e5e69; --mute: #8a8a95; --line: #dedee4; --soft: #f1f1f4; --accent: #c64536; --accentSoft: #fcebe8; }
+      html, body { margin: 0; background: #f6f5f2; }
       #c {
         position: relative; width: 1290px; overflow: hidden; color: var(--ink);
         font-family: 'IBM Plex Sans KR', sans-serif; letter-spacing: -0.6px; word-break: keep-all;
-        background: radial-gradient(90% 45% at 50% 0%, #ffffff 0%, #f6f5f2 70%), #f6f5f2;
+        background: radial-gradient(90% 40% at 50% 0%, #ffffff 0%, #f6f5f2 70%), #f6f5f2;
       }
       .abs { position: absolute; left: 0; right: 0; }
-      .brand { display: flex; align-items: center; justify-content: center; gap: 14px; font-weight: 600; color: var(--sub); }
       h1 { margin: 0; text-align: center; font-weight: 700; line-height: 1.18; letter-spacing: -3px; }
       h1 em { font-style: normal; color: var(--accent); }
-      .sub { text-align: center; color: var(--sub); font-weight: 500; line-height: 1.45; }
+      .sub { text-align: center; color: var(--sub); font-weight: 500; }
+      .mono { font-family: 'IBM Plex Mono', monospace; letter-spacing: 0; }
 
-      /* 답을 만드는 순서 — 네 걸음 */
-      .flow { margin: 0 auto; background: #fff; border: 2px solid var(--line); border-radius: 44px; }
-      .steps { display: flex; align-items: flex-start; justify-content: space-between; }
-      .step { flex: 1; display: flex; flex-direction: column; align-items: center; text-align: center; }
-      .icon { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--soft); }
-      .icon svg { fill: none; stroke: var(--ink); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-      .label { font-weight: 600; line-height: 1.3; }
-      .arrow { flex: none; display: flex; align-items: center; }
-      .arrow svg { stroke: #b9b9c2; stroke-width: 2.4; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-      .src { border-top: 2px solid var(--soft); text-align: center; color: var(--sub); font-weight: 500; }
+      /* 흐름도 패널 — 설계 좌표 1150×1200 */
+      #panel {
+        position: absolute; width: 1150px; height: 1250px; border-radius: 44px; overflow: hidden; transform-origin: 0 0;
+        background-color: #fff; border: 2px solid var(--line);
+        background-image: radial-gradient(circle, #e4e4ea 1.6px, transparent 1.8px); background-size: 30px 30px; background-position: 15px 15px;
+        box-shadow: 0 30px 80px rgba(22, 22, 26, 0.07);
+      }
+      #panel .p { position: absolute; }
+      .cap { font-size: 22px; font-weight: 600; letter-spacing: 3px; color: var(--mute); }
+      .node {
+        position: absolute; box-sizing: border-box; background: #fff; border: 2px solid var(--ink); border-radius: 22px;
+        padding: 16px 24px; display: flex; flex-direction: column; justify-content: center; gap: 4px;
+      }
+      .node .tag { font-size: 20px; font-weight: 600; color: var(--mute); letter-spacing: 1px; }
+      .node .t { font-size: 36px; font-weight: 700; letter-spacing: -1px; }
+      .layer { position: absolute; box-sizing: border-box; border-radius: 26px; background: #fff; border: 2px solid var(--ink); padding: 26px 28px; }
+      .layer.ghost { background: #fff; border-color: #c9c9d2; }
+      .chip { display: inline-block; font-size: 22px; font-weight: 600; padding: 4px 14px; border-radius: 10px; vertical-align: 6px; margin-right: 12px; }
+      .layer .t { font-size: 40px; font-weight: 700; letter-spacing: -1px; }
+      .layer ul { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+      .layer li { font-size: 28px; font-weight: 500; display: flex; align-items: center; gap: 12px; }
+      .layer li::before { content: ''; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--d, var(--ink)); }
+      .layer li small { color: var(--mute); font-size: 22px; margin-left: 2px; }
+      .layer .foot { position: absolute; left: 28px; right: 28px; bottom: 22px; border-top: 2px dashed var(--line); padding-top: 14px; font-size: 20px; color: var(--mute); font-weight: 600; }
+      .check { display: flex; align-items: center; gap: 10px; font-size: 25px; font-weight: 500; color: var(--sub); }
+      .check svg { flex: none; stroke: var(--accent); stroke-width: 3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+      .flag { position: absolute; font-size: 22px; font-weight: 600; color: var(--accent); background: var(--accentSoft); border-radius: 10px; padding: 6px 12px; white-space: nowrap; }
+      .lbl { position: absolute; font-size: 22px; font-weight: 600; white-space: nowrap; }
 
       /* 진짜 앱 화면 */
       .screen {
-        margin: 0 auto; background: #fff; border-radius: 52px; overflow: hidden; position: relative;
-        box-shadow: 0 2px 0 rgba(0, 0, 0, 0.02), 0 40px 90px rgba(22, 22, 26, 0.10); border: 2px solid var(--line);
+        position: absolute; background: #fff; border-radius: 48px; overflow: hidden;
+        box-shadow: 0 40px 90px rgba(22, 22, 26, 0.10); border: 2px solid var(--line);
       }
       .screen img { display: block; }
       .ring { position: absolute; border: 4px solid var(--accent); border-radius: 26px; }
-      .loop { display: flex; align-items: center; justify-content: center; gap: 18px; font-weight: 600; }
-      .loop svg { fill: none; stroke: var(--accent); stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
     </style>
   </head>
   <body>
@@ -55,8 +71,8 @@
       const ios = (new URLSearchParams(location.search).get('v') ?? 'ios') !== 'play';
       const H = ios ? 2796 : 2293;
       const L = ios
-        ? { h1Top: 300, h1: 122, subTop: 630, sub: 42, flowTop: 800, flowW: 1150, icon: 112, label: 34, src: 30, screenTop: 1370, screenW: 1150, loopTop: 2540, loop: 40 }
-        : { h1Top: 150, h1: 104, subTop: 430, sub: 37, flowTop: 580, flowW: 1150, icon: 96, label: 31, src: 27, screenTop: 1040, screenW: 1000, loopTop: 2130, loop: 36 };
+        ? { h1Top: 150, h1: 104, subTop: 420, sub: 38, panelTop: 520, scale: 1, screenTop: 1858, screenW: 1040 }
+        : { h1Top: 90, h1: 86, subTop: 312, sub: 32, panelTop: 392, scale: 0.8, screenTop: 1470, screenW: 880 };
       const c = document.getElementById('c');
       c.style.height = H + 'px';
       const add = (html) => c.insertAdjacentHTML('beforeend', html);
@@ -64,35 +80,89 @@
       add(`<h1 class="abs" style="top:${L.h1Top}px;font-size:${L.h1}px">검색 대신,<br><em>근거</em>로 답해요</h1>`);
       add(`<div class="abs sub" style="top:${L.subTop}px;font-size:${L.sub}px">공공 기관 지식에서 찾고, 우리 아기 기준으로</div>`);
 
-      // 네 걸음 — 서버 /v1/ask 의 순서: 지식 → 위험 신호 규칙 → 맞는 지식 + 아기 기록으로 AI 가 정리 → 답 검사
-      const ICON = {
-        book: '<path d="M10 14 h14 a6 6 0 0 1 6 6 v28 a4 4 0 0 0 -4 -4 H10 z M50 14 H36 a6 6 0 0 0 -6 6 v28 a4 4 0 0 1 4 -4 h16 z"/>',
-        alert: '<path d="M30 10 L53 50 H7 Z"/><path d="M30 25 v11"/><path d="M30 43 v0.5"/>',
-        baby: '<circle cx="30" cy="27" r="15"/><path d="M24 25 v1 M36 25 v1"/><path d="M25 33 q5 4 10 0"/><path d="M30 12 q-5 -6 2 -7"/><path d="M14 52 q16 -14 32 0"/>',
-        check: '<path d="M30 8 L49 15 V28 C49 40 41 48 30 52 C19 48 11 40 11 28 V15 Z"/><path d="M21 30 L27.5 36.5 L40 24"/>',
+      // ── 흐름도 ── 설계 좌표(1150×1200)로 그리고 크기만 줄인다
+      const PW = 1150, PH = 1250;
+      const panelX = (1290 - PW * L.scale) / 2;
+      add(`<div id="panel" style="left:${panelX}px;top:${L.panelTop}px;transform:scale(${L.scale})"></div>`);
+      const panel = document.getElementById('panel');
+      const put = (html) => panel.insertAdjacentHTML('beforeend', html);
+      const RX = 560, RW = 546, CX = RX + RW / 2; // 파이프라인 칸
+
+      put(`<div class="p mono cap" style="left:44px;top:34px">HOW BUDDY ANSWERS</div>`);
+      put(`<div class="p mono" style="right:44px;top:26px;font-size:22px;font-weight:600;padding:6px 16px;border-radius:10px;background:var(--soft);color:var(--sub)">POST /v1/ask</div>`);
+      put(`<div class="p" style="left:0;right:0;top:90px;border-top:2px solid var(--soft)"></div>`);
+      put(`<div class="p mono cap" style="left:44px;top:122px">KNOWLEDGE LAYERS</div>`);
+      put(`<div class="p mono cap" style="left:${RX}px;top:122px">PIPELINE</div>`);
+
+      // 지식층 — L1 은 겹친 카드(지식 묶음), L2 는 기기 안
+      put(`<div class="layer ghost" style="left:68px;top:194px;width:400px;height:400px"></div>
+           <div class="layer ghost" style="left:56px;top:182px;width:400px;height:400px"></div>`);
+      put(`<div class="layer" style="left:44px;top:170px;width:400px;height:400px">
+        <div><span class="chip mono" style="background:var(--accentSoft);color:var(--accent)">L1</span><span class="t">공공 지식</span></div>
+        <ul>
+          <li style="--d:var(--accent)">질병관리청 예방접종도우미</li>
+          <li style="--d:var(--accent)">국민건강보험공단</li>
+          <li style="--d:var(--accent)">미국 CDC</li>
+          <li style="--d:transparent"><small>접종 · 검진 · 발달 · 수유 · 수면 · 안전</small></li>
+        </ul>
+        <div class="foot mono">APPROVED · SOURCED<br><span style="font-family:'IBM Plex Sans KR';letter-spacing:-0.4px">승인 항목만 · 항목마다 출처</span></div></div>`);
+      put(`<div class="layer" style="left:44px;top:640px;width:400px;height:300px">
+        <div><span class="chip mono" style="background:var(--ink);color:#fff">L2</span><span class="t">우리 아기</span></div>
+        <ul><li>대화에서 쌓인 기록</li><li>되묻기에 답한 것</li></ul>
+        <div class="foot mono">ON-DEVICE<br><span style="font-family:'IBM Plex Sans KR';letter-spacing:-0.4px">이 기기에만 저장</span></div></div>`);
+
+      // 파이프라인 — 서버 /v1/ask 의 순서
+      const N = [
+        { y: 170, h: 84, html: `<div style="display:flex;align-items:center;gap:16px"><span class="mono tag" style="color:var(--mute);font-size:20px">Q</span><span style="font-size:32px;font-weight:600">BCG 언제 맞아요?</span></div>`, style: 'background:var(--soft);border-color:var(--soft);border-radius:42px' },
+        { y: 304, h: 110, tag: '01 · RULES', t: '위험 신호 규칙' },
+        { y: 464, h: 110, tag: '02 · RETRIEVE', t: '공공 지식 검색' },
+        { y: 624, h: 110, tag: '03 · GENERATE', t: 'AI 답 정리' },
+        { y: 784, h: 252, tag: '04 · VALIDATE', t: '답 검사', checks: ['위험 신호 다시 확인', '지어낸 출처 버리기', '근거 수위 표시'] },
+        { y: 1086, h: 104, tag: '05 · ANSWER', t: '답 + 출처', style: 'background:var(--accent);border-color:var(--accent);color:#fff', tagColor: 'rgba(255,255,255,0.75)' },
+      ];
+      const tick = '<svg width="26" height="26" viewBox="0 0 26 26"><path d="M5 13.5 L10.5 19 L21 7.5"/></svg>';
+      N.forEach((n) => put(`<div class="node" style="left:${RX}px;top:${n.y}px;width:${RW}px;height:${n.h}px;${n.style ?? ''}">
+        ${n.html ?? `<div class="tag mono" style="${n.tagColor ? `color:${n.tagColor}` : ''}">${n.tag}</div><div class="t">${n.t}</div>`}
+        ${n.checks ? `<div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">${n.checks.map((x) => `<div class="check">${tick}${x}</div>`).join('')}</div>` : ''}
+      </div>`));
+      put(`<div class="flag" style="left:${RX + RW - 250}px;top:${304 + 36}px">위험 → 병원 안내</div>`);
+
+      // 잇는 선 — 실선은 흐름, 점선은 되먹임
+      const head = (x, y, dir) => {
+        const d = { down: `M ${x - 9} ${y - 12} L ${x} ${y} L ${x + 9} ${y - 12}`, right: `M ${x - 12} ${y - 9} L ${x} ${y} L ${x - 12} ${y + 9}`, left: `M ${x + 12} ${y - 9} L ${x} ${y} L ${x + 12} ${y + 9}`, up: `M ${x - 9} ${y + 12} L ${x} ${y} L ${x + 9} ${y + 12}` }[dir];
+        return `<path d="${d}" fill="none"/>`;
       };
-      const STEPS = [['book', '공공 지식'], ['alert', '위험 신호<br>먼저 확인'], ['baby', '우리 아기<br>맞춤'], ['check', '답 검사']];
-      const arrow = `<div class="arrow" style="height:${L.icon}px"><svg width="34" height="34" viewBox="0 0 34 34"><path d="M4 17 H28 M21 10 L28 17 L21 24"/></svg></div>`;
-      add(`<div class="abs" style="top:${L.flowTop}px"><div class="flow" style="width:${L.flowW}px">
-        <div class="steps" style="padding:${ios ? 56 : 44}px ${ios ? 44 : 36}px ${ios ? 44 : 34}px">
-          ${STEPS.map(([icon, label]) => `<div class="step" style="gap:${ios ? 24 : 18}px">
-              <div class="icon" style="width:${L.icon}px;height:${L.icon}px"><svg viewBox="0 0 60 60" width="${L.icon * 0.54}" height="${L.icon * 0.54}">${ICON[icon]}</svg></div>
-              <div class="label" style="font-size:${L.label}px">${label}</div></div>`).join(arrow)}
-        </div>
-        <div class="src" style="font-size:${L.src}px;padding:${ios ? 30 : 24}px 0 ${ios ? 34 : 28}px">출처 · 질병관리청 · 국민건강보험공단 · 미국 CDC</div>
-      </div></div>`);
+      let svg = '';
+      const ink = 'stroke="#16161a" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+      const red = 'stroke="#c64536" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+      // 아래로 흐름
+      [[254, 304], [414, 464], [574, 624], [734, 784], [1036, 1086]].forEach(([a, b]) => {
+        svg += `<g ${ink}><path d="M ${CX} ${a + 6} L ${CX} ${b - 4}"/>${head(CX, b - 4, 'down')}</g>`;
+      });
+      // L1 → 검색, L2 → 정리
+      svg += `<g ${ink}><path d="M 446 519 L ${RX - 4} 519"/>${head(RX - 4, 519, 'right')}</g>`;
+      svg += `<g ${ink}><path d="M 446 679 L ${RX - 4} 679"/>${head(RX - 4, 679, 'right')}</g>`;
+      // 되먹임 ① 되묻기 답 → L2 (아래쪽으로 돌아 L2 밑으로)
+      svg += `<g ${red} stroke-dasharray="10 9"><path d="M ${RX} 1138 L 244 1138 L 244 946"/></g><g ${red}>${head(244, 946, 'up')}</g>`;
+      // 되먹임 ② 피드백 → AI 답 정리 (오른쪽 가장자리로)
+      svg += `<g stroke="#8a8a95" stroke-width="2.6" fill="none" stroke-dasharray="10 9" stroke-linecap="round"><path d="M ${RX + RW} 1138 L 1128 1138 L 1128 679 L ${RX + RW + 6} 679"/></g><g stroke="#8a8a95" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round">${head(RX + RW + 6, 679, 'left')}</g>`;
+      // 답 → 화면
+      svg += `<g ${red}><path d="M ${CX} 1190 L ${CX} ${PH}"/></g>`;
+      put(`<svg class="p" style="left:0;top:0" width="${PW}" height="${PH}" viewBox="0 0 ${PW} ${PH}">${svg}</svg>`);
+      put(`<div class="lbl" style="left:60px;top:1156px;color:var(--accent)">되묻기 답 → 우리 아기 기록</div>`);
+      put(`<div class="lbl" style="right:44px;top:1046px;color:var(--mute)">피드백 → 답 다듬기</div>`);
 
-      // 진짜 앱 화면 — 머리 줄(shots/answer-head.png 1170×150) + 질문과 답(shots/answer-qa.png 1170×930)
-      const k = L.screenW / 1170;
-      add(`<div class="abs" style="top:${L.screenTop}px"><div class="screen" style="width:${L.screenW}px">
-        <img src="shots/answer-head.png" style="width:${L.screenW}px;height:${150 * k}px"/>
+      // 패널 밖으로 이어지는 화살표 끝 — 진짜 앱 화면으로
+      const outX = panelX + CX * L.scale, outTop = L.panelTop + PH * L.scale;
+      add(`<svg class="abs" style="left:0;top:${outTop - 2}px" width="1290" height="${L.screenTop - outTop + 8}"><g stroke="#c64536" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M ${outX} 0 L ${outX} ${L.screenTop - outTop - 6}"/><path d="M ${outX - 9} ${L.screenTop - outTop - 18} L ${outX} ${L.screenTop - outTop - 6} L ${outX + 9} ${L.screenTop - outTop - 18}"/></g></svg>`);
+
+      // 진짜 앱 화면 — 질문과 답(shots/answer-qa.png 1170×930)
+      const k = L.screenW / 1170, sx = (1290 - L.screenW) / 2;
+      add(`<div class="screen" style="left:${sx}px;top:${L.screenTop}px;width:${L.screenW}px">
         <img src="shots/answer-qa.png" style="width:${L.screenW}px;height:${930 * k}px"/>
-        <div class="ring" style="left:${44 * k}px;top:${(150 + 640) * k}px;width:${520 * k}px;height:${178 * k}px"></div>
-      </div></div>`);
-
-      add(`<div class="abs loop" style="top:${L.loopTop}px;font-size:${L.loop}px">
-        <svg width="${L.loop * 1.2}" height="${L.loop * 1.2}" viewBox="0 0 48 48"><path d="M40 20 A17 17 0 0 0 10 16 M8 28 A17 17 0 0 0 38 32"/><path d="M41 10 V20 H31 M7 38 V28 H17"/></svg>
-        대화할수록 우리 아기에게 더 맞게 답해요</div>`);
+        <div class="ring" style="left:${44 * k}px;top:${640 * k}px;width:${520 * k}px;height:${178 * k}px"></div>
+      </div>`);
       document.fonts.ready.then(() => document.body.setAttribute('data-ready', '1'));
     </script>
   </body>
