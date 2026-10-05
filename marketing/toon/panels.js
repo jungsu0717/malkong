@@ -3,7 +3,7 @@
  */
 
 (() => {
-const { K, P, C, G, dad, arm, SH_L, SH_R, baby, box, book, star, bubble, cloud, magnifier } = window.T;
+const { K, P, C, G, dad, armAt, layer, SH_L, SH_R, baby, box, book, star, bubble, cloud, magnifier } = window.T;
 
 const YELLOW = '#FDD686';
 const ACCENT = '#C64536';
@@ -60,9 +60,7 @@ const botMsg = (text, size = 28) =>
 /* 아기 안은 팔 — 아빠 몸 좌표. 아기는 dad 의 front 로 먼저 그리고 팔을 그 위에 얹는다 */
 
 /** 왼팔로 아기 엉덩이를 받친다 — 손끝이 아기 옆구리를 감싼다 */
-const holdUnder = (f, el = [-196, 500], wr = [40, 505]) => arm(SH_L, el, wr, { fill: f, hand: 'open', thumb: -1, handDeg: -58, hs: 0.9 });
-/** 오른팔을 옆으로 늘어뜨림 */
-const downR = (f) => arm(SH_R, [206, 500], [214, 730], { fill: f, hand: 'open', thumb: -1 });
+const holdUnder = (el = [-215, 500], wr = [40, 505]) => armAt(SH_L, el, wr, { hand: 'open', thumb: -1, handDeg: -58, hs: 0.9 });
 
 /** 아이콘이 깔린 폰 (흑백 막) — 몸 좌표 (x,y) 가 가운데 */
 const appPhone = (x, y, rot) =>
@@ -110,7 +108,7 @@ window.PANELS = {
       { svg:
           cloud(540, 330, 420, 100, 700, 470) +
           dad(580, 700, 1.15, { expr: 'panic', messy: true, front: baby(-20, 300, 0.85, { expr: 'cry' }),
-            arm: (f) => holdUnder(f) + appPhone(300, 60, 10) + arm(SH_R, [300, 440], [296, 210], { fill: f, hand: 'fist', thumb: 1 }) }) },
+            arm: () => [holdUnder(), layer(appPhone(312, 60, 10)), armAt(SH_R, [314, 440], [304, 210], { hand: 'fist', thumb: 1 })] }) },
       { html:
           txt(540, 330, '마지막 수유가… 이 앱이었나?\n저 앱? 아니 수첩이었나??', { size: 44 }) +
           big(200, 790, '응애애애!!', { size: 84, rot: -14, color: '#444' }) +
@@ -151,7 +149,7 @@ window.PANELS = {
       { html: big(820, 236, '속았다…!', { size: 84, rot: -5 }) + txt(1000, 360, '부들\n부들', { size: 32, rot: 12 }) },
 
       /* 2칸: 자동 번역 글과 광고 */
-      { svg: tier(560) + dad(180, 800, 0.5, { expr: 'deadpan' }) + bubble(190, 640, 140, 54, 200, 712) },
+      { svg: tier(560) + dad(180, 800, 0.5, { expr: 'meh' }) + bubble(190, 640, 140, 54, 200, 712) },
       { html:
           yellowShot(380, 585, 660, 330,
             `<div style="font-size:20px;color:#777">🌐 자동 번역됨 · 원문 보기</div>
@@ -162,7 +160,7 @@ window.PANELS = {
 
       /* 3칸: 증상 검색은 무서운 것부터 */
       { svg: tier(950) +
-          dad(820, 1070, 0.5, { expr: 'pale', front: baby(-20, 300, 0.85, { expr: 'happy' }), arm: (f) => holdUnder(f) + downR(f) }) +
+          dad(820, 1070, 0.5, { expr: 'pale', front: baby(-20, 300, 0.85, { expr: 'happy' }), arm: () => [holdUnder()] }) +
           bubble(300, 1296, 270, 44, 740, 1150) },
       { html:
           card(40, 974, 610, 262,
@@ -185,7 +183,7 @@ window.PANELS = {
              ${userMsg('우리 애 3개월이고요, 분유 먹고, 지난주에 접종했고, 요즘 밤에 자주 깨고, 몸무게는 6.4kg이고…')}
              ${botMsg('좋은 질문이에요! 일반적으로 이 시기 아기들은 … 하는 경우가 많아요.')}
            </div>`, { pad: 26, radius: 26 }) },
-      { svg: dad(190, 610, 0.72, { expr: 'suspicious' }) + bubble(185, 330, 168, 100, 190, 455) + tier(830) },
+      { svg: dad(190, 610, 0.72, { expr: 'suspicious', arm: 'chin' }) + bubble(185, 330, 168, 100, 190, 455) + tier(830) },
       { html: txt(185, 330, '…맞는 말\n같은데,\n근거는?', { size: 38 }) + txt(330, 520, '슬쩍', { size: 36, rot: -10 }) },
       { svg: dad(240, 1010, 0.6, { expr: 'zombie', arm: 'typing' }) },
       { html: cap(560, 856, '새 대화를 열 때마다…', { size: 34 }) +
@@ -262,8 +260,7 @@ window.PANELS = {
           `<rect x="70" y="700" width="680" height="330" rx="60" fill="#E6D6BE" stroke="${K}" stroke-width="5"/>` +
           `<rect x="40" y="960" width="740" height="230" rx="50" fill="#EBDDC7" stroke="${K}" stroke-width="5"/>` +
           dad(410, 760, 0.9, { expr: 'sleep', shirt: YELLOW, headRot: -14, front: baby(0, 230, 0.75, { expr: 'sleep', blush: '#f7c6bd' }),
-            arm: (f) => holdUnder(f, [-196, 430], [-10, 420]) +
-              arm(SH_R, [204, 440], [96, 380], { fill: f, hand: 'open', thumb: 1, handDeg: 6, hs: 0.9 }) }) +
+            arm: () => [holdUnder([-215, 430], [-10, 420]), armAt(SH_R, [222, 440], [96, 380], { hand: 'open', thumb: 1, handDeg: 6, hs: 0.9 })] }) +
           bubble(890, 430, 170, 78, 880, 540, { stroke: ACCENT }) },
       { html:
           `<img src="../../assets/images/mascot/standing.png" style="position:absolute;left:760px;top:540px;width:270px"/>` +
@@ -279,31 +276,27 @@ window.PANELS = {
   poses: () => {
     const list = [
       ['down', {}], ['crossed', { arm: 'crossed', expr: 'smug' }], ['phone', { arm: 'phone', expr: 'deadpan', screen: '#e8f4ff' }],
-      ['typing', { arm: 'typing', expr: 'zombie' }],
-      ['holdUnder', { expr: 'panic', front: baby(-20, 300, 0.85, { expr: 'cry' }), arm: (f) => holdUnder(f) + appPhone(300, 60, 10) + arm(SH_R, [300, 440], [296, 210], { fill: f, hand: 'fist' }) }],
-      ['hug', { expr: 'sleep', shirt: YELLOW, front: baby(0, 230, 0.75, { expr: 'sleep' }),
-        arm: (f) => holdUnder(f, [-196, 430], [-10, 420]) + arm(SH_R, [204, 440], [96, 380], { fill: f, hand: 'open', handDeg: 6, hs: 0.9 }) }],
+      ['typing', { arm: 'typing', expr: 'zombie' }], ['chin', { arm: 'chin', expr: 'suspicious' }],
+      ['holdUnder', { expr: 'panic', front: baby(-20, 300, 0.85, { expr: 'cry' }), arm: () => [holdUnder(), layer(appPhone(312, 60, 10)), armAt(SH_R, [314, 440], [304, 210], { hand: 'fist' })] }],
     ];
     let svg = '', html = '';
     list.forEach(([name, o], i) => {
-      const x = 190 + (i % 3) * 350, y = 200 + Math.floor(i / 3) * 640;
+      const x = 190 + (i % 3) * 350, y = 230 + Math.floor(i / 3) * 640;
       svg += dad(x, y, 0.5, o);
-      html += txt(x, y - 170, name, { size: 30, color: '#c00' });
+      html += txt(x, y - 190, name, { size: 30, color: '#c00' });
     });
     return { layers: [{ svg }, { html }], mark: false };
   },
 
   /* 그림 확인용 — 표정 모음 */
   sheet: () => {
-    const exprs = ['normal', 'smug', 'proud', 'panic', 'suspicious', 'rage', 'touched', 'deadpan', 'pale', 'zombie', 'focused', 'sleep'];
-    let svg = '';
-    let html = '';
+    const exprs = ['normal', 'smug', 'proud', 'panic', 'suspicious', 'rage', 'meh', 'deadpan', 'pale', 'zombie', 'focused', 'touched', 'sleep'];
+    let svg = '', html = '';
     exprs.forEach((e, i) => {
-      const x = 180 + (i % 4) * 240, y = 230 + Math.floor(i / 4) * 380;
+      const x = 150 + (i % 4) * 260, y = 170 + Math.floor(i / 4) * 320;
       svg += dad(x, y, 0.62, { expr: e, arm: 'none' });
-      html += txt(x, y + 150, e, { size: 30 });
+      html += txt(x, y + 104, e, { size: 28, color: '#c00' });
     });
-    svg += baby(180, 1240, 0.6, { expr: 'cry', body: false }) + baby(420, 1240, 0.6, { expr: 'sleep', body: false }) + baby(660, 1240, 0.6, { expr: 'happy', body: false });
     return { layers: [{ svg }, { html }], mark: false };
   },
 };
