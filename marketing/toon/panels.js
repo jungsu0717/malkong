@@ -3,7 +3,7 @@
  */
 
 (() => {
-const { K, P, C, G, dad, dadSide, galaxy, armAt, layer, SH_L, SH_R, baby, box, book, star, bubble, cloud, magnifier } = window.T;
+const { K, P, C, G, dad, galaxy, armAt, layer, SH_L, SH_R, baby, box, book, star, bubble, cloud, magnifier } = window.T;
 
 const YELLOW = '#FDD686';
 const ACCENT = '#C64536';
@@ -72,7 +72,7 @@ const appPhone = (x, y, rot) =>
 
 window.PANELS = {
   1: () => ({
-    title: '준비는 완벽했다 <span style="font-size:34px;color:#999;font-weight:700">(실화)</span>',
+    title: '어느덧 눈앞에 다가온 출산 예정일',
     layers: [
       { svg: box(70, 1020, 330, 270, '기저귀', -2, 56) + box(100, 820, 260, 190, '분유', 3, 50) },
       { html: card(50, 330, 300, 420,
@@ -86,16 +86,14 @@ window.PANELS = {
     ],
   }),
 
-  /* 새벽 3시 — 우는 아기를 안고 허둥대는 아빠, 옆에는 오른쪽을 보고 폰으로 검색하는 잔상 */
+  /* 새벽 3시 — 한 팔로 우는 아기를 안고, 다른 손으로 폰을 치켜들고 허둥대는 아빠 */
   2: () => ({
-    title: '그리고, 새벽 3시',
+    title: '하지만 새벽 3시 현실은…',
     layers: [
       { svg:
-          `<g opacity="0.45">${dadSide(800, 790, 0.88)}</g>` +
-          P('M 520,690 L 640,690 M 540,750 L 680,750 M 520,810 L 640,810 M 560,870 L 660,870', 4, 'none', '#aaa') +
-          cloud(290, 268, 250, 84, 330, 470) +
-          dad(320, 800, 1.0, { expr: 'panic', messy: true, front: baby(-20, 300, 0.85, { expr: 'cry' }),
-            arm: () => [holdUnder(), armAt(SH_R, [224, 500], [84, 452], { hand: 'open', thumb: 1, handDeg: 4, hs: 0.9 })] }) },
+          cloud(290, 268, 250, 84, 390, 470) +
+          dad(400, 800, 1.0, { expr: 'panic', messy: true, front: baby(-20, 300, 0.85, { expr: 'cry' }),
+            arm: () => [holdUnder(), layer(appPhone(312, 60, 10)), armAt(SH_R, [314, 440], [304, 210], { hand: 'fist', thumb: 1 })] }) },
       { html:
           txt(290, 268, '마지막 수유가… 이 앱이었나?\n저 앱? 아니 수첩이었나??', { size: 32 }) +
           card(560, 186, 480, 84, searchBar('신생아 태열 크림', { size: 28 }), { rot: -2, pad: 12 }) +
@@ -105,7 +103,7 @@ window.PANELS = {
                ${userMsg('아기가 새벽에 계속 울어요 ㅠㅠ', 24)}
                <div style="display:flex;align-items:center;gap:12px;border:4px solid #1b1b1b;border-radius:40px;padding:8px 20px;font-size:26px;color:#999">
                  <span style="flex:1">무엇이든 물어보세요</span><span>⬆️</span></div></div>`, { rot: -1, pad: 16, radius: 24 }) +
-          txt(600, 625, '허둥지둥', { size: 44, rot: -8 }) +
+          txt(130, 600, '허둥지둥', { size: 44, rot: -10 }) +
           big(150, 1010, '응애애애!!', { size: 72, rot: -14, color: '#444' }) +
           big(860, 1255, '멘붕', { size: 170, rot: -8 }) },
     ],
@@ -113,7 +111,7 @@ window.PANELS = {
 
   /* 블로그 · 해외 글 · 증상 검색 · AI 챗봇 — 네 칸에 한 번에 */
   3: () => ({
-    title: '찾으면 찾을수록…',
+    title: '이런 답변을 원한 게 아닌데…',
     layers: [
       /* 1칸: 블로그 후기 → 맨 끝 협찬 문구 */
       { html:
@@ -195,7 +193,7 @@ window.PANELS = {
 
   /* 다음 날 아침 — 버디의 안부와 출처에 감동한 아빠, 그리고 마무리 */
   5: () => ({
-    title: '그리고 다음 날 아침',
+    title: '그래!! 바로 이거지!',
     bg: '#FFF6E2',
     mark: false,
     layers: [
