@@ -142,8 +142,7 @@ const eyes = {
   halfDown: () =>
     EYES_AT.map((x) =>
       P(`M ${x - 11},${EY - 4} A 11 11 0 0 0 ${x + 11},${EY - 4} Z`, 0, K) +
-      P(`M ${x - 27},${EY - 2} Q ${x},${EY - 12} ${x + 27},${EY - 2}`, 6) +
-      P(`M ${x - 16},${EY + 15} Q ${x},${EY + 19} ${x + 16},${EY + 15}`, 3)).join(''),
+      P(`M ${x - 27},${EY - 2} Q ${x},${EY - 12} ${x + 27},${EY - 2}`, 6)).join(''),
   /** 퀭한 눈 · 정색 — 무거운 눈꺼풀 아래 작은 눈동자 */
   heavy: () =>
     EYES_AT.map((x) =>
@@ -283,7 +282,7 @@ const extras = {
  */
 const FACES = {
   normal: { eyes: eyes.dots(), brows: 'calm', mouth: 'line' },
-  smug: { eyes: eyes.halfDown(), brows: 'smug', mouth: 'smug', extra: () => extras.nostrils() + extras.folds() + extras.glint(RX + 30, EY - 40, 18) },
+  smug: { eyes: eyes.halfDown(), brows: 'smug', mouth: 'smug', extra: () => extras.nostrils() + extras.glint(RX + 30, EY - 40, 18) },
   proud: { eyes: eyes.happy(), brows: 'high', mouth: 'grin', extra: () => extras.blush() + extras.nostrils() + extras.glint(RX + 30, EY - 40, 14) },
   panic: {
     eyes: eyes.bulge(), brows: 'shock', mouth: 'scream', glasses: { dx: 4, dy: 18, rot: -9 },
@@ -416,6 +415,113 @@ function dad(x, y, s, { expr = 'normal', arm: pose = 'down', shirt = '#fff', mes
   return G(x, y, s, neck + body + head + front + rest);
 }
 
+/**
+ * 옆모습 아빠(오른쪽을 본다) — 폰을 두 손에 쥐고 허둥지둥 검색 중. x,y 는 얼굴 가운데.
+ * 앞모습과 같은 머리 · 안경 · 반팔이고, 표정은 멘붕(휘둥그레 눈 · 벌린 입 · 땀) 하나다
+ */
+function dadSide(x, y, s, { shirt = '#fff', screen = '#e8f4ff' } = {}) {
+  const face = '#fff';
+  let h = '';
+  // 목 · 몸통(가슴이 오른쪽)
+  h += P('M -36,96 L -42,170 L 40,170 L 32,100 Z', 0, SKIN) + P('M 30,108 L 40,162 M -38,104 L -46,160', 5);
+  h += P('M -50,158 C -104,164 -130,210 -132,290 L -136,940 L 104,940 L 102,300 C 100,220 84,172 44,160 Q -4,180 -50,158 Z', 5, shirt);
+  h += P('M -50,158 Q -4,180 44,160', 5);
+  // 머리 — 뒤통수 · 정수리 · 이마 · 코 · 벌린 입 · 턱
+  h += P('M -40,108 C -92,88 -110,30 -106,-40 C -102,-120 -60,-168 10,-168 C 70,-168 100,-126 102,-72 L 104,-40 C 106,-28 104,-18 108,-10 L 130,22 C 134,30 124,36 112,34 C 110,42 114,48 112,54 L 96,64 L 110,90 C 110,104 102,116 86,120 C 58,126 28,120 10,110 C -6,112 -24,112 -40,108 Z', 5, face);
+  h += P('M 112,54 L 96,64 L 110,90 Q 124,72 112,54 Z', 4, K) + P('M 109,57 L 99,63 L 103,66 L 112,60 Z', 0, '#fff');
+  h += P('M 104,-80 L 92,-98 L 82,-76 L 70,-104 L 58,-82 L 44,-108 L 30,-84 C 14,-80 4,-70 2,-44 L -6,-20 C -10,-50 -40,-62 -56,-40 C -66,-10 -70,20 -64,50 C -84,50 -104,30 -108,-10 C -116,-110 -60,-178 14,-176 C 76,-176 108,-136 104,-80 Z', 4, K);
+  h += P('M -30,-170 L -42,-216 L -6,-174 M 22,-176 L 36,-224 L 50,-172 M -78,-140 L -124,-160 L -96,-118', 4, K);
+  h += P('M -48,-40 C -70,-44 -72,12 -48,16 C -32,18 -26,-34 -48,-40 Z', 5, face) + P('M -50,-24 C -60,-20 -60,0 -50,4', 3);
+  // 휘둥그레 눈 · 안경(옆에서 본 렌즈와 다리) · 치켜뜬 눈썹
+  h += C(88, -28, 10, 4, '#fff') + DOT(92, -27, 3.2);
+  h += `<ellipse cx="86" cy="-28" rx="14" ry="30" ${S(5)}/>` + P('M 72,-42 L -36,-36', 5);
+  h += P('M 60,-74 Q 82,-94 106,-84', 15, 'none', '#fff') + P('M 60,-74 Q 82,-94 106,-84', 8);
+  h += extras.sweat(-128, -96) + extras.sweat(-142, -40, 0.8) + extras.sweat(140, -70, 0.7) + extras.bigSweat(-60, -190);
+  // 뒤쪽 팔 손은 폰 뒤로 살짝, 폰, 앞쪽 팔 — 주먹으로 폰 아래를 쥐고 엄지가 화면을 두드린다
+  h += hand(224, 304, -84, { kind: 'fist', thumb: -1, s: 0.95 });
+  h += G(182, 250, 1,
+    phoneShape(104, 184, screen) +
+    `<rect x="-38" y="-70" width="76" height="16" rx="8" fill="#fff" stroke="#888" stroke-width="2.5"/>` +
+    [0, 1, 2].flatMap((c) => [0, 1].map((r) => `<rect x="${-34 + c * 26}" y="${-40 + r * 28}" width="18" height="18" rx="5" fill="#c9d6e3"/>`)).join(''),
+    -16);
+  const g = armGeom([-14, 238], [6, 430], [150, 352], { hand: 'fist', thumb: 1, handDeg: -18, hs: 1 });
+  const sw = g.o.w + 16;
+  const sleeve = `M ${xy(g.out)} L ${xy(g.hemOut)} L ${xy(g.hemIn)} L ${xy(g.inn)} A ${sw / 2} ${sw / 2} 0 0 0 ${xy(g.out)} Z`;
+  h += armSkin(g) + `<path d="${sleeve}" ${OUTLINE}/><path d="${sleeve}" fill="${shirt}"/>`;
+  // 두드리는 표시
+  h += P('M 150,196 q -12,-8 -8,-22 M 166,186 q -2,-14 10,-20 M 128,214 q -14,-2 -18,-14', 3.5);
+  return G(x, y, s, h);
+}
+
+/* ───────── 지식 지도 — 앱 「우리 아기」 탭의 3D 그래프(knowledge-galaxy.tsx)를 한 장면으로 ───────── */
+
+/** 영역 행성 — 이름 · 색 · 아는 정도 · 사실 점(1 아는 것, 0 모르는 것) */
+const GALAXY_DOMAINS = [
+  ['먹기', '#E8825F', 0.7, [1, 1, 0, 1]], ['잠', '#7D8FE0', 0.5, [1, 0, 1]], ['성장', '#4FB39A', 0.8, [1, 1, 1]],
+  ['건강', '#E0607A', 0.9, [1, 1, 1, 0]], ['발달', '#E9B03C', 0.4, [1, 0, 0]], ['생활', '#B08BDB', 0.3, [0, 1, 0, 0]],
+];
+const shadeHex = (hex, amount) => {
+  const n = parseInt(hex.slice(1), 16);
+  return '#' + [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+    .map((v) => Math.round(amount >= 0 ? v + (255 - v) * amount : v * (1 + amount)).toString(16).padStart(2, '0')).join('');
+};
+
+/** 지식 지도 — (0,0)~(w,h) 안에. 가운데 버디, 둘레에 영역 행성 여섯, 행성마다 사실 점. 먼 것부터 그린다 */
+function galaxy(w, h, { yaw = 1.02, pitch = -0.62, zoom = 1.32, face = '../../assets/images/mascot/face.png' } = {}) {
+  const CAM = 3.4, focal = Math.min(w, h) * zoom, cx = w / 2, cy = h / 2 - 8;
+  const proj = ([px, py, pz]) => {
+    const x1 = px * Math.cos(yaw) + pz * Math.sin(yaw), z1 = -px * Math.sin(yaw) + pz * Math.cos(yaw);
+    const y2 = py * Math.cos(pitch) - z1 * Math.sin(pitch), z2 = py * Math.sin(pitch) + z1 * Math.cos(pitch);
+    const depth = z2 + CAM, scale = focal / depth;
+    return { x: cx + x1 * scale, y: cy - y2 * scale, scale, depth };
+  };
+  const near = (d) => Math.max(0.35, Math.min(1, (CAM + 1.3 - d) / 2.2));
+  let back = '';
+  // 별
+  let seed = 7;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  for (let i = 0; i < 40; i++) back += DOT((rand() * w).toFixed(1), (rand() * h).toFixed(1), (0.8 + rand() * 1.4).toFixed(1), `rgba(255,255,255,${(0.3 + rand() * 0.6).toFixed(2)})`);
+  // 궤도 점
+  for (let i = 0; i < 48; i++) {
+    const a = (i / 48) * Math.PI * 2, q = proj([Math.cos(a) * 1.05, 0, Math.sin(a) * 1.05]);
+    back += DOT(q.x.toFixed(1), q.y.toFixed(1), 1.6, `rgba(255,255,255,${(0.35 * near(q.depth)).toFixed(2)})`);
+  }
+  const core = proj([0, 0, 0]);
+  const items = [];
+  let labels = ''; // 이름표는 맨 위에 — 행성 · 버디에 가리지 않게
+  GALAXY_DOMAINS.forEach(([name, color, score, facts], i) => {
+    const a = (i / GALAXY_DOMAINS.length) * Math.PI * 2;
+    const pos = [Math.cos(a) * 1.05, i % 2 ? 0.26 : -0.2, Math.sin(a) * 1.05];
+    const q = proj(pos), k = near(q.depth), r = q.scale * (0.12 + 0.08 * score);
+    // 가운데에서 행성으로 뻗는 빛줄기
+    back += `<line x1="${core.x.toFixed(1)}" y1="${core.y.toFixed(1)}" x2="${q.x.toFixed(1)}" y2="${q.y.toFixed(1)}" stroke="${color}" stroke-width="${(1.5 + 2 * score).toFixed(1)}" opacity="${(0.4 * (0.35 + 0.65 * score) * k).toFixed(2)}"/>`;
+    let svg = DOT(q.x.toFixed(1), q.y.toFixed(1), (r * 2).toFixed(1), color).replace('/>', ` opacity="${(0.08 + 0.1 * score).toFixed(2)}"/>`) +
+      DOT(q.x.toFixed(1), q.y.toFixed(1), (r * 1.45).toFixed(1), color).replace('/>', ` opacity="${(0.14 + 0.14 * score).toFixed(2)}"/>`) +
+      DOT(q.x.toFixed(1), q.y.toFixed(1), r.toFixed(1), shadeHex(color, -0.45)) +
+      DOT((q.x - r * 0.08).toFixed(1), (q.y - r * 0.1).toFixed(1), (r * 0.92).toFixed(1), color) +
+      DOT((q.x - r * 0.3).toFixed(1), (q.y - r * 0.34).toFixed(1), (r * 0.48).toFixed(1), shadeHex(color, 0.55)).replace('/>', ' opacity="0.6"/>') +
+      DOT((q.x - r * 0.36).toFixed(1), (q.y - r * 0.42).toFixed(1), (r * 0.16).toFixed(1), 'rgba(255,255,255,0.75)');
+    // 사실 점 — 아는 것은 채운 점, 모르는 것은 빈 고리
+    facts.forEach((known, j) => {
+      const kk = (j + 0.5) / facts.length, phi = Math.acos(1 - 2 * kk), th = Math.PI * (1 + Math.sqrt(5)) * j + i;
+      const o = 0.24 + 0.05 * (j % 2);
+      const f = proj([pos[0] + Math.sin(phi) * Math.cos(th) * o, pos[1] + Math.cos(phi) * o, pos[2] + Math.sin(phi) * Math.sin(th) * o]);
+      svg += known
+        ? DOT(f.x.toFixed(1), f.y.toFixed(1), 7, shadeHex(color, 0.55)).replace('/>', ' opacity="0.35"/>') + DOT(f.x.toFixed(1), f.y.toFixed(1), 3.6, '#fff')
+        : C(f.x.toFixed(1), f.y.toFixed(1), 3.6, 1.6, 'none', 'rgba(255,255,255,0.75)');
+    });
+    labels += `<text x="${q.x.toFixed(1)}" y="${(q.y + r + 17).toFixed(1)}" font-family="Noto Sans KR" font-weight="700" font-size="15" fill="#fff" text-anchor="middle" dominant-baseline="middle" paint-order="stroke" stroke="rgba(22,20,36,0.9)" stroke-width="5" stroke-linejoin="round">${name} <tspan fill="#c9c6d6" font-weight="500">${Math.round(score * 100)}%</tspan></text>`;
+    items.push({ depth: q.depth, svg: `<g opacity="${Math.min(1, 0.45 + (0.35 + 0.65 * score) * k).toFixed(2)}">${svg}</g>` });
+  });
+  // 가운데 — 빛무리와 버디 얼굴
+  const coreSvg = DOT(core.x.toFixed(1), core.y.toFixed(1), 46, '#F4A9A0').replace('/>', ' opacity="0.12"/>') +
+    DOT(core.x.toFixed(1), core.y.toFixed(1), 33, '#F4A9A0').replace('/>', ' opacity="0.25"/>') +
+    `<image href="${face}" x="${(core.x - 26).toFixed(1)}" y="${(core.y - 24).toFixed(1)}" width="52" height="48"/>`;
+  items.push({ depth: core.depth, svg: coreSvg });
+  items.sort((p, q) => q.depth - p.depth);
+  return back + items.map((it) => it.svg).join('') + labels;
+}
+
 /* ───────── 아기(말콩이) ───────── */
 
 const babyFaces = {
@@ -513,5 +619,5 @@ function burst(cx, cy, r1, r2, n = 28, color = K, w = 3) {
   return s;
 }
 
-window.T = { K, P, C, DOT, G, limb, hand, armAt, layer, phoneShape, SH_L, SH_R, downL, downR, dad, dadHead, baby, babyHead, label, box, book, star, bubble, cloud, magnifier, burst, extras };
+window.T = { K, P, C, DOT, G, limb, hand, armAt, layer, phoneShape, SH_L, SH_R, downL, downR, dad, dadHead, dadSide, galaxy, baby, babyHead, label, box, book, star, bubble, cloud, magnifier, burst, extras };
 })();

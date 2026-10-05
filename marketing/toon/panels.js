@@ -3,7 +3,7 @@
  */
 
 (() => {
-const { K, P, C, G, dad, armAt, layer, SH_L, SH_R, baby, box, book, star, bubble, cloud, magnifier } = window.T;
+const { K, P, C, G, dad, dadSide, galaxy, armAt, layer, SH_L, SH_R, baby, box, book, star, bubble, cloud, magnifier } = window.T;
 
 const YELLOW = '#FDD686';
 const ACCENT = '#C64536';
@@ -86,13 +86,12 @@ window.PANELS = {
     ],
   }),
 
-  /* 새벽 3시 — 우는 아기를 안고 허둥대는 아빠, 옆에는 폰으로 검색하는 잔상 */
+  /* 새벽 3시 — 우는 아기를 안고 허둥대는 아빠, 옆에는 오른쪽을 보고 폰으로 검색하는 잔상 */
   2: () => ({
     title: '그리고, 새벽 3시',
     layers: [
       { svg:
-          `<g opacity="0.2">${dad(950, 830, 0.76, { expr: 'panic', messy: true, arm: 'typing', screen: '#e8f4ff' })}</g>` +
-          `<g opacity="0.42">${dad(760, 815, 0.86, { expr: 'panic', messy: true, arm: 'typing', screen: '#e8f4ff' })}</g>` +
+          `<g opacity="0.45">${dadSide(800, 790, 0.88)}</g>` +
           P('M 520,690 L 640,690 M 540,750 L 680,750 M 520,810 L 640,810 M 560,870 L 660,870', 4, 'none', '#aaa') +
           cloud(290, 268, 250, 84, 330, 470) +
           dad(320, 800, 1.0, { expr: 'panic', messy: true, front: baby(-20, 300, 0.85, { expr: 'cry' }),
@@ -184,13 +183,12 @@ window.PANELS = {
           bubble(270, 380, 235, 118, 440, 560) },
       { html:
           txt(270, 380, '우리 애를 기억하고,\n근거를 대는 비서…\n내가 만든다.', { size: 40 }) +
-          card(600, 300, 440, 230,
-            `<div style="font-family:Menlo,monospace;font-size:25px;line-height:1.6;color:#d4d4d4;white-space:pre"><span style="color:#c586c0">if</span> (어제.<span style="color:#9cdcfe">열</span>) {
-  안부(<span style="color:#ce9178">"오늘은 좀 어때요?"</span>)
-}
-답.출처 = <span style="color:#ce9178">"공공기관"</span></div>`, { bg: '#1e1e1e', pad: 24, radius: 16, border: 4 }) +
+          card(600, 236, 460, 316,
+            `<div style="position:absolute;left:18px;top:12px;font-size:19px;font-weight:700;color:rgba(255,255,255,0.85)">우리 아기 지식 지도</div>`,
+            { bg: 'radial-gradient(120% 90% at 50% 55%, #3A2433 0%, #1A1D2E 70%)', border: 4, radius: 20 }) +
           txt(900, 1030, '타닥 타닥', { size: 46, color: '#bfe4ff', rot: -8 }) +
           txt(540, 935, 'z z', { size: 34, color: '#ddd' }) },
+      { rough: false, svg: G(600, 266, 1, galaxy(460, 282)) },
     ],
     mark: true,
   }),
