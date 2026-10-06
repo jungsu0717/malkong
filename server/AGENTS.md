@@ -74,7 +74,11 @@ gcloud secrets add-iam-policy-binding malkong-gemini-key --condition=None \
 gcloud run deploy malkong-server --source . --region asia-northeast3 \
   --allow-unauthenticated --min-instances 0 --max-instances 2 \
   --set-env-vars MALKONG_LLM_PROVIDER=gemini,MALKONG_LLM_MODEL=gemini-3.5-flash-lite,MALKONG_LLM_PAID_TIER=true \
-  --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest
+  --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest,MALKONG_DATABASE_URL=malkong-database-url:latest
+
+# 바꾼 판을 먼저 시험하려면 --no-traffic --tag <이름> 을 붙여 트래픽 없는 시험판으로 올리고, 확인한 뒤
+# `gcloud run services update-traffic malkong-server --region asia-northeast3 --to-latest` 와 `--remove-tags <이름>` 으로 넘긴다.
+# --no-traffic 을 한 번 쓰면 트래픽이 그 판에 고정되므로 --to-latest 로 풀어 줘야 다음 배포가 자동으로 넘어간다
 
 # Gemini 키는 Malkong 프로젝트의 키(유료 · 선불 충전 · 월 한도 1만 원, AI Studio Spend 화면에서 Julian 이 관리)다.
 # 한도를 넘으면 Gemini 가 429 「monthly spending cap」으로 모든 호출을 거절한다 — 앱에는 곧바로 503 이 간다(task ask/006).
@@ -83,8 +87,8 @@ gcloud run deploy malkong-server --source . --region asia-northeast3 \
 #   gcloud services api-keys get-key-string $(gcloud services api-keys list --project=malkong --format="value(name)" --limit=1) \
 #     --format="value(keyString)" | tr -d '\n' | gcloud secrets versions add malkong-gemini-key --data-file=- --project=malkong
 
-# Neon 과 운영자 기기를 넣은 뒤에는 --set-secrets 를 이렇게 늘린다(비밀값 이름은 task common/005)
-#   --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest,MALKONG_DATABASE_URL=malkong-database-url:latest,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest
+# Neon(malkong-database-url)은 2026-10-06 부터 붙어 있다. 운영자 기기 키를 넣은 뒤에는 --set-secrets 끝에
+#   ,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest 를 더한다(task common/005)
 ```
 
 - gcloud 는 Homebrew 로 깐다(`brew install --cask gcloud-cli` — 소스 컴파일 없이 Google 공식 파일을 받는다).
