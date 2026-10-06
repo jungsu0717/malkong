@@ -87,6 +87,11 @@ gcloud run deploy malkong-server --source . --region asia-northeast3 \
 #   gcloud services api-keys get-key-string $(gcloud services api-keys list --project=malkong --format="value(name)" --limit=1) \
 #     --format="value(keyString)" | tr -d '\n' | gcloud secrets versions add malkong-gemini-key --data-file=- --project=malkong
 
+# 배포마다 서버 이미지가 Artifact Registry(cloud-run-source-deploy)에 남는다 — 무료 구간은 0.5GB(이미지 하나 약 75MB).
+# 최근 2개만 남기고 7일 지난 것은 지우는 규칙을 한 번 걸어 둔다(규칙 파일 artifact-cleanup-policy.json). 지우는 일이라 Julian 이 직접 한다
+gcloud artifacts repositories set-cleanup-policies cloud-run-source-deploy --location asia-northeast3 --project malkong \
+  --policy artifact-cleanup-policy.json --no-dry-run
+
 # Neon(malkong-database-url)은 2026-10-06 부터 붙어 있다. 운영자 기기 키를 넣은 뒤에는 --set-secrets 끝에
 #   ,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest 를 더한다(task common/005)
 ```
