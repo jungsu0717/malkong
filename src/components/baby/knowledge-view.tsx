@@ -65,32 +65,7 @@ export function KnowledgeView() {
 
         <View style={styles.section}>
           <SectionHeader title="주제별로" aside="누르면 아래에 자세히" />
-          <Card style={styles.bars}>
-            {profile.domains.map((d) => {
-              const on = d.id === domain.id;
-              return (
-                <Pressable
-                  key={d.id}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                  style={styles.barRow}
-                  onPress={() => {
-                    tap();
-                    setSelected(d.id);
-                  }}>
-                  <ThemedText type="label" style={[styles.barName, { fontWeight: on ? 700 : 500 }]}>
-                    {d.name}
-                  </ThemedText>
-                  <View style={[styles.barTrack, { backgroundColor: c.surface }]}>
-                    <View style={[styles.barFill, { backgroundColor: d.color, width: `${Math.max(3, d.score * 100)}%` }]} />
-                  </View>
-                  <ThemedText type="caption" style={[styles.barValue, { color: on ? c.text : c.textSecondary }]}>
-                    {Math.round(d.score * 100)}%
-                  </ThemedText>
-                </Pressable>
-              );
-            })}
-          </Card>
+          <DomainBars domains={profile.domains} selectedId={domain.id} onPress={setSelected} />
           <DomainCard domain={domain} onAsk={askFact} />
         </View>
 
@@ -130,7 +105,48 @@ export function KnowledgeView() {
   );
 }
 
-/** 한 영역의 사실 목록 — 아는 것은 값과 「고치기」, 모르는 것은 「알려 주기」 */
+/** 주제 여섯의 가로 막대 — 우리 아기 탭(누르면 그 주제의 상세로)과 상세(누르면 아래 목록이 바뀐다)가 같이 쓴다 */
+export function DomainBars({
+  domains,
+  selectedId,
+  onPress,
+}: {
+  domains: Domain[];
+  selectedId?: string | null;
+  onPress: (id: string) => void;
+}) {
+  const c = useTheme();
+  return (
+    <Card style={styles.bars}>
+      {domains.map((d) => {
+        const on = d.id === selectedId;
+        return (
+          <Pressable
+            key={d.id}
+            accessibilityRole="button"
+            accessibilityState={{ selected: on }}
+            style={styles.barRow}
+            onPress={() => {
+              tap();
+              onPress(d.id);
+            }}>
+            <ThemedText type="label" style={[styles.barName, { fontWeight: on ? 700 : 500 }]}>
+              {d.name}
+            </ThemedText>
+            <View style={[styles.barTrack, { backgroundColor: c.surface }]}>
+              <View style={[styles.barFill, { backgroundColor: d.color, width: `${Math.max(3, d.score * 100)}%` }]} />
+            </View>
+            <ThemedText type="caption" style={[styles.barValue, { color: on ? c.text : c.textSecondary }]}>
+              {Math.round(d.score * 100)}%
+            </ThemedText>
+          </Pressable>
+        );
+      })}
+    </Card>
+  );
+}
+
+/** 한 주제의 사실 목록 — 아는 것은 값과 「고치기」, 모르는 것은 「알려 주기」 */
 function DomainCard({ domain, onAsk }: { domain: Domain; onAsk: (fact: Fact) => void }) {
   const c = useTheme();
   return (

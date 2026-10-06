@@ -3,12 +3,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { questionCount, togetherLine } from '@/components/baby/knowledge-view';
+import { DomainBars, questionCount, togetherLine } from '@/components/baby/knowledge-view';
 import { KnowledgeGalaxy } from '@/components/knowledge-galaxy';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Card, IconButton, ListRow } from '@/components/ui';
+import { IconButton, SectionHeader } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
@@ -39,8 +39,8 @@ function useCountUp(target: number, replay: number, duration = 1300) {
 /**
  * 우리 아기 탭 — 버디가 아는 우리 아기 (SPEC-BABY-01~07, decisions/013, task baby/001 · 003 · 004, home/011).
  * 탭에는 한눈 요약만: 지식 지도(아는 정도 · 단계 — 누르면 「버디가 아는 것」 `/knowledge`, 행성은 그 주제로) · 함께한 시간 한 줄 ·
- * 한눈에 보는 아기 `/profile` 한 줄. 적는 메뉴는 두지 않는다 — 하루 기록은 오늘 브리핑에서, 알려 주기는 상세와 대화의
- * 되묻기에서. 기록 전체는 「버디가 아는 것」 안에(2026-10-06 Julian).
+ * 주제별 가로 막대(누르면 그 주제의 상세). 적는 메뉴는 두지 않는다 — 하루 기록은 오늘 브리핑에서, 알려 주기는 상세와 대화의
+ * 되묻기에서. 기록 전체는 「버디가 아는 것」 안에. 「한눈에 보는 아기」 화면은 없앴다 — 지도와 상세로 충분하다(2026-10-06 Julian).
  */
 export default function BabyScreen() {
   const c = useTheme();
@@ -124,15 +124,11 @@ export default function BabyScreen() {
             </ThemedText>
           </View>
 
-          {/* 한눈에 보는 아기 — 최근 값 한 화면 (SPEC-BABY-03). 기록 전체는 「버디가 아는 것」 상세 안에 */}
-          <Card style={styles.rows}>
-            <ListRow
-              icon="person-outline"
-              title={`한눈에 보는 ${name}`}
-              detail="몸무게 · 키 · 먹기 · 잠 · 접종 · 검진"
-              onPress={() => router.push('/profile')}
-            />
-          </Card>
+          {/* 주제별로 — 막대를 누르면 그 주제의 상세로 (SPEC-BABY-01) */}
+          <View style={styles.section}>
+            <SectionHeader title="주제별로" aside={`알게 된 것 ${profile.knownCount} / ${profile.totalCount}`} />
+            <DomainBars domains={profile.domains} onPress={(id) => router.push({ pathname: '/knowledge', params: { domain: id } })} />
+          </View>
 
           <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
             이 숫자는 이 폰에 저장된 기록으로만 계산해요. 서버로 보내지 않아요.
@@ -172,6 +168,5 @@ const styles = StyleSheet.create({
   dotFilled: { width: 8, height: 8, borderRadius: 4 },
   dotHollow: { width: 8, height: 8, borderRadius: 4, borderWidth: 1.2, marginLeft: 8 },
   section: { gap: 10 },
-  rows: { paddingVertical: 2 },
   center: { textAlign: 'center' },
 });
