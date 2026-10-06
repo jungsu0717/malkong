@@ -222,7 +222,7 @@ export function useMalkong() {
   }, [failure, pendingId, records, run]);
 
   /**
-   * 광고 1편을 보고 정밀 답변 1회를 채운 뒤 같은 질문을 다시 보낸다(ask.md 한도 표시).
+   * 광고 1편을 보고 정밀 답변을 채운 뒤(1편에 5회, decisions/019) 같은 질문을 다시 보낸다(ask.md 한도 표시).
    * 적립은 AdMob 이 서버로 직접 알리므로(SSV) 서버가 남은 수를 올릴 때까지 잠깐 기다린다.
    * 끝까지 보지 않았거나 확인이 늦으면 false — 화면은 그대로 선택지를 다시 보인다.
    */

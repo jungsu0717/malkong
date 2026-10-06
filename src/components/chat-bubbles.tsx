@@ -197,7 +197,7 @@ export function RedflagCard({ message }: { message: MalkongMessage }) {
   );
 }
 
-export function ErrorBubble({ text, onRetry }: { text: string; onRetry: () => void }) {
+export function ErrorBubble({ text, onRetry }: { text: string; onRetry?: () => void }) {
   const c = useTheme();
   return (
     <View style={styles.answer}>
@@ -207,42 +207,60 @@ export function ErrorBubble({ text, onRetry }: { text: string; onRetry: () => vo
           {text}
         </ThemedText>
       </View>
-      <View style={styles.chips}>
-        <Chip icon="refresh" label="다시 시도" onPress={onRetry} />
-      </View>
+      {onRetry && (
+        <View style={styles.chips}>
+          <Chip icon="refresh" label="다시 시도" onPress={onRetry} />
+        </View>
+      )}
     </View>
   );
 }
 
 /**
  * 하루 정밀 답변을 다 썼을 때(429) — 아예 막지 않고 선택지를 준다(ask.md 한도 표시).
- * 광고 충전(정밀 답변 +1)은 보상형 광고가 붙으면 `onReward` 로 들어온다.
+ * 광고 충전(1편에 정밀 답변 5회, decisions/019)은 보상형 광고가 붙으면 `onReward` 로 들어온다.
  */
 export function LimitBubble({
   dailyLimit,
+  rewardPerAd,
+  rewardMaxPerDay,
   busy = false,
   note = null,
   onEco,
   onReward,
 }: {
   dailyLimit: number | null;
+  /** 광고 1편이 채우는 정밀 답변 수와 하루 편수(서버 자격) */
+  rewardPerAd: number;
+  rewardMaxPerDay: number;
   /** 광고를 보는 중이면 단추를 잠근다 */
   busy?: boolean;
   /** 충전 확인이 안 됐을 때처럼 한 줄 덧붙일 말 */
   note?: string | null;
-  onEco: () => void;
+  /** 일반 기준 답까지 오늘 다 썼으면 없다 */
+  onEco?: () => void;
   onReward?: () => void;
 }) {
   const c = useTheme();
+  const refill = `광고 1편을 보면 우리 아기 기록을 반영한 답변 ${rewardPerAd}회가 채워져요(하루 ${rewardMaxPerDay}편까지).`;
+  // 선택지가 하나도 없으면 오늘은 여기까지다 — 위험 신호 안내는 그래도 나간다(SPEC-ASK-02)
+  const body =
+    onReward && onEco
+      ? `${refill} 지금 바로 일반 기준으로 답해 드릴 수도 있어요.`
+      : onReward
+        ? `${refill} 일반 기준 답은 오늘 다 썼어요.`
+        : onEco
+          ? '지금 바로 일반 기준으로 답해 드릴 수 있어요. 정밀 답변은 내일 0시에 다시 채워져요.'
+          : '오늘 답할 수 있는 만큼 다 답했어요. 내일 0시에 다시 채워져요. 위험해 보이는 증상을 말씀하시면 그 안내는 지금도 바로 드려요.';
   return (
     <View style={[styles.limit, { backgroundColor: c.surface }]}>
       <ThemedText type="heading" style={{ fontSize: 15 }}>
-        오늘 정밀 답변{dailyLimit ? ` ${dailyLimit}회` : ''}를 다 썼어요
+        {onReward || onEco
+          ? `오늘 정밀 답변${dailyLimit ? ` ${dailyLimit}회를` : '을'} 다 썼어요`
+          : '오늘은 여기까지예요'}
       </ThemedText>
       <ThemedText type="small" style={{ color: c.textSecondary }}>
-        {onReward
-          ? '광고 1편을 보면 우리 아기 기록을 반영한 답변 1회가 채워져요(하루 3편까지). 지금 바로 일반 기준으로 답해 드릴 수도 있어요.'
-          : '지금 바로 일반 기준으로 답해 드릴 수 있어요. 정밀 답변은 내일 0시에 다시 채워져요.'}
+        {body}
       </ThemedText>
       <View style={styles.limitActions}>
         {onReward && (
@@ -253,7 +271,9 @@ export function LimitBubble({
             onPress={onReward}
           />
         )}
-        <Button label="일반 기준으로 바로 답변" variant="secondary" disabled={busy} onPress={onEco} />
+        {onEco && (
+          <Button label="일반 기준으로 바로 답변" variant="secondary" disabled={busy} onPress={onEco} />
+        )}
       </View>
       {note && (
         <ThemedText type="caption" style={{ color: c.textSecondary }}>

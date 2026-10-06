@@ -1,10 +1,12 @@
-"""기기 자격 서비스 — 키 발급·확인, 하루 한도 세기 (backend 「일일 한도」 · 「사용량을 세는 법」).
+"""기기 자격 서비스 — 키 발급·확인, 하루 한도 세기, 서버 전체 하루 비용 천장
+(backend 「일일 한도」 · 「사용량을 세는 법」, decisions/019).
 
 키 원문은 저장하지 않는다. 저장소에는 해시만 간다.
 질문도 오지 않는다 — clientMessageId 의 해시만 받는다.
 """
 
 import hashlib
+import logging
 import secrets
 import threading
 from collections import defaultdict
@@ -17,10 +19,12 @@ from zoneinfo import ZoneInfo
 from app.common.core.exception import ApiException
 from app.common.core.setting import Settings
 from app.domain.entitlements.schema import EntitlementsResponse
-from app.infra.db.usage_store import StoreError, UsageStore
+from app.infra.db.usage_store import DayUsage, StoreError, UsageStore
 
 # 하루는 한국 시간 0시에 바뀐다
 KST = ZoneInfo("Asia/Seoul")
+
+logger = logging.getLogger("uvicorn.error")
 
 
 def _hash(value: str) -> str:
@@ -92,51 +96,102 @@ class EntitlementsService:
             HTTPStatus.UNAUTHORIZED, "DEVICE_KEY_INVALID", "기기 키가 없거나 알 수 없어요"
         )
 
+    def _precise_left(self, day: DayUsage) -> int:
+        cfg = self._settings
+        return max(0, cfg.daily_limit + day.rewards * cfg.reward_per_ad - day.used)
+
     def remaining(self, device: Device) -> int | None:
+        """오늘 남은 정밀 답변 수. 운영자 기기는 None(무제한)."""
         if device.operator:
             return None
         with _store_errors():
-            used, rewards = self._store.usage(device.key_hash, self.today())
-        return max(0, self._settings.daily_limit + rewards - used)
+            day = self._store.usage(device.key_hash, self.today())
+        return self._precise_left(day)
 
-    def ensure_can_answer(self, device: Device) -> None:
-        """정밀 답변을 더 낼 수 있는지 — 다 썼으면 429 와 선택지 정보."""
+    def ensure_can_answer(self, device: Device, eco: bool = False) -> None:
+        """정밀(eco 면 일반 기준) 답을 더 낼 수 있는지 — 다 썼으면 429 와 선택지 정보."""
         if device.operator:
             return
         with _store_errors():
-            used, rewards = self._store.usage(device.key_hash, self.today())
-        if used < self._settings.daily_limit + rewards:
+            day = self._store.usage(device.key_hash, self.today())
+        eco_left = day.eco < self._settings.eco_daily_limit
+        if eco_left if eco else self._precise_left(day) > 0:
             return
-        tomorrow = datetime.combine(self.today() + timedelta(days=1), time(0), tzinfo=KST)
         raise ApiException(
             HTTPStatus.TOO_MANY_REQUESTS,
             "LIMIT_EXCEEDED",
-            "오늘 정밀 답변을 다 썼어요",
+            "오늘은 답을 다 썼어요" if eco else "오늘 정밀 답변을 다 썼어요",
             extra={
-                "resetAt": tomorrow.isoformat(),
-                "rewardAvailable": rewards < self._settings.reward_max_per_day,
-                "ecoAvailable": True,
+                "resetAt": self._tomorrow(),
+                "rewardAvailable": day.rewards < self._settings.reward_max_per_day,
+                "ecoAvailable": eco_left,
             },
         )
 
-    def record_answer(self, device: Device, client_message_id: str) -> int | None:
-        """정밀 답변 하나를 센다 — 같은 clientMessageId 는 한 번만. 남은 수를 돌려준다."""
+    def record_answer(
+        self, device: Device, client_message_id: str, eco: bool = False
+    ) -> int | None:
+        """답 하나를 센다 — 같은 clientMessageId 는 한 번만. 남은 정밀 답변 수를 돌려준다."""
         if device.operator:
             return None
-        day = self.today()
         with _store_errors():
-            used = self._store.count_once(device.key_hash, day, _hash(client_message_id))
-            _, rewards = self._store.usage(device.key_hash, day)
-        return max(0, self._settings.daily_limit + rewards - used)
+            day = self._store.count_once(
+                device.key_hash, self.today(), _hash(client_message_id), eco=eco
+            )
+        return self._precise_left(day)
+
+    def _budget_micro_usd(self) -> int:
+        cfg = self._settings
+        return round(cfg.daily_budget_krw / cfg.usd_to_krw * 1_000_000)
+
+    def ensure_budget(self, device: Device) -> None:
+        """서버 전체의 오늘 모델 비용이 천장을 넘었으면 503. 운영자 기기는 막지 않는다."""
+        if device.operator:
+            return
+        with _store_errors():
+            spent = self._store.cost(self.today())
+        if spent < self._budget_micro_usd():
+            return
+        raise ApiException(
+            HTTPStatus.SERVICE_UNAVAILABLE,
+            "DAILY_BUDGET_REACHED",
+            "오늘은 버디가 답할 수 있는 양을 다 썼어요",
+            extra={"resetAt": self._tomorrow()},
+        )
+
+    def add_cost(self, micro_usd: int) -> None:
+        """모델을 한 번 부른 비용을 오늘 합계에 더한다.
+
+        천장을 넘는 순간 ERROR 를 한 줄 남긴다 — 메일 알림의 근거가 된다.
+        """
+        if micro_usd <= 0:
+            return
+        try:
+            total = self._store.add_cost(self.today(), micro_usd)
+        except StoreError as exc:
+            # 기록일 뿐이다 — 이미 값을 치른 모델 답을 저장소 장애로 버리지 않는다.
+            # 그 몫은 천장 계산에서 빠진다
+            logger.warning("usage: 모델 비용을 적지 못함 (%s)", exc)
+            return
+        budget = self._budget_micro_usd()
+        if total - micro_usd < budget <= total:
+            logger.error(
+                "usage: 오늘 모델 비용이 하루 천장에 닿음 (약 %d원) — 오늘은 모델 답을 멈춘다",
+                self._settings.daily_budget_krw,
+            )
+
+    def _tomorrow(self) -> str:
+        return datetime.combine(self.today() + timedelta(days=1), time(0), tzinfo=KST).isoformat()
 
     def entitlements(self, device: Device) -> EntitlementsResponse:
         if device.operator:
             return EntitlementsResponse(
-                ads=False, daily_limit=None, reward_max_per_day=0, remaining=None
+                ads=False, daily_limit=None, reward_per_ad=0, reward_max_per_day=0, remaining=None
             )
         return EntitlementsResponse(
             ads=True,
             daily_limit=self._settings.daily_limit,
+            reward_per_ad=self._settings.reward_per_ad,
             reward_max_per_day=self._settings.reward_max_per_day,
             remaining=self.remaining(device),
         )

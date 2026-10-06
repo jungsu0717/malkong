@@ -54,13 +54,14 @@ def callback(key: str, tx: str) -> str:
     )
 
 
-def test_verified_reward_adds_one_answer(setup) -> None:
+def test_verified_reward_adds_answers_per_ad(setup) -> None:
     client, usage, key = setup
     device = usage.device(key)
     assert usage.remaining(device) == 1
     res = client.get(f"/v1/reward/ssv?{signed(callback(key, 'tx-1'))}")
     assert res.status_code == 200
-    assert usage.remaining(device) == 2
+    # 광고 1편 = 정밀 답변 5회(설정 reward_per_ad, decisions/019)
+    assert usage.remaining(device) == 1 + 5
 
 
 def test_same_transaction_counts_once(setup) -> None:
@@ -68,15 +69,15 @@ def test_same_transaction_counts_once(setup) -> None:
     query = signed(callback(key, "tx-1"))
     client.get(f"/v1/reward/ssv?{query}")
     assert client.get(f"/v1/reward/ssv?{query}").status_code == 200
-    assert usage.remaining(usage.device(key)) == 2
+    assert usage.remaining(usage.device(key)) == 1 + 5
 
 
 def test_rewards_are_capped_per_day(setup) -> None:
     client, usage, key = setup
     for i in range(5):
         client.get(f"/v1/reward/ssv?{signed(callback(key, f'tx-{i}'))}")
-    # 하루 3편까지(설정 reward_max_per_day)
-    assert usage.remaining(usage.device(key)) == 1 + 3
+    # 하루 2편까지(설정 reward_max_per_day)
+    assert usage.remaining(usage.device(key)) == 1 + 2 * 5
 
 
 @pytest.mark.parametrize(

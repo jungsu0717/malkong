@@ -11,6 +11,8 @@ class EntitlementsResponse(ApiModel):
     ads: bool
     # 하루 정밀 답변 수. null 이면 무제한(운영자 기기)
     daily_limit: int | None
+    # 보상형 광고 1편이 채우는 정밀 답변 수와 하루 편수
+    reward_per_ad: int
     reward_max_per_day: int
     # 오늘 남은 정밀 답변 수. null 이면 무제한
     remaining: int | None
@@ -28,4 +30,17 @@ class LimitExceededBody(ApiModel):
     # 한도가 다시 차는 시각(한국 시간 다음 0시)
     reset_at: str
     reward_available: bool
+    # 일반 기준 답을 오늘 더 받을 수 있는지 — 그것까지 다 썼으면 false
     eco_available: bool
+
+
+class BudgetReachedBody(ApiModel):
+    """503 DAILY_BUDGET_REACHED — 서버 전체의 오늘 모델 비용이 천장에 닿았다.
+
+    위험 신호 안내는 모델을 부르지 않으므로 계속 나간다.
+    """
+
+    code: str
+    message: str
+    # 다시 답하기 시작하는 시각(한국 시간 다음 0시)
+    reset_at: str

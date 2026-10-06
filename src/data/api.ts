@@ -72,6 +72,8 @@ export class ApiError extends Error {
 export type Entitlements = {
   ads: boolean;
   dailyLimit: number | null;
+  /** 보상형 광고 1편이 채우는 정밀 답변 수 */
+  rewardPerAd: number;
   rewardMaxPerDay: number;
   remaining: number | null;
 };

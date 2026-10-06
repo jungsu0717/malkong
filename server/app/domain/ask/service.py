@@ -42,7 +42,7 @@ from app.domain.ask.schema import (
 )
 from app.domain.entitlements.service import EntitlementsService
 from app.domain.knowledge.repository import L1Item, L1Repository
-from app.infra.llm.base import LlmClient, LlmError, LlmRequest, LlmUnavailable
+from app.infra.llm.base import LlmClient, LlmError, LlmRequest, LlmResult, LlmUnavailable
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -131,18 +131,15 @@ class AskService:
         cached = self._cache.get(device.key_hash, req.client_message_id)
         if cached is not None:
             return cached
-        # 절약 모드 요청은 한도와 상관없다. 정밀 답변 요청만 다 썼는지 본다
-        precise = req.mode != "eco"
-        if precise:
-            self._usage.ensure_can_answer(device)
+        # 정밀 답변과 일반 기준 답(절약 모드)은 따로 센다. 그다음 서버 전체의 오늘 비용 천장을 본다
+        # (decisions/019) — 둘 다 모델을 부르기 전에 막는다
+        eco = req.mode == "eco"
+        self._usage.ensure_can_answer(device, eco=eco)
+        self._usage.ensure_budget(device)
 
         response = self._model_answer(req)
         if isinstance(response, AnswerResponse):
-            remaining = (
-                self._usage.record_answer(device, req.client_message_id)
-                if precise
-                else self._usage.remaining(device)
-            )
+            remaining = self._usage.record_answer(device, req.client_message_id, eco=eco)
             response = response.model_copy(update={"usage": Usage(remaining=remaining)})
         self._cache.put(device.key_hash, req.client_message_id, response)
         return response
@@ -224,7 +221,10 @@ class AskService:
         assert self._llm is not None
         request = LlmRequest(system=SYSTEM_PROMPT, user=user, schema=MODEL_OUTPUT_SCHEMA)
         try:
-            return ModelOutput.model_validate(self._llm.generate(request).data)
+            result = self._llm.generate(request)
+            # 답이 쓸모없어도 부른 값은 나갔다 — 형식 검사 전에 센다
+            self._usage.add_cost(_cost_micro_usd(result, self._settings))
+            return ModelOutput.model_validate(result.data)
         except LlmUnavailable as exc:
             # 요금·호출 한도나 키 문제 — 다시 불러도 같다. 기다리게 하지 않고 바로 알린다
             logger.warning("ask: 모델 회사가 요청을 받지 않음 (%s)", exc)
@@ -272,3 +272,17 @@ def _clean_followup(out: ModelOutput) -> Followup | None:
 
 def _source(item: L1Item) -> Source:
     return Source(id=item.id, name=item.source_name, url=item.source_url)
+
+
+def _cost_micro_usd(result: LlmResult, s: Settings) -> int:
+    """모델 한 번 부른 비용(백만분의 1 달러).
+
+    가격이 백만 토큰당 달러라서 토큰 수 × 가격이 곧 이 단위다.
+    """
+    uncached = max(0, result.input_tokens - result.cached_input_tokens)
+    output = result.output_tokens + result.thought_tokens
+    return round(
+        uncached * s.llm_price_input_usd
+        + result.cached_input_tokens * s.llm_price_cached_usd
+        + output * s.llm_price_output_usd
+    )

@@ -22,6 +22,13 @@ uv run pytest
 # 실제 모델로 로컬 실행 — 모델은 환경변수로만 고른다(코드에 적지 않는다). 무료 티어 키면 아기 기록은 안 간다
 MALKONG_LLM_PROVIDER=gemini MALKONG_LLM_MODEL=gemini-3.5-flash-lite uv run uvicorn app.main:app --port 8000
 
+# Postgres 저장소를 실제 Postgres 로 시험 — 저장소 SQL 을 고쳤으면 돌린다(평소 pytest 에서는 건너뛴다).
+# 로컬 Postgres 는 pgserver 로 띄운다(설치 권한 불필요, Python 3.12 판만 있다). 운영 DB(Neon) 주소는 넣지 않는다
+URI=$(uv run --no-project --python 3.12 --with pgserver python -c \
+  "import pgserver; print(pgserver.get_server('/tmp/malkong-pg', cleanup_mode=None).get_uri())" | tail -1)
+MALKONG_TEST_PG_URL="$URI" uv run pytest tests/test_pg_store.py
+kill $(head -1 /tmp/malkong-pg/postmaster.pid)                # 끝나면 끈다
+
 # L1 을 고친 뒤 — 서버 사본(app/data/l1/)을 원본(src/data/l1/)과 맞춘다. 어긋나면 tests/test_l1_copy.py 가 실패한다
 uv run python -m scripts.sync_l1
 

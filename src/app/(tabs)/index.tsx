@@ -57,6 +57,9 @@ const QUICK = [
 ];
 
 function failureText(failure: AskFailure): string {
+  // 서버 전체의 오늘 모델 비용이 천장에 닿았다(decisions/019) — 위험 신호 안내는 그래도 나간다
+  if (failure.code === 'DAILY_BUDGET_REACHED')
+    return '오늘은 버디가 답할 수 있는 양을 다 썼어요. 내일 0시에 다시 답해 드릴게요. 위험해 보이는 증상을 말씀하시면 그 안내는 지금도 바로 드려요.';
   if (failure.status === 0) return '인터넷 연결이 불안정해서 답을 받지 못했어요. 연결을 확인하고 다시 시도해 주세요.';
   if (failure.status === 503) return '버디가 지금 답을 만들지 못했어요. 잠시 뒤에 다시 시도해 주세요.';
   if (failure.status === 422) return '질문을 알아듣지 못했어요. 조금 바꿔서 다시 물어봐 주세요.';
@@ -86,7 +89,7 @@ export default function ChatScreen() {
   /** 광고를 보는 중 — 한도 줄의 단추를 잠근다 */
   const [watching, setWatching] = useState(false);
   const [refillMissed, setRefillMissed] = useState(false);
-  const { dailyLimit, remaining } = useEntitlements();
+  const { dailyLimit, rewardPerAd, rewardMaxPerDay, remaining } = useEntitlements();
   const typing = useKeyboardVisible();
   // 기록 화면의 「대화 보기」에서 넘어온 질문 말풍선 id. ft 는 같은 줄을 다시 눌렀을 때의 구분값이다
   const { focus, ft } = useLocalSearchParams<{ focus?: string; ft?: string }>();
@@ -228,12 +231,18 @@ export default function ChatScreen() {
       <LimitBubble
         key="limit"
         dailyLimit={dailyLimit}
+        rewardPerAd={rewardPerAd}
+        rewardMaxPerDay={rewardMaxPerDay}
         busy={watching}
         note={refillMissed ? '충전을 확인하지 못했어요. 광고를 끝까지 봤다면 잠시 뒤 다시 눌러 주세요' : null}
-        onEco={() => {
-          stickToEnd.current = true;
-          void answerInEco();
-        }}
+        onEco={
+          failure.limit?.ecoAvailable === false
+            ? undefined
+            : () => {
+                stickToEnd.current = true;
+                void answerInEco();
+              }
+        }
         onReward={
           failure.limit?.rewardAvailable && canOfferRewardedAd()
             ? async () => {
@@ -249,7 +258,14 @@ export default function ChatScreen() {
       />,
     );
   } else if (failure) {
-    rows.push(<ErrorBubble key="error" text={failureText(failure)} onRetry={() => void retry()} />);
+    rows.push(
+      <ErrorBubble
+        key="error"
+        text={failureText(failure)}
+        // 하루 비용 천장은 0시 전에는 다시 해도 같다 — 다시 시도를 두지 않는다
+        onRetry={failure.code === 'DAILY_BUDGET_REACHED' ? undefined : () => void retry()}
+      />,
+    );
   }
 
   const showQuick = !input && !pendingId && !openFollowup;

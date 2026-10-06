@@ -16,7 +16,7 @@ from app.domain.ask.cache import ResponseCache
 from app.domain.ask.router import get_llm_client, get_response_cache
 from app.domain.entitlements.router import get_entitlements_service
 from app.domain.entitlements.service import KST, EntitlementsService
-from app.infra.db.usage_store import MemoryUsageStore
+from app.infra.db.usage_store import DayUsage, MemoryUsageStore, StoreError
 from app.main import create_app
 from tests.test_ask import FakeLlm, model_out
 
@@ -108,7 +108,13 @@ def test_store_keeps_only_key_hashes() -> None:
 
 def test_entitlements_for_a_device(app) -> None:
     body = keyed(app).get("/v1/entitlements").json()
-    assert body == {"ads": True, "dailyLimit": 2, "rewardMaxPerDay": 3, "remaining": 2}
+    assert body == {
+        "ads": True,
+        "dailyLimit": 2,
+        "rewardPerAd": 5,
+        "rewardMaxPerDay": 2,
+        "remaining": 2,
+    }
 
 
 def test_entitlements_need_a_key(app) -> None:
@@ -120,7 +126,13 @@ def test_entitlements_need_a_key(app) -> None:
 def test_operator_device_has_no_ads_and_no_limit(app) -> None:
     client = TestClient(app, headers={"X-Device-Key": OPERATOR_KEY})
     body = client.get("/v1/entitlements").json()
-    assert body == {"ads": False, "dailyLimit": None, "rewardMaxPerDay": 0, "remaining": None}
+    assert body == {
+        "ads": False,
+        "dailyLimit": None,
+        "rewardPerAd": 0,
+        "rewardMaxPerDay": 0,
+        "remaining": None,
+    }
     with_llm(app, *[model_out()] * 3)
     for i in range(3):
         res = client.post("/v1/ask", json={**QUESTION, "clientMessageId": f"op-{i}"})
@@ -214,5 +226,109 @@ def test_old_usage_is_purged() -> None:
     store.count_once("k", today - timedelta(days=31), "old")
     store.count_once("k", today, "new")
     store.purge(today)
-    assert store.usage("k", today - timedelta(days=31)) == (0, 0)
-    assert store.usage("k", today) == (1, 0)
+    assert store.usage("k", today - timedelta(days=31)) == DayUsage()
+    assert store.usage("k", today) == DayUsage(used=1)
+
+
+# --- 일반 기준 답 한도 · 서버 전체 하루 비용 천장 (decisions/019) ---
+
+
+def swap_settings(app, clock: Clock, **over) -> EntitlementsService:
+    """설정을 바꿔 끼운 새 자격 서비스 — 한도와 천장 숫자를 작게 해서 시험한다."""
+    base = {"_env_file": None, "daily_limit": 2, "operator_device_keys": SecretStr(OPERATOR_KEY)}
+    settings = Settings(**(base | over))
+    usage = EntitlementsService(MemoryUsageStore(), settings, clock=clock)
+    app.dependency_overrides[get_entitlements_service] = lambda: usage
+    app.dependency_overrides[get_settings] = lambda: settings
+    return usage
+
+
+def ask(client: TestClient, msg_id: str, eco: bool = False):
+    body = {**QUESTION, "clientMessageId": msg_id} | ({"mode": "eco"} if eco else {})
+    return client.post("/v1/ask", json=body)
+
+
+def test_eco_answers_are_counted_and_capped(app, clock: Clock) -> None:
+    swap_settings(app, clock, eco_daily_limit=2)
+    client = keyed(app)
+    with_llm(app, *[model_out()] * 4)
+    for i in range(2):
+        assert ask(client, f"q-{i}").status_code == 200
+    for i in range(2):
+        assert ask(client, f"e-{i}", eco=True).status_code == 200
+    # 일반 기준 답까지 다 썼다 — 오늘은 여기까지
+    res = ask(client, "e-2", eco=True)
+    assert res.status_code == 429
+    assert res.json()["ecoAvailable"] is False
+    assert res.json()["rewardAvailable"] is True
+    # 정밀 답 요청도 이제 일반 기준 선택지를 내주지 않는다
+    assert ask(client, "q-9").json()["ecoAvailable"] is False
+
+
+def test_eco_retry_counts_once(app, clock: Clock) -> None:
+    usage = swap_settings(app, clock, eco_daily_limit=1)
+    client = keyed(app)
+    with_llm(app, model_out())
+    first = ask(client, "e-1", eco=True)
+    assert ask(client, "e-1", eco=True).json() == first.json()
+    device = usage.device(client.headers["X-Device-Key"])
+    assert usage._store.usage(device.key_hash, usage.today()).eco == 1
+
+
+def test_daily_budget_stops_model_answers_but_not_redflags(app, clock: Clock) -> None:
+    # 천장 1원(1달러 = 1000원으로) = 백만분의1달러로 1000.
+    # 한 번 부르는 값: 입력 1000 × 0.30 + 출력 400 × 2.50 = 1300 이라 첫 답 뒤에 닿는다
+    usage = swap_settings(app, clock, daily_budget_krw=1, usd_to_krw=1000)
+    client = keyed(app)
+    app.dependency_overrides[get_llm_client] = lambda: FakeLlm(
+        model_out(), model_out(), tokens=(1000, 0, 400, 0)
+    )
+    assert ask(client, "q-1").status_code == 200
+    assert usage._store.cost(usage.today()) == 1300
+
+    res = ask(client, "q-2")
+    assert res.status_code == 503
+    assert res.json()["code"] == "DAILY_BUDGET_REACHED"
+    assert res.json()["resetAt"] == "2026-10-04T00:00:00+09:00"
+    # 위험 신호 안내는 모델을 부르지 않으므로 그대로 나간다
+    assert client.post("/v1/ask", json=REDFLAG).json()["type"] == "redflag"
+    # 운영자(가족) 기기는 천장에 걸리지 않는다
+    family = TestClient(app, headers={"X-Device-Key": OPERATOR_KEY})
+    assert ask(family, "op-1").status_code == 200
+    # 다음 날 0시에 풀린다
+    clock.now = datetime(2026, 10, 4, 0, 0, tzinfo=KST)
+    assert ask(client, "q-3").status_code != 503
+
+
+def test_reaching_the_budget_logs_one_error(app, clock: Clock, caplog) -> None:
+    usage = swap_settings(app, clock, daily_budget_krw=1, usd_to_krw=1000)
+    with caplog.at_level("ERROR", logger="uvicorn.error"):
+        usage.add_cost(600)
+        usage.add_cost(600)
+        usage.add_cost(600)
+    assert sum("하루 천장" in r.getMessage() for r in caplog.records) == 1
+
+
+def test_cost_history_is_kept_longer_than_usage() -> None:
+    store = MemoryUsageStore()
+    today = date(2026, 10, 3)
+    store.add_cost(today - timedelta(days=31), 5)
+    store.add_cost(today - timedelta(days=401), 7)
+    store.purge(today)
+    assert store.cost(today - timedelta(days=31)) == 5
+    assert store.cost(today - timedelta(days=401)) == 0
+
+
+def test_answer_survives_a_failure_to_record_its_cost(app, clock: Clock) -> None:
+    # 비용 적기는 기록일 뿐 — 저장소가 잠깐 실패해도 이미 만든 답을 버리지 않는다(리뷰 지적)
+    usage = swap_settings(app, clock)
+
+    def broken(day, micro_usd):
+        raise StoreError("OperationalError")
+
+    usage._store.add_cost = broken
+    client = keyed(app)
+    app.dependency_overrides[get_llm_client] = lambda: FakeLlm(model_out(), tokens=(10, 0, 10, 0))
+    res = ask(client, "q-1")
+    assert res.status_code == 200
+    assert res.json()["type"] == "answer"

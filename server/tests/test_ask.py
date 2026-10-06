@@ -56,9 +56,11 @@ class FakeLlm:
     provider = "fake"
     model = "fake-model"
 
-    def __init__(self, *outputs) -> None:
+    def __init__(self, *outputs, tokens: tuple[int, int, int, int] = (0, 0, 0, 0)) -> None:
         self.outputs = list(outputs)
         self.requests: list[LlmRequest] = []
+        # (입력, 그중 캐시, 출력, 생각) — 비용 천장 시험에서 쓴다
+        self.tokens = tokens
 
     def generate(self, req: LlmRequest) -> LlmResult:
         self.requests.append(req)
@@ -69,10 +71,10 @@ class FakeLlm:
             data=out,
             raw_text="",
             model=self.model,
-            input_tokens=0,
-            cached_input_tokens=0,
-            output_tokens=0,
-            thought_tokens=0,
+            input_tokens=self.tokens[0],
+            cached_input_tokens=self.tokens[1],
+            output_tokens=self.tokens[2],
+            thought_tokens=self.tokens[3],
             latency_ms=0,
             stop_reason=None,
         )

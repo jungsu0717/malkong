@@ -1,6 +1,6 @@
 # 005 디바이스 키 · 하루 한도 · 재시도 안전 · 한도 화면
 
-> 상태: 진행 (2026-10-03) — 코드와 시험 완료. 남은 것: 배포(Julian 허락), Neon 연결(Julian 계정)
+> 상태: 진행 (2026-10-06) — 코드와 시험 완료, Neon 생성 완료. 남은 것: Neon 을 붙인 배포와 Cloud Run 확인(Julian 허락)
 > 근거: backend 「일일 한도」 · 「운영자 기기」 · 「사용량을 세는 법」, api-contract `/v1/devices` · `/v1/entitlements` · `/v1/ask`,
 > ask.md 「한도 표시」
 
@@ -36,8 +36,13 @@
 
 - [ ] 서버 배포 허락(자동 모드가 운영 배포를 막는다) — 명령은 server/AGENTS.md 「배포」. **앱은 새 서버가 있어야
       답을 받는다**(키 발급 경로가 옛 서버에 없다)
-- [ ] Neon 프로젝트를 만들고 접속 주소를 Secret Manager `malkong-database-url` 로 넣기 → 배포에
-      `MALKONG_DATABASE_URL=malkong-database-url:latest` 를 더한다
+- [x] Neon 프로젝트를 만들고 접속 주소를 Secret Manager `malkong-database-url` 로 넣기 — 2026-10-06 Julian
+      (무료 플랜, 싱가포르 `ap-southeast-1`, 풀러 주소). 남은 것: 배포에
+      `MALKONG_DATABASE_URL=malkong-database-url:latest` 를 더하고 Cloud Run 에서 확인한다
+  - 붙여 넣을 때 주소 앞에 `\r` 두 개가 섞여 들어가 있었다. 비밀값은 그대로 두고, 서버가 비밀값 설정의 앞뒤 공백과
+    줄바꿈을 지우게 고쳤다(`setting.py`)
+  - Julian 의 WSL PC(회사망)에서는 DB 포트 5432 로 나가는 길이 막혀 있다(웹 포트 443 은 된다). 그래서 실제 Neon
+    확인은 이 PC 가 아니라 Cloud Run 의 트래픽 없는 시험판에서 한다
 - [ ] 가족 기기 키를 `malkong-operator-keys`(쉼표로 구분)로 넣기 → `MALKONG_OPERATOR_DEVICE_KEYS`
 
 ## 완료 조건

@@ -10,7 +10,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -33,9 +33,23 @@ class Settings(BaseSettings):
     # 유료 전환은 Julian 이 한다
     llm_paid_tier: bool = False
 
-    # 하루 정밀 답변 수와 보상형 광고로 더 받을 수 있는 수(backend 「일일 한도」)
+    # 한도와 하루 비용 천장(backend 「일일 한도」, decisions/019).
+    # 실제 사용량을 보고 앱 업데이트 없이 바꾼다
+    # 하루 정밀 답변 수
     daily_limit: int = 10
-    reward_max_per_day: int = 3
+    # 보상형 광고 1편이 채우는 정밀 답변 수와 하루 편수
+    reward_per_ad: int = 5
+    reward_max_per_day: int = 2
+    # 정밀 답변을 다 쓴 뒤 일반 기준 답의 하루 상한 — 사람은 닿지 않는 수로, 남용만 막는다
+    eco_daily_limit: int = 20
+    # 서버 전체의 하루 모델 비용 천장(원). 넘으면 그날은 모델 답을 멈춘다 — Gemini 월 지출 한도 ÷ 30
+    daily_budget_krw: int = 330
+    usd_to_krw: float = 1400
+    # 모델 가격(백만 토큰당 달러) — 기본값은 Gemini 3.5 Flash-Lite(2026-10-02 가격표).
+    # 모델을 바꾸면 함께 바꾼다
+    llm_price_input_usd: float = 0.30
+    llm_price_cached_usd: float = 0.03
+    llm_price_output_usd: float = 2.50
 
     # 운영 데이터 저장소(Neon Postgres) 접속 주소.
     # 없으면 메모리 저장소로 돈다(인스턴스가 바뀌면 잊는다)
@@ -52,6 +66,17 @@ class Settings(BaseSettings):
 
     # 승인된 L1 사본이 있는 곳(scripts/sync_l1.py 가 만든다)
     l1_dir: Path = Path(__file__).resolve().parents[2] / "data" / "l1"
+
+    @field_validator(
+        "gemini_api_key", "anthropic_api_key", "database_url", "operator_device_keys", mode="before"
+    )
+    @classmethod
+    def _strip_secret(cls, value: object) -> object:
+        # 붙여 넣을 때 섞인 공백과 줄바꿈(\r 포함)을 지운다 — Neon 주소 앞에 \r 두 개가
+        # 붙어 들어간 적이 있다(2026-10-06). 지우고 남는 것이 없으면 설정이 없는 것으로 본다
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
 
 
 @lru_cache
