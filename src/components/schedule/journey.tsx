@@ -334,7 +334,7 @@ export function Journey({
             </View>
           ))}
           <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-            · 채운 점은 한 것 · 정류장을 눌러 보세요
+            · 색이 찬 점은 한 것 · 정류장을 누르면 자세히 보여요
           </ThemedText>
         </View>
       </View>

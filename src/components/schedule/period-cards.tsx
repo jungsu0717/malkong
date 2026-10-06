@@ -16,7 +16,7 @@ import { useTheme } from '@/hooks/use-theme';
 const md = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
 
 /** 「아직 안 한 것」 섹션의 설명 — 줄마다 되풀이하지 않고 여기 한 번(SPEC-HOME-02 지난 항목) */
-const LEFT_NOTE = '기록이 없는 것이에요. 했다면 알려 주세요';
+const LEFT_NOTE = '아직 기록이 없어요. 이미 했다면 「했어요」를 눌러 주세요';
 
 function Head({ kind, range, title }: { kind: string; range: string; title: string }) {
   const c = useTheme();
@@ -99,8 +99,8 @@ export function WeeklyCard({ monday, onPick }: { monday: Date; onPick: (g: GapGr
   return (
     <Card style={styles.card}>
       <Head kind="주간 브리핑" range={`${md(monday)} ~ ${md(sunday)}`} title="이번 주 일정" />
-      <CardSection title="이번 주 무렵" aside={week.due.length > 0 ? `${week.due.length}` : null}>
-        <ItemRows items={week.due} onPick={onPick} empty="이번 주에 무렵인 접종 · 검진은 없어요" />
+      <CardSection title="이번 주 예정" aside={week.due.length > 0 ? `${week.due.length}` : null}>
+        <ItemRows items={week.due} onPick={onPick} empty="이번 주에 예정된 접종 · 검진은 없어요" />
       </CardSection>
       {week.left.length > 0 && (
         <CardSection title="아직 안 한 것" aside={`${week.left.length}`} note={LEFT_NOTE}>
@@ -108,7 +108,7 @@ export function WeeklyCard({ monday, onPick }: { monday: Date; onPick: (g: GapGr
         </CardSection>
       )}
       <ThemedText type="caption" style={[styles.foot, { color: c.textTertiary }]}>
-        날짜는 생일로 계산한 무렵이에요
+        날짜는 생일로 어림한 거예요
       </ThemedText>
     </Card>
   );
@@ -137,7 +137,7 @@ export function MonthlyCard({ month, onPick }: { month: number; onPick: (g: GapG
         title={month === 0 ? '세상에 온 첫 달' : `${month}개월이 됐어요${m.headline ? ` — ${m.headline}` : ''}`}
       />
       <CardSection title="이번 달 챙길 것" aside={m.items.length > 0 ? `${m.items.length}` : null}>
-        <ItemRows items={m.items} onPick={onPick} empty="이번 달에 새로 시작하는 챙길 것은 없어요" />
+        <ItemRows items={m.items} onPick={onPick} empty="이번 달에 새로 시작하는 건 없어요" />
       </CardSection>
       {leftover.length > 0 && (
         <CardSection title="아직 안 한 것" aside={`${leftover.length}`} note={LEFT_NOTE}>
@@ -156,7 +156,7 @@ export function MonthlyCard({ month, onPick }: { month: number; onPick: (g: GapG
           ))
         ) : (
           <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-            {m.pointsNote ?? '이 월령의 발달 포인트는 아직 준비 중이에요'}
+            {m.pointsNote ?? '이 시기의 발달 포인트는 아직 준비 중이에요'}
           </ThemedText>
         )}
       </CardSection>

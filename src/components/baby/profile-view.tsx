@@ -80,7 +80,7 @@ export function ProfileView() {
           />
         </View>
         <ThemedText type="caption" style={[styles.note, { color: c.textSecondary }]}>
-          기록에서 찾은 값은 그 기록의 말 그대로예요. 모르는 칸은 눌러서 알려 주세요
+          적어 둔 기록에서 찾은 값이에요. 비어 있는 칸은 눌러서 알려 주세요
         </ThemedText>
 
         {/* 하루 기록 (SPEC-BABY-07) — 오늘 브리핑에서 적는 게 기본이고, 여기서는 언제든 */}

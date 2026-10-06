@@ -15,7 +15,6 @@ import { Button, Card, SectionHeader, tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
-import { topic } from '@/data/briefing';
 import type { ChatMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { buildProfile, knowledgeGrowth, type Domain, type Fact } from '@/data/knowledge-profile';
@@ -30,7 +29,7 @@ export const questionCount = (messages: ChatMessage[]) =>
 /** 버디와 함께한 시간을 한 문장으로 — 「함께한 지 3일째 · 질문 6번 · 기록 2개」(SPEC-BABY-05, 통계 칸 대신) */
 export function togetherLine(createdAt: string, questions: number, recordCount: number): string {
   const days = Math.max(1, Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000) + 1);
-  return `함께한 지 ${days}일째 · 질문 ${questions}번 · 기록 ${recordCount}개`;
+  return `함께한 지 ${days}일째 · 나눈 질문 ${questions}번 · 모은 기록 ${recordCount}개`;
 }
 
 export function KnowledgeView() {
@@ -59,12 +58,12 @@ export function KnowledgeView() {
         <View style={styles.head}>
           <ThemedText type="display">{profile.percent}%</ThemedText>
           <ThemedText type="small" style={{ color: c.textSecondary }}>
-            Lv.{profile.level.step} {profile.level.name} · 아는 것 {profile.knownCount} / {profile.totalCount}
+            Lv.{profile.level.step} {profile.level.name} · 알게 된 것 {profile.knownCount} / {profile.totalCount}
           </ThemedText>
         </View>
 
         <View style={styles.section}>
-          <SectionHeader title="영역별로" aside="누르면 자세히" />
+          <SectionHeader title="주제별로" aside="누르면 아래에 자세히" />
           <Card style={styles.bars}>
             {profile.domains.map((d) => {
               const on = d.id === domain.id;
@@ -105,14 +104,14 @@ export function KnowledgeView() {
               <Sparkline points={growth} color={c.accent} />
             ) : (
               <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                {topic(name)} 기록이 쌓이면 버디가 알게 된 흐름이 여기 그려져요
+                기록이 쌓이면 버디가 {name}에 대해 알아 간 흐름이 여기 그려져요
               </ThemedText>
             )}
           </Card>
         </View>
 
         <ThemedText type="caption" style={[styles.note, { color: c.textSecondary }]}>
-          아는 정도는 이 기기에 저장된 기록만으로 세요. 서버로 보내지 않아요.
+          이 숫자는 이 폰에 저장된 기록으로만 계산해요. 서버로 보내지 않아요.
         </ThemedText>
       </ScrollView>
       {sheet}

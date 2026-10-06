@@ -155,7 +155,7 @@ export default function ScheduleScreen() {
           <AdBanner />
 
           <ThemedText type="caption" style={[styles.disclaimer, { color: c.textSecondary }]}>
-            날짜는 생일로 계산한 무렵이에요. 정확한 접종일은 병원과 함께 정해요
+            날짜는 생일로 어림한 거예요. 정확한 접종일은 병원과 함께 정해 주세요
           </ThemedText>
         </ScrollView>
 

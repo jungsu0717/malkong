@@ -139,12 +139,12 @@ export default function MyScreen() {
                 title="아침 브리핑 알림"
                 detail={
                   !supported
-                    ? '이 기기에서는 알림을 쓸 수 없어요'
+                    ? '이 기기에서는 알림을 받을 수 없어요'
                     : allowed === false && briefingTime !== null
                       ? '휴대폰 설정에서 알림이 꺼져 있어요'
                       : briefingOn
                         ? `매일 ${timeLabel(briefingTime!)}에 알려 드려요`
-                        : '꺼도 브리핑은 앱을 열면 그대로 생겨요'
+                        : '꺼도 앱을 열면 브리핑은 볼 수 있어요'
                 }
                 right={
                   supported ? (
@@ -165,12 +165,12 @@ export default function MyScreen() {
                 title="기록이 비면 알림"
                 detail={
                   !supported
-                    ? '이 기기에서는 알림을 쓸 수 없어요'
+                    ? '이 기기에서는 알림을 받을 수 없어요'
                     : allowed === false && nudgePush
                       ? '휴대폰 설정에서 알림이 꺼져 있어요'
                       : nudgePushOn
                         ? '하루 기록이 사흘째 비면 저녁 8시에 한 번 알려 드려요'
-                        : '꺼도 우리 아기 탭에서 언제든 적을 수 있어요'
+                        : '꺼도 오늘 브리핑에서 언제든 적을 수 있어요'
                 }
                 right={
                   supported ? (
@@ -203,10 +203,10 @@ export default function MyScreen() {
             <Card style={styles.rows}>
               <ListRow
                 icon="leaf-outline"
-                title="챙길 것에 생활 항목도 보기"
-                detail="끄면 접종·검진만 보여요"
+                title="생활 팁도 챙길 것에 넣기"
+                detail="끄면 접종 · 검진만 보여요"
                 right={
-                  <Toggle label="챙길 것에 생활 항목도 보기" value={!scheduleOnly} onChange={(on) => void setScheduleOnly(!on)} />
+                  <Toggle label="생활 팁도 챙길 것에 넣기" value={!scheduleOnly} onChange={(on) => void setScheduleOnly(!on)} />
                 }
               />
             </Card>

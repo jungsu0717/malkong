@@ -156,7 +156,7 @@ const DOMAINS: { id: DomainId; name: string; color: string; facts: FactDef[] }[]
       { kind: 'rule', id: 'temper', label: '기질', match: /예민|순한|순해|기질|잘\s*울|잘\s*웃|겁이/, benefit: '달래기·잠투정 답을 우리 아기 성향에 맞춰요', ask: choose('우리 아기 성향은 어떤가요?', '기질', ['순한 편', '예민한 편', '활발한 편', '겁이 많은 편']) },
       { kind: 'rule', id: 'likes', label: '좋아하는 것', match: /좋아(해|하|함)|싫어(해|하|함)/, benefit: '놀이·달래기 방법을 좋아하는 것에서 시작해요', ask: choose('좋아하는 건 뭐예요?', '좋아하는 것', ['노래 · 자장가', '산책', '목욕', '안아 주기', '장난감']) },
       { kind: 'rule', id: 'play', label: '놀이 · 목욕', match: /터미타임|놀이|산책|목욕|외출/, benefit: '하루 일과 질문에 지금 생활을 반영해요', ask: choose('요즘 하루 일과는 어떤가요?', '놀이 · 목욕', ['터미타임을 해요', '매일 목욕해요', '산책을 자주 해요', '주로 집에서 놀아요']) },
-      { kind: 'cover', id: 'life', label: '알아 둔 생활 안전', kinds: ['생활', '안전', '수면', '수유'], benefit: '챙길 것의 생활 항목을 확인하면 늘어나요' },
+      { kind: 'cover', id: 'life', label: '알아 둔 생활 팁', kinds: ['생활', '안전', '수면', '수유'], benefit: '챙길 것의 생활 팁을 확인하면 늘어나요' },
     ],
   },
 ];

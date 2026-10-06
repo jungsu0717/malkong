@@ -76,7 +76,7 @@ export function DayView({
             <ListRow
               icon="sunny-outline"
               iconTone="accent"
-              title={isToday ? '오늘 브리핑' : '그날 브리핑'}
+              title={isToday ? '오늘 브리핑' : '이날 브리핑'}
               detail={briefingSummary(daily)}
               onPress={() => router.push(briefingHref(key, 'daily'))}
             />
@@ -134,7 +134,7 @@ export function DayView({
 
       {nothing && (
         <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-          {diff > 0 ? '이날은 아직 잡힌 일정이 없어요' : '이날은 남은 브리핑도 기록도 없어요'}
+          {diff > 0 ? '이날은 아직 잡힌 일정이 없어요' : '이날은 브리핑도 기록도 없어요'}
         </ThemedText>
       )}
     </View>

@@ -107,15 +107,15 @@ export default function BabyScreen() {
                 <View style={styles.legend}>
                   <View style={[styles.dotFilled, { backgroundColor: c.onSpace }]} />
                   <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-                    아는 것 {profile.knownCount}
+                    알게 된 것 {profile.knownCount}
                   </ThemedText>
                   <View style={[styles.dotHollow, { borderColor: c.onSpaceDim }]} />
                   <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-                    아직 모르는 것 {profile.totalCount - profile.knownCount}
+                    알아 갈 것 {profile.totalCount - profile.knownCount}
                   </ThemedText>
                 </View>
                 <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-                  끌어서 돌리고, 행성을 눌러 보세요
+                  행성을 누르면 자세히 볼 수 있어요
                 </ThemedText>
               </View>
             </View>
@@ -132,7 +132,7 @@ export default function BabyScreen() {
               <ListRow
                 icon="planet-outline"
                 title="버디가 아는 것"
-                detail={`영역별로 · 아는 것 ${profile.knownCount} / ${profile.totalCount}`}
+                detail={`주제별로 알게 된 것 ${profile.knownCount} / ${profile.totalCount}`}
                 onPress={() => router.push('/knowledge')}
               />
               <ListRow
@@ -146,14 +146,14 @@ export default function BabyScreen() {
                 divider
                 icon="document-text-outline"
                 title="기록 전체 보기"
-                detail={records.length > 0 ? `${records.length}건 · 고치거나 지울 수 있어요` : '대화와 챙길 것에서 모은 기록이 여기 쌓여요'}
+                detail={records.length > 0 ? `${records.length}건 · 고치거나 지울 수 있어요` : '버디와 나눈 이야기에서 모은 기록이 여기 쌓여요'}
                 onPress={() => router.push('/records')}
               />
             </Card>
           </View>
 
           <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
-            아는 정도는 이 기기에 저장된 기록만으로 세요. 서버로 보내지 않아요.
+            이 숫자는 이 폰에 저장된 기록으로만 계산해요. 서버로 보내지 않아요.
           </ThemedText>
         </ScrollView>
       </SafeAreaView>

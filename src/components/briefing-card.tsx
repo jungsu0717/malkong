@@ -453,7 +453,7 @@ export function BriefingCard({
     sections.push(
       <CardSection
         key="week"
-        title="다가오는 일정 · 7일 안"
+        title="다가오는 일정 · 일주일 안"
         aside={weekAll.length > weekLeft.length ? `${weekAll.length - weekLeft.length}/${weekAll.length} 했어요` : null}
         first={sections.length === 0}>
         <Folded>
