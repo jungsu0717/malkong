@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { TodoRow } from '@/components/todo-row';
-import { Card } from '@/components/ui';
+import { Card, CardSection, Folded } from '@/components/ui';
 import { ageFrom } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { todoOf } from '@/data/briefing';
@@ -14,6 +14,9 @@ import { getGaps, groupGaps, labelByKind, type GapGroup, type L1Item } from '@/d
 import { useTheme } from '@/hooks/use-theme';
 
 const md = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
+
+/** 「아직 안 한 것」 섹션의 설명 — 줄마다 되풀이하지 않고 여기 한 번(SPEC-HOME-02 지난 항목) */
+const LEFT_NOTE = '기록이 없는 것이에요. 했다면 알려 주세요';
 
 function Head({ kind, range, title }: { kind: string; range: string; title: string }) {
   const c = useTheme();
@@ -32,16 +35,7 @@ function Head({ kind, range, title }: { kind: string; range: string; title: stri
   );
 }
 
-function Section({ title }: { title: string }) {
-  const c = useTheme();
-  return (
-    <ThemedText type="caption" style={[styles.section, { color: c.textSecondary, borderTopColor: c.divider }]}>
-      {title}
-    </ThemedText>
-  );
-}
-
-/** 할 것 줄 — 남은 것은 완료 알리기, 한 것은 흐리게 한 줄 */
+/** 할 것 줄 — 남은 것은 완료 알리기(3줄까지, 나머지는 더 보기), 한 것은 흐리게 한 줄 */
 function ItemRows({ items, onPick, empty }: { items: L1Item[]; onPick: (g: GapGroup) => void; empty: string }) {
   const c = useTheme();
   const { baby } = useBaby();
@@ -60,9 +54,11 @@ function ItemRows({ items, onPick, empty }: { items: L1Item[]; onPick: (g: GapGr
   }
   return (
     <>
-      {open.map((g, i) => (
-        <TodoRow key={g.key} todo={todoOf(g)} birthDate={baby.birthDate} currentMonth={currentMonth} divider={i > 0} onPick={() => onPick(g)} />
-      ))}
+      <Folded>
+        {open.map((g, i) => (
+          <TodoRow key={g.key} todo={todoOf(g)} birthDate={baby.birthDate} currentMonth={currentMonth} divider={i > 0} onPick={() => onPick(g)} />
+        ))}
+      </Folded>
       {done.length > 0 && (
         <TodoRow
           todo={todoOf({ key: 'done', status: 'open', month: done[0].months[0], label: labelByKind(done), items: done })}
@@ -74,6 +70,20 @@ function ItemRows({ items, onPick, empty }: { items: L1Item[]; onPick: (g: GapGr
         />
       )}
     </>
+  );
+}
+
+/** 묶음 줄들 — 3줄까지, 나머지는 더 보기 */
+function GroupRows({ groups, onPick }: { groups: GapGroup[]; onPick: (g: GapGroup) => void }) {
+  const { baby } = useBaby();
+  if (!baby) return null;
+  const currentMonth = ageFrom(baby.birthDate).month;
+  return (
+    <Folded>
+      {groups.map((g, i) => (
+        <TodoRow key={g.key} todo={todoOf(g)} birthDate={baby.birthDate} currentMonth={currentMonth} divider={i > 0} onPick={() => onPick(g)} />
+      ))}
+    </Folded>
   );
 }
 
@@ -89,15 +99,13 @@ export function WeeklyCard({ monday, onPick }: { monday: Date; onPick: (g: GapGr
   return (
     <Card style={styles.card}>
       <Head kind="주간 브리핑" range={`${md(monday)} ~ ${md(sunday)}`} title="이번 주 일정" />
-      <Section title="이번 주 무렵" />
-      <ItemRows items={week.due} onPick={onPick} empty="이번 주에 무렵인 접종 · 검진은 없어요" />
+      <CardSection title="이번 주 무렵" aside={week.due.length > 0 ? `${week.due.length}` : null}>
+        <ItemRows items={week.due} onPick={onPick} empty="이번 주에 무렵인 접종 · 검진은 없어요" />
+      </CardSection>
       {week.left.length > 0 && (
-        <>
-          <Section title="아직 안 한 것" />
-          {week.left.map((g, i) => (
-            <TodoRow key={g.key} todo={todoOf(g)} birthDate={baby.birthDate} currentMonth={currentMonth} divider={i > 0} onPick={() => onPick(g)} />
-          ))}
-        </>
+        <CardSection title="아직 안 한 것" aside={`${week.left.length}`} note={LEFT_NOTE}>
+          <GroupRows groups={week.left} onPick={onPick} />
+        </CardSection>
       )}
       <ThemedText type="caption" style={[styles.foot, { color: c.textTertiary }]}>
         날짜는 생일로 계산한 무렵이에요
@@ -106,7 +114,7 @@ export function WeeklyCard({ monday, onPick }: { monday: Date; onPick: (g: GapGr
   );
 }
 
-/** 월간 브리핑 (SPEC-HOME-08 월간) — 이번 달 챙길 것 · 발달 포인트 · 다음 달 미리 보기 */
+/** 월간 브리핑 (SPEC-HOME-08 월간) — 이번 달 챙길 것 · 아직 안 한 것 · 발달 포인트 · 다음 달 미리 보기 */
 export function MonthlyCard({ month, onPick }: { month: number; onPick: (g: GapGroup) => void }) {
   const c = useTheme();
   const { baby } = useBaby();
@@ -128,38 +136,36 @@ export function MonthlyCard({ month, onPick }: { month: number; onPick: (g: GapG
         range={`${md(m.start)}부터`}
         title={month === 0 ? '세상에 온 첫 달' : `${month}개월이 됐어요${m.headline ? ` — ${m.headline}` : ''}`}
       />
-      <Section title="이번 달 챙길 것" />
-      <ItemRows items={m.items} onPick={onPick} empty="이번 달에 새로 시작하는 챙길 것은 없어요" />
+      <CardSection title="이번 달 챙길 것" aside={m.items.length > 0 ? `${m.items.length}` : null}>
+        <ItemRows items={m.items} onPick={onPick} empty="이번 달에 새로 시작하는 챙길 것은 없어요" />
+      </CardSection>
       {leftover.length > 0 && (
-        <>
-          <Section title="아직 안 한 것" />
-          {leftover.map((g, i) => (
-            <TodoRow key={g.key} todo={todoOf(g)} birthDate={baby.birthDate} currentMonth={currentMonth} divider={i > 0} onPick={() => onPick(g)} />
-          ))}
-        </>
+        <CardSection title="아직 안 한 것" aside={`${leftover.length}`} note={LEFT_NOTE}>
+          <GroupRows groups={leftover} onPick={onPick} />
+        </CardSection>
       )}
-      <Section title="이번 달 발달 포인트" />
-      {m.points.length > 0 ? (
-        m.points.map((p) => (
-          <View key={p.id} style={styles.point}>
-            <View style={[styles.dot, { backgroundColor: c.accent }]} />
-            <ThemedText type="small" style={styles.flex}>
-              {p.title}
-            </ThemedText>
-          </View>
-        ))
-      ) : (
-        <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-          {m.pointsNote ?? '이 월령의 발달 포인트는 아직 준비 중이에요'}
-        </ThemedText>
-      )}
+      <CardSection title="이번 달 발달 포인트">
+        {m.points.length > 0 ? (
+          m.points.map((p) => (
+            <View key={p.id} style={styles.point}>
+              <View style={[styles.dot, { backgroundColor: c.accent }]} />
+              <ThemedText type="small" style={styles.flex}>
+                {p.title}
+              </ThemedText>
+            </View>
+          ))
+        ) : (
+          <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
+            {m.pointsNote ?? '이 월령의 발달 포인트는 아직 준비 중이에요'}
+          </ThemedText>
+        )}
+      </CardSection>
       {m.next.length > 0 && (
-        <>
-          <Section title="다음 달 미리 보기" />
+        <CardSection title="다음 달 미리 보기">
           <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
             {month + 1}개월({md(nextStart)} 무렵) · {labelByKind(m.next)}
           </ThemedText>
-        </>
+        </CardSection>
       )}
     </Card>
   );
@@ -170,16 +176,8 @@ const styles = StyleSheet.create({
   card: { paddingVertical: 4 },
   head: { gap: 2, paddingTop: 12, paddingBottom: 4 },
   headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  section: {
-    fontWeight: 600,
-    paddingTop: 12,
-    paddingBottom: 2,
-    marginTop: 6,
-    borderTopWidth: StyleSheet.hairlineWidth * 2,
-  },
   empty: { paddingVertical: 10 },
   point: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, marginTop: 8 },
   foot: { paddingVertical: 10 },
 });
-

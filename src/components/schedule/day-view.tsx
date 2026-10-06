@@ -4,7 +4,7 @@ import { BriefingCard } from '@/components/briefing-card';
 import { MonthlyCard, WeeklyCard } from '@/components/schedule/period-cards';
 import { ThemedText } from '@/components/themed-text';
 import { TodoRow } from '@/components/todo-row';
-import { Card, ListRow, Tag } from '@/components/ui';
+import { Card, CardSection, Folded, ListRow, Tag } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { ageFrom } from '@/data/baby';
 import { todoOf } from '@/data/briefing';
@@ -81,33 +81,35 @@ export function DayView({
 
       {due.length > 0 && (
         <Card style={styles.list}>
-          <ThemedText type="caption" style={[styles.sectionTitle, { color: c.textSecondary }]}>
-            이날 무렵 일정
-          </ThemedText>
-          {open.map((g, i) => (
-            <TodoRow key={g.key} todo={todoOf(g)} birthDate={birthDate} currentMonth={currentMonth} divider={i > 0} onPick={() => onPick(g)} />
-          ))}
-          {doneDue.length > 0 && (
-            <TodoRow
-              todo={todoOf({ key: `done-${key}`, status: 'open', month: currentMonth, label: labelByKind(doneDue), items: doneDue })}
-              birthDate={birthDate}
-              currentMonth={currentMonth}
-              done
-              divider={open.length > 0}
-              onPick={() => undefined}
-            />
-          )}
+          <CardSection title="이날 무렵 일정" aside={`${due.length}`} first>
+            <Folded>
+              {open.map((g, i) => (
+                <TodoRow key={g.key} todo={todoOf(g)} birthDate={birthDate} currentMonth={currentMonth} divider={i > 0} onPick={() => onPick(g)} />
+              ))}
+            </Folded>
+            {doneDue.length > 0 && (
+              <TodoRow
+                todo={todoOf({ key: `done-${key}`, status: 'open', month: currentMonth, label: labelByKind(doneDue), items: doneDue })}
+                birthDate={birthDate}
+                currentMonth={currentMonth}
+                done
+                divider={open.length > 0}
+                onPick={() => undefined}
+              />
+            )}
+          </CardSection>
         </Card>
       )}
 
       {written.length > 0 && (
         <Card style={styles.list}>
-          <ThemedText type="caption" style={[styles.sectionTitle, { color: c.textSecondary }]}>
-            이날 남긴 기록
-          </ThemedText>
-          {written.map((r, i) => (
-            <ListRow key={r.id} divider={i > 0} icon="checkmark-done-outline" title={r.label} detail={r.whenLabel} />
-          ))}
+          <CardSection title="이날 남긴 기록" aside={`${written.length}`} first>
+            <Folded>
+              {written.map((r, i) => (
+                <ListRow key={r.id} divider={i > 0} icon="checkmark-done-outline" title={r.label} detail={r.whenLabel} />
+              ))}
+            </Folded>
+          </CardSection>
         </Card>
       )}
 
@@ -125,6 +127,5 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   list: { paddingVertical: 4 },
-  sectionTitle: { fontWeight: 600, paddingTop: 12, paddingBottom: 2 },
   empty: { paddingVertical: Spacing.two },
 });

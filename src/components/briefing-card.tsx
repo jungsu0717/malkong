@@ -13,8 +13,8 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { TodoRow } from '@/components/todo-row';
-import { Button, Card, Chip, ListRow, type IconName } from '@/components/ui';
+import { kindColor, TodoRow } from '@/components/todo-row';
+import { Button, Card, CardSection, Chip, Folded, ListRow, type IconName } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
 import { ageFrom } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
@@ -22,6 +22,7 @@ import { briefingSummary, tipTitle, todoDone, todoOf, todosOf, type BriefingTodo
 import type { CareCheck, ParentCheck, SuggestKey } from '@/data/care-signals';
 import { dayKey, type MalkongMessage } from '@/data/chat';
 import { suggestAsk } from '@/data/daily-log';
+import type { InboxCard } from '@/data/inbox';
 import { useInbox } from '@/data/inbox-context';
 import { itemById } from '@/data/l1';
 import { useRecords } from '@/data/records-context';
@@ -174,15 +175,25 @@ function Checks({ message, answerable }: { message: MalkongMessage; answerable: 
   );
 }
 
-/** 다가오는 일정 한 줄 — 「DTaP·폴리오 2차 · 10월 29일 무렵」 */
-function weekLine(ids: string[], birthDate: string): string | null {
-  const items = ids.map((id) => itemById(id)).filter((i): i is L1Item => !!i);
-  if (items.length === 0) return null;
-  const due = dueDate(birthDate, items[0]);
-  return `${labelByKind(items)} · ${due.getMonth() + 1}월 ${due.getDate()}일 무렵`;
+/** 그날 온 주간 · 월간 줄의 짧은 이름 — 「이번 주 일정」 「5개월 일정」 */
+function periodLabel(card: InboxCard): string {
+  return card.kind === 'weekly' ? '이번 주 일정' : `${card.id.replace('monthly-', '')}개월 일정`;
 }
 
-/** 대화 속 브리핑 — 인사 · 안부 · 요약. 오늘 것만 크게, 지난 것은 한 줄. 누르면 일정 탭의 그날 */
+/** 요약 카드의 한 줄 — 내용 문장이 제목, 종류 · 시점이 작은 글씨 */
+type SummaryRow = {
+  key: string;
+  icon: IconName;
+  color?: string;
+  title: string;
+  detail: string;
+  onPress?: () => void;
+};
+
+/**
+ * 대화 속 브리핑 — 인사 · 안부 · 「오늘 브리핑」 요약. 오늘 것만 크게, 지난 것은 한 줄. 누르면 일정 탭의 그날.
+ * 요약은 내용 문장을 줄이지 않고 한 줄씩 보인다 — 「도착했어요」 같은 알림 문구를 되풀이하지 않는다(task home/010)
+ */
 export function BriefingSummary({
   message,
   today,
@@ -220,112 +231,86 @@ export function BriefingSummary({
     );
   }
 
-  const tips = briefing.tips ?? [];
-  const week = weekLine(briefing.week ?? [], baby.birthDate);
-  const lines: { icon: IconName; title: string; detail: string }[] = [];
+  const rows: SummaryRow[] = [];
   if (todos.length > 0) {
-    lines.push({
+    rows.push({
+      key: 'todos',
       icon: 'checkbox-outline',
-      title: '챙길 것',
-      detail:
+      title:
         left.length === 0 ? `${todos.length}개 모두 했어요` : left.length === 1 ? left[0].label : `${left[0].label} 외 ${left.length - 1}개`,
+      detail: '챙길 것',
     });
   }
-  if (tips.length > 0) {
-    lines.push({
-      icon: 'sunny-outline',
-      title: '오늘 챙기면 좋을 것',
-      detail: tips.length > 1 ? `${tipTitle(tips[0])} 외 ${tips.length - 1}가지` : tipTitle(tips[0]),
+  for (const id of briefing.tips ?? []) {
+    const tip = itemById(id);
+    if (tip) rows.push({ key: id, icon: TIP_ICONS[tip.kind] ?? 'sunny-outline', title: tipTitle(id), detail: `오늘 챙기면 좋을 것 · ${tip.kind}` });
+  }
+  if (briefing.suggest) {
+    rows.push({ key: 'suggest', icon: 'create-outline', title: SUGGEST_NAMES[briefing.suggest], detail: '기록하면 좋을 것' });
+  }
+  const week = (briefing.week ?? []).map((id) => itemById(id)).filter((i): i is L1Item => !!i);
+  if (week.length > 0) {
+    const due = dueDate(baby.birthDate, week[0]);
+    rows.push({
+      key: 'week',
+      icon: week[0].kind === '검진' ? 'clipboard-outline' : 'medkit-outline',
+      color: kindColor(week[0].kind),
+      title: labelByKind(week),
+      detail: `다가오는 일정 · ${due.getMonth() + 1}월 ${due.getDate()}일 무렵`,
     });
   }
-  if (briefing.suggest) lines.push({ icon: 'create-outline', title: '기록하면 좋을 것', detail: SUGGEST_NAMES[briefing.suggest] });
-  if (week) lines.push({ icon: 'calendar-outline', title: '다가오는 일정', detail: week });
+  for (const card of periods) {
+    rows.push({
+      key: card.id,
+      icon: card.kind === 'weekly' ? 'calendar-outline' : 'ribbon-outline',
+      title: card.summary,
+      detail: periodLabel(card),
+      onPress: () => {
+        void markRead([card.id]);
+        if (card.day) router.navigate(scheduleDayHref(card.day));
+      },
+    });
+  }
   const date = `${made.getMonth() + 1}월 ${made.getDate()}일 ${WEEKDAYS[made.getDay()]}요일`;
 
   return (
     <View style={styles.wrap}>
       <View style={styles.hello}>
         <ThemedText type="display" style={styles.greeting}>
-          {briefing.greeting}.{'\n'}
-          {briefing.headline}
+          {briefing.greeting}
         </ThemedText>
+        <ThemedText type="heading">{briefing.headline}</ThemedText>
         <ThemedText type="small" style={{ color: c.textSecondary }}>
           {date} · 만 {month}개월
         </ThemedText>
       </View>
       <Checks message={message} answerable />
       <Card style={styles.summary}>
-        <View style={styles.summaryHead}>
-          <View style={[styles.mailIcon, { backgroundColor: c.accentSoft }]}>
-            <Ionicons name="mail-unread-outline" size={20} color={c.accent} />
-          </View>
-          <View style={styles.flex}>
-            <ThemedText type="heading">오늘의 브리핑이 도착했어요</ThemedText>
-            <ThemedText type="caption" style={{ color: c.textSecondary }}>
-              버디가 정리했어요
-            </ThemedText>
-          </View>
-        </View>
-        {lines.length > 0 ? (
-          <View style={[styles.summaryLines, { backgroundColor: c.surface }]}>
-            {lines.map((line) => (
-              <View key={line.title} style={styles.summaryLine}>
-                <Ionicons name={line.icon} size={18} color={c.text} />
-                <View style={styles.flex}>
-                  <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                    {line.title}
-                  </ThemedText>
-                  <ThemedText type="body" style={{ fontWeight: 600 }} numberOfLines={1}>
-                    {line.detail}
-                  </ThemedText>
-                </View>
-              </View>
-            ))}
-          </View>
+        <ThemedText type="caption" style={[styles.summaryLabel, { color: c.textSecondary, fontWeight: 600 }]}>
+          오늘 브리핑
+        </ThemedText>
+        {rows.length > 0 ? (
+          rows.map((row, i) => (
+            <ListRow
+              key={row.key}
+              divider={i > 0}
+              icon={row.icon}
+              iconColor={row.color}
+              iconTone={row.onPress ? 'accent' : 'neutral'}
+              title={row.title}
+              detail={row.detail}
+              onPress={row.onPress}
+            />
+          ))
         ) : (
-          <ThemedText type="small" style={{ color: c.textSecondary }}>
+          <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
             오늘은 따로 챙길 게 없어요. 궁금한 게 생기면 언제든 물어보세요
           </ThemedText>
         )}
-        {periods.map((card) => (
-          <Pressable
-            key={card.id}
-            accessibilityRole="button"
-            onPress={() => {
-              void markRead([card.id]);
-              if (card.day) router.navigate(scheduleDayHref(card.day));
-            }}
-            style={({ pressed }) => [styles.period, { borderColor: c.border }, pressed && { opacity: 0.6 }]}>
-            <Ionicons name={card.kind === 'weekly' ? 'calendar-outline' : 'ribbon-outline'} size={18} color={c.accent} />
-            <View style={styles.flex}>
-              <ThemedText type="body" style={{ fontWeight: 600 }}>
-                {card.title}
-              </ThemedText>
-              <ThemedText type="caption" style={{ color: c.textSecondary }} numberOfLines={1}>
-                {card.summary}
-              </ThemedText>
-            </View>
-            <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
-          </Pressable>
-        ))}
-        <Button label="확인하러 가기" icon="arrow-forward" onPress={onOpen} />
+        <View style={styles.summaryButton}>
+          <Button label="일정에서 보기" icon="arrow-forward" onPress={onOpen} />
+        </View>
       </Card>
-    </View>
-  );
-}
-
-function SectionHead({ title, note, first }: { title: string; note?: string | null; first: boolean }) {
-  const c = useTheme();
-  return (
-    <View style={[styles.section, !first && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.divider }]}>
-      <ThemedText type="caption" style={{ color: c.textSecondary, fontWeight: 600 }}>
-        {title}
-      </ThemedText>
-      {note ? (
-        <ThemedText type="caption" style={{ color: c.textTertiary }}>
-          {note}
-        </ThemedText>
-      ) : null}
     </View>
   );
 }
@@ -358,26 +343,30 @@ export function BriefingCard({
 
   if (todos.length > 0) {
     sections.push(
-      <View key="todos">
-        <SectionHead title="챙길 것" note={`${todos.filter((t) => todoDone(t, records)).length}/${todos.length}`} first={sections.length === 0} />
-        {todos.map((todo, i) => (
-          <TodoRow
-            key={todo.key}
-            todo={todo}
-            birthDate={baby.birthDate}
-            currentMonth={currentMonth}
-            done={todoDone(todo, records)}
-            divider={i > 0}
-            onPick={() => onPick(groupOf(todo))}
-          />
-        ))}
-      </View>,
+      <CardSection
+        key="todos"
+        title="챙길 것"
+        aside={`${todos.filter((t) => todoDone(t, records)).length}/${todos.length}`}
+        first={sections.length === 0}>
+        <Folded>
+          {todos.map((todo, i) => (
+            <TodoRow
+              key={todo.key}
+              todo={todo}
+              birthDate={baby.birthDate}
+              currentMonth={currentMonth}
+              done={todoDone(todo, records)}
+              divider={i > 0}
+              onPick={() => onPick(groupOf(todo))}
+            />
+          ))}
+        </Folded>
+      </CardSection>,
     );
   }
   if (tips.length > 0) {
     sections.push(
-      <View key="tips">
-        <SectionHead title="오늘 챙기면 좋을 것" first={sections.length === 0} />
+      <CardSection key="tips" title="오늘 챙기면 좋을 것" first={sections.length === 0}>
         {tips.map((tip, i) => {
           const done = covered.has(tip.id);
           return (
@@ -407,41 +396,41 @@ export function BriefingCard({
             </View>
           );
         })}
-      </View>,
+      </CardSection>,
     );
   }
   if (briefing.suggest && today) {
     const key = briefing.suggest;
     sections.push(
-      <View key="suggest">
-        <SectionHead title="기록하면 좋을 것" note="적어 두면 버디가 흐름을 보고 답해요" first={sections.length === 0} />
+      <CardSection key="suggest" title="기록하면 좋을 것" note="적어 두면 버디가 흐름을 보고 답해요" first={sections.length === 0}>
         <ListRow
           icon="create-outline"
           title={SUGGEST_NAMES[key]}
           detail={suggestAsk(key).hint}
           right={<Button label="적기" size="sm" variant="secondary" onPress={() => ask(suggestAsk(key))} />}
         />
-      </View>,
+      </CardSection>,
     );
   }
   if (weekAll.length > 0) {
     const groups = groupsToMark(weekLeft, covered, currentMonth);
     sections.push(
-      <View key="week">
-        <SectionHead
-          title="다가오는 일정 · 7일 안"
-          note={weekAll.length > weekLeft.length ? `${weekAll.length - weekLeft.length}/${weekAll.length} 했어요` : null}
-          first={sections.length === 0}
-        />
-        {groups.map((g, i) => (
-          <TodoRow key={g.key} todo={todoOf(g)} birthDate={baby.birthDate} currentMonth={currentMonth} divider={i > 0} onPick={() => onPick(g)} />
-        ))}
+      <CardSection
+        key="week"
+        title="다가오는 일정 · 7일 안"
+        aside={weekAll.length > weekLeft.length ? `${weekAll.length - weekLeft.length}/${weekAll.length} 했어요` : null}
+        first={sections.length === 0}>
+        <Folded>
+          {groups.map((g, i) => (
+            <TodoRow key={g.key} todo={todoOf(g)} birthDate={baby.birthDate} currentMonth={currentMonth} divider={i > 0} onPick={() => onPick(g)} />
+          ))}
+        </Folded>
         {groups.length === 0 && (
           <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
             다가오는 일정은 다 챙겼어요
           </ThemedText>
         )}
-      </View>,
+      </CardSection>,
     );
   }
 
@@ -494,23 +483,12 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 8,
   },
-  section: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingTop: 12,
-    paddingBottom: 2,
-  },
   tip: { flexDirection: 'row', gap: 12, alignItems: 'flex-start', paddingVertical: 12 },
   tipIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   empty: { paddingVertical: 12 },
-  summary: { gap: Spacing.three, paddingVertical: Spacing.three },
-  summaryHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  mailIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  summaryLines: { borderRadius: 12, paddingHorizontal: 14, paddingVertical: 4 },
-  summaryLine: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9 },
-  period: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
+  summary: { paddingVertical: 4 },
+  summaryLabel: { paddingTop: 10 },
+  summaryButton: { paddingTop: Spacing.two, paddingBottom: Spacing.two },
   pastRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -210,11 +210,12 @@ export function whenText(todo: BriefingTodo, birthDate: string, currentMonth: nu
   text: string;
   dday: number | null;
 } {
+  // 줄의 작은 글씨는 시점만 짧게 — 「기록이 없어요 — 했다면 알려 주세요」 같은 설명은 섹션 머리에 한 번만(task home/010)
   if (todo.life) {
-    return { text: todo.status === 'soon' ? `${todo.month}개월부터 알아 두면 좋아요` : '이번 달 알아 둘 것', dday: null };
+    return { text: todo.status === 'soon' ? `${todo.month}개월부터` : '이번 달', dday: null };
   }
   if (todo.status === 'missed') {
-    return { text: `${todo.month}개월 항목인데 기록이 없어요 — 했다면 알려 주세요`, dday: null };
+    return { text: `${todo.month}개월 무렵`, dday: null };
   }
   const start = monthStart(birthDate, todo.month);
   const date = `${start.getMonth() + 1}월 ${start.getDate()}일 무렵`;
@@ -223,7 +224,7 @@ export function whenText(todo: BriefingTodo, birthDate: string, currentMonth: nu
     const dday = Math.max(0, Math.round((start.getTime() - today.getTime()) / 86_400_000));
     return { text: `${todo.month}개월 · ${date}`, dday };
   }
-  return { text: todo.month === currentMonth ? `이번 달 · ${date}부터` : `${todo.month}개월부터 챙길 시기예요`, dday: null };
+  return { text: todo.month === currentMonth ? `이번 달 · ${date}부터` : `${todo.month}개월부터`, dday: null };
 }
 
 /** 「챙길 것」 묶음을 브리핑 줄 모양으로 — 우리 아기 탭이 브리핑과 같은 줄을 그리게 한다 */

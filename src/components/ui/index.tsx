@@ -5,7 +5,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { type ComponentProps, type ReactNode } from 'react';
+import { useState, type ComponentProps, type ReactNode } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -257,6 +257,7 @@ export function Segmented<T extends string>({
 export function ListRow({
   icon,
   iconTone = 'neutral',
+  iconColor,
   title,
   detail,
   right,
@@ -266,6 +267,8 @@ export function ListRow({
 }: {
   icon?: IconName;
   iconTone?: 'neutral' | 'accent';
+  /** 종류 색(접종 · 검진 · 발달 — 여정의 KIND_COLORS)으로 아이콘을 물들인다. 바탕은 그 색을 옅게 */
+  iconColor?: string;
   title: string;
   detail?: string | null;
   right?: ReactNode;
@@ -276,11 +279,16 @@ export function ListRow({
   muted?: boolean;
 }) {
   const c = useTheme();
+  const tint = iconColor ?? (iconTone === 'accent' ? c.accent : null);
   const body = (
     <>
       {icon && (
-        <View style={[styles.rowIcon, { backgroundColor: iconTone === 'accent' ? c.accentSoft : c.surface }]}>
-          <Ionicons name={icon} size={18} color={iconTone === 'accent' ? c.accent : c.text} />
+        <View
+          style={[
+            styles.rowIcon,
+            { backgroundColor: iconColor ? `${iconColor}24` : iconTone === 'accent' ? c.accentSoft : c.surface },
+          ]}>
+          <Ionicons name={icon} size={18} color={tint ?? c.text} />
         </View>
       )}
       <View style={styles.rowText}>
@@ -348,6 +356,71 @@ export function SectionHeader({ title, aside }: { title: string; aside?: string 
         </ThemedText>
       ) : null}
     </View>
+  );
+}
+
+/**
+ * 카드 안 섹션 — 작은 회색 제목 · 오른쪽 개수 · 아래 설명 한 줄, 그 아래 줄들.
+ * 줄마다 같은 설명을 되풀이하지 않고 여기 한 번만 쓴다. 첫 섹션이 아니면 위에 가는 선을 긋는다
+ */
+export function CardSection({
+  title,
+  aside,
+  note,
+  first = false,
+  children,
+}: {
+  title: string;
+  aside?: string | null;
+  note?: string | null;
+  first?: boolean;
+  children?: ReactNode;
+}) {
+  const c = useTheme();
+  return (
+    <View style={[styles.cardSection, !first && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider }]}>
+      <View style={styles.cardSectionHead}>
+        <ThemedText type="caption" style={[styles.flex, { color: c.textSecondary, fontWeight: 600 }]}>
+          {title}
+        </ThemedText>
+        {aside ? (
+          <ThemedText type="caption" style={{ color: c.textTertiary }}>
+            {aside}
+          </ThemedText>
+        ) : null}
+      </View>
+      {note ? (
+        <ThemedText type="caption" style={{ color: c.textTertiary }}>
+          {note}
+        </ThemedText>
+      ) : null}
+      {children}
+    </View>
+  );
+}
+
+/** 긴 목록 접기 — 처음엔 `limit` 줄까지, 「N개 더 보기」를 누르면 다 보인다(SPEC-HOME-02 분량) */
+export function Folded({ limit = 3, children }: { limit?: number; children: ReactNode[] }) {
+  const c = useTheme();
+  const [open, setOpen] = useState(false);
+  const hidden = children.length - limit;
+  if (hidden <= 0 || open) return <>{children}</>;
+  return (
+    <>
+      {children.slice(0, limit)}
+      <Pressable
+        accessibilityRole="button"
+        onPress={() => {
+          tap();
+          setOpen(true);
+        }}
+        style={({ pressed }) => [styles.more, pressed && { opacity: 0.6 }]}>
+        <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
+          {hidden}개 더 보기
+        </ThemedText>
+        <Ionicons name="chevron-down" size={14} color={c.textSecondary} />
+      </Pressable>
+    </>
   );
 }
 
@@ -428,5 +501,9 @@ const styles = StyleSheet.create({
   rowIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   rowText: { flex: 1, gap: 1 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  flex: { flex: 1 },
+  cardSection: { paddingTop: 12, paddingBottom: 2, gap: 2 },
+  cardSectionHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  more: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 10, alignSelf: 'flex-start' },
   empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five, paddingHorizontal: Spacing.four },
 });
