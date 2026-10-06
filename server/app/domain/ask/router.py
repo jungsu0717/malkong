@@ -87,5 +87,7 @@ def ask(
     service: Annotated[AskService, Depends(get_ask_service)],
     # POST /v1/devices 로 받은 키. 위험 신호 응답은 키 없이도 나간다
     x_device_key: Annotated[str | None, Header()] = None,
+    # 가족 기기의 일반 사용자로 보기 — "1" 이면 한도 · 하루 천장을 일반 기기처럼 본다
+    x_as_user: Annotated[str | None, Header()] = None,
 ) -> AskResponse:
-    return service.ask(req, x_device_key)
+    return service.ask(req, x_device_key, x_as_user)

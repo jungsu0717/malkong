@@ -120,13 +120,15 @@ class AskService:
         self._usage = usage
         self._cache = cache
 
-    def ask(self, req: AskRequest, device_key: str | None) -> AskResponse:
+    def ask(
+        self, req: AskRequest, device_key: str | None, as_user: str | None = None
+    ) -> AskResponse:
         # ① 위험 신호 — 모델을 부르지 않는다(SPEC-ASK-02). 키·한도와 상관없이 언제나 나간다
         hits = redflag.detect(req.question, req.baby.months)
         if hits:
             return self._redflag([h.l1_id for h in hits])
 
-        device = self._usage.device(device_key)
+        device = self._usage.device(device_key, as_user)
         # 같은 clientMessageId 의 재요청 — 새로 만들지 않고 같은 응답(api-contract 재시도 안전)
         cached = self._cache.get(device.key_hash, req.client_message_id)
         if cached is not None:

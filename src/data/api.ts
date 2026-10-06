@@ -76,6 +76,8 @@ export type Entitlements = {
   rewardPerAd: number;
   rewardMaxPerDay: number;
   remaining: number | null;
+  /** 이 키가 가족 명단에 있는지 — 일반 사용자로 보기 중에도 true. 옛 서버는 보내지 않는다 */
+  operator?: boolean;
 };
 
 // --- 기기 키 (POST /v1/devices) — 처음 한 번 받아 기기 settings 에 둔다 ---
@@ -113,12 +115,36 @@ export async function storedDeviceKey(): Promise<string | null> {
   return deviceKey ?? (await readSetting(DEVICE_KEY_SETTING));
 }
 
+// --- 일반 사용자로 보기 — 가족 기기의 숨은 스위치(backend 「운영자 기기」) ---
+
+const AS_USER_SETTING = 'as_user';
+let asUser: boolean | null = null;
+
+/** 켜 두었는지 — 기기 settings 에서 한 번 읽는다 */
+export async function loadAsUser(): Promise<boolean> {
+  asUser ??= (await readSetting(AS_USER_SETTING)) === 'true';
+  return asUser;
+}
+
+/**
+ * 켜면 요청에 `X-As-User: 1` 을 실어, 가족 기기도 한도 · 광고 · 하루 천장을 일반 기기처럼 받는다.
+ * 권한을 낮추기만 하는 머리라서 일반 기기에서는 서버가 보지 않는다.
+ */
+export async function saveAsUser(on: boolean): Promise<void> {
+  asUser = on;
+  await writeSetting(AS_USER_SETTING, on ? 'true' : 'false');
+}
+
+async function deviceHeaders(): Promise<Record<string, string>> {
+  return { 'X-Device-Key': await getDeviceKey(), ...((await loadAsUser()) ? { 'X-As-User': '1' } : {}) };
+}
+
 async function request<T>(
   method: 'GET' | 'POST',
   path: string,
   body: unknown,
   timeoutMs: number,
-  key?: string,
+  extraHeaders: Record<string, string> = {},
 ): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -128,7 +154,7 @@ async function request<T>(
       method,
       headers: {
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
-        ...(key ? { 'X-Device-Key': key } : {}),
+        ...extraHeaders,
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: controller.signal,
@@ -168,12 +194,12 @@ async function withDeviceKey<T>(
   timeoutMs: number,
 ): Promise<T> {
   try {
-    return await request<T>(method, path, body, timeoutMs, await getDeviceKey());
+    return await request<T>(method, path, body, timeoutMs, await deviceHeaders());
   } catch (error) {
     if (!(error instanceof ApiError) || error.code !== 'DEVICE_KEY_INVALID') throw error;
     deviceKey = null;
     await writeSetting(DEVICE_KEY_SETTING, '');
-    return request<T>(method, path, body, timeoutMs, await getDeviceKey());
+    return request<T>(method, path, body, timeoutMs, await deviceHeaders());
   }
 }
 

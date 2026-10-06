@@ -54,7 +54,7 @@ def test_cors_allows_localhost(client: TestClient, origin: str) -> None:
         headers={
             "Origin": origin,
             "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "content-type,x-device-key",
+            "Access-Control-Request-Headers": "content-type,x-device-key,x-as-user",
         },
     )
     assert res.status_code == 200

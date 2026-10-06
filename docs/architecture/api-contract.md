@@ -4,6 +4,8 @@
 
 인증은 초기엔 익명 **디바이스 키**(설치 시 서버가 발급, 헤더 `X-Device-Key`)로 하고 한도 집계에만 쓴다.
 로그인 도입 시 계정 토큰이 이를 대체한다. 에러는 공통 형식 `{ code, message }`.
+운영자(가족) 기기는 헤더 `X-As-User: 1` 을 더해 `/v1/ask` · `/v1/entitlements` 를 일반 기기처럼 받을 수 있다
+(일반 사용자로 보기 — [backend](backend.md) 운영자 절). 일반 기기의 이 헤더는 무시한다.
 
 ## POST /v1/ask — 질문
 
@@ -68,9 +70,11 @@
 
 ## GET /v1/entitlements — 기기 자격
 
-요청 머리 `X-Device-Key`. 응답: `{ "ads": true, "dailyLimit": 10, "rewardPerAd": 5, "rewardMaxPerDay": 2, "remaining": 7 }`
+요청 머리 `X-Device-Key`. 응답: `{ "ads": true, "dailyLimit": 10, "rewardPerAd": 5, "rewardMaxPerDay": 2, "remaining": 7, "operator": false }`
 (`rewardPerAd` 는 광고 1편이 채우는 정밀 답변 수) — 운영자(가족) 기기는
-`{ "ads": false, "dailyLimit": null, "rewardPerAd": 0, "rewardMaxPerDay": 0, "remaining": null }`.
+`{ "ads": false, "dailyLimit": null, "rewardPerAd": 0, "rewardMaxPerDay": 0, "remaining": null, "operator": true }`.
+`operator` 는 키가 운영자 allowlist 에 있는지다 — `X-As-User: 1` 로 일반 기기처럼 받는 중에도 true 라서,
+앱은 이 값으로 숨은 「일반 사용자로 보기」 스위치를 보인다.
 키가 없거나 모르는 키면 401 `DEVICE_KEY_INVALID`. 앱은 부팅 시 1회 받아 광고 표시·한도 안내에 쓴다.
 지정은 서버 allowlist([backend](backend.md) 운영자 절). 차감·리셋 규칙은 backend 의 일일 한도 절이 정본.
 
@@ -129,3 +133,4 @@ AdMob 의 서버 측 검증(SSV) 콜백. AdMob 은 GET 쿼리로 부른다(`user
 - 2026-10-03 `/v1/feedback` 요청 모양(answer 정보 · 동의한 원문만 shared · 기기 키와 분리) (task ask/003)
 - 2026-10-03 `POST /v1/devices`, `X-Device-Key` 필수(위험 신호는 예외)·401 DEVICE_KEY_INVALID, entitlements 에 remaining, usage.remaining 은 운영자 기기에서 null (task common/005)
 - 2026-10-06 한도 정책 v2 — 429 의 ecoAvailable 을 일반 기준 답 한도로, 503 DAILY_BUDGET_REACHED, 자격에 rewardPerAd (task common/014)
+- 2026-10-06 운영자 기기의 `X-As-User` 헤더, 자격에 operator (task common/015)

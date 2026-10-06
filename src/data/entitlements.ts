@@ -23,6 +23,8 @@ export type Entitlements = {
   rewardMaxPerDay: number;
   /** 오늘 남은 정밀 답변 수 — 서버에서 받기 전이거나 무제한이면 null */
   remaining: number | null;
+  /** 가족 기기 키인지 — 마이의 숨은 「일반 사용자로 보기」 스위치를 보일지 */
+  operator: boolean;
 };
 
 export const DEFAULT_ENTITLEMENTS: Entitlements = {
@@ -31,6 +33,7 @@ export const DEFAULT_ENTITLEMENTS: Entitlements = {
   rewardPerAd: 5,
   rewardMaxPerDay: 2,
   remaining: null,
+  operator: false,
 };
 
 const ADS_REMOVED_KEY = 'ads_removed';

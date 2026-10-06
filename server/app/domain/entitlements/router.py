@@ -46,5 +46,7 @@ def get_entitlements_service() -> EntitlementsService:
 def entitlements(
     service: Annotated[EntitlementsService, Depends(get_entitlements_service)],
     x_device_key: Annotated[str | None, Header()] = None,
+    # 가족 기기의 일반 사용자로 보기 — "1" 이면 일반 기기처럼 답한다
+    x_as_user: Annotated[str | None, Header()] = None,
 ) -> EntitlementsResponse:
-    return service.entitlements(service.device(x_device_key))
+    return service.entitlements(service.device(x_device_key, x_as_user))

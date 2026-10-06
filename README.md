@@ -3,7 +3,7 @@
 우리 아기 기준으로 답하는 AI 육아 비서. 궁금할 때 물어보면 월령과 우리 아기 기록에 맞춰
 공공 의료·육아 지식의 출처와 함께 답하고, 아침마다 오늘 챙길 것을 먼저 알려준다.
 
-## 지금 상태 (2026-10-05)
+## 지금 상태 (2026-10-06)
 
 - **앱**: 시안 B 「단정한 비서」([decisions/012](docs/decisions/012-chat-first-three-tabs.md)), 탭 넷 —
   **버디**(첫 화면 · 데일리 브리핑(아기 안부 · 부모 안부 · 오늘 챙길 것) · 알림함 · 진짜 답 · 질문마다 다른 처리 현황 · 되묻기와 기록 · 위험 신호 · 피드백 · 하루 한도) ·
@@ -15,10 +15,13 @@
   온보딩은 처음 실행 만화 5컷([my/006](docs/task/my/006-intro-toon.md) — 건너뛰거나 끝까지 볼 때까지는 생일이 있는 사람에게도 뜬다) → 생일 → 브리핑 알림 시각. 광고(AdMob 배너·보상형), 캐릭터 버디 아이콘
 - **Expo 계정** `@julian-malkong/malkong` 연결, 앱 식별자 `kr.malkong.app`. Julian 아이폰(Expo Go)으로 볼 수 있다
 - **지식(L1)**: 승인된 77건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호·부모 돌봄(미국 CDC)
-- **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 하루 한도, 재시도 안전,
-  피드백, 보상형 광고 확인(SSV). Cloud Run 에 새 판(revision 00007, 2026-10-04 — **Gemini 유료**: 기록을 보내고 되묻는다 · 모델 회사가 거절하면 곧바로 503)이 올라가 있다 — 하루 한도는 아직
-  메모리에 세어서 서버가 다시 시작되면 0 으로 돌아간다(Neon 을 붙이면 풀린다).
-  **배포 안 된 서버 변경**: 부모 돌봄 L1 넷 · 검색 분류어 「부모」([common/013](docs/task/common/013-parent-care-l1.md)) — 커밋만 됐고 Julian 승인 뒤 배포
+- **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 재시도 안전, 피드백,
+  보상형 광고 확인(SSV), 하루 한도 정책 v2 — 정밀 답변 10회 · 광고 1편에 5회(하루 2편) · 그 뒤 일반 기준 답 20회 ·
+  서버 전체 하루 모델 비용 천장 330원([decisions/019](docs/decisions/019-generous-limits-hard-daily-budget.md)).
+  Cloud Run 에 revision 00010(2026-10-06 — **Gemini 유료** · **Neon(싱가포르)에 기기 키 · 사용량 · 하루 비용 저장**, 서버가 다시
+  켜져도 남는다 · 부모 돌봄 L1 포함)이 올라가 있다.
+  **배포 안 된 서버 변경**: 가족 기기의 「일반 사용자로 보기」 숨은 스위치([common/015](docs/task/common/015-operator-user-view.md)) —
+  Julian 폰을 가족 기기로 등록할 때 함께 올린다
 - 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
 - **홍보 자료(보관 — 배포 때 · 앱 첫 실행에 쓴다)**: 만화 「아빠가 육아 앱을 만든 이유」 5컷 · 릴스 30초(`marketing/toon/`, 앱 첫 실행에도 들어가 있다),
   스토어 첫 장 「검색 대신, 근거로 답해요」 — 지식층 · 답 파이프라인 흐름도 + 진짜 앱 화면(`marketing/store/`, 앱스토어 · 구글 플레이 두 크기).
@@ -28,14 +31,17 @@
   [knowledge-layers](docs/architecture/knowledge-layers.md) 「채워지는 경로」
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점 (2026-10-05)
+## 다음 시작점 (2026-10-06)
 
-1. **Julian 이 아이폰(Expo Go)으로 며칠 써 본다** — 답 · 안부 브리핑 · 일정 탭 · 알림함 · 지식 지도 · 디자인에서 걸리는 것을 모은다.
+1. **Julian 폰을 가족 기기로 등록**([common/005](docs/task/common/005-device-key-and-limit.md) 마지막 칸) — 앱 마이 탭 맨 아래
+   「육아버디 v1.0.0」을 1초 꾹 → 기기 키 복사 → Julian 이 비밀값 `malkong-operator-keys` 에 넣기 → Claude 가 권한을 주고
+   [common/015](docs/task/common/015-operator-user-view.md) 와 함께 배포(Julian 승인). 그 뒤 같은 숨은 메뉴의 「일반 사용자로 보기」로
+   일반 사용자 화면(남은 횟수 · 광고 자리 · 한도 말풍선)을 오가며 본다
+2. **Julian 이 아이폰(Expo Go)으로 며칠 써 본다** — 답 · 안부 브리핑 · 일정 탭 · 알림함 · 지식 지도 · 디자인에서 걸리는 것을 모은다.
    맥에서 `REACT_NATIVE_PACKAGER_HOSTNAME=<맥 IP> npx expo start --go` 로 켠다(아래 「실행」 — `--go` 를 빼면 Expo Go 가 못 연다).
    웹으로는 못 본 것: 처음 실행 만화를 손가락으로 넘기기(아직 닫지 않았으니 다음에 열면 뜬다) · 기록이 사흘 비었을 때 저녁 8시 알림과
    그 알림을 누르면 뜨는 카드 · 일정 탭 여정 그래픽의 움직임과 가로 넘기기 · 시트를 열었을 때 키보드.
-   안부 문구(`src/data/care-signals.ts`) 검토는 나중에(Julian)
-2. **서버 배포는 Julian 이 「올려」 할 때만** — 지금 쌓인 것은 위 「배포 안 된 서버 변경」. 다음 서버 작업과 함께 올려도 된다
+   안부 문구(`src/data/care-signals.ts`) 검토는 나중에(Julian). 하루 천장에 닿으면 메일로 알리는 설정은 Julian 이 받을 메일 주소를 정하면 건다
 3. **Julian 이 고를 다음 후보** — 서버가 진행 단계를 실시간으로 보내기(SSE, 배포 필요 · 모델 비용 그대로,
    [ask/007](docs/task/ask/007-question-aware-trace.md) 「정한 것」 4) · 수면 · 수유 · 울음 · 변 같은 일상 주제 L1 늘리기(항목마다 Julian 승인) ·
    「모두에게 더 똑똑해지는」 고리 — 근거 없이 답한 질문의 주제만 익명으로 세고(원문 저장 없음, 서버 배포 필요) 많이 나온 주제부터
@@ -43,7 +49,7 @@
 4. Claude 몫: 써 본 피드백 반영 → 답변 완성도 다듬기(위험 신호 — Julian 승인) → 스토어 등록 준비 — 첫 장은 됐고, 남은 것은
    스크린샷 4장(아침 안부 · 위험 신호 · 일정 · 우리 아기, `marketing/store/capture.mjs` 로 진짜 화면) · 구글 플레이 그래픽 이미지(1024×500) ·
    소개 문구([product-brief](docs/product/product-brief.md)) · 개인정보 처리방침 웹 주소
-5. 출시 전 Julian 몫(계정·결제·법률): Apple 개발자($99) → 개발 빌드로 아이콘·광고·결제 확인 → Neon · AdMob · 스토어 계정 ·
+5. 출시 전 Julian 몫(계정·결제·법률): Apple 개발자($99) → 개발 빌드로 아이콘·광고·결제 확인 → AdMob · 스토어 계정 ·
    RevenueCat · 약관 정보 → 「육아버디」 상표 출원(변리사) · 주소(선택). 목록은
    [common/008](docs/task/common/008-first-release-check.md) · [common/011](docs/task/common/011-rename-yugabuddy.md)
 

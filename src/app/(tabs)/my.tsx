@@ -14,6 +14,7 @@ import { storedDeviceKey } from '@/data/api';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { BRIEFING_TIMES, timeLabel } from '@/data/briefing';
 import { useBaby } from '@/data/baby-context';
+import { useEntitlements } from '@/data/entitlements-context';
 import { allItems, L1_VERSION, pendingReviewCount } from '@/data/l1';
 import { askNotifications, notificationsAllowed, notificationsSupported } from '@/data/notifications';
 import { DEFAULT_BRIEFING_TIME, usePreferences } from '@/data/preferences-context';
@@ -48,8 +49,12 @@ export default function MyScreen() {
     nudgeCard,
     setNudgeCard,
   } = usePreferences();
-  /** 버전을 길게 누르면 보이는 기기 키 — 운영자(가족) 기기로 등록할 때 쓴다(backend 「운영자 기기」) */
+  /**
+   * 버전을 길게 누르면 열리는 숨은 메뉴 — 기기 키(가족 기기로 등록할 때 쓴다)와, 가족 기기면 「일반 사용자로 보기」
+   * 스위치(backend 「운영자 기기」 · task common/015). 다시 길게 누르면 닫힌다
+   */
   const [deviceKey, setDeviceKey] = useState<string | null>(null);
+  const { operator, asUser, setAsUser } = useEntitlements();
   /** 기기 알림 허락 — 설정 앱에서 바꾸고 돌아오면 다시 읽는다 */
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const supported = notificationsSupported();
@@ -246,12 +251,23 @@ export default function MyScreen() {
           )}
 
           <Pressable
-            onLongPress={async () => setDeviceKey((await storedDeviceKey()) || '아직 없어요')}
+            onLongPress={async () =>
+              setDeviceKey(deviceKey ? null : (await storedDeviceKey()) || '아직 없어요')
+            }
             delayLongPress={800}>
             <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
               육아버디 v1.0.0
             </ThemedText>
           </Pressable>
+          {deviceKey && operator && (
+            <Card style={styles.rows}>
+              <ListRow
+                title="일반 사용자로 보기"
+                detail={asUser ? '일반 사용자와 같은 한도 · 광고로 써요' : '가족 기기라 한도 없이 써요'}
+                right={<Toggle label="일반 사용자로 보기" value={asUser} onChange={(on) => void setAsUser(on)} />}
+              />
+            </Card>
+          )}
           {deviceKey && (
             <ThemedText selectable type="caption" style={[styles.center, { color: c.textSecondary }]}>
               기기 키 {deviceKey}

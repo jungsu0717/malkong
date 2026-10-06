@@ -181,7 +181,7 @@ class FixedService:
     def __init__(self, response) -> None:
         self.response = response
 
-    def ask(self, _req: AskRequest, _device_key: str | None):
+    def ask(self, _req: AskRequest, _device_key: str | None, _as_user: str | None = None):
         return self.response
 
 

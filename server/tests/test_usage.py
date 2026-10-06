@@ -114,6 +114,7 @@ def test_entitlements_for_a_device(app) -> None:
         "rewardPerAd": 5,
         "rewardMaxPerDay": 2,
         "remaining": 2,
+        "operator": False,
     }
 
 
@@ -132,6 +133,7 @@ def test_operator_device_has_no_ads_and_no_limit(app) -> None:
         "rewardPerAd": 0,
         "rewardMaxPerDay": 0,
         "remaining": None,
+        "operator": True,
     }
     with_llm(app, *[model_out()] * 3)
     for i in range(3):
@@ -332,3 +334,50 @@ def test_answer_survives_a_failure_to_record_its_cost(app, clock: Clock) -> None
     res = ask(client, "q-1")
     assert res.status_code == 200
     assert res.json()["type"] == "answer"
+
+
+# --- 가족 기기의 일반 사용자로 보기 (task common/015) ---
+
+
+def test_operator_can_view_as_a_user(app, clock: Clock) -> None:
+    swap_settings(app, clock, daily_limit=1, eco_daily_limit=1)
+    user_view = TestClient(app, headers={"X-Device-Key": OPERATOR_KEY, "X-As-User": "1"})
+    body = user_view.get("/v1/entitlements").json()
+    # 한도 · 광고는 일반 기기와 같고, 스위치를 보이도록 operator 는 그대로 true
+    assert body == {
+        "ads": True,
+        "dailyLimit": 1,
+        "rewardPerAd": 5,
+        "rewardMaxPerDay": 2,
+        "remaining": 1,
+        "operator": True,
+    }
+    with_llm(app, *[model_out()] * 3)
+    assert ask(user_view, "u-1").json()["usage"]["remaining"] == 0
+    res = ask(user_view, "u-2")
+    assert res.status_code == 429
+    assert res.json()["ecoAvailable"] is True
+    assert ask(user_view, "u-3", eco=True).status_code == 200
+    # 스위치를 끄면 다시 가족 기기 — 한도가 없다
+    family = TestClient(app, headers={"X-Device-Key": OPERATOR_KEY})
+    assert family.get("/v1/entitlements").json()["remaining"] is None
+    assert ask(family, "op-1").status_code == 200
+
+
+def test_user_view_meets_the_daily_budget(app, clock: Clock) -> None:
+    swap_settings(app, clock, daily_budget_krw=1, usd_to_krw=1000)
+    app.dependency_overrides[get_llm_client] = lambda: FakeLlm(
+        model_out(), model_out(), tokens=(1000, 0, 400, 0)
+    )
+    family = TestClient(app, headers={"X-Device-Key": OPERATOR_KEY})
+    assert ask(family, "op-1").status_code == 200
+    user_view = TestClient(app, headers={"X-Device-Key": OPERATOR_KEY, "X-As-User": "1"})
+    assert ask(user_view, "u-1").json()["code"] == "DAILY_BUDGET_REACHED"
+
+
+def test_as_user_header_changes_nothing_for_a_normal_device(app) -> None:
+    client = keyed(app)
+    plain = client.get("/v1/entitlements").json()
+    client.headers["X-As-User"] = "1"
+    assert client.get("/v1/entitlements").json() == plain
+    assert plain["operator"] is False

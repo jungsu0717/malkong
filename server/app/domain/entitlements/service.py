@@ -34,8 +34,10 @@ def _hash(value: str) -> str:
 @dataclass(frozen=True)
 class Device:
     key_hash: str
-    # 운영자(가족) 기기 — 한도 없음·광고 없음
+    # 운영자(가족) 기기로 다룬다 — 한도 없음·광고 없음. 일반 사용자로 보기 중이면 False
     operator: bool
+    # 키가 가족 명단에 있는지 — 일반 사용자로 보기 중에도 True(앱이 스위치를 보인다)
+    operator_key: bool = False
 
 
 class EntitlementsService:
@@ -82,12 +84,16 @@ class EntitlementsService:
             self._purge_once_a_day(day)
         return key
 
-    def device(self, key: str | None) -> Device:
-        """요청의 X-Device-Key 를 확인한다. 없거나 모르는 키면 401 — 앱은 키를 새로 받는다."""
+    def device(self, key: str | None, as_user: str | None = None) -> Device:
+        """요청의 X-Device-Key 를 확인한다. 없거나 모르는 키면 401 — 앱은 키를 새로 받는다.
+
+        가족 키에 X-As-User: 1 이 오면 일반 기기처럼 다룬다(일반 사용자로 보기).
+        권한을 낮추기만 하므로 일반 키에서는 이 머리를 보지 않는다.
+        """
         if key:
             key_hash = _hash(key)
             if key_hash in self._operators:
-                return Device(key_hash, operator=True)
+                return Device(key_hash, operator=as_user != "1", operator_key=True)
             with _store_errors():
                 known = self._store.has_device(key_hash)
             if known:
@@ -186,9 +192,15 @@ class EntitlementsService:
     def entitlements(self, device: Device) -> EntitlementsResponse:
         if device.operator:
             return EntitlementsResponse(
-                ads=False, daily_limit=None, reward_per_ad=0, reward_max_per_day=0, remaining=None
+                ads=False,
+                daily_limit=None,
+                reward_per_ad=0,
+                reward_max_per_day=0,
+                remaining=None,
+                operator=True,
             )
         return EntitlementsResponse(
+            operator=device.operator_key,
             ads=True,
             daily_limit=self._settings.daily_limit,
             reward_per_ad=self._settings.reward_per_ad,

@@ -16,6 +16,9 @@ class EntitlementsResponse(ApiModel):
     reward_max_per_day: int
     # 오늘 남은 정밀 답변 수. null 이면 무제한
     remaining: int | None
+    # 이 키가 가족 명단에 있는지 — 일반 사용자로 보기(X-As-User) 중에도 true.
+    # 앱은 이 값을 보고 숨은 스위치를 보인다
+    operator: bool = False
 
 
 class DeviceKeyResponse(ApiModel):
