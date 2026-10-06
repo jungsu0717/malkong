@@ -7,6 +7,7 @@
 
 import { monthStart } from './briefing';
 import { dayKey } from './chat';
+import type { InboxCard } from './inbox';
 import { allItems } from './l1';
 import type { BabyRecord } from './records';
 import { groupLabel, type GapGroup, type GapStatus, type L1Item } from './timeline';
@@ -170,4 +171,23 @@ let openSeq = 0;
 export function scheduleDayHref(day: string) {
   openSeq += 1;
   return { pathname: '/schedule' as const, params: { day, t: String(openSeq) } };
+}
+
+export type BriefingKind = 'daily' | 'weekly' | 'monthly';
+
+/** 브리핑 상세 화면(`/briefing`) — 홈 · 알림함 · 일정 탭 고른 날이 모두 같은 곳으로 간다(task growth/003) */
+export function briefingHref(day: string, kind: BriefingKind = 'daily', month?: number) {
+  return {
+    pathname: '/briefing' as const,
+    params: { day, kind, ...(month !== undefined ? { month: String(month) } : {}) },
+  };
+}
+
+/** 알림함의 브리핑 줄이 갈 곳 — 기록 요청(nudge) 줄은 카드라 여기 없다 */
+export function inboxCardHref(card: InboxCard) {
+  if (!card.day) return null;
+  if (card.kind === 'monthly') return briefingHref(card.day, 'monthly', Number(card.id.replace('monthly-', '')));
+  if (card.kind === 'weekly') return briefingHref(card.day, 'weekly');
+  if (card.kind === 'daily') return briefingHref(card.day, 'daily');
+  return null;
 }

@@ -6,7 +6,6 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import * as Linking from 'expo-linking';
 import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -176,7 +175,7 @@ export function FollowupBubble({
   );
 }
 
-/** 위험 신호 고정 응답(SPEC-ASK-02) — 채운 경고 머리와 119 단추로, 포인트 색과 모양부터 다르게 */
+/** 위험 신호 고정 응답(SPEC-ASK-02) — 채운 경고 머리로 포인트 색과 모양부터 다르게. 전화 단추는 두지 않는다(2026-10-06 Julian) */
 export function RedflagCard({ message }: { message: MalkongMessage }) {
   const c = useTheme();
   if (message.meta.type !== 'redflag') return null;
@@ -190,7 +189,6 @@ export function RedflagCard({ message }: { message: MalkongMessage }) {
       </View>
       <View style={styles.redflagBody}>
         <ThemedText type="body">{message.content}</ThemedText>
-        <Button label="119 전화하기" icon="call" variant="danger" onPress={() => Linking.openURL('tel:119')} />
         {message.meta.sources.length > 0 && <SourceList sources={message.meta.sources} />}
       </View>
     </View>

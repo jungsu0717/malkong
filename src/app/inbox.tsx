@@ -12,7 +12,7 @@ import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { dayKey } from '@/data/chat';
 import { isBriefing, type InboxCard, type InboxKind } from '@/data/inbox';
 import { useInbox } from '@/data/inbox-context';
-import { scheduleDayHref } from '@/data/schedule';
+import { inboxCardHref } from '@/data/schedule';
 import { useTheme } from '@/hooks/use-theme';
 
 type Section = 'briefing' | 'notice';
@@ -59,7 +59,8 @@ export default function InboxScreen() {
       openRecordNudge();
       return;
     }
-    if (card.day) router.navigate(scheduleDayHref(card.day));
+    const href = inboxCardHref(card);
+    if (href) router.navigate(href);
   };
 
   const label = (name: string, list: InboxCard[]) => (unreadOf(list) > 0 ? `${name} ${unreadOf(list)}` : name);

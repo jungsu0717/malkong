@@ -29,7 +29,7 @@ export const Colors = {
     accentText: '#8F2E23',
     danger: '#D92D3F', // 위험 신호·오류 — 이 색은 경고에만 쓴다
     dangerSoft: '#FDECEE',
-    /** 흰 글씨를 얹는 경고 바탕(119 단추·경고 머리) — 다크 모드에서도 흰 글씨가 읽히게 따로 둔다 */
+    /** 흰 글씨를 얹는 경고 바탕(위험 신호 경고 머리) — 다크 모드에서도 흰 글씨가 읽히게 따로 둔다 */
     dangerFill: '#D92D3F',
     onDanger: '#FFFFFF',
     /** 시트 뒤를 덮는 막 */

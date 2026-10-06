@@ -1,16 +1,15 @@
+import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { BriefingCard } from '@/components/briefing-card';
-import { MonthlyCard, WeeklyCard } from '@/components/schedule/period-cards';
 import { ThemedText } from '@/components/themed-text';
 import { TodoRow } from '@/components/todo-row';
 import { Card, CardSection, Folded, ListRow, Tag } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { ageFrom } from '@/data/baby';
-import { todoOf } from '@/data/briefing';
+import { briefingSummary, todoOf } from '@/data/briefing';
 import { dayKey, type MalkongMessage } from '@/data/chat';
 import type { InboxCard } from '@/data/inbox';
-import { coveredIds, fromDayKey, groupsToMark, type DayIndex } from '@/data/schedule';
+import { briefingHref, coveredIds, groupsToMark, inboxCardHref, type DayIndex } from '@/data/schedule';
 import type { BabyRecord } from '@/data/records';
 import { labelByKind, type GapGroup } from '@/data/timeline';
 import { useTheme } from '@/hooks/use-theme';
@@ -18,8 +17,8 @@ import { useTheme } from '@/hooks/use-theme';
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 /**
- * 달력에서 고른 날 (SPEC-GROW-01 고르기) — 그날의 데일리 · 주간 · 월간 브리핑 · 그날 무렵인 일정 · 그날 생긴 기록.
- * 지난날은 남은 것만, 앞날은 일정만 보인다. 일정은 거기서 바로 완료를 알린다(SPEC-HOME-02).
+ * 달력에서 고른 날 (SPEC-GROW-01 고르기, task growth/003) — 그날의 데일리 · 주간 · 월간 브리핑은 한 줄씩(누르면 상세 화면),
+ * 그날 무렵인 일정은 그 자리에서 완료를 알리고(SPEC-HOME-02), 그날 생긴 기록. 지난날은 남은 것만, 앞날은 일정만 보인다.
  */
 export function DayView({
   date,
@@ -54,7 +53,8 @@ export function DayView({
   const open = groupsToMark(due, covered, currentMonth);
   const doneDue = due.filter((i) => covered.has(i.id));
   const written = index.records.get(key) ?? [];
-  const nothing = !briefing && periods.length === 0 && due.length === 0 && written.length === 0;
+  const daily = briefing && briefing.meta.type === 'briefing' ? briefing.meta : null;
+  const nothing = !daily && periods.length === 0 && due.length === 0 && written.length === 0;
 
   return (
     <View style={styles.wrap}>
@@ -70,13 +70,32 @@ export function DayView({
         )}
       </View>
 
-      {briefing && <BriefingCard message={briefing} today={isToday} onPick={onPick} />}
-      {periods.map((card) =>
-        card.kind === 'weekly' && card.day ? (
-          <WeeklyCard key={card.id} monday={fromDayKey(card.day) ?? date} onPick={onPick} />
-        ) : card.kind === 'monthly' ? (
-          <MonthlyCard key={card.id} month={Number(card.id.replace('monthly-', ''))} onPick={onPick} />
-        ) : null,
+      {(daily || periods.length > 0) && (
+        <Card style={styles.list}>
+          {daily && (
+            <ListRow
+              icon="sunny-outline"
+              iconTone="accent"
+              title={isToday ? '오늘 브리핑' : '그날 브리핑'}
+              detail={briefingSummary(daily)}
+              onPress={() => router.push(briefingHref(key, 'daily'))}
+            />
+          )}
+          {periods.map((card, i) => {
+            const href = inboxCardHref(card);
+            return (
+              <ListRow
+                key={card.id}
+                divider={!!daily || i > 0}
+                icon={card.kind === 'weekly' ? 'calendar-outline' : 'ribbon-outline'}
+                iconTone="accent"
+                title={card.kind === 'weekly' ? '주간 브리핑' : '월간 브리핑'}
+                detail={card.summary}
+                onPress={href ? () => router.push(href) : undefined}
+              />
+            );
+          })}
+        </Card>
       )}
 
       {due.length > 0 && (
@@ -126,6 +145,6 @@ const styles = StyleSheet.create({
   wrap: { gap: Spacing.three },
   flex: { flex: 1 },
   head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  list: { paddingVertical: 4 },
+  list: { paddingVertical: 2 },
   empty: { paddingVertical: Spacing.two },
 });

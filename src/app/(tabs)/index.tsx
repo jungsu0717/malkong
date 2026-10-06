@@ -40,7 +40,7 @@ import { useChat } from '@/data/chat-context';
 import { useDraft } from '@/data/draft-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { useInbox } from '@/data/inbox-context';
-import { scheduleDayHref } from '@/data/schedule';
+import { briefingHref } from '@/data/schedule';
 import { useRecords } from '@/data/records-context';
 import { useDailyBriefing } from '@/hooks/use-daily-briefing';
 import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
@@ -95,10 +95,10 @@ export default function ChatScreen() {
   const { focus, ft } = useLocalSearchParams<{ focus?: string; ft?: string }>();
   // 알림함 배지 — 아직 열어 보지 않은 브리핑 · 알림의 수(SPEC-HOME-07)
   const { unread, markDayRead } = useInbox();
-  /** 브리핑 자세히 — 일정 탭의 그날. 열어 봤으니 알림함에서도 읽은 것 */
+  /** 브리핑 자세히 — 상세 화면. 열어 봤으니 알림함에서도 읽은 것 */
   const openDay = (day: string) => {
     void markDayRead(day);
-    router.navigate(scheduleDayHref(day));
+    router.navigate(briefingHref(day, 'daily'));
   };
   // 입력창 글은 다른 탭이 말머리를 담을 수 있게 한곳에 둔다(draft-context)
   const { draft: input, setDraft: setInput, focusRequest } = useDraft();

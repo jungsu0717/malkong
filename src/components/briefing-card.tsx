@@ -26,7 +26,7 @@ import type { InboxCard } from '@/data/inbox';
 import { useInbox } from '@/data/inbox-context';
 import { itemById } from '@/data/l1';
 import { useRecords } from '@/data/records-context';
-import { coveredIds, dueDate, groupsToMark, scheduleDayHref } from '@/data/schedule';
+import { coveredIds, dueDate, groupsToMark, inboxCardHref } from '@/data/schedule';
 import { labelByKind, type GapGroup, type L1Item } from '@/data/timeline';
 import { useBriefingAnswer } from '@/hooks/use-briefing-answer';
 import { useQuickAsk } from '@/hooks/use-quick-ask';
@@ -267,7 +267,8 @@ export function BriefingSummary({
       detail: periodLabel(card),
       onPress: () => {
         void markRead([card.id]);
-        if (card.day) router.navigate(scheduleDayHref(card.day));
+        const href = inboxCardHref(card);
+        if (href) router.navigate(href);
       },
     });
   }
@@ -308,7 +309,7 @@ export function BriefingSummary({
           </ThemedText>
         )}
         <View style={styles.summaryButton}>
-          <Button label="일정에서 보기" icon="arrow-forward" onPress={onOpen} />
+          <Button label="자세히 보기" icon="arrow-forward" onPress={onOpen} />
         </View>
       </Card>
     </View>
