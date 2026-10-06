@@ -1,6 +1,6 @@
 /**
- * 「한눈에 보는 우리 아기」 상세 (SPEC-BABY-03, task baby/004) — 몸무게 · 키 · 먹기 · 잠 · 접종 · 검진 타일.
- * 모르는 칸은 누르면 그 자리에서 묻는다(SPEC-BABY-04). 접종 · 검진은 일정 탭에서 완료를 알린다.
+ * 「한눈에 보는 우리 아기」 상세 (SPEC-BABY-03 · 07, task baby/004 · home/011) — 몸무게 · 키 · 먹기 · 잠 · 접종 · 검진 타일과
+ * 언제든 적는 하루 기록 넷. 모르는 칸은 누르면 그 자리에서 묻는다(SPEC-BABY-04). 접종 · 검진은 일정 탭에서 완료를 알린다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -8,11 +8,13 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { LOG_ICONS } from '@/components/record-nudge-card';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
-import { tap } from '@/components/ui';
+import { Button, Card, ListRow, SectionHeader, tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
+import { DAILY_LOGS, latestLog, valueOf, writtenAgo } from '@/data/daily-log';
 import { buildProfile, factOf, factValue, type Fact } from '@/data/knowledge-profile';
 import { useRecords } from '@/data/records-context';
 import { useQuickAsk } from '@/hooks/use-quick-ask';
@@ -80,6 +82,26 @@ export function ProfileView() {
         <ThemedText type="caption" style={[styles.note, { color: c.textSecondary }]}>
           기록에서 찾은 값은 그 기록의 말 그대로예요. 모르는 칸은 눌러서 알려 주세요
         </ThemedText>
+
+        {/* 하루 기록 (SPEC-BABY-07) — 오늘 브리핑에서 적는 게 기본이고, 여기서는 언제든 */}
+        <View style={styles.section}>
+          <SectionHeader title="하루 기록" aside="생각날 때 적어요" />
+          <Card style={styles.rows}>
+            {DAILY_LOGS.map((def, i) => {
+              const last = latestLog(def, records);
+              return (
+                <ListRow
+                  key={def.key}
+                  divider={i > 0}
+                  icon={LOG_ICONS[def.key]}
+                  title={def.title}
+                  detail={last ? `${valueOf(def, last)} · ${writtenAgo(last)} 적음` : def.hint}
+                  right={<Button label="적기" size="sm" variant="secondary" onPress={() => ask(def)} />}
+                />
+              );
+            })}
+          </Card>
+        </View>
       </ScrollView>
       {sheet}
     </>
@@ -149,4 +171,6 @@ const styles = StyleSheet.create({
   barTrack: { height: 6, borderRadius: 3, overflow: 'hidden', marginTop: 2 },
   barFill: { height: '100%', borderRadius: 3 },
   note: { textAlign: 'center' },
+  section: { gap: 10, marginTop: Spacing.two },
+  rows: { paddingVertical: 2 },
 });

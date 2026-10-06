@@ -12,6 +12,7 @@ import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { LOG_ICONS } from '@/components/record-nudge-card';
 import { ThemedText } from '@/components/themed-text';
 import { kindColor, TodoRow } from '@/components/todo-row';
 import { Button, Card, CardSection, Chip, Folded, ListRow, type IconName } from '@/components/ui';
@@ -21,7 +22,7 @@ import { useBaby } from '@/data/baby-context';
 import { briefingSummary, tipTitle, todoDone, todoOf, todosOf, type BriefingTodo } from '@/data/briefing';
 import type { CareCheck, ParentCheck, SuggestKey } from '@/data/care-signals';
 import { dayKey, type MalkongMessage } from '@/data/chat';
-import { suggestAsk } from '@/data/daily-log';
+import { DAILY_LOGS, latestLog, suggestAsk, valueOf, writtenAgo } from '@/data/daily-log';
 import type { InboxCard } from '@/data/inbox';
 import { useInbox } from '@/data/inbox-context';
 import { itemById } from '@/data/l1';
@@ -245,9 +246,22 @@ export function BriefingSummary({
     const tip = itemById(id);
     if (tip) rows.push({ key: id, icon: TIP_ICONS[tip.kind] ?? 'sunny-outline', title: tipTitle(id), detail: `오늘 챙기면 좋을 것 · ${tip.kind}` });
   }
-  if (briefing.suggest) {
-    rows.push({ key: 'suggest', icon: 'create-outline', title: SUGGEST_NAMES[briefing.suggest], detail: '기록하면 좋을 것' });
-  }
+  // 오늘의 기록 — 하루 기록 넷을 브리핑에서 적는다(SPEC-HOME-06 ④). 안부와 이어지는 기록이 있으면 그것부터
+  const logsToday = DAILY_LOGS.filter((def) => {
+    const last = latestLog(def, records);
+    return !!last && dayKey(last.createdAt) === briefing.day;
+  }).length;
+  rows.push({
+    key: 'log',
+    icon: 'create-outline',
+    title: '오늘의 기록',
+    detail: briefing.suggest
+      ? `${SUGGEST_NAMES[briefing.suggest]}부터 적어 두면 좋아요`
+      : logsToday > 0
+        ? `${logsToday}가지 적었어요`
+        : '안 적어도 괜찮아요 · 필요하면 대화에서 물어봐요',
+    onPress: onOpen,
+  });
   const week = (briefing.week ?? []).map((id) => itemById(id)).filter((i): i is L1Item => !!i);
   if (week.length > 0) {
     const due = dueDate(baby.birthDate, week[0]);
@@ -400,16 +414,37 @@ export function BriefingCard({
       </CardSection>,
     );
   }
-  if (briefing.suggest && today) {
+  if (today) {
+    // 오늘의 기록 (SPEC-HOME-06 ④ · SPEC-BABY-07) — 안부와 이어지는 기록이 있으면 맨 앞, 그 아래 하루 기록 넷
     const key = briefing.suggest;
     sections.push(
-      <CardSection key="suggest" title="기록하면 좋을 것" note="적어 두면 버디가 흐름을 보고 답해요" first={sections.length === 0}>
-        <ListRow
-          icon="create-outline"
-          title={SUGGEST_NAMES[key]}
-          detail={suggestAsk(key).hint}
-          right={<Button label="적기" size="sm" variant="secondary" onPress={() => ask(suggestAsk(key))} />}
-        />
+      <CardSection
+        key="log"
+        title="오늘의 기록"
+        note="안 적어도 괜찮아요. 필요하면 대화에서 버디가 물어봐요"
+        first={sections.length === 0}>
+        {key && (
+          <ListRow
+            icon="thermometer-outline"
+            iconTone="accent"
+            title={SUGGEST_NAMES[key]}
+            detail={suggestAsk(key).hint}
+            right={<Button label="적기" size="sm" variant="secondary" onPress={() => ask(suggestAsk(key))} />}
+          />
+        )}
+        {DAILY_LOGS.map((def, i) => {
+          const last = latestLog(def, records);
+          return (
+            <ListRow
+              key={def.key}
+              divider={!!key || i > 0}
+              icon={LOG_ICONS[def.key]}
+              title={def.title}
+              detail={last ? `${valueOf(def, last)} · ${writtenAgo(last)} 적음` : def.hint}
+              right={<Button label="적기" size="sm" variant="secondary" onPress={() => ask(def)} />}
+            />
+          );
+        })}
       </CardSection>,
     );
   }

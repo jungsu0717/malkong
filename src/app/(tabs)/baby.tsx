@@ -5,19 +5,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { questionCount, togetherLine } from '@/components/baby/knowledge-view';
 import { KnowledgeGalaxy } from '@/components/knowledge-galaxy';
-import { LOG_ICONS } from '@/components/record-nudge-card';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Button, Card, IconButton, ListRow, SectionHeader, tap } from '@/components/ui';
+import { Card, IconButton, ListRow, SectionHeader } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { useChat } from '@/data/chat-context';
-import { DAILY_LOGS, latestLog, valueOf, writtenAgo } from '@/data/daily-log';
-import { buildProfile, suggestions, type Fact } from '@/data/knowledge-profile';
+import { buildProfile } from '@/data/knowledge-profile';
 import { useRecords } from '@/data/records-context';
-import { useQuickAsk } from '@/hooks/use-quick-ask';
 import { useTheme } from '@/hooks/use-theme';
 
 const GALAXY_HEIGHT = 330;
@@ -40,17 +37,16 @@ function useCountUp(target: number, replay: number, duration = 1300) {
 }
 
 /**
- * 우리 아기 탭 — 버디가 아는 우리 아기 (SPEC-BABY-01~07, decisions/013, task baby/001 · 003 · 004).
- * 탭에는 한눈 요약과 바로 할 행동만: 지식 지도(아는 정도 · 단계) · 함께한 시간 한 줄 · 알려 주면 좋아지는 것 · 하루 기록 ·
- * 더 보기(버디가 아는 것 `/knowledge` · 한눈에 보는 아기 `/profile` · 기록 전체 `/records`). 자세한 것은 상세 화면에서.
+ * 우리 아기 탭 — 버디가 아는 우리 아기 (SPEC-BABY-01~07, decisions/013, task baby/001 · 003 · 004, home/011).
+ * 탭에는 한눈 요약만: 지식 지도(아는 정도 · 단계) · 함께한 시간 한 줄 · 더 보기(버디가 아는 것 `/knowledge` ·
+ * 한눈에 보는 아기 `/profile` · 기록 전체 `/records`). 적는 메뉴는 두지 않는다 — 하루 기록은 오늘 브리핑과 상세에서,
+ * 알려 주기는 상세와 대화의 되묻기에서(2026-10-06 Julian).
  */
 export default function BabyScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
   const { messages } = useChat();
-  // 「알려 주기」는 대화 탭으로 넘어가지 않고 이 자리에서 묻는다(task baby/002)
-  const { ask, sheet } = useQuickAsk();
   /** 탭에 올 때마다 등장 모션을 다시 */
   const [visit, setVisit] = useState(0);
   const [focused, setFocused] = useState(false);
@@ -67,13 +63,6 @@ export default function BabyScreen() {
 
   if (!baby || !age || !profile) return <ScreenLoading />;
   const name = baby.name ?? DEFAULT_BABY_NAME;
-
-  const askFact = (fact: Fact) => {
-    if (!fact.ask) return;
-    tap();
-    ask(fact.ask, fact.record, fact.value);
-  };
-  const suggested = suggestions(profile);
 
   return (
     <ThemedView style={styles.container}>
@@ -136,46 +125,6 @@ export default function BabyScreen() {
             </ThemedText>
           </View>
 
-          {/* 알려 주면 좋아지는 것 (SPEC-BABY-04) — 경고가 아니라 제안으로 */}
-          {suggested.length > 0 && (
-            <View style={styles.section}>
-              <SectionHeader title="알려 주면 더 정확해져요" />
-              <Card style={styles.rows}>
-                {suggested.map((f, i) => (
-                  <ListRow
-                    key={f.id}
-                    divider={i > 0}
-                    icon="sparkles-outline"
-                    iconTone="accent"
-                    title={f.label}
-                    detail={f.benefit}
-                    onPress={() => askFact(f)}
-                  />
-                ))}
-              </Card>
-            </View>
-          )}
-
-          {/* 하루 기록 (SPEC-BABY-07) — 매일이 아니어도 생각날 때. 며칠 비면 버디가 카드로 한 번 묻는다 */}
-          <View style={styles.section}>
-            <SectionHeader title="하루 기록" aside="생각날 때 적어요" />
-            <Card style={styles.rows}>
-              {DAILY_LOGS.map((def, i) => {
-                const last = latestLog(def, records);
-                return (
-                  <ListRow
-                    key={def.key}
-                    divider={i > 0}
-                    icon={LOG_ICONS[def.key]}
-                    title={def.title}
-                    detail={last ? `${valueOf(def, last)} · ${writtenAgo(last)} 적음` : def.hint}
-                    right={<Button label="적기" size="sm" variant="secondary" onPress={() => ask(def)} />}
-                  />
-                );
-              })}
-            </Card>
-          </View>
-
           {/* 더 보기 — 자세한 것은 상세 화면에서 (task baby/004) */}
           <View style={styles.section}>
             <SectionHeader title="더 보기" />
@@ -208,7 +157,6 @@ export default function BabyScreen() {
           </ThemedText>
         </ScrollView>
       </SafeAreaView>
-      {sheet}
     </ThemedView>
   );
 }
