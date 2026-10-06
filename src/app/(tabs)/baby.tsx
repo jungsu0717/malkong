@@ -8,7 +8,7 @@ import { KnowledgeGalaxy } from '@/components/knowledge-galaxy';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Card, IconButton, ListRow, SectionHeader } from '@/components/ui';
+import { Card, IconButton, ListRow } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
@@ -38,9 +38,9 @@ function useCountUp(target: number, replay: number, duration = 1300) {
 
 /**
  * 우리 아기 탭 — 버디가 아는 우리 아기 (SPEC-BABY-01~07, decisions/013, task baby/001 · 003 · 004, home/011).
- * 탭에는 한눈 요약만: 지식 지도(아는 정도 · 단계) · 함께한 시간 한 줄 · 더 보기(버디가 아는 것 `/knowledge` ·
- * 한눈에 보는 아기 `/profile` · 기록 전체 `/records`). 적는 메뉴는 두지 않는다 — 하루 기록은 오늘 브리핑과 상세에서,
- * 알려 주기는 상세와 대화의 되묻기에서(2026-10-06 Julian).
+ * 탭에는 한눈 요약만: 지식 지도(아는 정도 · 단계 — 누르면 「버디가 아는 것」 `/knowledge`, 행성은 그 주제로) · 함께한 시간 한 줄 ·
+ * 한눈에 보는 아기 `/profile` 한 줄. 적는 메뉴는 두지 않는다 — 하루 기록은 오늘 브리핑에서, 알려 주기는 상세와 대화의
+ * 되묻기에서. 기록 전체는 「버디가 아는 것」 안에(2026-10-06 Julian).
  */
 export default function BabyScreen() {
   const c = useTheme();
@@ -86,9 +86,8 @@ export default function BabyScreen() {
                 active={focused}
                 domains={profile.domains}
                 selected={null}
-                onSelect={(id) => {
-                  if (id) router.push({ pathname: '/knowledge', params: { domain: id } });
-                }}
+                // 행성은 그 주제로, 빈 자리는 전체로 — 지도가 곧 「버디가 아는 것」의 입구다
+                onSelect={(id) => router.push(id ? { pathname: '/knowledge', params: { domain: id } } : '/knowledge')}
                 height={GALAXY_HEIGHT}
                 coreColor={c.accent}
               />
@@ -115,7 +114,7 @@ export default function BabyScreen() {
                   </ThemedText>
                 </View>
                 <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-                  행성을 누르면 자세히 볼 수 있어요
+                  누르면 자세히 · 행성을 누르면 그 주제로
                 </ThemedText>
               </View>
             </View>
@@ -125,32 +124,15 @@ export default function BabyScreen() {
             </ThemedText>
           </View>
 
-          {/* 더 보기 — 자세한 것은 상세 화면에서 (task baby/004) */}
-          <View style={styles.section}>
-            <SectionHeader title="더 보기" />
-            <Card style={styles.rows}>
-              <ListRow
-                icon="planet-outline"
-                title="버디가 아는 것"
-                detail={`주제별로 알게 된 것 ${profile.knownCount} / ${profile.totalCount}`}
-                onPress={() => router.push('/knowledge')}
-              />
-              <ListRow
-                divider
-                icon="person-outline"
-                title={`한눈에 보는 ${name}`}
-                detail="몸무게 · 키 · 먹기 · 잠 · 접종 · 검진"
-                onPress={() => router.push('/profile')}
-              />
-              <ListRow
-                divider
-                icon="document-text-outline"
-                title="기록 전체 보기"
-                detail={records.length > 0 ? `${records.length}건 · 고치거나 지울 수 있어요` : '버디와 나눈 이야기에서 모은 기록이 여기 쌓여요'}
-                onPress={() => router.push('/records')}
-              />
-            </Card>
-          </View>
+          {/* 한눈에 보는 아기 — 최근 값 한 화면 (SPEC-BABY-03). 기록 전체는 「버디가 아는 것」 상세 안에 */}
+          <Card style={styles.rows}>
+            <ListRow
+              icon="person-outline"
+              title={`한눈에 보는 ${name}`}
+              detail="몸무게 · 키 · 먹기 · 잠 · 접종 · 검진"
+              onPress={() => router.push('/profile')}
+            />
+          </Card>
 
           <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
             이 숫자는 이 폰에 저장된 기록으로만 계산해요. 서버로 보내지 않아요.

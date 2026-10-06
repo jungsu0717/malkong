@@ -1,17 +1,18 @@
 /**
  * 「버디가 아는 것」 상세 (SPEC-BABY-01 · 02 조작 · 04 · 05, task baby/004) — 우리 아기 탭의 「더 보기」와 지도의 행성에서 들어온다.
- * 영역 여섯 막대(누르면 고름) → 고른 영역의 사실 목록(알려 주기 · 고치기) → 버디와 함께한 시간(한 문장과 알게 된 흐름).
+ * 주제 여섯 막대(누르면 고름) → 고른 주제의 사실 목록(알려 주기 · 고치기) → 버디와 함께한 시간(한 문장과 알게 된 흐름) →
+ * 모은 기록 전체(보고 고치기, SPEC-BABY-06).
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
-import { Button, Card, SectionHeader, tap } from '@/components/ui';
+import { Button, Card, ListRow, SectionHeader, tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
@@ -109,6 +110,16 @@ export function KnowledgeView() {
             )}
           </Card>
         </View>
+
+        {/* 기록 전체 (SPEC-BABY-06) — 아는 것의 바탕이 되는 기록을 보고 고친다 */}
+        <Card style={styles.rows}>
+          <ListRow
+            icon="document-text-outline"
+            title="모은 기록 전체 보기"
+            detail={records.length > 0 ? `${records.length}건 · 고치거나 지울 수 있어요` : '버디와 나눈 이야기에서 모은 기록이 여기 쌓여요'}
+            onPress={() => router.push('/records')}
+          />
+        </Card>
 
         <ThemedText type="caption" style={[styles.note, { color: c.textSecondary }]}>
           이 숫자는 이 폰에 저장된 기록으로만 계산해요. 서버로 보내지 않아요.
@@ -218,5 +229,6 @@ const styles = StyleSheet.create({
   bigDot: { width: 12, height: 12, borderRadius: 6 },
   factRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 10, borderTopWidth: 1 },
   together: { gap: 14 },
+  rows: { paddingVertical: 2 },
   note: { textAlign: 'center' },
 });
