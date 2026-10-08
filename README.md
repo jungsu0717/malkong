@@ -18,11 +18,10 @@
 - **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 재시도 안전, 피드백,
   보상형 광고 확인(SSV), 하루 한도 정책 v2 — 정밀 답변 10회 · 광고 1편에 5회(하루 2편) · 그 뒤 일반 기준 답 20회 ·
   서버 전체 하루 모델 비용 천장 330원([decisions/019](docs/decisions/019-generous-limits-hard-daily-budget.md)).
-  Cloud Run 에 revision 00010(2026-10-06 — **Gemini 유료** · **Neon(싱가포르)에 기기 키 · 사용량 · 하루 비용 저장**, 서버가 다시
-  켜져도 남는다 · 부모 돌봄 L1 포함)이 올라가 있다.
-  **배포 안 된 서버 변경**(Julian 폰을 가족 기기로 등록할 때 함께 올린다): 가족 기기의 「일반 사용자로 보기」 숨은 스위치([common/015](docs/task/common/015-operator-user-view.md)) ·
+  Cloud Run 에 revision 00011(2026-10-08 — **Gemini 유료** · **Neon(싱가포르)에 기기 키 · 사용량 · 하루 비용 저장** · 부모 돌봄 L1 ·
+  **Julian 폰이 가족 기기로 등록**되어 「일반 사용자로 보기」 숨은 스위치가 있다([common/015](docs/task/common/015-operator-user-view.md)) ·
   위험 신호 규칙 오탐 수정(「아기 주변에서 담배 피우면」이 피 섞인 변으로 잡히던 것)과 수면 검색 낱말 보강([common/016](docs/task/common/016-l1-reach.md)) ·
-  근거 없이 답한 질문을 주제 × 월령 띠로 세는 로그([common/017](docs/task/common/017-ungrounded-count.md))
+  근거 없이 답한 질문을 주제 × 월령 띠로 세는 로그([common/017](docs/task/common/017-ungrounded-count.md)))가 올라가 있다. 배포 안 된 서버 변경은 없다
 - 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
 - **홍보 자료(보관 — 배포 때 · 앱 첫 실행에 쓴다)**: 만화 「아빠가 육아 앱을 만든 이유」 5컷 · 릴스 30초(`marketing/toon/`, 앱 첫 실행에도 들어가 있다),
   스토어 첫 장 「검색 대신, 근거로 답해요」 — 지식층 · 답 파이프라인 흐름도 + 진짜 앱 화면(`marketing/store/`, 앱스토어 · 구글 플레이 두 크기).
@@ -39,10 +38,9 @@
 
 ## 다음 시작점 (2026-10-08)
 
-1. **Julian 폰을 가족 기기로 등록**([common/005](docs/task/common/005-device-key-and-limit.md) 마지막 칸) — 앱 마이 탭 맨 아래
-   「육아버디 v1.0.0」을 1초 꾹 → 기기 키 복사 → Julian 이 비밀값 `malkong-operator-keys` 에 넣기 → Claude 가 권한을 주고
-   [common/015](docs/task/common/015-operator-user-view.md) · [common/016](docs/task/common/016-l1-reach.md) · [common/017](docs/task/common/017-ungrounded-count.md) 과 함께 배포(Julian 승인). 그 뒤 같은 숨은 메뉴의 「일반 사용자로 보기」로
-   일반 사용자 화면(남은 횟수 · 광고 자리 · 한도 말풍선)을 오가며 본다
+1. **폰이 가족 기기로 보이는지 확인**(Julian) — 등록 · 배포는 끝났다([common/005](docs/task/common/005-device-key-and-limit.md)).
+   앱을 다시 열고 마이 탭 맨 아래 「육아버디 v1.0.0」을 1초 꾹 → 「일반 사용자로 보기」 스위치가 보여야 한다. 그 스위치로
+   일반 사용자 화면(남은 횟수 · 광고 자리 · 한도 말풍선)을 오가며 본다. 안 보이면 비밀값에 빈 값이 들어간 것 — 005 「출시 전에 Julian 이 할 것」 마지막 칸
 2. **Julian 이 아이폰(Expo Go)으로 며칠 써 본다** — 답 · 안부 브리핑 · 일정 탭 · 알림함 · 지식 지도 · 디자인에서 걸리는 것을 모은다.
    맥에서 `REACT_NATIVE_PACKAGER_HOSTNAME=<맥 IP> npx expo start --go` 로 켠다(아래 「실행」 — `--go` 를 빼면 Expo Go 가 못 연다).
    웹으로는 못 본 것: 처음 실행 만화를 손가락으로 넘기기(아직 닫지 않았으니 다음에 열면 뜬다) · 기록이 사흘 비었을 때 저녁 8시 알림과
@@ -88,6 +86,13 @@ Claude Code 의 메모리는 PC 마다 따로라서, 이어받는 기준은 이 
   (빈 helper 줄이 키체인에 남은 다른 계정 자격을 먼저 끊는다)
 - **앱**: Node 22.13 이상을 설치하고 `npm install` (22.8 은 경고가 뜨지만 돈다). 앱은 기본으로 배포된 Cloud Run 서버에
   묻기 때문에 앱만 고칠 때는 키도 서버도 필요 없다
+- **Expo 로그인(아이폰 Expo Go 로 볼 때)**: 2026년부터 아이폰 Expo Go 는 PC 의 Expo CLI 와 **같은 계정으로 로그인**되어 있어야
+  개발 서버의 앱을 연다. 계정은 구글로 가입한 `julian-malkong`(비밀번호 없음) 이라 `npx expo login` 대신
+  `npx eas-cli@latest login --device` 로 — 터미널에 뜨는 주소를 브라우저에서 열어 구글로 승인한다(Expo CLI · EAS CLI 가 로그인을 공유).
+  폰의 Expo Go 도 같은 계정으로 로그인
+- **WSL(윈도우) PC 에서 폰으로 볼 때**: WSL 은 윈도우 안의 가상 네트워크라 맥처럼 와이파이 주소로는 폰이 못 들어온다. 터널로 켠다 —
+  `npm i -g @expo/ngrok` 한 번, 그 뒤 `npx expo start --go --tunnel`(QR 을 폰 카메라로). 인터넷을 한 번 거쳐 느리지만 어느 와이파이든 된다.
+  이 창의 `!` 명령은 비밀번호 · 승인 입력을 못 받으므로 로그인과 개발 서버는 따로 연 터미널에서
 - **서버**: uv 를 설치하고 `server/` 에서 `uv sync` (Python 3.13 은 uv 가 받는다)
 - **Gemini 키(서버를 로컬에서 돌릴 때만)**: git 에 없다. https://aistudio.google.com/apikey 의 「Default Gemini Project」
   무료 키를 `server/.env` 에 `MALKONG_GEMINI_API_KEY=...` 한 줄로 둔다(Julian 이 직접). 무료 키라

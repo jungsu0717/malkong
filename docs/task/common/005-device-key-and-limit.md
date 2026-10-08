@@ -1,6 +1,6 @@
 # 005 디바이스 키 · 하루 한도 · 재시도 안전 · 한도 화면
 
-> 상태: 진행 (2026-10-06) — Neon 을 붙여 배포(revision 00010). 남은 것: 가족 기기 키 등록(Julian 폰)
+> 상태: 완료 (2026-10-08) — Neon 을 붙여 배포(revision 00010), Julian 폰을 가족 기기로 등록해 배포(revision 00011)
 > 근거: backend 「일일 한도」 · 「운영자 기기」 · 「사용량을 세는 법」, api-contract `/v1/devices` · `/v1/entitlements` · `/v1/ask`,
 > ask.md 「한도 표시」
 
@@ -48,7 +48,13 @@
     같은 이미지로 띄운 다른 시험판 00009 에서도 그 키를 알아보고 남은 9 · 천장 상태가 그대로 — **인스턴스가 바뀌어도
     잊지 않는다.** 정상 설정의 00010 으로 트래픽을 넘기고(`--to-latest`) 시험판 이름표를 지웠다. 운영 주소에서 상태 확인 ·
     키 · 자격 · 위험 신호 · 실제 답 1회. 실제 Gemini 호출은 모두 2회
-- [ ] 가족 기기 키를 `malkong-operator-keys`(쉼표로 구분)로 넣기 → `MALKONG_OPERATOR_DEVICE_KEYS`
+- [x] 가족 기기 키를 `malkong-operator-keys`(쉼표로 구분)로 넣기 → `MALKONG_OPERATOR_DEVICE_KEYS` — 2026-10-08 Julian 이
+      WSL PC 에서 `read -rsp` 로 키를 숨겨 받아 비밀값에 넣었다(화면 · 셸 기록 · 대화에 키가 남지 않는다). Claude 가 서비스 계정에
+      읽기 권한을 주고 revision 00011 로 배포(Julian 승인, common/015 · 016 · 017 함께). 확인은 모델 호출 0 — `/health` · 비밀값
+      여섯이 다 실려 있음 · 새 기기 키 발급 → 자격(일반 기기, 남은 10) · 위험 신호 질문 1 → redflag · 새 판 오류 로그 없음.
+      폰이 가족 기기로 보이는지는 Julian 이 마이 탭 버전 길게 누르기로 확인한다. 스위치가 안 보이면 빈 값이 들어간 것 —
+      server/AGENTS.md 「배포」의 `versions add` 명령으로 다시 넣는다. 환경변수 비밀값은 **인스턴스가 켜질 때** 읽으므로(Cloud Run 문서)
+      min-instances 0 인 지금은 서버가 한 번 꺼졌다 켜지면 새 값이 들어간다. 바로 반영하려면 Claude 가 같은 명령으로 한 번 더 배포한다(Julian 승인)
 
 ## 완료 조건
 

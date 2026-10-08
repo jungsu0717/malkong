@@ -78,7 +78,7 @@ gcloud secrets add-iam-policy-binding malkong-gemini-key --condition=None \
 gcloud run deploy malkong-server --source . --region asia-northeast3 \
   --allow-unauthenticated --min-instances 0 --max-instances 2 \
   --set-env-vars MALKONG_LLM_PROVIDER=gemini,MALKONG_LLM_MODEL=gemini-3.5-flash-lite,MALKONG_LLM_PAID_TIER=true \
-  --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest,MALKONG_DATABASE_URL=malkong-database-url:latest
+  --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest,MALKONG_DATABASE_URL=malkong-database-url:latest,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest
 
 # 바꾼 판을 먼저 시험하려면 --no-traffic --tag <이름> 을 붙여 트래픽 없는 시험판으로 올리고, 확인한 뒤
 # `gcloud run services update-traffic malkong-server --region asia-northeast3 --to-latest` 와 `--remove-tags <이름>` 으로 넘긴다.
@@ -96,8 +96,9 @@ gcloud run deploy malkong-server --source . --region asia-northeast3 \
 gcloud artifacts repositories set-cleanup-policies cloud-run-source-deploy --location asia-northeast3 --project malkong \
   --policy artifact-cleanup-policy.json --no-dry-run
 
-# Neon(malkong-database-url)은 2026-10-06 부터 붙어 있다. 운영자 기기 키를 넣은 뒤에는 --set-secrets 끝에
-#   ,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest 를 더한다(task common/005)
+# Neon(malkong-database-url)은 2026-10-06 부터, 가족 기기 키(malkong-operator-keys, 쉼표로 여러 개)는 2026-10-08 부터 붙어 있다(task common/005).
+# 가족 기기를 더하거나 바꿀 때 Julian 이(키는 화면 · 셸 기록에 남기지 않는다):
+#   read -rsp '기기 키(쉼표로 여러 개) 붙여넣고 Enter: ' KEY; printf '%s' "$KEY" | gcloud secrets versions add malkong-operator-keys --data-file=- --project malkong; unset KEY
 ```
 
 - gcloud 는 Homebrew 로 깐다(`brew install --cask gcloud-cli` — 소스 컴파일 없이 Google 공식 파일을 받는다).

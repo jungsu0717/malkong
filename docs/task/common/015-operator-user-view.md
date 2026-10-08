@@ -1,6 +1,6 @@
 # 015 가족 기기의 「일반 사용자로 보기」 숨은 스위치
 
-> 상태: 완료 (2026-10-06) — 서버 배포는 Julian 폰을 가족 기기로 등록할 때 함께(common/005, Julian 승인)
+> 상태: 완료 (2026-10-06) — 서버는 2026-10-08 revision 00011 로 배포(common/005 가족 기기 등록과 함께, Julian 승인)
 > 근거: [backend](../../architecture/backend.md) 「운영자(가족) 기기」(이 task 에서 정의를 고친다) ·
 > [api-contract](../../architecture/api-contract.md) 「GET /v1/entitlements」 · [my.md](../../menu-spec/my.md) 버전 줄
 > 횡단(common): 서버 자격 · 앱 자격 · 마이 숨은 메뉴가 함께 바뀐다
