@@ -3,12 +3,12 @@
 우리 아기 기준으로 답하는 AI 육아 비서. 궁금할 때 물어보면 월령과 우리 아기 기록에 맞춰
 공공 의료·육아 지식의 출처와 함께 답하고, 아침마다 오늘 챙길 것을 먼저 알려준다.
 
-## 지금 상태 (2026-10-06)
+## 지금 상태 (2026-10-08)
 
 - **앱**: 시안 B 「단정한 비서」([decisions/012](docs/decisions/012-chat-first-three-tabs.md)), 탭 넷 —
-  **버디**(첫 화면 · 데일리 브리핑(아기 안부 · 부모 안부 · 오늘 챙길 것) · 알림함 · 진짜 답 · 질문마다 다른 처리 현황 · 되묻기와 기록 · 위험 신호 · 피드백 · 하루 한도) ·
-  **우리 아기**(3D 지식 지도 · 버디가 아는 정도와 단계 · 한눈에 보는 프로필 · 하루 기록 · 그 자리에서 알려 주기 · 함께 쌓아 온 것) ·
-  **일정**(달력 · 고른 날의 브리핑 · 챙길 것 여정 그래픽 · 주간 · 월간 브리핑, [decisions/017](docs/decisions/017-schedule-tab-and-inbox.md)) ·
+  **버디**(첫 화면 · 데일리 브리핑(아기 안부 · 부모 안부 · 오늘 챙길 것) · 알림함 · 진짜 답 · 질문마다 다른 처리 현황 · 되묻기와 기록 · 버디의 짐작(맞아요 · 아니에요) · 위험 신호 · 피드백 · 하루 한도 · 최근 50줄부터) ·
+  **우리 아기**(3D 지식 지도 — 누르면 「버디가 아는 것」 상세 · 주제별 가로 막대 · 함께한 시간 한 줄, [baby/004](docs/task/baby/004-overview-and-depth.md)) ·
+  **일정**(달력 · 고른 날의 브리핑과 그날 나눈 대화 줄 · 챙길 것 여정 그래픽 · 주간 · 월간 브리핑, [decisions/017](docs/decisions/017-schedule-tab-and-inbox.md)) ·
   **마이**(알림 시각 · 기록 요청 알림과 카드 · 설정 · 광고 없이 쓰기 · 약관 초안).
   하루 기록이 사흘째 비면 적을 카드와 저녁 알림 한 번([decisions/016](docs/decisions/016-daily-log-out-of-briefing.md)).
   브리핑은 기기 안 규칙과 문구 틀로 만든다([decisions/018](docs/decisions/018-daily-care-briefing.md)). 부모 돌봄 L1 넷 승인(2026-10-04).
@@ -20,8 +20,9 @@
   서버 전체 하루 모델 비용 천장 330원([decisions/019](docs/decisions/019-generous-limits-hard-daily-budget.md)).
   Cloud Run 에 revision 00010(2026-10-06 — **Gemini 유료** · **Neon(싱가포르)에 기기 키 · 사용량 · 하루 비용 저장**, 서버가 다시
   켜져도 남는다 · 부모 돌봄 L1 포함)이 올라가 있다.
-  **배포 안 된 서버 변경**: 가족 기기의 「일반 사용자로 보기」 숨은 스위치([common/015](docs/task/common/015-operator-user-view.md)) —
-  Julian 폰을 가족 기기로 등록할 때 함께 올린다
+  **배포 안 된 서버 변경**(Julian 폰을 가족 기기로 등록할 때 함께 올린다): 가족 기기의 「일반 사용자로 보기」 숨은 스위치([common/015](docs/task/common/015-operator-user-view.md)) ·
+  위험 신호 규칙 오탐 수정(「아기 주변에서 담배 피우면」이 피 섞인 변으로 잡히던 것)과 수면 검색 낱말 보강([common/016](docs/task/common/016-l1-reach.md)) ·
+  근거 없이 답한 질문을 주제 × 월령 띠로 세는 로그([common/017](docs/task/common/017-ungrounded-count.md))
 - 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
 - **홍보 자료(보관 — 배포 때 · 앱 첫 실행에 쓴다)**: 만화 「아빠가 육아 앱을 만든 이유」 5컷 · 릴스 30초(`marketing/toon/`, 앱 첫 실행에도 들어가 있다),
   스토어 첫 장 「검색 대신, 근거로 답해요」 — 지식층 · 답 파이프라인 흐름도 + 진짜 앱 화면(`marketing/store/`, 앱스토어 · 구글 플레이 두 크기).
@@ -29,13 +30,18 @@
 - **설계 문서와 코드를 맞췄다(2026-10-05)**: 질문 처리 단계(위험 신호 규칙 → 재시도 캐시 → 모델 → 답 검사)의 된 것 · 아직인 것 ·
   모델 호출 횟수 · 모델을 부르지 않는 기기 안 화면은 [backend](docs/architecture/backend.md) 「LLM 파이프라인」, L2 가 쌓이는 길은
   [knowledge-layers](docs/architecture/knowledge-layers.md) 「채워지는 경로」
+- **온톨로지 세미나 뒤 정리(2026-10-08)**: 지식층은 규칙으로 판단하는 작은 루프로 둔다 — 그래프 · 벡터 DB · 온톨로지 스택 · 대화방 나누기 ·
+  온디바이스 모델은 넣지 않는다([decisions/020](docs/decisions/020-rule-based-judgment-loop.md)). 어휘 대응표(분류 아홉 ↔ 영역 여섯,
+  [knowledge-layers](docs/architecture/knowledge-layers.md) 「어휘」) · 승인된 지식은 모두 어느 질문에는 닿아야 한다는 시험(평가 질문 30 → 56개,
+  [common/016](docs/task/common/016-l1-reach.md)) · 근거 없음 로그([common/017](docs/task/common/017-ungrounded-count.md)) ·
+  버디의 짐작은 확인 뒤 기록([ask/008](docs/task/ask/008-confirm-guess.md)) · 대화는 최근 50줄부터, 날짜에서 그날 대화로([ask/009](docs/task/ask/009-recent-window-and-day-jump.md))
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점 (2026-10-06)
+## 다음 시작점 (2026-10-08)
 
 1. **Julian 폰을 가족 기기로 등록**([common/005](docs/task/common/005-device-key-and-limit.md) 마지막 칸) — 앱 마이 탭 맨 아래
    「육아버디 v1.0.0」을 1초 꾹 → 기기 키 복사 → Julian 이 비밀값 `malkong-operator-keys` 에 넣기 → Claude 가 권한을 주고
-   [common/015](docs/task/common/015-operator-user-view.md) 와 함께 배포(Julian 승인). 그 뒤 같은 숨은 메뉴의 「일반 사용자로 보기」로
+   [common/015](docs/task/common/015-operator-user-view.md) · [common/016](docs/task/common/016-l1-reach.md) · [common/017](docs/task/common/017-ungrounded-count.md) 과 함께 배포(Julian 승인). 그 뒤 같은 숨은 메뉴의 「일반 사용자로 보기」로
    일반 사용자 화면(남은 횟수 · 광고 자리 · 한도 말풍선)을 오가며 본다
 2. **Julian 이 아이폰(Expo Go)으로 며칠 써 본다** — 답 · 안부 브리핑 · 일정 탭 · 알림함 · 지식 지도 · 디자인에서 걸리는 것을 모은다.
    맥에서 `REACT_NATIVE_PACKAGER_HOSTNAME=<맥 IP> npx expo start --go` 로 켠다(아래 「실행」 — `--go` 를 빼면 Expo Go 가 못 연다).
@@ -49,12 +55,16 @@
    로그인이 들어오면 계정 기준으로 센다
 5. **Julian 이 고를 다음 후보** — 서버가 진행 단계를 실시간으로 보내기(SSE, 배포 필요 · 모델 비용 그대로,
    [ask/007](docs/task/ask/007-question-aware-trace.md) 「정한 것」 4) · 수면 · 수유 · 울음 · 변 같은 일상 주제 L1 늘리기(항목마다 Julian 승인) ·
-   「모두에게 더 똑똑해지는」 고리 — 근거 없이 답한 질문의 주제만 익명으로 세고(원문 저장 없음, 서버 배포 필요) 많이 나온 주제부터
-   L1 초안 → Julian 승인. 자주 묻는 질문 캐시(backend ②′)는 그 뒤에. 지금 「쓸수록 똑똑해지는」 것은 우리 아기 기록(L2)뿐이다
+   「모두에게 더 똑똑해지는」 고리 — 근거 없이 답한 질문을 주제 × 월령 띠로 세는 로그는 들어갔다([common/017](docs/task/common/017-ungrounded-count.md),
+   배포 뒤 쌓인다, 보는 명령은 server/AGENTS.md). 많이 나온 주제부터 L1 초안 → Julian 승인. 자주 묻는 질문 캐시(backend ②′)는 그 뒤에. 지금 「쓸수록 똑똑해지는」 것은 우리 아기 기록(L2)뿐이다
 6. Claude 몫: 써 본 피드백 반영 → 답변 완성도 다듬기(위험 신호 — Julian 승인) → 스토어 등록 준비 — 첫 장은 됐고, 남은 것은
    스크린샷 4장(아침 안부 · 위험 신호 · 일정 · 우리 아기, `marketing/store/capture.mjs` 로 진짜 화면) · 구글 플레이 그래픽 이미지(1024×500) ·
    소개 문구([product-brief](docs/product/product-brief.md)) · 개인정보 처리방침 웹 주소
-7. 출시 전 Julian 몫(계정·결제·법률): Apple 개발자($99) → 개발 빌드로 아이콘·광고·결제 확인 → AdMob · 스토어 계정 ·
+7. **Julian 결정 대기(2026-10-08)**: ① 직전 2~4턴을 질문과 함께 보내 「그럼 몇 시에 재워요?」 같은 이어 묻기가 되게 할지(서버 저장 없음, 1건 1원 미만) ·
+   ② 비용 · 수익 방향을 결정 기록으로 남길지 — 답변 과금은 손해 안 보기 · 광고가 주수익 · 쇼핑은 나중에 제휴 링크부터(버디의 답과 상품은 분리) ·
+   기존 LLM 구독 연동은 OpenAI 「Sign in with ChatGPT」가 일반 개발자에게 열리면 재검토(API 키 직접 입력은 안 함) ·
+   ③ 답변 피드백(좋아요 · 별로예요)이 실제로 눌리는지 보고 「셋 중 하나 고르기」로 바꿀지(온톨로지 세미나 5교시 사례)
+8. 출시 전 Julian 몫(계정·결제·법률): Apple 개발자($99) → 개발 빌드로 아이콘·광고·결제 확인 → AdMob · 스토어 계정 ·
    RevenueCat · 약관 정보 → 「육아버디」 상표 출원(변리사) · 주소(선택). 목록은
    [common/008](docs/task/common/008-first-release-check.md) · [common/011](docs/task/common/011-rename-yugabuddy.md)
 
