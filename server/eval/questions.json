@@ -192,5 +192,20 @@
   {"id": "q56", "category": "사실", "months": 2, "question": "2개월 접종은 뭐가 있어요?", "records": [],
    "l1": ["k-vacc-0201", "k-vacc-0202", "k-vacc-0203", "k-vacc-0204", "k-vacc-0205"],
    "expect": {"type": "answer", "level": "사실", "gold": ["k-vacc-0201", "k-vacc-0202", "k-vacc-0203", "k-vacc-0204", "k-vacc-0205"],
-              "facts": "DTaP·폴리오·Hib·폐렴구균·로타바이러스 1차 다섯 가지"}}
+              "facts": "DTaP·폴리오·Hib·폐렴구균·로타바이러스 1차 다섯 가지"}},
+  {"id": "q57", "category": "사실", "months": 4, "question": "이유식은 언제부터 시작하면 돼요?",
+   "records": [{"kind": "기록", "label": "이유식: 아직 시작 안 함"}],
+   "l1": ["k-feed-0401", "k-feed-0402"],
+   "expect": {"type": "answer", "level": "사실", "gold": ["k-feed-0401", "k-feed-0402"],
+              "facts": "6개월 무렵, 4개월 전엔 안 됨. 우리 아기 4개월이니 두 달쯤 뒤 — 준비 신호(앉기·머리 가누기·입 벌리기). 진료 권유 없음 (task ask/010)"}},
+  {"id": "q58", "category": "일반", "months": 5, "question": "밤에 자꾸 깨고 눕히면 바로 울어요. 어떻게 재워야 해요?",
+   "records": [{"kind": "기록", "label": "재우는 방식: 안아서 재움"}, {"kind": "기록", "label": "밤중 수유 2회"}],
+   "l1": [],
+   "expect": {"type": "answer", "level": "일반", "gold": [],
+              "facts": "「일반적으로는」. 안아서 재우는 기록을 앞머리에 짚기. 이 월령에 흔한 일인지 한 문장. 집에서 할 것 (task ask/010)"}},
+  {"id": "q59", "category": "판단", "months": 5, "question": "5개월인데 아직 뒤집기를 못 해요. 괜찮은 건가요?",
+   "records": [{"kind": "기록", "label": "뒤집기: 아직 못 함"}],
+   "l1": ["k-dev-0601", "k-dev-0202"],
+   "expect": {"type": "answer", "level": "판단", "gold": ["k-dev-0601", "k-dev-0202"],
+              "facts": "괜찮다고 판정하지 않기. 6개월 이정표 → 흔한 모습 → 엎드려 놀기 → 6개월 지나도 못 하면 상담 (task ask/010)"}}
 ]
