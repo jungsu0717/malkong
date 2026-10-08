@@ -14,6 +14,8 @@ export const Colors = {
     /** 장식·아이콘·자리 표시 글 — 본문 글자에는 쓰지 않는다(대비가 모자람) */
     textTertiary: '#8A8A95',
     background: '#FFFFFF',
+    /** 시작 화면 바탕 — 우주복 노랑(decisions/015). app.json 의 expo-splash-screen backgroundColor 와 같아야 한다 */
+    splash: '#FDD686',
     /** 옅은 회색 면 — 입력창 · 칩 · 묶음 카드 */
     surface: '#F4F4F6',
     /** 눌렀을 때 · 골랐을 때 · 꺼진 단추 */
@@ -44,6 +46,8 @@ export const Colors = {
     textSecondary: '#A0A0AB',
     textTertiary: '#6E6E79',
     background: '#0E0E11',
+    /** 다크 모드 시작 화면은 바탕색 그대로(app.json dark.backgroundColor) */
+    splash: '#0E0E11',
     surface: '#1A1A1F',
     surfaceStrong: '#26262D',
     border: '#2A2A31',

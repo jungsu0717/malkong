@@ -51,7 +51,10 @@
 - **런처 아이콘** — 우주복 노랑(#FDD686) 바탕에 버디 얼굴. Android adaptive 전경(안전 영역 안 얼굴) · 배경(노랑) ·
   단색(테마 아이콘, 흰 실루엣). **알림 아이콘**(Android 상태 표시줄) — 흰 실루엣 96px, `expo-notifications` 플러그인.
   만드는 법은 `scripts/brand/`
-- **시작 화면** — 흰 바탕(다크 모드는 #0E0E11)에 서 있는 버디
+- **시작 화면** — 우주복 노랑(#FDD686, 다크 모드는 #0E0E11) 바탕에 서 있는 버디. 기기 시작 화면(그림만 가능)이 걷힌 뒤
+  같은 자리에 「육아버디」와 슬로건 「육아의 모든 질문, 우리 아기 기준으로 버디가 다 챙겨요」가 한 박자 떠올랐다가 함께 흐려진다
+  (`AnimatedSplashOverlay`, task common/018). 글은 그림에 굽지 않는다 — Android 12+ 가 시작 그림을 아이콘 크기로 줄이고,
+  글꼴 · 다크 모드를 코드로 맞추기 위해서다. Expo Go 는 자체 로딩 화면(앱 아이콘 + 이름)을 보이므로 기기 시작 화면은 빌드에서만 본다
 
 ## 로딩과 모션
 
@@ -61,7 +64,7 @@
 | 생각 중 (답변 대기) | **처리 현황 블록** (`thinking-status.tsx`, SPEC-ASK-05) — 대기 문구 3.2초 순환 + 접이식 생각 과정, selvas 통합 chat(neuro-frontend `packages/chat` ThinkingIndicator·ChatTrace) 이식. Orb 자리 = 버디 얼굴(`BuddyMark`) 맥동 |
 | 큰 로딩 (초기 구동·화면 단위) | **육아 소품 아이콘이 톡톡 바뀐다** — 동그란 accentSoft 바탕 안에서 쪽쪽이 → 젖병 → 딸랑이 → 곰돌이(베이비 아이콘 세트)가 0.7초마다 뿅 커지며 바뀌고, 바뀔 때 바탕이 살짝 튄다(`baby-loading.tsx`, Reanimated). 캐릭터 그림은 쓰지 않는다 |
 | 짧은 차단 동작 (1초 미만) | 기본 ActivityIndicator |
-| 스플래시 | expo-splash-screen(흰 바탕 · 서 있는 버디) → 글꼴과 기기 저장을 읽는 동안 같은 그림을 유지 → `AnimatedSplashOverlay` 가 흐리며 걷힌다 |
+| 스플래시 | expo-splash-screen(노랑 바탕 · 서 있는 버디) → 글꼴을 읽는 동안 같은 그림을 유지 → `AnimatedSplashOverlay` 가 같은 자리에 이름과 슬로건을 띄웠다가(약 1초) 함께 흐리며 걷힌다 |
 | 빈 화면 | 버디 얼굴 + 한 줄 안내 + 할 수 있는 행동 하나(`EmptyState`) |
 | 화면 전환·미세 반응 | Reanimated |
 
