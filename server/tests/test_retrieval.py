@@ -45,6 +45,8 @@ def test_fact_questions_get_their_gold_items(q: dict) -> None:
         ("질식 예방하려면 어떻게 해요", 8, "k-safe-0003"),
         ("아빠가 담배 피우는데", 4, "k-safe-0006"),
         ("6개월 접종이랑 이유식 같이 해도 돼요?", 6, "k-feed-0401"),
+        ("잘 때 너무 덥게 입히면 안 되나요?", 1, "k-sleep-0004"),
+        ("신생아 잘 때 머리를 덮어 주면 안 되나요?", 1, "k-sleep-0004"),
     ],
 )
 def test_topic_questions_find_their_item(question: str, months: int, expected: str) -> None:
