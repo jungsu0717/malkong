@@ -4,7 +4,8 @@
  * 화면은 그리기만 하고, 무엇을 저장하고 무엇을 다시 보낼지는 여기서 정한다:
  * - 질문과 답은 대화 타임라인에 저장한다(SPEC-ASK-10). 실패한 시도는 저장하지 않는다
  * - 되묻기에 고른 답은 L2 기록으로 남기고 원래 질문을 다시 보낸다. "잘 모르겠어요"는 일반 기준으로(SPEC-ASK-03)
- * - 답변의 기록 제안은 자동 저장하고 답 아래 「기록됨」으로 보인다(ask.md L2 추출 규칙)
+ * - 답변의 기록 제안 가운데 사실(「기록」)은 자동 저장하고 답 아래 「기록했어요」로 보인다. 해석(「요약」)은 버디의 짐작으로
+ *   보여 주고 「맞아요」를 눌러야 저장한다(SPEC-ASK-12, task ask/008) — 해석은 사람이 확인한다
  * - 자동 재시도는 하지 않는다 — 서버가 같은 clientMessageId 를 아직 같은 응답으로 돌려주지 못해서,
  *   다시 보내면 모델 호출이 한 번 더 나간다. 사용자가 「다시 시도」를 고른다
  * - 처리 현황 문구는 질문 · 보낸 기록 · 응답으로 만든다(`ask-trace.ts`, task ask/007) — 기다리는 동안 쓸 재료를 `pending` 으로 내준다
@@ -18,7 +19,7 @@ import { ApiError, deviceKeyHash, getEntitlements, postAsk, type LimitInfo } fro
 import { doneTrace } from '@/data/ask-trace';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
-import { newMessageId, type MalkongMessage, type UserMessage } from '@/data/chat';
+import { newMessageId, type Guess, type MalkongMessage, type UserMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { recordsForQuestion } from '@/data/daily-log';
@@ -48,7 +49,7 @@ export type PendingAsk = { question: string; records: string[] };
 export function useMalkong() {
   const { age, baby } = useBaby();
   const name = baby?.name ?? DEFAULT_BABY_NAME;
-  const { messages, append } = useChat();
+  const { messages, append, updateMeta } = useChat();
   const { records, add } = useRecords();
   const { setRemaining } = useEntitlements();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -92,12 +93,18 @@ export function useMalkong() {
         let message: MalkongMessage;
         if (response.type === 'answer') {
           setRemaining(response.usage.remaining);
-          // 기록 제안은 자동 저장한다 — 같은 문구가 이미 있으면 다시 넣지 않는다
+          // 사실 제안은 자동 저장한다 — 같은 문구가 이미 있으면 다시 넣지 않는다.
+          // 해석(요약) 제안은 저장하지 않고 짐작으로 남겨 「맞아요」를 기다린다(SPEC-ASK-12)
           const savedIds = [...attempt.carriedRecordIds];
+          const guesses: Guess[] = [];
           const labels = new Set(known.map((r) => r.label));
           for (const suggestion of response.records) {
             if (labels.has(suggestion.label)) continue;
             labels.add(suggestion.label);
+            if (suggestion.kind === '요약') {
+              guesses.push({ label: suggestion.label, covers: suggestion.covers ?? [] });
+              continue;
+            }
             const record = await add({
               kind: suggestion.kind,
               label: suggestion.label,
@@ -117,6 +124,7 @@ export function useMalkong() {
               sources: response.sources,
               eco: response.eco,
               recordIds: savedIds,
+              ...(guesses.length > 0 ? { guesses } : {}),
               usedRecords: response.eco ? 0 : sent.length,
               trace,
               traceSummary,
@@ -152,6 +160,40 @@ export function useMalkong() {
       }
     },
     [age, name, askServer, add, append, setRemaining],
+  );
+
+  /** 버디의 짐작이 맞다 — 요약(L2)으로 저장하고 「기록했어요」 줄로 옮긴다. 시점은 지금 질문의 D+ */
+  const confirmGuess = useCallback(
+    async (message: MalkongMessage, label: string) => {
+      if (message.meta.type !== 'answer' || !age) return;
+      const guess = message.meta.guesses?.find((g) => g.label === label);
+      if (!guess) return;
+      const record = await add({
+        kind: '요약',
+        label: guess.label,
+        covers: guess.covers,
+        whenLabel: `D+${age.days} 질문에서`,
+        sourceMessageId: message.meta.questionId,
+      });
+      await updateMeta(message.id, {
+        ...message.meta,
+        recordIds: [...message.meta.recordIds, record.id],
+        guesses: message.meta.guesses?.filter((g) => g.label !== label),
+      });
+    },
+    [age, add, updateMeta],
+  );
+
+  /** 짐작이 틀렸다 — 저장하지 않고 줄만 지운다. 원문 대화는 그대로 남는다 */
+  const dismissGuess = useCallback(
+    async (message: MalkongMessage, label: string) => {
+      if (message.meta.type !== 'answer') return;
+      await updateMeta(message.id, {
+        ...message.meta,
+        guesses: message.meta.guesses?.filter((g) => g.label !== label),
+      });
+    },
+    [updateMeta],
   );
 
   /** 되묻기에 답한다 — 칩을 누르거나, 되묻기가 열려 있을 때 입력창에 친 글 */
@@ -258,5 +300,7 @@ export function useMalkong() {
     retry,
     answerInEco,
     refillWithAd,
+    confirmGuess,
+    dismissGuess,
   };
 }

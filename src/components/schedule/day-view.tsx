@@ -9,7 +9,7 @@ import { ageFrom } from '@/data/baby';
 import { briefingSummary, todoOf } from '@/data/briefing';
 import { dayKey, type MalkongMessage } from '@/data/chat';
 import type { InboxCard } from '@/data/inbox';
-import { briefingHref, coveredIds, groupsToMark, inboxCardHref, type DayIndex } from '@/data/schedule';
+import { briefingHref, coveredIds, groupsToMark, inboxCardHref, type DayChat, type DayIndex } from '@/data/schedule';
 import type { BabyRecord } from '@/data/records';
 import { labelByKind, type GapGroup } from '@/data/timeline';
 import { useTheme } from '@/hooks/use-theme';
@@ -17,7 +17,7 @@ import { useTheme } from '@/hooks/use-theme';
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 /**
- * 달력에서 고른 날 (SPEC-GROW-01 고르기, task growth/003) — 그날의 데일리 · 주간 · 월간 브리핑은 한 줄씩(누르면 상세 화면),
+ * 달력에서 고른 날 (SPEC-GROW-01 고르기, task growth/003) — 그날의 데일리 · 주간 · 월간 브리핑과 나눈 대화는 한 줄씩(누르면 상세 화면 · 대화의 그 자리),
  * 그날 무렵인 일정은 그 자리에서 완료를 알리고(SPEC-HOME-02), 그날 생긴 기록. 지난날은 남은 것만, 앞날은 일정만 보인다.
  */
 export function DayView({
@@ -29,6 +29,7 @@ export function DayView({
   records,
   briefing,
   periods,
+  chat,
   onPick,
 }: {
   date: Date;
@@ -41,6 +42,8 @@ export function DayView({
   briefing: MalkongMessage | null;
   /** 그날 온 주간 · 월간 브리핑(알림함 줄) */
   periods: InboxCard[];
+  /** 그날 나눈 대화 — 질문이 있던 날만. 누르면 대화의 그 자리로(SPEC-ASK-10 날짜로 찾기) */
+  chat: DayChat | null;
   onPick: (group: GapGroup) => void;
 }) {
   const c = useTheme();
@@ -54,7 +57,7 @@ export function DayView({
   const doneDue = due.filter((i) => covered.has(i.id));
   const written = index.records.get(key) ?? [];
   const daily = briefing && briefing.meta.type === 'briefing' ? briefing.meta : null;
-  const nothing = !daily && periods.length === 0 && due.length === 0 && written.length === 0;
+  const nothing = !daily && periods.length === 0 && !chat && due.length === 0 && written.length === 0;
 
   return (
     <View style={styles.wrap}>
@@ -70,7 +73,7 @@ export function DayView({
         )}
       </View>
 
-      {(daily || periods.length > 0) && (
+      {(daily || periods.length > 0 || chat) && (
         <Card style={styles.list}>
           {daily && (
             <ListRow
@@ -95,6 +98,15 @@ export function DayView({
               />
             );
           })}
+          {chat && (
+            <ListRow
+              divider={!!daily || periods.length > 0}
+              icon="chatbubble-ellipses-outline"
+              title={isToday ? '오늘 나눈 대화' : '이날 나눈 대화'}
+              detail={`질문 ${chat.questions}개 · ${chat.firstQuestion}`}
+              onPress={() => router.navigate({ pathname: '/', params: { focus: chat.firstId, ft: String(Date.now()) } })}
+            />
+          )}
         </Card>
       )}
 

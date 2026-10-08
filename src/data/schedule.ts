@@ -6,7 +6,7 @@
  */
 
 import { monthStart } from './briefing';
-import { dayKey } from './chat';
+import { type ChatMessage, dayKey } from './chat';
 import type { InboxCard } from './inbox';
 import { allItems } from './l1';
 import type { BabyRecord } from './records';
@@ -190,4 +190,25 @@ export function inboxCardHref(card: InboxCard) {
   if (card.kind === 'weekly') return briefingHref(card.day, 'weekly');
   if (card.kind === 'daily') return briefingHref(card.day, 'daily');
   return null;
+}
+
+/** 그날 나눈 대화의 요약 — 일정 탭에서 그날을 고르면 한 줄로 보이고, 누르면 첫 질문 자리로 간다(SPEC-GROW-01 · SPEC-ASK-10) */
+export type DayChat = {
+  /** 그날 첫 질문 말풍선 — 대화 화면의 `focus` */
+  firstId: string;
+  questions: number;
+  firstQuestion: string;
+};
+
+/** 날짜 열쇠 → 그날의 대화 요약. 질문(사용자 말풍선)이 하나도 없는 날은 들어가지 않는다 */
+export function chatByDay(messages: ChatMessage[]): Map<string, DayChat> {
+  const byDay = new Map<string, DayChat>();
+  for (const m of messages) {
+    if (m.role !== 'user') continue;
+    const key = dayKey(m.createdAt);
+    const found = byDay.get(key);
+    if (found) found.questions += 1;
+    else byDay.set(key, { firstId: m.id, questions: 1, firstQuestion: m.content });
+  }
+  return byDay;
 }

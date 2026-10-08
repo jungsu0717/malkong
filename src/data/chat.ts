@@ -14,6 +14,9 @@ import { insertChatRow, readChatRows, updateChatMetaRow } from './db';
 /** 처리 현황을 접었을 때 다시 펼쳐 볼 단계와 한 줄 결과(SPEC-ASK-05) */
 export type TraceStep = { id: string; title: string; brief?: string };
 
+/** 모델이 답하며 내놓은 해석 — 사용자가 맞다고 해야 요약(L2)이 된다 */
+export type Guess = { label: string; covers: string[] };
+
 export type UserMessage = {
   id: string;
   role: 'user';
@@ -40,6 +43,8 @@ export type MalkongMeta =
       traceSummary?: string;
       /** 남긴 피드백(SPEC-ASK-06) — 다시 열어도 눌렀던 쪽이 보인다 */
       feedback?: 'up' | 'down';
+      /** 버디의 짐작(해석) — 「맞아요」를 눌러야 요약 기록이 된다(SPEC-ASK-12). 누르기 전까지 여기 머문다. 예전 답에는 없다 */
+      guesses?: Guess[];
     }
   | {
       type: 'followup';

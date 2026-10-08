@@ -19,7 +19,7 @@ import { dayKey, type MalkongMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useInbox } from '@/data/inbox-context';
 import { useRecords } from '@/data/records-context';
-import { coveredIds, dayIndex, fromDayKey, sameDay } from '@/data/schedule';
+import { chatByDay, coveredIds, dayIndex, fromDayKey, sameDay } from '@/data/schedule';
 import { headlineOf } from '@/data/timeline';
 import { useMarkDone } from '@/hooks/use-mark-done';
 import { useTheme } from '@/hooks/use-theme';
@@ -84,6 +84,7 @@ export default function ScheduleScreen() {
   }, [messages]);
 
   const periods = useMemo(() => cards.filter((c) => (c.kind === 'weekly' || c.kind === 'monthly') && c.day), [cards]);
+  const chats = useMemo(() => chatByDay(messages), [messages]);
 
   if (!baby || !age || !index) return <ScreenLoading />;
   const name = baby.name ?? DEFAULT_BABY_NAME;
@@ -137,6 +138,7 @@ export default function ScheduleScreen() {
             records={records}
             briefing={briefings.get(selectedKey) ?? null}
             periods={periods.filter((p) => p.day === selectedKey)}
+            chat={chats.get(selectedKey) ?? null}
             onPick={pick}
           />
 

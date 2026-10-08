@@ -97,20 +97,44 @@ function SavedRecordRow({ record, onRemove }: { record: BabyRecord; onRemove: (i
   );
 }
 
+/** 버디의 짐작 줄 — 해석은 사람이 확인해야 기록이 된다(SPEC-ASK-12). 「맞아요」면 요약으로 저장, 「아니에요」면 줄만 사라진다 */
+function GuessRow({ label, onConfirm, onDismiss }: { label: string; onConfirm: () => void; onDismiss: () => void }) {
+  const c = useTheme();
+  return (
+    <View style={styles.guessRow}>
+      <View style={styles.savedChip}>
+        <Ionicons name="help-circle-outline" size={16} color={c.textSecondary} />
+        <ThemedText type="small" style={[styles.grow, { color: c.textSecondary }]}>
+          버디의 짐작 · <ThemedText type="small">{label}</ThemedText>
+        </ThemedText>
+      </View>
+      <View style={styles.guessChips}>
+        <Chip label="맞아요" icon="checkmark" onPress={onConfirm} />
+        <Chip label="아니에요" onPress={onDismiss} />
+      </View>
+    </View>
+  );
+}
+
 export function AnswerBubble({
   message,
   question,
   records,
   onRemoveRecord,
+  onConfirmGuess,
+  onDismissGuess,
 }: {
   message: MalkongMessage;
   /** 이 답이 답한 질문 — 피드백에 「함께 보내기」를 고르면 같이 간다 */
   question: string | null;
   records: BabyRecord[];
   onRemoveRecord: (id: string) => void;
+  /** 버디의 짐작에 「맞아요」 「아니에요」 */
+  onConfirmGuess: (label: string) => void;
+  onDismissGuess: (label: string) => void;
 }) {
   if (message.meta.type !== 'answer') return null;
-  const { sources, eco, recordIds, usedRecords = 0 } = message.meta;
+  const { sources, eco, recordIds, usedRecords = 0, guesses = [] } = message.meta;
   // 지운 기록은 줄도 사라진다
   const saved = recordIds
     .map((id) => records.find((r) => r.id === id))
@@ -134,6 +158,13 @@ export function AnswerBubble({
         <View style={styles.savedList}>
           {saved.map((r) => (
             <SavedRecordRow key={r.id} record={r} onRemove={onRemoveRecord} />
+          ))}
+        </View>
+      )}
+      {guesses.length > 0 && (
+        <View style={styles.savedList}>
+          {guesses.map((g) => (
+            <GuessRow key={g.label} label={g.label} onConfirm={() => onConfirmGuess(g.label)} onDismiss={() => onDismissGuess(g.label)} />
           ))}
         </View>
       )}
@@ -302,6 +333,9 @@ const styles = StyleSheet.create({
   savedList: { gap: 4 },
   savedRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, flexWrap: 'wrap' },
   savedChip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 28 },
+  guessRow: { gap: 6 },
+  guessChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  grow: { flex: 1 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   redflag: { borderWidth: 1.5, borderRadius: Radius.lg, overflow: 'hidden' },
   redflagHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingHorizontal: 14, paddingVertical: 10 },

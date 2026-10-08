@@ -56,6 +56,9 @@ const QUICK = [
   '수면 교육은 언제부터 시작하나요?',
 ];
 
+/** 켤 때 그리는 줄 수 — 최근 것부터. 「이전 대화 더 보기」로 이만큼씩 늘린다(SPEC-ASK-10, task ask/009) */
+const WINDOW = 50;
+
 function failureText(failure: AskFailure): string {
   // 서버 전체의 오늘 모델 비용이 천장에 닿았다(decisions/019) — 위험 신호 안내는 그래도 나간다
   if (failure.code === 'DAILY_BUDGET_REACHED')
@@ -85,6 +88,8 @@ export default function ChatScreen() {
     retry,
     answerInEco,
     refillWithAd,
+    confirmGuess,
+    dismissGuess,
   } = useMalkong();
   /** 광고를 보는 중 — 한도 줄의 단추를 잠근다 */
   const [watching, setWatching] = useState(false);
@@ -93,6 +98,15 @@ export default function ChatScreen() {
   const typing = useKeyboardVisible();
   // 기록 화면의 「대화 보기」에서 넘어온 질문 말풍선 id. ft 는 같은 줄을 다시 눌렀을 때의 구분값이다
   const { focus, ft } = useLocalSearchParams<{ focus?: string; ft?: string }>();
+  const [shown, setShown] = useState(WINDOW);
+  // 넘어온 줄이 창 밖(더 오래된 대화)이면 그 줄까지 창을 넓힌다 — 그리는 중에 맞춘다. 읽는 중이면 다 읽은 뒤에
+  const [focusSeen, setFocusSeen] = useState<string | null>(null);
+  const focusKey = focus && !loading ? `${focus}-${ft}` : null;
+  if (focusKey !== focusSeen) {
+    setFocusSeen(focusKey);
+    const at = focus ? messages.findIndex((m) => m.id === focus) : -1;
+    if (at >= 0 && messages.length - at > shown) setShown(messages.length - at + 3);
+  }
   // 알림함 배지 — 아직 열어 보지 않은 브리핑 · 알림의 수(SPEC-HOME-07)
   const { unread, markDayRead } = useInbox();
   /** 브리핑 자세히 — 상세 화면. 열어 봤으니 알림함에서도 읽은 것 */
@@ -155,8 +169,25 @@ export default function ChatScreen() {
     }
     return textOf.get(questionId) ?? null;
   };
+  const start = Math.max(0, messages.length - shown);
+  if (start > 0) {
+    rows.push(
+      <Pressable
+        key="more"
+        accessibilityRole="button"
+        style={styles.more}
+        onPress={() => {
+          stickToEnd.current = false;
+          setShown((n) => n + WINDOW);
+        }}>
+        <ThemedText type="label" style={{ color: c.textSecondary }}>
+          이전 대화 더 보기
+        </ThemedText>
+      </Pressable>,
+    );
+  }
   let lastDay = '';
-  for (const m of messages) {
+  for (const m of messages.slice(start)) {
     const day = dayKey(m.createdAt);
     const briefing = m.role === 'malkong' && m.meta.type === 'briefing';
     if (day !== lastDay) {
@@ -181,19 +212,41 @@ export default function ChatScreen() {
       continue;
     }
     if (m.meta.type === 'redflag') {
-      rows.push(<RedflagCard key={m.id} message={m} />);
+      rows.push(
+        <View
+          key={m.id}
+          onLayout={(e) => {
+            positions.current[m.id] = e.nativeEvent.layout.y;
+            scrollToFocus(m.id);
+          }}>
+          <RedflagCard message={m} />
+        </View>,
+      );
       continue;
     }
     if (m.meta.type === 'briefing') {
       const isToday = m.meta.day === today;
       rows.push(
         // 대화에는 요약만 — 자세한 것은 일정 탭의 그날에서(SPEC-HOME-06)
-        <BriefingSummary key={m.id} message={m} today={isToday} onOpen={() => openDay(m.meta.type === 'briefing' ? m.meta.day : today)} />,
+        <View
+          key={m.id}
+          onLayout={(e) => {
+            positions.current[m.id] = e.nativeEvent.layout.y;
+            scrollToFocus(m.id);
+          }}>
+          <BriefingSummary message={m} today={isToday} onOpen={() => openDay(m.meta.type === 'briefing' ? m.meta.day : today)} />
+        </View>,
       );
       continue;
     }
     rows.push(
-      <View key={m.id} style={styles.malkong}>
+      <View
+        key={m.id}
+        style={styles.malkong}
+        onLayout={(e) => {
+          positions.current[m.id] = e.nativeEvent.layout.y;
+          scrollToFocus(m.id);
+        }}>
         <DoneTrace trace={m.meta.trace} summary={m.meta.traceSummary} />
         {m.meta.type === 'answer' ? (
           <AnswerBubble
@@ -201,6 +254,8 @@ export default function ChatScreen() {
             question={questionOf(m.meta.questionId)}
             records={records}
             onRemoveRecord={remove}
+            onConfirmGuess={(label) => void confirmGuess(m, label)}
+            onDismissGuess={(label) => void dismissGuess(m, label)}
           />
         ) : (
           <FollowupBubble
@@ -297,6 +352,8 @@ export default function ChatScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive"
+            // 위에 지난 대화를 더 붙여도 보던 자리가 밀리지 않게(iOS · Android)
+            maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
             onContentSizeChange={() => {
               if (messages.length && stickToEnd.current) scrollRef.current?.scrollToEnd({ animated: true });
             }}>
@@ -394,6 +451,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   hello: { gap: Spacing.two, paddingTop: Spacing.four, paddingBottom: Spacing.two },
+  more: { alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 14 },
   malkong: { gap: 6 },
   composer: { paddingTop: Spacing.one, gap: Spacing.two },
   quick: { paddingHorizontal: Gutter - 4, gap: 6 },
