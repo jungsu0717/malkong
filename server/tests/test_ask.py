@@ -3,6 +3,8 @@
 모델은 가짜를 끼운다(server/AGENTS.md 「테스트」) — 실제 API 는 부르지 않는다.
 """
 
+import logging
+
 import pytest
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
@@ -290,6 +292,49 @@ def test_general_answer_is_marked(app, client: TestClient) -> None:
     assert body["level"] == "일반"
     assert body["sources"] == []
     assert body["answer"].startswith("일반적으로는")
+
+
+def _ungrounded(caplog) -> list[str]:
+    return [r.getMessage() for r in caplog.records if "근거 없음" in r.getMessage()]
+
+
+def test_ungrounded_answer_is_counted_without_the_question(app, client: TestClient, caplog) -> None:
+    # 근거 없이 일반론으로 답하면 분류 × 월령 띠 × 검색 건수만 한 줄 —
+    # 질문 원문은 없다 (task common/017)
+    use(app, FakeLlm(model_out(level="일반", answer="목욕은 짧게 시켜요.")))
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"):
+        client.post(
+            "/v1/ask",
+            json={
+                "question": "손톱은 어떻게 잘라요?",
+                "baby": {"months": 2},
+                "clientMessageId": "u1",
+            },
+        )
+    assert _ungrounded(caplog) == ["ask: 근거 없음 kinds=없음 band=0~3 retrieved=0"]
+    assert "손톱" not in caplog.text
+
+
+def test_ungrounded_answer_keeps_its_topic_and_band(app, client: TestClient, caplog) -> None:
+    use(app, FakeLlm(model_out(level="일반", answer="일반적으로는 매일 시켜도 돼요.")))
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"):
+        client.post(
+            "/v1/ask",
+            json={
+                "question": "아기 목욕은 매일 시켜도 되나요?",
+                "baby": {"months": 8},
+                "clientMessageId": "u2",
+            },
+        )
+    (line,) = _ungrounded(caplog)
+    assert line.startswith("ask: 근거 없음 kinds=안전 band=7~12 retrieved=")
+
+
+def test_cited_answer_is_not_counted_as_ungrounded(app, client: TestClient, caplog) -> None:
+    use(app, FakeLlm(model_out(level="사실", answer="6개월엔 이렇게요.", citedIds=["k-vacc-0601"])))
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"):
+        client.post("/v1/ask", json=FACT_Q)
+    assert _ungrounded(caplog) == []
 
 
 def test_judgment_reassurance_is_regenerated(app, client: TestClient) -> None:

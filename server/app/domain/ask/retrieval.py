@@ -154,6 +154,14 @@ def _kinds(q: str) -> set[str]:
     return {kind for kind, pattern in KIND_WORDS.items() if re.search(pattern, q)}
 
 
+def question_kinds(question: str) -> set[str]:
+    """질문이 어느 분류(접종·수유·수면…)의 말을 담고 있는가.
+
+    근거 없는 답을 셀 때 쓴다 (task common/017).
+    """
+    return _kinds(_compact(question))
+
+
 def _common_bigrams(items: list[L1Item]) -> set[str]:
     counts: dict[str, int] = {}
     for item in items:

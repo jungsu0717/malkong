@@ -35,6 +35,10 @@ uv run python -m scripts.sync_l1
 # 모델 비교 (task common/003) — 실제 API 를 부르므로 돈이 든다. 모델 id 는 인자로 넘긴다
 uv run python -m eval.run --model gemini:<id> [--model anthropic:<id> --vertex-project malkong]
 uv run python -m eval.score eval/results/<날짜>
+
+# 근거 없이 일반론으로 답한 질문이 어느 주제 · 월령에 몰리는지 — 최근 7일(task common/017). 질문 원문은 애초에 없다
+gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="malkong-server" AND textPayload:"근거 없음"' \
+  --project malkong --freshness=7d --format="value(textPayload)" | sed 's/.*kinds=/kinds=/' | sort | uniq -c | sort -rn
 ```
 
 결과 폴더에는 그 판에 쓴 `system_prompt.txt` 를 함께 남긴다 — 프롬프트를 고치면 점수가 바뀌기 때문이다.

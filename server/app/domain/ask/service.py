@@ -28,7 +28,7 @@ from app.domain.ask.prompt import (
     ModelOutput,
     build_user_message,
 )
-from app.domain.ask.retrieval import retrieve
+from app.domain.ask.retrieval import question_kinds, retrieve
 from app.domain.ask.schema import (
     AnswerResponse,
     AskRequest,
@@ -45,6 +45,17 @@ from app.domain.knowledge.repository import L1Item, L1Repository
 from app.infra.llm.base import LlmClient, LlmError, LlmRequest, LlmResult, LlmUnavailable
 
 logger = logging.getLogger("uvicorn.error")
+
+# 월령 띠 — 코호트 집계(backend)와 같은 넷. 월령을 그대로 적지 않고 띠로 뭉갠다
+MONTH_BANDS: tuple[tuple[int, str], ...] = ((3, "0~3"), (6, "4~6"), (12, "7~12"), (24, "13~24"))
+
+
+def month_band(months: int) -> str:
+    for upper, label in MONTH_BANDS:
+        if months <= upper:
+            return label
+    return "25~"
+
 
 # 처음 한 번 + 검사에 걸렸을 때 다시 한 번
 MAX_ATTEMPTS = 2
@@ -160,7 +171,23 @@ class AskService:
         user = build_user_message(req.question, req.baby.months, records, snippets)
         if eco:
             user += ECO_NOTE
-        return self._answer(user, {i.id: i for i in items}, eco, req.baby.months)
+        response = self._answer(user, {i.id: i for i in items}, eco, req.baby.months)
+        ungrounded = (
+            isinstance(response, AnswerResponse)
+            and response.level == "일반"
+            and not response.sources
+        )
+        if ungrounded:
+            # 근거 없이 일반론으로 답했다 — 어느 분류 · 월령의 지식이 비었는지 센다
+            # (knowledge-layers 「비어 있는 곳 찾기」, task common/017).
+            # 질문 원문과 기기 키는 남기지 않는다(backend 「서버가 저장하는 것」)
+            logger.info(
+                "ask: 근거 없음 kinds=%s band=%s retrieved=%d",
+                ",".join(sorted(question_kinds(req.question))) or "없음",
+                month_band(req.baby.months),
+                len(items),
+            )
+        return response
 
     def _redflag(self, ids: list[str]) -> RedflagResponse:
         items = [item for i in ids if (item := self._l1.get(i)) is not None]
