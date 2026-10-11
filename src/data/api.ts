@@ -26,9 +26,14 @@ export type RecordSuggestion = { kind: RecordKind; label: string; covers?: strin
 
 export type Followup = { question: string; chips: string[]; recordLabel: string };
 
+/** 바로 앞 대화 한 턴 — 부모(user)나 버디(buddy)의 말 */
+export type HistoryTurn = { role: 'user' | 'buddy'; text: string };
+
 export type AskRequest = {
   question: string;
   baby: { months: number; records: { kind: RecordKind; label: string }[] };
+  /** 바로 앞 대화, 오래된 것부터 최대 6턴 — 서버는 모델에 넘길 뿐 저장하지 않는다(계약) */
+  history?: HistoryTurn[];
   /** 질문 말풍선의 id — 같은 값의 재요청은 서버가 같은 응답으로 돌려준다(계약) */
   clientMessageId: string;
   /** "eco" 면 기록 없이 일반 기준으로 답한다 */

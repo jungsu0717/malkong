@@ -24,9 +24,11 @@ from app.domain.ask.prompt import (
     RED_FLAG_IDS,
     SYSTEM_PROMPT,
     BabyRecordLine,
+    HistoryTurn,
     L1Snippet,
     ModelOutput,
     build_user_message,
+    trim_history,
 )
 from app.domain.ask.retrieval import question_kinds, retrieve
 from app.domain.ask.schema import (
@@ -104,8 +106,6 @@ JUDGMENT_FALLBACK = (
     "아기 상태를 버디가 판단해 드릴 수는 없어요. 걱정되는 모습이 이어지면 "
     "소아청소년과에서 진료를 받아 보세요."
 )
-GENERAL_PREFIX = "일반적으로는, "
-
 # 답을 만드는 동안의 자리 값 — ask() 가 사용량을 센 뒤 실제 남은 수로 바꾼다
 PENDING_USAGE = Usage(remaining=None)
 
@@ -166,9 +166,18 @@ class AskService:
         # 무료 티어나 절약 모드에서는 아기 기록을 보내지 않는다
         eco = req.mode == "eco" or not self._settings.llm_paid_tier
         records = [] if eco else [BabyRecordLine(r.kind, r.label) for r in req.baby.records]
-        items = retrieve(req.question, req.baby.months, self._l1.approved())
+        # 바로 앞 대화 — 절약 모드에도 보낸다(질문 글과 같은 성격, 기기 안 기록이 아니다)
+        history = trim_history([HistoryTurn(t.role, t.text) for t in req.history])
+        approved = self._l1.approved()
+        items = retrieve(req.question, req.baby.months, approved)
+        if not items:
+            # 「몇 개월까지 그렇게 해요?」처럼 앞 말을 가리키는 질문 —
+            # 직전 질문의 주제로 한 번 더 찾는다
+            previous = next((t.text for t in reversed(history) if t.role == "user"), None)
+            if previous:
+                items = retrieve(previous, req.baby.months, approved)
         snippets = [L1Snippet(i.id, i.title, i.body, i.source_name) for i in items]
-        user = build_user_message(req.question, req.baby.months, records, snippets)
+        user = build_user_message(req.question, req.baby.months, records, snippets, history)
         if eco:
             user += ECO_NOTE
         response = self._answer(user, {i.id: i for i in items}, eco, req.baby.months)
@@ -268,12 +277,10 @@ class AskService:
             return None
 
     def _to_answer(self, out: ModelOutput, cited: list[L1Item], eco: bool) -> AnswerResponse:
-        answer = out.answer.strip()
-        # 근거 없는 일반 답은 그렇다고 밝힌다(SPEC-ASK-08) — 모델이 빠뜨렸으면 서버가 붙인다
-        if out.level == "일반" and not cited and "일반적" not in answer:
-            answer = GENERAL_PREFIX + answer
+        # 근거 없음 표시는 앱의 「일반 정보」 배지가 맡는다(SPEC-ASK-08) —
+        # 답 글에 접두어를 붙이지 않는다
         return AnswerResponse(
-            answer=answer,
+            answer=out.answer.strip(),
             level=out.level,
             sources=[_source(i) for i in cited],
             records=[

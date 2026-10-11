@@ -14,9 +14,17 @@
 {
   "question": "분유를 갑자기 잘 안 먹어요",
   "baby": { "months": 3, "records": [ { "kind": "기록", "label": "수유 텀 3시간 · 160ml" } ] },
+  "history": [
+    { "role": "user", "text": "태열 예방하려면 얼마나 시원하게 해 줘야 해요?" },
+    { "role": "buddy", "text": "실내는 22~24도 정도로…" }
+  ],
   "clientMessageId": "로컬 메시지 id (중복 방지)"
 }
 ```
+
+`history` 는 바로 앞 대화다 — 부모(`user`)와 버디(`buddy`)가 주고받은 말을 오래된 것부터, 최대 6턴(세 번의 주고받음).
+서버는 6턴을 넘으면 최근 것만 남기고 한 턴을 600자에서 자른다. 모델에 넘길 뿐 저장하지 않는다. 절약 모드에도 보낸다 —
+질문 글과 같은 성격이다(기기 안 기록은 보내지 않는다). 없으면 빈 배열이나 생략.
 
 `baby` 에는 월령과 기록만 담는다. 아기 이름 · 생일은 보내지 않는다 — 개인정보 처리방침(`src/data/legal.ts`)이 그렇게
 약속하고 있고, 답을 「우리 아기」로 부르는 데 이름이 꼭 필요하지도 않다(Julian, 2026-10-08, task ask/011).
@@ -137,3 +145,4 @@ AdMob 의 서버 측 검증(SSV) 콜백. AdMob 은 GET 쿼리로 부른다(`user
 - 2026-10-03 `POST /v1/devices`, `X-Device-Key` 필수(위험 신호는 예외)·401 DEVICE_KEY_INVALID, entitlements 에 remaining, usage.remaining 은 운영자 기기에서 null (task common/005)
 - 2026-10-06 한도 정책 v2 — 429 의 ecoAvailable 을 일반 기준 답 한도로, 503 DAILY_BUDGET_REACHED, 자격에 rewardPerAd (task common/014)
 - 2026-10-06 운영자 기기의 `X-As-User` 헤더, 자격에 operator (task common/015)
+- 2026-10-11 `/v1/ask` 요청에 `history`(바로 앞 대화 최대 6턴) — 앞 질문을 모른 채 답하던 것을 고침 (task ask/012)

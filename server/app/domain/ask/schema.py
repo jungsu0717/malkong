@@ -19,9 +19,18 @@ class BabyContext(ApiModel):
     records: list[BabyRecordIn] = []
 
 
+class Turn(ApiModel):
+    """바로 앞 대화 한 턴 — 부모(user)나 버디(buddy)의 말."""
+
+    role: Literal["user", "buddy"]
+    text: NonEmptyStr
+
+
 class AskRequest(ApiModel):
     question: NonEmptyStr
     baby: BabyContext
+    # 바로 앞 대화 — 오래된 것부터. 서버는 모델에 넘길 뿐 저장하지 않는다
+    history: list[Turn] = []
     client_message_id: NonEmptyStr
     # "eco" 면 L2 기록 없이 일반 기준으로 답한다(backend 일일 한도 절)
     mode: Literal["eco"] | None = None

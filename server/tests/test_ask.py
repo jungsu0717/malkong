@@ -283,7 +283,9 @@ def test_refused_by_provider_fails_fast_without_retry(app, client: TestClient) -
     assert len(llm.requests) == 1
 
 
-def test_general_answer_is_marked(app, client: TestClient) -> None:
+def test_general_answer_is_marked_by_level_not_by_prefix(app, client: TestClient) -> None:
+    # 근거 없음 표시는 앱의 「일반 정보」 배지가 맡는다(SPEC-ASK-08, task ask/012)
+    # — 답 글은 그대로 나간다
     use(app, FakeLlm(model_out(level="일반", answer="목욕은 짧게 시켜요.")))
     body = client.post(
         "/v1/ask",
@@ -291,7 +293,65 @@ def test_general_answer_is_marked(app, client: TestClient) -> None:
     ).json()
     assert body["level"] == "일반"
     assert body["sources"] == []
-    assert body["answer"].startswith("일반적으로는")
+    assert body["answer"] == "목욕은 짧게 시켜요."
+
+
+# --- 바로 앞 대화 (SPEC-ASK-01, task ask/012) ---
+
+
+def _with_history(question: str, history: list[dict], mid: str = "h") -> dict:
+    return {"question": question, "baby": {"months": 1}, "history": history, "clientMessageId": mid}
+
+
+def test_history_goes_to_the_model_in_order(app, client: TestClient) -> None:
+    llm = FakeLlm(model_out(level="일반", answer="두 달 정도는요."))
+    use(app, llm)
+    history = [
+        {"role": "user", "text": "태열 예방하려면 얼마나 시원하게 해 줘야 해요?"},
+        {"role": "buddy", "text": "실내는 22~24도 정도로\n유지해요."},
+    ]
+    res = client.post("/v1/ask", json=_with_history("몇 개월까지 그렇게 해야 해요?", history))
+    assert res.status_code == 200
+    user = llm.requests[0].user
+    assert "바로 앞 대화:" in user
+    head = user.index("- 부모: 태열 예방하려면 얼마나 시원하게 해 줘야 해요?")
+    tail = user.index("- 버디: 실내는 22~24도 정도로 유지해요.")  # 줄 바꿈은 한 줄로 눌린다
+    assert head < tail < user.index("질문: 몇 개월까지 그렇게 해야 해요?")
+
+
+def test_history_is_trimmed_to_recent_turns_and_length(app, client: TestClient) -> None:
+    llm = FakeLlm(model_out(level="일반", answer="답"))
+    use(app, llm)
+    history = [{"role": "user", "text": f"질문 {i}"} for i in range(7)]
+    history.append({"role": "buddy", "text": "가" * 700})
+    client.post("/v1/ask", json=_with_history("그건요?", history))
+    user = llm.requests[0].user
+    assert "질문 1" not in user and "질문 2" in user  # 최근 6턴만
+    assert "가" * 600 in user and "가" * 601 not in user  # 한 턴 600자
+
+
+def test_history_is_optional(app, client: TestClient) -> None:
+    llm = FakeLlm(model_out(level="일반", answer="답"))
+    use(app, llm)
+    assert client.post("/v1/ask", json=VALID).status_code == 200
+    assert "바로 앞 대화:\n- 없음" in llm.requests[0].user
+
+
+def test_question_pointing_back_retrieves_with_the_previous_question(
+    app, client: TestClient
+) -> None:
+    # 「몇 개월까지 그렇게?」만으로는 L1 이 안 잡힌다 — 직전 질문(BCG)의 조각을 건넨다
+    llm = FakeLlm(model_out(level="사실", answer="생후 4주 안에요.", citedIds=["k-vacc-0001"]))
+    use(app, llm)
+    history = [
+        {"role": "user", "text": "BCG 언제 맞아요?"},
+        {"role": "buddy", "text": "생후 4주 안에 한 번이에요."},
+    ]
+    body = client.post(
+        "/v1/ask", json=_with_history("몇 개월까지 그렇게 해야 해요?", history)
+    ).json()
+    assert "id: k-vacc-0001" in llm.requests[0].user
+    assert body["sources"][0]["id"] == "k-vacc-0001"
 
 
 def _ungrounded(caplog) -> list[str]:

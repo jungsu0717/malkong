@@ -71,6 +71,30 @@ export type MalkongMessage = {
 
 export type ChatMessage = UserMessage | MalkongMessage;
 
+/** 모델에 보내는 바로 앞 대화 — 이 수의 턴까지, 이 시간 안의 것만, 한 턴은 이 길이에서 자른다 */
+const HISTORY_TURNS = 6;
+const HISTORY_WINDOW_MS = 24 * 60 * 60 * 1000;
+const HISTORY_TURN_CHARS = 500;
+
+/**
+ * 질문 말풍선(beforeId) 바로 앞의 대화 — 「몇 개월까지 그렇게 해야 해요?」의 「그렇게」를 모델이 알게(SPEC-ASK-01).
+ * 되묻기 · 응급 안내도 버디의 말이다. 브리핑은 뺀다 — 기기가 아기 이름을 넣어 만든 글이라 서버로 보내지 않는다는
+ * 약속(task ask/011)에 걸린다. 오래된 것부터 돌려준다
+ */
+export function recentTurns(
+  messages: ChatMessage[],
+  beforeId: string,
+  now = Date.now(),
+): { role: 'user' | 'buddy'; text: string }[] {
+  const end = messages.findIndex((m) => m.id === beforeId);
+  const before = end === -1 ? messages : messages.slice(0, end);
+  return before
+    .filter((m) => m.role === 'user' || m.meta.type !== 'briefing')
+    .filter((m) => m.content.trim() && now - Date.parse(m.createdAt) <= HISTORY_WINDOW_MS)
+    .slice(-HISTORY_TURNS)
+    .map((m) => ({ role: m.role === 'user' ? 'user' : 'buddy', text: m.content.trim().slice(0, HISTORY_TURN_CHARS) }));
+}
+
 export function newMessageId(): string {
   return `msg-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }

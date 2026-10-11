@@ -19,7 +19,7 @@ import { ApiError, deviceKeyHash, getEntitlements, postAsk, type LimitInfo } fro
 import { doneTrace } from '@/data/ask-trace';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
-import { newMessageId, type Guess, type MalkongMessage, type UserMessage } from '@/data/chat';
+import { newMessageId, recentTurns, type Guess, type MalkongMessage, type UserMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { recordsForQuestion } from '@/data/daily-log';
@@ -75,6 +75,8 @@ export function useMalkong() {
         const response = await askServer({
           question: attempt.question,
           baby: { months: age.month, records: sent },
+          // 바로 앞 대화 — 절약 모드에도 보낸다(질문 글과 같은 성격)
+          history: recentTurns(messages, attempt.questionId),
           clientMessageId: attempt.questionId,
           ...(attempt.mode ? { mode: attempt.mode } : {}),
         });
@@ -159,7 +161,7 @@ export function useMalkong() {
         setPending(null);
       }
     },
-    [age, name, askServer, add, append, setRemaining],
+    [age, name, messages, askServer, add, append, setRemaining],
   );
 
   /** 버디의 짐작이 맞다 — 요약(L2)으로 저장하고 「기록했어요」 줄로 옮긴다. 시점은 지금 질문의 D+ */

@@ -98,13 +98,39 @@ class BabyRecordLine:
     label: str
 
 
+@dataclass(frozen=True)
+class HistoryTurn:
+    # "user"(부모) · "buddy"(버디)
+    role: str
+    text: str
+
+
+# 바로 앞 대화 — 이보다 많으면 최근 것만, 한 턴은 이 길이에서 자른다
+MAX_HISTORY_TURNS = 6
+MAX_TURN_CHARS = 600
+
+
+def trim_history(turns: list[HistoryTurn]) -> list[HistoryTurn]:
+    """최근 MAX_HISTORY_TURNS 턴만, 한 턴은 MAX_TURN_CHARS 에서 자른다."""
+    return [HistoryTurn(t.role, t.text[:MAX_TURN_CHARS]) for t in turns[-MAX_HISTORY_TURNS:]]
+
+
 def build_user_message(
-    question: str, months: int, records: list[BabyRecordLine], snippets: list[L1Snippet]
+    question: str,
+    months: int,
+    records: list[BabyRecordLine],
+    snippets: list[L1Snippet],
+    history: list[HistoryTurn] | None = None,
 ) -> str:
     record_lines = [f"- [{r.kind}] {r.label}" for r in records] or ["- 없음"]
     snippet_lines = [
         f"- id: {s.id} | {s.title} | {s.body} | 출처: {s.source_name}" for s in snippets
     ] or ["- 이 질문에 맞는 표준 지식 없음"]
+    # 앞 대화는 오래된 것부터 — 줄 바꿈은 한 줄로 눌러 한 턴이 한 줄이 되게
+    history_lines = [
+        f"- {'부모' if t.role == 'user' else '버디'}: {' '.join(t.text.split())}"
+        for t in (history or [])
+    ] or ["- 없음"]
     return "\n".join(
         [
             f"아기: 생후 {months}개월",
@@ -112,6 +138,8 @@ def build_user_message(
             *record_lines,
             "표준 지식:",
             *snippet_lines,
+            "바로 앞 대화:",
+            *history_lines,
             "",
             f"질문: {question}",
         ]
