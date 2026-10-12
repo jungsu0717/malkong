@@ -83,12 +83,12 @@ export default function OnboardingScreen() {
             <View style={styles.heading}>
               <ThemedText type="display">매일 아침,{'\n'}버디가 먼저 챙길게요</ThemedText>
               <ThemedText type="body" style={{ color: c.textSecondary }}>
-                오늘 챙길 접종·검진과 기록할 것을 정리해서, 정한 시각에 알려 드려요. 알림에는 아기 정보를 쓰지 않아요.
+                오늘 챙길 접종·검진과 기록할 것을 정리해서, 정한 시간에 알려 드려요. 알림에는 아기 정보를 쓰지 않아요.
               </ThemedText>
             </View>
             <View style={styles.field}>
               <ThemedText type="label" style={{ color: c.textSecondary }}>
-                알림 시각
+                알림 시간
               </ThemedText>
               <View style={styles.times}>
                 {BRIEFING_TIMES.map((t) => (
@@ -205,7 +205,7 @@ export default function OnboardingScreen() {
 
           <View style={styles.footer}>
             <ThemedText type="caption" style={[styles.notice, { color: c.textSecondary }]}>
-              입력한 내용은 이 기기 안에만 저장돼요
+              입력한 내용은 이 폰 안에만 저장돼요
             </ThemedText>
             <Button
               label={isEdit ? '저장' : '다음'}

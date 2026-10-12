@@ -44,8 +44,8 @@ const TIP_ICONS: Record<string, IconName> = {
 
 const SUGGEST_NAMES: Record<SuggestKey, string> = {
   temperature: '체온',
-  'feed-total': '어제 총 수유량',
-  note: '특이사항',
+  'feed-total': '어제 하루 먹은 양',
+  note: '달랐던 것',
 };
 
 export function groupOf(todo: BriefingTodo): GapGroup {
@@ -454,7 +454,7 @@ export function BriefingCard({
       <CardSection
         key="week"
         title="다가오는 일정 · 일주일 안"
-        aside={weekAll.length > weekLeft.length ? `${weekAll.length - weekLeft.length}/${weekAll.length} 했어요` : null}
+        aside={weekAll.length > weekLeft.length ? `${weekAll.length}개 중 ${weekAll.length - weekLeft.length}개 했어요` : null}
         first={sections.length === 0}>
         <Folded>
           {groups.map((g, i) => (
@@ -478,7 +478,7 @@ export function BriefingCard({
             {today ? '오늘의 브리핑' : `${made.getMonth() + 1}월 ${made.getDate()}일 브리핑`}
           </ThemedText>
           <ThemedText type="caption" style={[styles.flex, styles.right, { color: c.textSecondary }]} numberOfLines={1}>
-            {today ? '버디가 정리했어요' : briefing.headline}
+            {today ? '오늘 챙길 것을 모아 뒀어요' : briefing.headline}
           </ThemedText>
         </View>
         {(briefing.care || briefing.parent) && (

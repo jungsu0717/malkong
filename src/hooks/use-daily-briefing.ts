@@ -85,7 +85,7 @@ export function useDailyBriefing() {
     void addToInbox({
       id: `daily-${today}`,
       kind: 'daily',
-      title: '오늘의 브리핑이 도착했어요',
+      title: '오늘 브리핑',
       summary: briefingSummary(briefing),
       day: today,
       readAt: null,
@@ -104,7 +104,7 @@ export function useDailyBriefing() {
       void addToInbox({
         id: weeklyId(monday),
         kind: 'weekly',
-        title: '이번 주 일정이 도착했어요',
+        title: '이번 주 일정',
         summary: weeklySummary(week, records),
         day: dayKey(monday.toISOString()),
         readAt: null,
@@ -116,7 +116,7 @@ export function useDailyBriefing() {
       void addToInbox({
         id: monthlyId(month),
         kind: 'monthly',
-        title: month === 0 ? '첫 달 일정이 도착했어요' : `${month}개월 일정이 도착했어요`,
+        title: month === 0 ? '첫 달 일정' : `${month}개월 일정`,
         summary: monthlySummary(m),
         day: dayKey(monthStart(baby.birthDate, month).toISOString()),
         readAt: null,

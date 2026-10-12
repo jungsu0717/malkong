@@ -98,7 +98,7 @@ export default function BabyScreen() {
                 <ThemedText style={[styles.percent, { color: c.onSpace }]}>{shown}%</ThemedText>
                 <View style={styles.levelChip}>
                   <ThemedText type="caption" style={{ color: c.onSpace, fontWeight: 600 }}>
-                    Lv.{profile.level.step} · {profile.level.step === 5 ? `${name} ${profile.level.name}` : profile.level.name}
+                    {profile.level.step}단계 · {profile.level.step === 5 ? `${name} ${profile.level.name}` : profile.level.name}
                   </ThemedText>
                 </View>
               </View>
@@ -131,7 +131,7 @@ export default function BabyScreen() {
           </View>
 
           <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
-            이 숫자는 이 폰에 저장된 기록으로만 계산해요. 서버로 보내지 않아요.
+            이 숫자는 이 폰에 저장된 기록으로만 세요. 서버로 보내지 않아요.
           </ThemedText>
         </ScrollView>
       </SafeAreaView>

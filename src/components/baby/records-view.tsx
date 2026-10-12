@@ -12,6 +12,7 @@ import { Card, EmptyState, SectionHeader, tap } from '@/components/ui';
 import { FontFamily, Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import type { BabyRecord } from '@/data/records';
+import { monthDay } from '@/data/quick-ask';
 import { useRecords } from '@/data/records-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -27,7 +28,7 @@ export function RecordsView() {
     if (!label) return;
     tap('success');
     setDraft('');
-    await add({ kind: '기록', label, covers: [], whenLabel: `D+${age.days}에 적음` });
+    await add({ kind: '기록', label, covers: [], whenLabel: `${monthDay(new Date())}에 적음` });
   };
 
   const newestFirst = [...records].reverse();
@@ -38,7 +39,7 @@ export function RecordsView() {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       <ThemedText type="small" style={{ color: c.textSecondary }}>
-        버디가 대화와 챙길 것에서 모은 기록이에요. 다음 답에 반영되고, 이 기기 안에만 저장돼요.
+        버디가 대화와 챙길 것에서 모은 기록이에요. 다음 답에 쓰이고, 이 폰 안에만 저장돼요.
       </ThemedText>
 
       <View style={[styles.addRow, { backgroundColor: c.surface }]}>
@@ -66,12 +67,12 @@ export function RecordsView() {
       {newestFirst.length === 0 ? (
         <EmptyState
           title="아직 기록이 없어요"
-          detail="버디에게 물어보거나 챙길 것을 완료하면 여기에 쌓여요"
+          detail="버디에게 물어보거나 챙길 것을 하고 알리면 여기에 쌓여요"
           action={{ label: '버디에게 물어보기', onPress: () => router.navigate('/') }}
         />
       ) : (
         <View style={styles.list}>
-          <SectionHeader title="모은 기록" aside={`${newestFirst.length}건`} />
+          <SectionHeader title="모은 기록" aside={`${newestFirst.length}개`} />
           {newestFirst.map((record) => (
             <RecordRow key={record.id} record={record} />
           ))}
@@ -126,7 +127,7 @@ function RecordRow({ record }: { record: BabyRecord }) {
         ) : confirming ? (
           <>
             <ThemedText type="caption" style={[styles.flex, { color: c.textSecondary }]}>
-              지우면 이 기록을 근거로 한 추천도 바뀌어요
+              지우면 이 기록을 보고 한 추천도 바뀌어요
             </ThemedText>
             <Action label="지우기" color={c.danger} onPress={() => remove(record.id)} />
             <Action label="취소" color={c.textSecondary} onPress={() => setConfirming(false)} />

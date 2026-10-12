@@ -23,6 +23,7 @@ import { newMessageId, recentTurns, type Guess, type MalkongMessage, type UserMe
 import { useChat } from '@/data/chat-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { recordsForQuestion } from '@/data/daily-log';
+import { monthDay } from '@/data/quick-ask';
 import type { BabyRecord } from '@/data/records';
 import { useRecords } from '@/data/records-context';
 
@@ -111,7 +112,7 @@ export function useMalkong() {
               kind: suggestion.kind,
               label: suggestion.label,
               covers: suggestion.covers ?? [],
-              whenLabel: `D+${age.days} 질문에서`,
+              whenLabel: `${monthDay(new Date())} 대화에서`,
               sourceMessageId: attempt.questionId,
             });
             savedIds.push(record.id);
@@ -174,7 +175,7 @@ export function useMalkong() {
         kind: '요약',
         label: guess.label,
         covers: guess.covers,
-        whenLabel: `D+${age.days} 질문에서`,
+        whenLabel: `${monthDay(new Date())} 대화에서`,
         sourceMessageId: message.meta.questionId,
       });
       await updateMeta(message.id, {
@@ -219,7 +220,7 @@ export function useMalkong() {
         kind: '기록',
         label: `${followup.meta.followup.recordLabel}: ${text}`,
         covers: [],
-        whenLabel: `D+${age.days} 질문에서`,
+        whenLabel: `${monthDay(new Date())} 대화에서`,
         sourceMessageId: message.id,
       });
       await run(

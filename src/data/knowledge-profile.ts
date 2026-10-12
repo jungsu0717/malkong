@@ -102,7 +102,7 @@ const DOMAINS: { id: DomainId; name: string; color: string; facts: FactDef[] }[]
     color: '#E8825F',
     facts: [
       { kind: 'rule', id: 'feed-type', label: '수유 방식', match: /수유\s*방식|모유|분유|혼합\s*수유/, benefit: '수유량·간격 답이 모유·분유에 맞춰져요', ask: choose('수유는 어떻게 하고 있나요?', '수유 방식', ['모유', '분유', '혼합 수유']) },
-      { kind: 'rule', id: 'feed-interval', label: '수유 간격', match: /수유\s*(텀|간격)|시간\s*(마다|간격|텀)|밤중\s*수유/, benefit: '배고픔·밤중 수유 질문에 우리 아기 패턴으로 답해요', ask: measure('요즘 수유 간격은요?', '수유 간격', '시간', '3', { options: ['2', '2.5', '3', '3.5', '4'], dated: false }) },
+      { kind: 'rule', id: 'feed-interval', label: '수유 간격', match: /수유\s*(텀|간격)|시간\s*(마다|간격|텀)|밤중\s*수유/, benefit: '배고픔·밤중 수유 질문에 우리 아기 리듬에 맞춰 답해요', ask: measure('요즘 수유 간격은요?', '수유 간격', '시간', '3', { options: ['2', '2.5', '3', '3.5', '4'], dated: false }) },
       { kind: 'rule', id: 'feed-amount', label: '한 번 먹는 양', match: /\d+\s*(ml|mL|ML|cc)|수유량|먹는\s*양/, benefit: '먹는 양이 괜찮은지 물을 때 기준이 생겨요', ask: measure('한 번에 먹는 양은요?', '한 번 먹는 양', 'ml', '120', { options: ['60', '90', '120', '150', '180'], dated: false }) },
       { kind: 'rule', id: 'solids', label: '이유식', match: /이유식|미음|퓨레/, benefit: '이유식 단계와 재료 답이 정확해져요', ask: choose('이유식은 어디까지 왔나요?', '이유식', ['아직 시작 안 했어요', '초기(미음)', '중기', '후기', '완료기']), fromMonth: 4 },
     ],
@@ -114,7 +114,7 @@ const DOMAINS: { id: DomainId; name: string; color: string; facts: FactDef[] }[]
     facts: [
       { kind: 'rule', id: 'night', label: '밤잠', match: /밤잠|통잠|밤에\s*\S*\s*(자|깨)|밤중에?\s*깨/, benefit: '밤에 자주 깨는 이유를 우리 아기 기준으로 짚어요', ask: choose('밤잠은 어떤가요?', '밤잠', ['통잠 자요', '1~2번 깨요', '3번 이상 깨요']) },
       { kind: 'rule', id: 'nap', label: '낮잠', match: /낮잠/, benefit: '낮잠 횟수·길이 질문에 바로 비교해 드려요', ask: choose('낮잠은 하루 몇 번 자나요?', '낮잠', ['하루 1번', '하루 2번', '하루 3번', '하루 4번 이상']) },
-      { kind: 'rule', id: 'settle', label: '재우는 방식', match: /재우|재움|수면\s*교육|안아서\s*자|눕혀서|자장가|백색\s*소음/, benefit: '수면 교육·잠투정 답이 지금 방식에서 시작해요', ask: choose('보통 어떻게 재우나요?', '재우는 방식', ['안아서 재워요', '눕히면 스스로 자요', '먹이면서 재워요', '흔들거나 업어서 재워요']) },
+      { kind: 'rule', id: 'settle', label: '재우는 방식', match: /재우|재움|수면\s*교육|안아서\s*자|눕혀서|자장가|백색\s*소음/, benefit: '수면 교육·잠투정 답을 재우는 방식에 맞춰요', ask: choose('보통 어떻게 재우나요?', '재우는 방식', ['안아서 재워요', '눕히면 스스로 자요', '먹이면서 재워요', '흔들거나 업어서 재워요']) },
     ],
   },
   {
@@ -143,8 +143,8 @@ const DOMAINS: { id: DomainId; name: string; color: string; facts: FactDef[] }[]
     name: '발달',
     color: '#E9B03C',
     facts: [
-      { kind: 'rule', id: 'motor', label: '몸 움직임', match: /몸\s*움직임|목\s*가누|뒤집|배밀이|기어|기기|앉|서기|걸음|걷/, benefit: '이정표 질문에 지금 할 수 있는 것부터 답해요', ask: choose('요즘 몸으로 하는 건 뭐예요?', '몸 움직임', ['목을 가눠요', '뒤집어요', '배밀이해요', '기어요', '혼자 앉아요', '잡고 서요', '걸어요']) },
-      { kind: 'rule', id: 'social', label: '소리 · 표정', match: /소리\s*·\s*표정|옹알|웃|눈\s*맞|소리\s*내|낯가림|엄마|아빠/, benefit: '말·사회성 발달 질문이 우리 아기 기준이 돼요', ask: choose('요즘 내는 소리나 표정은요?', '소리 · 표정', ['눈을 맞춰요', '소리 내 웃어요', '옹알이해요', '낯을 가려요', '엄마 · 아빠를 말해요']) },
+      { kind: 'rule', id: 'motor', label: '몸 움직임', match: /몸\s*움직임|목\s*가누|뒤집|배밀이|기어|기기|앉|서기|걸음|걷/, benefit: '이정표 질문에 지금 할 수 있는 것부터 답해요', ask: choose('요즘 할 수 있는 몸동작은요?', '몸 움직임', ['목을 가눠요', '뒤집어요', '배밀이해요', '기어요', '혼자 앉아요', '잡고 서요', '걸어요']) },
+      { kind: 'rule', id: 'social', label: '소리 · 표정', match: /소리\s*·\s*표정|옹알|웃|눈\s*맞|소리\s*내|낯가림|엄마|아빠/, benefit: '말과 표정 발달을 우리 아기에 맞춰 답해요', ask: choose('요즘 내는 소리나 표정은요?', '소리 · 표정', ['눈을 맞춰요', '소리 내 웃어요', '옹알이해요', '낯을 가려요', '엄마 · 아빠를 말해요']) },
       { kind: 'rule', id: 'teeth', label: '이', match: /이가?\s*(났|나)|치아|잇몸/, benefit: '이앓이·양치 질문에 바로 맞춰 답해요', ask: choose('이는 났나요?', '치아', ['아직 안 났어요', '1~2개', '3~6개', '7개 이상']), fromMonth: 4 },
     ],
   },
@@ -155,7 +155,7 @@ const DOMAINS: { id: DomainId; name: string; color: string; facts: FactDef[] }[]
     facts: [
       { kind: 'rule', id: 'temper', label: '기질', match: /예민|순한|순해|기질|잘\s*울|잘\s*웃|겁이/, benefit: '달래기·잠투정 답을 우리 아기 성향에 맞춰요', ask: choose('우리 아기 성향은 어떤가요?', '기질', ['순한 편', '예민한 편', '활발한 편', '겁이 많은 편']) },
       { kind: 'rule', id: 'likes', label: '좋아하는 것', match: /좋아(해|하|함)|싫어(해|하|함)/, benefit: '놀이·달래기 방법을 좋아하는 것에서 시작해요', ask: choose('좋아하는 건 뭐예요?', '좋아하는 것', ['노래 · 자장가', '산책', '목욕', '안아 주기', '장난감']) },
-      { kind: 'rule', id: 'play', label: '놀이 · 목욕', match: /터미타임|놀이|산책|목욕|외출/, benefit: '하루 일과 질문에 지금 생활을 반영해요', ask: choose('요즘 하루 일과는 어떤가요?', '놀이 · 목욕', ['터미타임을 해요', '매일 목욕해요', '산책을 자주 해요', '주로 집에서 놀아요']) },
+      { kind: 'rule', id: 'play', label: '놀이 · 목욕', match: /터미타임|놀이|산책|목욕|외출/, benefit: '하루 일과 질문에 지금 생활에 맞춰 답해요', ask: choose('요즘 하루 일과는 어떤가요?', '놀이 · 목욕', ['터미타임을 해요', '매일 목욕해요', '산책을 자주 해요', '주로 집에서 놀아요']) },
       { kind: 'cover', id: 'life', label: '알아 둔 생활 팁', kinds: ['생활', '안전', '수면', '수유'], benefit: '챙길 것의 생활 팁을 확인하면 늘어나요' },
     ],
   },

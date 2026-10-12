@@ -48,8 +48,8 @@ export function weeklySummary(w: Weekly, records: BabyRecord[]): string {
   const covered = new Set(records.flatMap((r) => r.covers));
   const dueLeft = w.due.filter((i) => !covered.has(i.id));
   const parts = [
-    dueLeft.length > 0 ? `${labelByKind(dueLeft)} 무렵` : '이번 주 잡힌 접종 · 검진 없음',
-    w.left.length > 0 ? `아직 안 한 것 ${w.left.length}` : null,
+    dueLeft.length > 0 ? `${labelByKind(dueLeft)} 무렵` : '이번 주 접종 · 검진은 없어요',
+    w.left.length > 0 ? `아직 안 한 것 ${w.left.length}개` : null,
   ].filter((p): p is string => !!p);
   return parts.join(' · ');
 }
@@ -98,9 +98,9 @@ export function monthlySummary(m: Monthly): string {
   const check = m.items.filter((i) => i.kind === '검진').length;
   const parts = [
     m.headline ?? null,
-    vacc > 0 ? `접종 ${vacc}` : null,
-    check > 0 ? `검진 ${check}` : null,
-    m.points.length > 0 ? '발달 포인트' : null,
+    vacc > 0 ? `접종 ${vacc}개` : null,
+    check > 0 ? `검진 ${check}개` : null,
+    m.points.length > 0 ? '이달의 발달' : null,
   ].filter((p): p is string => !!p);
-  return parts.length > 0 ? parts.join(' · ') : '이번 달 챙길 것과 발달 포인트';
+  return parts.length > 0 ? parts.join(' · ') : '이번 달 챙길 것과 이달의 발달';
 }

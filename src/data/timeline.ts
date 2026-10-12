@@ -20,8 +20,8 @@ export type L2Item = BabyRecord;
 const HEADLINES: Record<number, string> = {
   0: '세상에 온 첫 달',
   1: '낮밤이 없는 시기',
-  2: '첫 사회적 미소',
-  3: '목을 가누기 시작',
+  2: '처음 웃어 주는 달',
+  3: '목을 가누는 달',
   4: '뒤집기 연습의 달',
   5: '이유식 준비',
   6: '앉기와 이유식 시작',

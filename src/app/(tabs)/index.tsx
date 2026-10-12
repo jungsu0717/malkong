@@ -62,9 +62,9 @@ const WINDOW = 50;
 function failureText(failure: AskFailure): string {
   // 서버 전체의 오늘 모델 비용이 천장에 닿았다(decisions/019) — 위험 신호 안내는 그래도 나간다
   if (failure.code === 'DAILY_BUDGET_REACHED')
-    return '오늘은 버디가 답할 수 있는 양을 다 썼어요. 내일 0시에 다시 답해 드릴게요. 위험해 보이는 증상을 말씀하시면 그 안내는 지금도 바로 드려요.';
+    return '오늘 질문은 여기까지예요. 자정이 지나면 다시 답할 수 있어요. 아기가 위험해 보이면 지금도 바로 알려 드려요.';
   if (failure.status === 0) return '인터넷 연결이 불안정해서 답을 받지 못했어요. 연결을 확인하고 다시 시도해 주세요.';
-  if (failure.status === 503) return '버디가 지금 답을 만들지 못했어요. 잠시 뒤에 다시 시도해 주세요.';
+  if (failure.status === 503) return '버디가 지금은 답하지 못했어요. 잠시 뒤에 다시 시도해 주세요.';
   if (failure.status === 422) return '질문을 알아듣지 못했어요. 조금 바꿔서 다시 물어봐 주세요.';
   return '잠깐 문제가 생겼어요. 다시 시도해 주세요.';
 }
@@ -289,7 +289,7 @@ export default function ChatScreen() {
         rewardPerAd={rewardPerAd}
         rewardMaxPerDay={rewardMaxPerDay}
         busy={watching}
-        note={refillMissed ? '충전을 확인하지 못했어요. 광고를 끝까지 봤다면 잠시 뒤 다시 눌러 주세요' : null}
+        note={refillMissed ? '광고 본 것을 확인하지 못했어요. 끝까지 봤다면 잠시 뒤 다시 눌러 주세요' : null}
         onEco={
           failure.limit?.ecoAvailable === false
             ? undefined
@@ -334,11 +334,11 @@ export default function ChatScreen() {
             <ThemedText type="heading" style={styles.brand}>
               육아버디
             </ThemedText>
-            {/* 남은 정밀 답변 — 평소엔 숨기고 3회 이하일 때만 조용히(ask.md 한도 표시) */}
+            {/* 남은 맞춤 답 — 평소엔 숨기고 3회 이하일 때만 조용히(ask.md 한도 표시) */}
             {remaining !== null && remaining <= 3 && (
               <View style={[styles.pill, { backgroundColor: c.surface }]}>
                 <ThemedText type="caption" style={{ color: c.textSecondary, fontWeight: 500 }}>
-                  {remaining > 0 ? `정밀 답변 ${remaining}회 남음` : '오늘 정밀 답변 끝 · 0시에 채워져요'}
+                  {remaining > 0 ? `맞춤 답 ${remaining}개 남았어요` : '오늘 맞춤 답은 다 썼어요 · 자정에 다시'}
                 </ThemedText>
               </View>
             )}
@@ -363,7 +363,7 @@ export default function ChatScreen() {
                   안녕하세요,{'\n'}버디예요
                 </ThemedText>
                 <ThemedText type="body" style={{ color: c.textSecondary }}>
-                  만 {age.month}개월 {name} 기준으로 답해요. 이야기해 주신 건 기록해 두고, 다음 답에 반영할게요.
+                  만 {age.month}개월 {name}에 맞춰 답해요. 알려 주신 건 기억해 뒀다가 다음 답에 써요.
                 </ThemedText>
               </View>
             )}
@@ -393,7 +393,7 @@ export default function ChatScreen() {
               <TextInput
                 ref={inputRef}
                 style={[styles.input, { color: c.text }]}
-                placeholder={openFollowup ? '답을 입력하거나 위에서 골라 주세요' : `${name}에 대해 무엇이든 물어보세요`}
+                placeholder={openFollowup ? '위에서 고르거나 직접 적어 주세요' : `${name}에 대해 무엇이든 물어보세요`}
                 placeholderTextColor={c.textTertiary}
                 value={input}
                 onChangeText={setInput}

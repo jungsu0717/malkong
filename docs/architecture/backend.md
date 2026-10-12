@@ -310,7 +310,7 @@ CREATE TABLE record (                      -- L2 — 기록과 요약
   kind               TEXT NOT NULL CHECK (kind IN ('기록','요약')),
   label              TEXT NOT NULL,        -- "수유 텀 3시간 · 160ml"
   covers             TEXT,                 -- 완료 처리하는 L1 항목 id 목록, JSON 배열 (홈 추천 차집합의 근거)
-  when_label         TEXT,                 -- "D+86 질문에서" 같은 시점 표기
+  when_label         TEXT,                 -- "10월 8일 대화에서" 같은 시점 표기
   source_message_id  TEXT,                 -- 어느 대화에서 나왔나
   stale              INTEGER NOT NULL DEFAULT 0,   -- 요약이 낡았다고 표시되면 1
   created_at         TEXT NOT NULL,

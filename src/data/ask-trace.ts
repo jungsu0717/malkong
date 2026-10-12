@@ -61,17 +61,17 @@ export function waitingPhrases({ question, records, month, name }: Context): str
   const subject = topic ? `${month}개월 ${topic.name}` : `${month}개월`;
   const phrases: string[] = [];
   if (topic?.key === 'health') {
-    phrases.push(pick(['바로 병원에 가야 하는 신호인지 먼저 보고 있어요…', '위험 신호 기준부터 대조하고 있어요…'], seed, 0));
+    phrases.push(pick(['바로 병원에 가야 하는 신호인지 먼저 보고 있어요…', '위험 신호부터 살피고 있어요…'], seed, 0));
   }
   if (near.length > 0) {
-    phrases.push(`${name} ${topic!.name} 기록 ${near.length}건을 보고 있어요…`);
+    phrases.push(`${name} ${topic!.name} 기록 ${near.length}개를 보고 있어요…`);
   } else if (records.length > 0) {
-    phrases.push(pick([`${name} 기록 ${records.length}건을 훑어보고 있어요…`, `${name}에 대해 아는 것부터 떠올리고 있어요…`], seed, 1));
+    phrases.push(pick([`${name} 기록 ${records.length}개를 훑어보고 있어요…`, `${name}에 대해 아는 것부터 떠올리고 있어요…`], seed, 1));
   } else {
     phrases.push(`${month}개월 ${name} 기준으로 살펴보고 있어요…`);
   }
   phrases.push(pick([`${subject} 기준을 찾고 있어요…`, `${subject} 공공 지식을 뒤져 보고 있어요…`, `${subject}에 맞는 자료를 고르고 있어요…`], seed, 2));
-  phrases.push(pick(['출처를 대조하고 있어요…', '근거가 맞는지 한 번 더 보고 있어요…'], seed, 3));
+  phrases.push(pick(['출처를 확인하고 있어요…', '근거가 맞는지 한 번 더 보고 있어요…'], seed, 3));
   phrases.push(pick([`${name}에게 맞게 정리하고 있어요…`, '쉬운 말로 다듬고 있어요…', '답을 가지런히 정리하고 있어요…'], seed, 4));
   return phrases;
 }
@@ -92,18 +92,18 @@ export function doneTrace(
   const steps: TraceStep[] = [];
 
   if (topic?.key === 'health') {
-    steps.push({ id: 'redflag', title: '위험 신호 기준 대조', brief: '고열 · 숨쉬기 · 경련 같은 신호 기준과 먼저 맞춰 봤어요' });
+    steps.push({ id: 'redflag', title: '위험 신호 확인', brief: '고열 · 숨쉬기 · 경련 같은 신호가 있는지 먼저 봤어요' });
   }
   if (eco) {
-    steps.push({ id: 'l2', title: '일반 기준으로', brief: '기록 없이 월령으로만 답했어요' });
+    steps.push({ id: 'l2', title: '일반 답으로', brief: '기록 없이 월령으로만 답했어요' });
   } else if (near.length > 0) {
     steps.push({
       id: 'l2',
       title: `${name} ${topic!.name} 기록`,
-      brief: `${near.slice(0, 2).join(' · ')}${near.length > 2 ? ` 외 ${near.length - 2}건` : ''}`,
+      brief: `${near.slice(0, 2).join(' · ')}${near.length > 2 ? ` 외 ${near.length - 2}개` : ''}`,
     });
   } else if (records.length > 0) {
-    steps.push({ id: 'l2', title: `${name} 기록`, brief: `${records.length}건 함께 봤어요` });
+    steps.push({ id: 'l2', title: `${name} 기록`, brief: `${records.length}개 함께 봤어요` });
   }
 
   if (response.type === 'followup') {
@@ -120,8 +120,8 @@ export function doneTrace(
     title: response.level === '사실' ? '출처대로 정리' : response.level === '판단' ? '상황별로 나눠 정리' : `${month}개월 기준으로 정리`,
   });
 
-  // 주제에 닿는 기록이 있으면 그 수를 주제와 함께 — 답 아래 「우리 아기 기록 N건 참고」(보낸 전체)와 헷갈리지 않게
-  const used = near.length > 0 ? `${name} ${topic!.name} 기록 ${near.length}건` : !eco && records.length > 0 ? `${name} 기록 ${records.length}건` : null;
+  // 주제에 닿는 기록이 있으면 그 수를 주제와 함께 — 답 아래 「우리 아기 기록 N개 봤어요」(보낸 전체)와 헷갈리지 않게
+  const used = near.length > 0 ? `${name} ${topic!.name} 기록 ${near.length}개` : !eco && records.length > 0 ? `${name} 기록 ${records.length}개` : null;
   const summary =
     names.length > 0 && used
       ? `${used}과 출처 ${names.length}곳을 보고 답했어요`

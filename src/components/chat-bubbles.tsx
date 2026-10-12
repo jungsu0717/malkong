@@ -146,11 +146,11 @@ export function AnswerBubble({
         {message.content}
       </ThemedText>
       <View style={styles.tags}>
-        {usedRecords > 0 && <Tag tone="accent" label={`우리 아기 기록 ${usedRecords}건 참고`} />}
+        {usedRecords > 0 && <Tag tone="accent" label={`우리 아기 기록 ${usedRecords}개 봤어요`} />}
         {sources.length > 0 ? (
-          <Tag label="공공 기준" />
+          <Tag label="출처 있음" />
         ) : (
-          <Tag label={eco ? '일반 기준 · 기록 없이' : '일반 정보'} />
+          <Tag label={eco ? '일반 답 · 기록 없이' : '일반 정보'} />
         )}
       </View>
       {sources.length > 0 && <SourceList sources={sources} />}
@@ -271,21 +271,21 @@ export function LimitBubble({
   onReward?: () => void;
 }) {
   const c = useTheme();
-  const refill = `광고 1편을 보면 우리 아기 기록을 반영한 답변 ${rewardPerAd}회가 채워져요(하루 ${rewardMaxPerDay}편까지).`;
+  const refill = `광고 한 편을 보면 맞춤 답 ${rewardPerAd}개를 더 할 수 있어요(하루 ${rewardMaxPerDay}편까지).`;
   // 선택지가 하나도 없으면 오늘은 여기까지다 — 위험 신호 안내는 그래도 나간다(SPEC-ASK-02)
   const body =
     onReward && onEco
-      ? `${refill} 지금 바로 일반 기준으로 답해 드릴 수도 있어요.`
+      ? `${refill} 기록 없이 일반 답으로는 지금 바로 들을 수 있어요.`
       : onReward
-        ? `${refill} 일반 기준 답은 오늘 다 썼어요.`
+        ? `${refill} 일반 답도 오늘은 다 썼어요.`
         : onEco
-          ? '지금 바로 일반 기준으로 답해 드릴 수 있어요. 정밀 답변은 내일 0시에 다시 채워져요.'
-          : '오늘 답할 수 있는 만큼 다 답했어요. 내일 0시에 다시 채워져요. 위험해 보이는 증상을 말씀하시면 그 안내는 지금도 바로 드려요.';
+          ? '기록 없이 일반 답으로는 지금 바로 들을 수 있어요. 맞춤 답은 자정이 지나면 다시 할 수 있어요.'
+          : '오늘 질문은 여기까지예요. 자정이 지나면 다시 답할 수 있어요. 아기가 위험해 보이면 지금도 바로 알려 드려요.';
   return (
     <View style={[styles.limit, { backgroundColor: c.surface }]}>
       <ThemedText type="heading" style={{ fontSize: 15 }}>
         {onReward || onEco
-          ? `오늘 정밀 답변${dailyLimit ? ` ${dailyLimit}회를` : '을'} 다 썼어요`
+          ? `오늘 맞춤 답${dailyLimit ? ` ${dailyLimit}개를` : '을'} 다 썼어요`
           : '오늘은 여기까지예요'}
       </ThemedText>
       <ThemedText type="small" style={{ color: c.textSecondary }}>
@@ -294,14 +294,14 @@ export function LimitBubble({
       <View style={styles.limitActions}>
         {onReward && (
           <Button
-            label={busy ? '광고를 불러오는 중…' : '광고 보고 정밀 답변'}
+            label={busy ? '광고를 불러오는 중…' : '광고 보고 맞춤 답 더 받기'}
             icon="play-circle-outline"
             busy={busy}
             onPress={onReward}
           />
         )}
         {onEco && (
-          <Button label="일반 기준으로 바로 답변" variant="secondary" disabled={busy} onPress={onEco} />
+          <Button label="일반 답으로 바로 듣기" variant="secondary" disabled={busy} onPress={onEco} />
         )}
       </View>
       {note && (

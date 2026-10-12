@@ -124,7 +124,7 @@ export default function MyScreen() {
               <ListRow
                 icon="document-text-outline"
                 title="우리 아기 기록"
-                detail={records.length > 0 ? `${records.length}건 · 보고 고치거나 지울 수 있어요` : '대화와 챙길 것에서 모은 기록이 여기 쌓여요'}
+                detail={records.length > 0 ? `${records.length}개 · 보고 고치거나 지울 수 있어요` : '대화와 챙길 것에서 모은 기록이 여기 쌓여요'}
                 onPress={() => router.push('/records')}
               />
             </Card>
@@ -139,7 +139,7 @@ export default function MyScreen() {
                 title="아침 브리핑 알림"
                 detail={
                   !supported
-                    ? '이 기기에서는 알림을 받을 수 없어요'
+                    ? '이 폰에서는 알림을 받을 수 없어요'
                     : allowed === false && briefingTime !== null
                       ? '휴대폰 설정에서 알림이 꺼져 있어요'
                       : briefingOn
@@ -165,7 +165,7 @@ export default function MyScreen() {
                 title="기록이 비면 알림"
                 detail={
                   !supported
-                    ? '이 기기에서는 알림을 받을 수 없어요'
+                    ? '이 폰에서는 알림을 받을 수 없어요'
                     : allowed === false && nudgePush
                       ? '휴대폰 설정에서 알림이 꺼져 있어요'
                       : nudgePushOn
@@ -181,9 +181,9 @@ export default function MyScreen() {
               <ListRow
                 divider
                 icon="albums-outline"
-                title="기록이 비면 카드 띄우기"
+                title="기록이 비면 적을 칸 보여 주기"
                 detail={nudgeCard ? '앱을 열 때 적을 칸을 모아 보여 드려요' : '적지 않은 것은 대화하다 버디가 물어봐요'}
-                right={<Toggle label="기록이 비면 카드 띄우기" value={nudgeCard} onChange={(on) => void setNudgeCard(on)} />}
+                right={<Toggle label="기록이 비면 적을 칸 보여 주기" value={nudgeCard} onChange={(on) => void setNudgeCard(on)} />}
               />
               {blocked && (
                 <Button
@@ -221,7 +221,7 @@ export default function MyScreen() {
               가족과 함께 보기 · 준비 중
             </ThemedText>
             <ThemedText type="caption" style={{ color: c.textSecondary }}>
-              로그인하면 기기를 바꿔도 기록을 옮기고, 가족과 같은 아기를 함께 볼 수 있게 할 거예요. 지금은 로그인 없이
+              로그인하면 폰을 바꿔도 기록을 옮기고, 가족과 같은 아기를 함께 볼 수 있게 할 거예요. 지금은 로그인 없이
               모든 기능을 쓸 수 있어요.
             </ThemedText>
           </Card>
@@ -245,7 +245,7 @@ export default function MyScreen() {
           {/* 구축 중에만 두는 칸 — L1 지식이 쌓인 정도. 개발 빌드에서만 보인다 */}
           {__DEV__ && (
             <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
-              개발 빌드 · 표준 지식 {allItems().length}건(승인 대기 {pendingReviewCount()}건) · 기록 {records.length}건 · 판{' '}
+              개발 빌드 · 공공 지식 {allItems().length}개(승인 대기 {pendingReviewCount()}개) · 기록 {records.length}개 · 판{' '}
               {l1Version()}
             </ThemedText>
           )}
@@ -263,7 +263,7 @@ export default function MyScreen() {
             <Card style={styles.rows}>
               <ListRow
                 title="일반 사용자로 보기"
-                detail={asUser ? '일반 사용자와 같은 한도 · 광고로 써요' : '가족 기기라 한도 없이 써요'}
+                detail={asUser ? '일반 사용자와 같은 한도 · 광고로 써요' : '가족 폰이라 한도 없이 써요'}
                 right={<Toggle label="일반 사용자로 보기" value={asUser} onChange={(on) => void setAsUser(on)} />}
               />
             </Card>

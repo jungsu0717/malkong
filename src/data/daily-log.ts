@@ -22,7 +22,7 @@ const yesterday = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate
 export const DAILY_LOGS: LogDef[] = [
   {
     key: 'feed-total',
-    title: '어제 총 수유량',
+    title: '어제 하루 먹은 양',
     hint: '모유·분유 합쳐 대략이면 돼요',
     unit: 'ml',
     placeholder: '800',
@@ -32,7 +32,7 @@ export const DAILY_LOGS: LogDef[] = [
   },
   {
     key: 'feed-interval',
-    title: '평균 수유 간격',
+    title: '수유 간격',
     hint: '어제 보통 몇 시간마다 먹었나요',
     unit: '시간',
     placeholder: '3',
@@ -52,13 +52,13 @@ export const DAILY_LOGS: LogDef[] = [
   },
   {
     key: 'note',
-    title: '특이사항',
+    title: '평소와 달랐던 것',
     hint: '열·변·잠투정처럼 평소와 달랐던 것',
     unit: null,
     placeholder: '예: 낮잠을 거의 안 잤어요',
     options: ['특별한 일 없었어요', '평소보다 덜 먹었어요', '많이 보챘어요'],
-    match: /특이\s*사항/,
-    label: (v, today) => `${md(yesterday(today))} 특이사항: ${v}`,
+    match: /특이\s*사항|달랐던\s*것/,
+    label: (v, today) => `${md(yesterday(today))} 달랐던 것: ${v}`,
   },
 ];
 
@@ -95,7 +95,7 @@ export function lastLogAt(records: BabyRecord[]): Date | null {
 
 /** 줄에 보일 값 — 「820ml」 「6.4kg」, 글 기록은 그 내용 */
 export function valueOf(def: LogDef, record: BabyRecord): string {
-  if (def.unit === null) return record.label.split(/특이\s*사항\s*:?\s*/).at(-1)?.trim() || record.label;
+  if (def.unit === null) return record.label.split(/(?:특이\s*사항|달랐던\s*것)\s*:?\s*/).at(-1)?.trim() || record.label;
   const hit = record.label.match(/(\d+(?:\.\d+)?)\s*(ml|cc|kg|킬로|시간)/i);
   return hit ? `${hit[1]}${hit[2]}` : record.label;
 }

@@ -59,7 +59,7 @@ export function KnowledgeView() {
         <View style={styles.head}>
           <ThemedText type="display">{profile.percent}%</ThemedText>
           <ThemedText type="small" style={{ color: c.textSecondary }}>
-            Lv.{profile.level.step} {profile.level.name} · 알게 된 것 {profile.knownCount} / {profile.totalCount}
+            {profile.level.step}단계 · {profile.level.name} · 알게 된 것 {profile.knownCount} / {profile.totalCount}
           </ThemedText>
         </View>
 
@@ -91,13 +91,13 @@ export function KnowledgeView() {
           <ListRow
             icon="document-text-outline"
             title="모은 기록 전체 보기"
-            detail={records.length > 0 ? `${records.length}건 · 고치거나 지울 수 있어요` : '버디와 나눈 이야기에서 모은 기록이 여기 쌓여요'}
+            detail={records.length > 0 ? `${records.length}개 · 고치거나 지울 수 있어요` : '버디와 나눈 이야기에서 모은 기록이 여기 쌓여요'}
             onPress={() => router.push('/records')}
           />
         </Card>
 
         <ThemedText type="caption" style={[styles.note, { color: c.textSecondary }]}>
-          이 숫자는 이 폰에 저장된 기록으로만 계산해요. 서버로 보내지 않아요.
+          이 숫자는 이 폰에 저장된 기록으로만 세요. 서버로 보내지 않아요.
         </ThemedText>
       </ScrollView>
       {sheet}

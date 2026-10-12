@@ -67,7 +67,7 @@ export function NoAdsCard() {
     setNote(null);
     const owned = await restoreNoAds();
     if (owned) await applyAdsRemoved(true);
-    else setNote(owned === false ? '되살릴 구매가 없어요' : '지금은 확인할 수 없어요. 잠시 뒤 다시 시도해 주세요');
+    else setNote(owned === false ? '복원할 구매가 없어요' : '지금은 확인할 수 없어요. 잠시 뒤 다시 시도해 주세요');
     setBusy(false);
   };
 

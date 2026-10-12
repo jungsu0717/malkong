@@ -144,7 +144,7 @@ export function MonthlyCard({ month, onPick }: { month: number; onPick: (g: GapG
           <GroupRows groups={leftover} onPick={onPick} />
         </CardSection>
       )}
-      <CardSection title="이번 달 발달 포인트">
+      <CardSection title="이달의 발달">
         {m.points.length > 0 ? (
           m.points.map((p) => (
             <View key={p.id} style={styles.point}>
@@ -156,7 +156,7 @@ export function MonthlyCard({ month, onPick }: { month: number; onPick: (g: GapG
           ))
         ) : (
           <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-            {m.pointsNote ?? '이 시기의 발달 포인트는 아직 준비 중이에요'}
+            {m.pointsNote ?? '이 시기의 발달 내용은 아직 준비 중이에요'}
           </ThemedText>
         )}
       </CardSection>

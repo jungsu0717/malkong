@@ -176,10 +176,10 @@ export function briefingSummary(briefing: Briefing): string {
     return todos.length === 1 ? `챙길 것 · ${todos[0].label}` : `챙길 것 ${todos.length}개 · ${todos[0].label} 외`;
   }
   const parts = [
-    briefing.care ? `${SIGNAL_NAMES[briefing.care.signal]} 안부` : null,
-    briefing.parent ? '부모님 안부' : null,
+    briefing.care ? `어제 ${topic(SIGNAL_NAMES[briefing.care.signal])} 어땠는지` : null,
+    briefing.parent ? '부모님은 어떤지' : null,
     ...(briefing.tips ?? []).slice(0, 1).map((id) => tipTitle(id)),
-    briefing.week && briefing.week.length > 0 ? `다가오는 일정 ${briefing.week.length}` : null,
+    briefing.week && briefing.week.length > 0 ? `다가오는 일정 ${briefing.week.length}개` : null,
   ].filter((t): t is string => !!t);
   return parts.length > 0 ? parts.join(' · ') : briefing.headline;
 }

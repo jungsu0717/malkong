@@ -19,6 +19,7 @@ import { readSetting, writeSetting } from '@/data/db';
 import { useInbox } from '@/data/inbox-context';
 import { onRecordNudgeOpened, scheduleRecordNudge } from '@/data/notifications';
 import { usePreferences } from '@/data/preferences-context';
+import { monthDay } from '@/data/quick-ask';
 import { nextNudgeAt, nudgeDay, nudgeDue } from '@/data/record-nudge';
 import { useRecords } from '@/data/records-context';
 
@@ -34,7 +35,7 @@ export function openRecordNudge(): void {
 }
 
 export function RecordNudge() {
-  const { baby, age } = useBaby();
+  const { baby } = useBaby();
   const { records, loading: recordsLoading, add } = useRecords();
   const { nudgePush, nudgeCard, setNudgePush, setNudgeCard, loading: prefsLoading } = usePreferences();
   const segments = useSegments();
@@ -130,7 +131,7 @@ export function RecordNudge() {
     tap('success');
     const today = new Date();
     for (const { def, value } of entries) {
-      await add({ kind: '기록', label: def.label(value, today), covers: [], whenLabel: age ? `D+${age.days}에 알림` : null });
+      await add({ kind: '기록', label: def.label(value, today), covers: [], whenLabel: `${monthDay(today)} 알림에서` });
     }
     asked();
   };

@@ -15,7 +15,7 @@ const ROTATION_MS = 3200;
 /** 질문을 모를 때만 쓰는 대기 문구 — 보통은 질문으로 만든 문구(`ask-trace.ts`)가 들어온다(task ask/007) */
 const WAITING_PHRASES = [
   '우리 아기 기록을 살펴보고 있어요…',
-  '표준 육아 지식을 찾아보고 있어요…',
+  '공공 육아 지식을 찾아보고 있어요…',
   '출처를 확인하고 있어요…',
   '답변을 가지런히 정리하고 있어요…',
 ];
@@ -92,7 +92,7 @@ export function ThinkingStatus({ steps, done, label, phrases, summary }: Thinkin
   const doneCount = steps.filter((s) => s.done).length;
   const rotating = phrases && phrases.length > 0 ? phrases : WAITING_PHRASES;
   const headerText = done
-    ? (summary ?? `${doneCount}단계 확인했어요`)
+    ? (summary ?? `확인 ${doneCount}가지 마쳤어요`)
     : (label ?? rotating[Math.min(phraseIndex, rotating.length - 1)]);
 
   return (
