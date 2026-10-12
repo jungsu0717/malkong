@@ -59,6 +59,8 @@ class EventIn(ApiModel):
     amount: float | None = None
     side: Literal["left", "right"] | None = None
     diaper: Literal["pee", "poo", "both"] | None = None
+    # 변 색 — 대변이 있을 때(task log/002)
+    color: Literal["yellow", "brown", "green", "black", "red", "white"] | None = None
     note: str | None = Field(default=None, max_length=500)
     created_at: NonEmptyStr = Field(max_length=40)
     updated_at: NonEmptyStr = Field(max_length=40)

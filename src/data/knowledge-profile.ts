@@ -7,6 +7,8 @@
  */
 
 import { ageFrom, type Baby } from './baby';
+import { eventFacts } from './event-summary';
+import type { CareEvent } from './events';
 import { allItems, type KnowledgeKind } from './l1';
 import { monthDay, type QuickAsk } from './quick-ask';
 import type { BabyRecord } from './records';
@@ -169,10 +171,14 @@ const LEVELS = [
   { from: 75, name: '박사' },
 ];
 
-export function buildProfile(baby: Baby, records: BabyRecord[], now = new Date()): KnowledgeProfile {
+/**
+ * 기록(L2)과 기록 탭의 빠른 기록으로 사실 칸을 채운다. 같은 칸을 둘 다 알면 더 늦게 안 쪽을 보인다(SPEC-LOG-06).
+ */
+export function buildProfile(baby: Baby, records: BabyRecord[], events: CareEvent[] = [], now = new Date()): KnowledgeProfile {
   const { month } = ageFrom(baby.birthDate, now);
   const covered = new Set(records.flatMap((r) => r.covers));
   const newestFirst = [...records].reverse();
+  const fromEvents = eventFacts(events, now);
 
   const domains: Domain[] = DOMAINS.map((d) => {
     const facts: Fact[] = d.facts
@@ -193,14 +199,17 @@ export function buildProfile(baby: Baby, records: BabyRecord[], now = new Date()
           };
         }
         const hit = newestFirst.find((r) => f.match.test(r.label));
+        // 기록 탭으로 아는 값 — 대화 기록보다 늦게 안 것이면 그것을 보인다
+        const logged = fromEvents[f.id];
+        const useLogged = logged && (!hit || logged.at > hit.createdAt);
         return {
           id: f.id,
           label: f.label,
-          score: hit ? 1 : 0,
-          value: hit?.label ?? null,
+          score: hit || logged ? 1 : 0,
+          value: useLogged ? logged.value : (hit?.label ?? null),
           benefit: f.benefit,
           ask: { ...f.ask, hint: f.benefit },
-          record: hit ?? null,
+          record: useLogged ? null : (hit ?? null),
         };
       });
     const score = facts.length ? facts.reduce((s, f) => s + f.score, 0) / facts.length : 0;

@@ -8,7 +8,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { readSetting, writeSetting } from './db';
-import { durationLabel, feedReminderAt } from './event-summary';
+import { useBaby } from './baby-context';
+import { diaperReminderAt, durationLabel, feedReminderAt, sleepReminderAt } from './event-summary';
 import {
   loadEvents,
   makeEvent,
@@ -19,7 +20,13 @@ import {
   type EventInput,
 } from './events';
 import { noteDeleted } from './family';
-import { askNotifications, scheduleFeedReminder } from './notifications';
+import {
+  askNotifications,
+  scheduleDiaperReminder,
+  scheduleFeedReminder,
+  scheduleSleepReminder,
+  scheduleTempReminders,
+} from './notifications';
 import { usePreferences } from './preferences-context';
 import { requestSync } from './sync-events';
 
@@ -43,7 +50,9 @@ const EventsContext = createContext<EventsContextValue | null>(null);
 export function EventsProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<CareEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const { feedReminder, loading: prefsLoading } = usePreferences();
+  const { feedReminder, diaperReminder, sleepReminder, tempReminder, loading: prefsLoading } = usePreferences();
+  const { age } = useBaby();
+  const month = age?.month ?? 0;
   // 고칠 때 지금 줄을 찾는 자리 — 화면이 그려진 뒤의 목록
   const current = useRef<CareEvent[]>([]);
   useEffect(() => {
@@ -64,12 +73,16 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // 수유 알림 — 기록 · 설정이 바뀔 때마다 마지막 수유 시작 + 정한 시간으로 다시 건다(지난 때면 끈다)
+  // 수유 · 기저귀 · 잠 알림 — 기록 · 설정이 바뀔 때마다 다시 건다(지난 때면 끈다, SPEC-LOG-05)
   useEffect(() => {
     if (loading || prefsLoading) return;
-    const at = feedReminderAt(events, feedReminder);
-    void scheduleFeedReminder(at, durationLabel(feedReminder ?? 0)).catch(() => undefined);
-  }, [events, feedReminder, loading, prefsLoading]);
+    void scheduleFeedReminder(feedReminderAt(events, feedReminder), durationLabel(feedReminder ?? 0)).catch(() => undefined);
+    void scheduleDiaperReminder(diaperReminderAt(events, diaperReminder), durationLabel(diaperReminder ?? 0)).catch(
+      () => undefined,
+    );
+    const sleep = sleepReminderAt(events, month, sleepReminder);
+    void scheduleSleepReminder(sleep?.at ?? null, durationLabel(sleep?.minutes ?? 0)).catch(() => undefined);
+  }, [events, feedReminder, diaperReminder, sleepReminder, month, loading, prefsLoading]);
 
   const add = useCallback<EventsContextValue['add']>(
     async (input) => {
@@ -77,13 +90,15 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
       await saveEvent(event);
       setEvents((prev) => sortEvents([...prev, event]));
       requestSync();
-      if ((event.kind === 'breast' || event.kind === 'formula') && feedReminder && !(await readSetting(FEED_ASKED_KEY))) {
+      // 알림 허락은 처음 기록할 때 한 번 — 허락하면 체온 알림도 바로 건다
+      if (!(await readSetting(FEED_ASKED_KEY))) {
         await writeSetting(FEED_ASKED_KEY, 'yes');
-        await askNotifications().catch(() => false);
+        const ok = await askNotifications().catch(() => false);
+        if (ok && tempReminder) await scheduleTempReminders(true).catch(() => undefined);
       }
       return event;
     },
-    [feedReminder],
+    [tempReminder],
   );
 
   const update = useCallback<EventsContextValue['update']>(async (id, patch) => {

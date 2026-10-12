@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -11,26 +11,35 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { KIND_UI } from '@/components/log/kinds';
+import { KIND_UI, STOOL_SWATCH } from '@/components/log/kinds';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Chip, Segmented, tap } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { cleanNumber } from '@/data/daily-log';
-import { clockLabel, durationLabel, minutesOf } from '@/data/event-summary';
-import { AMOUNT_RANGE, type CareEvent, type DiaperKind, type EventInput, type EventKind, type Side } from '@/data/events';
+import { STOOL_COLOR_LABEL, clockLabel, durationLabel, minutesOf } from '@/data/event-summary';
+import {
+  AMOUNT_RANGE,
+  type CareEvent,
+  type DiaperKind,
+  type EventInput,
+  type EventKind,
+  type Side,
+  type StoolColor,
+} from '@/data/events';
 import { useTheme } from '@/hooks/use-theme';
 
 /** 열 시트 — 새로 적기(editing 없음) · 고치기(editing 있음) */
 export type SheetTarget = { kind: EventKind; editing: CareEvent | null };
 
 const MIN = 60 * 1000;
+const STOOL_COLORS: StoolColor[] = ['yellow', 'brown', 'green', 'black', 'red', 'white'];
 
 /**
  * 기록 하나를 적거나 고치는 시트 (SPEC-LOG-01 · 02 · 03).
  *
- * 때는 「지금」이 기본이고 칩과 ±5분으로 옮긴다. 기저귀는 고르면 바로 저장(두 번 눌러 끝),
- * 모유 · 잠은 「시작」으로 재기 시작하거나 걸린 시간만 적는다. 숫자는 범위 밖이면 저장 단추가 꺼진다.
- * 부르는 쪽에서 `key` 를 열 때마다 바꿔 안의 값이 처음부터 시작하게 한다.
+ * 때는 「지금」이 기본이고, 칩으로 크게 옮기고 ±1분으로 맞춘다(꾹 누르면 빨라진다). 기저귀 소변은 고르면 바로 저장,
+ * 대변 · 둘 다는 변 색을 고르면 저장(색 없이도). 모유 · 잠은 「시작」으로 재기 시작하거나 걸린 시간만 적는다.
+ * 분유는 5ml 단위. 숫자는 범위 밖이면 저장 단추가 꺼진다. 부르는 쪽에서 `key` 를 열 때마다 바꿔 처음부터 시작하게 한다.
  */
 export function LogSheet({
   target,
@@ -64,6 +73,8 @@ export function LogSheet({
   const [text, setText] = useState<string>(() =>
     editing?.amount != null ? String(editing.amount) : kind !== 'temp' && lastAmount != null ? String(lastAmount) : '',
   );
+  // 기저귀 — 대변 · 둘 다를 고르면 변 색을 묻는다
+  const [stool, setStool] = useState<DiaperKind | null>(() => (editing?.diaper && editing.diaper !== 'pee' ? editing.diaper : null));
 
   const running = editing !== null && editing.endAt === null;
   const range = AMOUNT_RANGE[kind];
@@ -92,7 +103,7 @@ export function LogSheet({
           </ThemedText>
 
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">
-            {/* 모유 — 시작으로 재거나, 걸린 시간만 */}
+            {/* 모유 — 시작으로 재거나, 먹인 시간만 */}
             {kind === 'breast' && (
               <>
                 {!editing && (
@@ -122,7 +133,7 @@ export function LogSheet({
                     chips={[5, 10, 15, 20, 30]}
                   />
                 )}
-                <TimeRow label="시작한 때" value={at} onChange={setAt} />
+                <TimeRow label="수유 시간" value={at} onChange={setAt} />
                 <Button
                   size="lg"
                   label={editing ? '고쳤어요' : '기록할게요'}
@@ -131,25 +142,25 @@ export function LogSheet({
               </>
             )}
 
-            {/* 분유 — ml */}
+            {/* 분유 — 5ml 단위 */}
             {kind === 'formula' && (
               <>
                 <Stepper
-                  label="먹은 양"
+                  label="수유량"
                   value={ml}
-                  step={10}
-                  min={10}
+                  step={5}
+                  min={5}
                   max={400}
                   format={(v) => `${v}ml`}
                   onChange={setMl}
                   chips={[60, 90, 120, 150, 180, 200]}
                 />
-                <TimeRow label="먹인 때" value={at} onChange={setAt} />
+                <TimeRow label="수유 시간" value={at} onChange={setAt} />
                 <Button size="lg" label={editing ? '고쳤어요' : '기록할게요'} onPress={() => save({ amount: ml, startAt: at.toISOString() })} />
               </>
             )}
 
-            {/* 기저귀 — 고르면 바로 저장 */}
+            {/* 기저귀 — 소변은 바로 저장, 대변 · 둘 다는 변 색까지 */}
             {kind === 'diaper' && (
               <>
                 <TimeRow label="갈아 준 때" value={at} onChange={setAt} />
@@ -160,23 +171,61 @@ export function LogSheet({
                       ['poo', '대변'],
                       ['both', '둘 다'],
                     ] as [DiaperKind, string][]
-                  ).map(([value, label]) => (
-                    <Pressable
-                      key={value}
-                      accessibilityRole="button"
-                      onPress={() => save({ diaper: value, startAt: at.toISOString() })}
-                      style={({ pressed }) => [
-                        styles.big,
-                        {
-                          backgroundColor: editing?.diaper === value ? c.ink : pressed ? c.surfaceStrong : c.surface,
-                        },
-                      ]}>
-                      <ThemedText type="heading" style={{ color: editing?.diaper === value ? c.onInk : c.text }}>
-                        {label}
-                      </ThemedText>
-                    </Pressable>
-                  ))}
+                  ).map(([value, label]) => {
+                    const on = stool === value || (stool === null && editing?.diaper === value);
+                    return (
+                      <Pressable
+                        key={value}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                        onPress={() => {
+                          if (value === 'pee') save({ diaper: 'pee', color: null, startAt: at.toISOString() });
+                          else {
+                            tap();
+                            setStool(value);
+                          }
+                        }}
+                        style={({ pressed }) => [styles.big, { backgroundColor: on ? c.ink : pressed ? c.surfaceStrong : c.surface }]}>
+                        <ThemedText type="heading" style={{ color: on ? c.onInk : c.text }}>
+                          {label}
+                        </ThemedText>
+                      </Pressable>
+                    );
+                  })}
                 </View>
+                {stool && (
+                  <View style={styles.group}>
+                    <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
+                      변 색
+                    </ThemedText>
+                    <View style={styles.swatches}>
+                      {STOOL_COLORS.map((color) => {
+                        const on = editing?.color === color;
+                        return (
+                          <Pressable
+                            key={color}
+                            accessibilityRole="button"
+                            accessibilityLabel={`변 색 ${STOOL_COLOR_LABEL[color]}`}
+                            onPress={() => save({ diaper: stool, color, startAt: at.toISOString() })}
+                            style={({ pressed }) => [
+                              styles.swatch,
+                              { borderColor: on ? c.ink : c.border, backgroundColor: pressed ? c.surface : c.background },
+                            ]}>
+                            <View style={[styles.dot, { backgroundColor: STOOL_SWATCH[color], borderColor: c.border }]} />
+                            <ThemedText type="caption" style={{ fontWeight: 600 }}>
+                              {STOOL_COLOR_LABEL[color]}
+                            </ThemedText>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                    <Button
+                      variant="secondary"
+                      label="색 없이 기록"
+                      onPress={() => save({ diaper: stool, color: null, startAt: at.toISOString() })}
+                    />
+                  </View>
+                )}
               </>
             )}
 
@@ -190,8 +239,8 @@ export function LogSheet({
                   <Stepper
                     label="잔 시간"
                     value={minutes}
-                    step={15}
-                    min={5}
+                    step={1}
+                    min={1}
                     max={16 * 60}
                     format={(m) => durationLabel(m)}
                     onChange={setMinutes}
@@ -233,7 +282,7 @@ export function LogSheet({
                     ))}
                   </View>
                 )}
-                <TimeRow label={kind === 'temp' ? '잰 때' : '잰 날'} value={at} onChange={setAt} />
+                <TimeRow label={kind === 'temp' ? '잰 때' : '잰 날'} value={at} onChange={setAt} days />
                 <Button
                   size="lg"
                   label={editing ? '고쳤어요' : '기록할게요'}
@@ -276,15 +325,36 @@ function Divider({ label }: { label: string }) {
   );
 }
 
-/** 때 고르기 — 지금 · 몇 분 전 칩과 ±5분. 앞으로의 때는 고를 수 없다 */
-function TimeRow({ label, value, onChange }: { label: string; value: Date; onChange: (d: Date) => void }) {
+/**
+ * 때 고르기 — 지금 · 몇 분 전 칩으로 크게, ±1분으로 맞춘다(꾹 누르면 빨라진다). 앞으로의 때는 고를 수 없다.
+ * `days` 면 「어제」 칩도 — 몸무게 · 키처럼 지난날을 적을 때
+ */
+function TimeRow({
+  label,
+  value,
+  onChange,
+  days = false,
+}: {
+  label: string;
+  value: Date;
+  onChange: Dispatch<SetStateAction<Date>>;
+  days?: boolean;
+}) {
   const c = useTheme();
   const now = Date.now();
   const ago = Math.round((now - value.getTime()) / MIN);
-  const set = (minutesAgo: number) => onChange(new Date(now - minutesAgo * MIN));
-  const shift = (delta: number) => onChange(new Date(Math.min(now, value.getTime() + delta * MIN)));
-  const days = Math.floor((new Date(now).setHours(0, 0, 0, 0) - new Date(value).setHours(0, 0, 0, 0)) / (24 * 60 * MIN));
-  const dayWord = days === 0 ? '' : days === 1 ? '어제 ' : `${value.getMonth() + 1}월 ${value.getDate()}일 `;
+  const set = (minutesAgo: number) => onChange(new Date(Date.now() - minutesAgo * MIN));
+  const shift = (delta: number) => onChange((prev) => new Date(Math.min(Date.now(), prev.getTime() + delta * MIN)));
+  const dayDiff = Math.floor((new Date(now).setHours(0, 0, 0, 0) - new Date(value).setHours(0, 0, 0, 0)) / (24 * 60 * MIN));
+  const dayWord = dayDiff === 0 ? '' : dayDiff === 1 ? '어제 ' : `${value.getMonth() + 1}월 ${value.getDate()}일 `;
+  const chips: [number, string][] = [
+    [0, '지금'],
+    [10, '10분 전'],
+    [30, '30분 전'],
+    [60, '1시간 전'],
+    [180, '3시간 전'],
+    ...(days ? ([[24 * 60, '어제']] as [number, string][]) : []),
+  ];
   return (
     <View style={styles.group}>
       <View style={styles.groupHead}>
@@ -292,23 +362,17 @@ function TimeRow({ label, value, onChange }: { label: string; value: Date; onCha
           {label}
         </ThemedText>
         <View style={styles.stepper}>
-          <StepButton icon="remove" label="5분 이르게" onPress={() => shift(-5)} />
+          <StepButton icon="remove" label="1분 이르게" onStep={() => shift(-1)} />
           <ThemedText type="heading" style={styles.stepValue}>
             {dayWord}
             {clockLabel(value)}
           </ThemedText>
-          <StepButton icon="add" label="5분 늦게" onPress={() => shift(5)} disabled={ago <= 0} />
+          <StepButton icon="add" label="1분 늦게" onStep={() => shift(1)} disabled={ago <= 0} />
         </View>
       </View>
       <View style={styles.chips}>
-        {[
-          [0, '지금'],
-          [10, '10분 전'],
-          [30, '30분 전'],
-          [60, '1시간 전'],
-          [180, '3시간 전'],
-        ].map(([m, l]) => (
-          <Chip key={l} label={l as string} selected={Math.abs(ago - (m as number)) < 1} onPress={() => set(m as number)} />
+        {chips.map(([m, l]) => (
+          <Chip key={l} label={l} selected={Math.abs(ago - m) < 1} onPress={() => set(m)} />
         ))}
       </View>
     </View>
@@ -331,7 +395,7 @@ function Stepper({
   min: number;
   max: number;
   format: (v: number) => string;
-  onChange: (v: number) => void;
+  onChange: Dispatch<SetStateAction<number>>;
   chips: number[];
 }) {
   const c = useTheme();
@@ -342,11 +406,21 @@ function Stepper({
           {label}
         </ThemedText>
         <View style={styles.stepper}>
-          <StepButton icon="remove" label={`${label} 줄이기`} onPress={() => onChange(Math.max(min, value - step))} disabled={value <= min} />
+          <StepButton
+            icon="remove"
+            label={`${label} 줄이기`}
+            onStep={() => onChange((v) => Math.max(min, v - step))}
+            disabled={value <= min}
+          />
           <ThemedText type="title" style={styles.stepValue}>
             {format(value)}
           </ThemedText>
-          <StepButton icon="add" label={`${label} 늘리기`} onPress={() => onChange(Math.min(max, value + step))} disabled={value >= max} />
+          <StepButton
+            icon="add"
+            label={`${label} 늘리기`}
+            onStep={() => onChange((v) => Math.min(max, v + step))}
+            disabled={value >= max}
+          />
         </View>
       </View>
       <View style={styles.chips}>
@@ -358,28 +432,55 @@ function Stepper({
   );
 }
 
+/** −/+ 단추 — 한 번 누르면 한 칸, 꾹 누르고 있으면 점점 빨리 움직인다 */
 function StepButton({
   icon,
   label,
-  onPress,
+  onStep,
   disabled = false,
 }: {
   icon: 'add' | 'remove';
   label: string;
-  onPress: () => void;
+  onStep: () => void;
   disabled?: boolean;
 }) {
   const c = useTheme();
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const step = useRef(onStep);
+  useEffect(() => {
+    step.current = onStep;
+  }, [onStep]);
+  const stop = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  useEffect(() => stop, []);
+  const repeat = (count: number) => {
+    timer.current = setTimeout(
+      () => {
+        step.current();
+        repeat(count + 1);
+      },
+      count < 8 ? 120 : count < 30 ? 60 : 25,
+    );
+  };
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={label}
       disabled={disabled}
       hitSlop={6}
+      // 한 번 누르면 한 칸(화면 읽기 프로그램의 두 번 탭도 이 길), 꾹 누르면 손을 뗄 때까지 이어서
       onPress={() => {
         tap();
-        onPress();
+        onStep();
       }}
+      delayLongPress={380}
+      onLongPress={() => {
+        stop();
+        repeat(0);
+      }}
+      onPressOut={stop}
       style={({ pressed }) => [styles.stepButton, { backgroundColor: pressed ? c.surfaceStrong : c.surface, opacity: disabled ? 0.4 : 1 }]}>
       <ThemedText type="heading" style={{ color: c.text, fontSize: 20, lineHeight: 22 }}>
         {icon === 'add' ? '+' : '−'}
@@ -410,8 +511,21 @@ const styles = StyleSheet.create({
   groupHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   stepValue: { minWidth: 92, textAlign: 'center' },
-  stepButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  stepButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  swatch: {
+    width: '31%',
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderRadius: Radius.md,
+    paddingHorizontal: 10,
+    minHeight: 48,
+  },
+  dot: { width: 18, height: 18, borderRadius: 9, borderWidth: 1 },
   field: {
     flexDirection: 'row',
     alignItems: 'center',

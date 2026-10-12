@@ -19,6 +19,7 @@ import { useBaby } from '@/data/baby-context';
 import type { ChatMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { buildProfile, knowledgeGrowth, type Domain, type Fact } from '@/data/knowledge-profile';
+import { useEvents } from '@/data/events-context';
 import { useRecords } from '@/data/records-context';
 import { useQuickAsk } from '@/hooks/use-quick-ask';
 import { useTheme } from '@/hooks/use-theme';
@@ -37,12 +38,13 @@ export function KnowledgeView() {
   const c = useTheme();
   const { baby } = useBaby();
   const { records } = useRecords();
+  const { events } = useEvents();
   const { messages } = useChat();
   // 「알려 주기」는 이 자리에서 묻는다(task baby/002)
   const { ask, sheet } = useQuickAsk();
   const { domain: param } = useLocalSearchParams<{ domain?: string }>();
   const [selected, setSelected] = useState<string | null>(param ?? null);
-  const profile = useMemo(() => (baby ? buildProfile(baby, records) : null), [baby, records]);
+  const profile = useMemo(() => (baby ? buildProfile(baby, records, events) : null), [baby, records, events]);
   if (!baby || !profile) return <ScreenLoading />;
   const name = baby.name ?? DEFAULT_BABY_NAME;
   const domain = profile.domains.find((d) => d.id === selected) ?? profile.domains[0];
@@ -74,7 +76,7 @@ export function KnowledgeView() {
           <SectionHeader title="버디와 함께한 시간" />
           <Card style={styles.together}>
             <ThemedText type="body" style={{ fontWeight: 600 }}>
-              {togetherLine(baby.createdAt, questionCount(messages), records.length)}
+              {togetherLine(baby.createdAt, questionCount(messages), records.length + events.length)}
             </ThemedText>
             {growth.length >= 2 ? (
               <Sparkline points={growth} color={c.accent} />

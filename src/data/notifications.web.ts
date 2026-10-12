@@ -25,3 +25,9 @@ export async function scheduleFeedReminder(_at: Date | null, _afterLabel: string
 export function onBriefingOpened(_listener: () => void): () => void {
   return () => undefined;
 }
+
+export async function scheduleDiaperReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
+
+export async function scheduleSleepReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
+
+export async function scheduleTempReminders(_on: boolean): Promise<void> {}

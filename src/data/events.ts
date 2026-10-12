@@ -11,6 +11,8 @@ import { deleteEventRow, readEventRows, upsertEventRow } from './db';
 export type EventKind = 'breast' | 'formula' | 'diaper' | 'sleep' | 'temp' | 'weight' | 'height';
 export type Side = 'left' | 'right';
 export type DiaperKind = 'pee' | 'poo' | 'both';
+/** 변 색 — 대변 · 둘 다일 때 고른다(SPEC-LOG-01) */
+export type StoolColor = 'yellow' | 'brown' | 'green' | 'black' | 'red' | 'white';
 
 export type CareEvent = {
   id: string;
@@ -23,6 +25,8 @@ export type CareEvent = {
   amount: number | null;
   side: Side | null;
   diaper: DiaperKind | null;
+  /** 변 색 — 대변이 있을 때만. 옛 기록에는 없다 */
+  color: StoolColor | null;
   note: string | null;
   createdAt: string;
   /** 마지막으로 고친 때 — 가족 공유에서 늦게 고친 쪽이 이긴다 */
@@ -59,6 +63,7 @@ export function makeEvent(input: EventInput, now = new Date()): CareEvent {
     amount: input.amount ?? null,
     side: input.side ?? null,
     diaper: input.diaper ?? null,
+    color: input.color ?? null,
     note: input.note ?? null,
     createdAt: at,
     updatedAt: at,

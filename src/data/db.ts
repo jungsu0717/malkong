@@ -71,6 +71,7 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           amount      REAL,
           side        TEXT,
           diaper      TEXT,
+          color       TEXT,
           note        TEXT,
           created_at  TEXT NOT NULL,
           updated_at  TEXT NOT NULL
@@ -81,6 +82,11 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
       const babyColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(baby)');
       if (!babyColumns.some((col) => col.name === 'updated_at')) {
         await db.execAsync('ALTER TABLE baby ADD COLUMN updated_at TEXT');
+      }
+      // 변 색(task log/002) — 그 전에 만든 기록 표에는 없다
+      const eventColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(care_event)');
+      if (!eventColumns.some((col) => col.name === 'color')) {
+        await db.execAsync('ALTER TABLE care_event ADD COLUMN color TEXT');
       }
       return db;
     })();
@@ -300,7 +306,7 @@ export async function markInboxReadRows(ids: string[], at: string): Promise<void
 export async function readEventRows(): Promise<CareEvent[]> {
   const db = await getDb();
   return db.getAllAsync<CareEvent>(
-    `SELECT id, kind, start_at AS startAt, end_at AS endAt, amount, side, diaper, note,
+    `SELECT id, kind, start_at AS startAt, end_at AS endAt, amount, side, diaper, color, note,
             created_at AS createdAt, updated_at AS updatedAt
        FROM care_event ORDER BY start_at`,
   );
@@ -310,11 +316,11 @@ export async function readEventRows(): Promise<CareEvent[]> {
 export async function upsertEventRow(e: CareEvent): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO care_event (id, kind, start_at, end_at, amount, side, diaper, note, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO care_event (id, kind, start_at, end_at, amount, side, diaper, color, note, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, start_at = excluded.start_at, end_at = excluded.end_at,
-       amount = excluded.amount, side = excluded.side, diaper = excluded.diaper, note = excluded.note,
-       updated_at = excluded.updated_at`,
+       amount = excluded.amount, side = excluded.side, diaper = excluded.diaper, color = excluded.color,
+       note = excluded.note, updated_at = excluded.updated_at`,
     e.id,
     e.kind,
     e.startAt,
@@ -322,6 +328,7 @@ export async function upsertEventRow(e: CareEvent): Promise<void> {
     e.amount,
     e.side,
     e.diaper,
+    e.color ?? null,
     e.note,
     e.createdAt,
     e.updatedAt,

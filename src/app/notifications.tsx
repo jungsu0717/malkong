@@ -11,16 +11,39 @@ import { ThemedView } from '@/components/themed-view';
 import { Button, Card, Chip, ListRow, Toggle } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { BRIEFING_TIMES, timeLabel } from '@/data/briefing';
-import { durationLabel } from '@/data/event-summary';
+import { useBaby } from '@/data/baby-context';
+import { defaultAwakeMinutes, durationLabel, usualAwakeMinutes } from '@/data/event-summary';
+import { useEvents } from '@/data/events-context';
 import { askNotifications, notificationsAllowed, notificationsSupported } from '@/data/notifications';
-import { DEFAULT_BRIEFING_TIME, DEFAULT_FEED_REMINDER, usePreferences } from '@/data/preferences-context';
+import { DEFAULT_BRIEFING_TIME, DEFAULT_DIAPER_REMINDER, DEFAULT_FEED_REMINDER, usePreferences } from '@/data/preferences-context';
 
 /** 수유 알림 간격 — 분 */
 const FEED_GAPS = [120, 150, 180, 210, 240];
+/** 기저귀 알림 간격 — 분 */
+const DIAPER_GAPS = [120, 180, 240, 300];
 
 export default function NotificationsScreen() {
-  const { briefingTime, setBriefingTime, nudgePush, setNudgePush, nudgeCard, setNudgeCard, feedReminder, setFeedReminder } =
-    usePreferences();
+  const {
+    briefingTime,
+    setBriefingTime,
+    nudgePush,
+    setNudgePush,
+    nudgeCard,
+    setNudgeCard,
+    feedReminder,
+    setFeedReminder,
+    diaperReminder,
+    setDiaperReminder,
+    sleepReminder,
+    setSleepReminder,
+    tempReminder,
+    setTempReminder,
+  } = usePreferences();
+  const { age } = useBaby();
+  const { events } = useEvents();
+  // 잠 알림의 지금 기준 — 우리 아기의 평소 깨어 있던 시간, 모르면 월령 기본값
+  const usualAwake = usualAwakeMinutes(events);
+  const awake = usualAwake ?? defaultAwakeMinutes(age?.month ?? 0);
   /** 폰의 알림 허락 — 설정 앱에서 바꾸고 돌아오면 다시 읽는다 */
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const supported = notificationsSupported();
@@ -61,8 +84,21 @@ export default function NotificationsScreen() {
     if (ok) await setFeedReminder(feedReminder ?? DEFAULT_FEED_REMINDER);
   };
 
+  // 기저귀 · 잠 · 체온 알림 — 켤 때 허락을 묻는다
+  const withPermission = async (turnOn: () => Promise<void>) => {
+    const ok = await askNotifications();
+    setAllowed(ok);
+    if (ok) await turnOn();
+  };
+  const diaperOn = diaperReminder !== null && allowed === true;
+  const sleepOn = sleepReminder && allowed === true;
+  const tempOn = tempReminder && allowed === true;
+
   /** 켜 두었는데 폰 설정에서 막혀 있으면 「설정 열기」 */
-  const blocked = supported && allowed === false && (briefingTime !== null || nudgePush || feedReminder !== null);
+  const blocked =
+    supported &&
+    allowed === false &&
+    (briefingTime !== null || nudgePush || feedReminder !== null || diaperReminder !== null || sleepReminder || tempReminder);
   const blockedText = !supported ? '이 폰에서는 알림을 받을 수 없어요' : '폰 설정에서 알림이 꺼져 있어요';
 
   return (
@@ -88,6 +124,74 @@ export default function NotificationsScreen() {
               ))}
             </View>
           )}
+          <ListRow
+            divider
+            icon="water-outline"
+            title="기저귀 알림"
+            detail={
+              !supported || (allowed === false && diaperReminder !== null)
+                ? blockedText
+                : diaperOn
+                  ? `마지막 기저귀 ${durationLabel(diaperReminder!)} 뒤에 한 번`
+                  : '안 받아요'
+            }
+            right={
+              supported ? (
+                <Toggle
+                  label="기저귀 알림"
+                  value={diaperOn}
+                  onChange={(on) =>
+                    void (on ? withPermission(() => setDiaperReminder(diaperReminder ?? DEFAULT_DIAPER_REMINDER)) : setDiaperReminder(null))
+                  }
+                />
+              ) : null
+            }
+          />
+          {diaperOn && (
+            <View style={styles.times}>
+              {DIAPER_GAPS.map((m) => (
+                <Chip key={m} label={durationLabel(m)} selected={m === diaperReminder} onPress={() => void setDiaperReminder(m)} />
+              ))}
+            </View>
+          )}
+          <ListRow
+            divider
+            icon="moon-outline"
+            title="잠 알림"
+            detail={
+              !supported || (allowed === false && sleepReminder)
+                ? blockedText
+                : sleepOn
+                  ? `깬 뒤 ${durationLabel(awake)} 동안 잠 기록이 없으면 · ${usualAwake ? '우리 아기 평소' : '월령 기본값, 기록이 쌓이면 우리 아기 평소로'}`
+                  : '안 받아요'
+            }
+            right={
+              supported ? (
+                <Toggle
+                  label="잠 알림"
+                  value={sleepOn}
+                  onChange={(on) => void (on ? withPermission(() => setSleepReminder(true)) : setSleepReminder(false))}
+                />
+              ) : null
+            }
+          />
+          <ListRow
+            divider
+            icon="thermometer-outline"
+            title="체온 알림"
+            detail={
+              !supported || (allowed === false && tempReminder) ? blockedText : tempOn ? '매일 오전 8시 · 오후 8시' : '안 받아요'
+            }
+            right={
+              supported ? (
+                <Toggle
+                  label="체온 알림"
+                  value={tempOn}
+                  onChange={(on) => void (on ? withPermission(() => setTempReminder(true)) : setTempReminder(false))}
+                />
+              ) : null
+            }
+          />
           <ListRow
             divider
             icon="notifications-outline"

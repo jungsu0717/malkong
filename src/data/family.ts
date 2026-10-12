@@ -159,6 +159,7 @@ function eventTombstone(t: Tombstone): SyncEvent {
     amount: null,
     side: null,
     diaper: null,
+    color: null,
     note: null,
     createdAt: t.deletedAt,
     updatedAt: t.deletedAt,

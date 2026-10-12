@@ -326,6 +326,7 @@ CREATE TABLE care_event (                  -- 빠른 기록 (SPEC-LOG-01, decisi
   amount      REAL,                        -- 분유 ml · 체온 ℃ · 몸무게 kg · 키 cm
   side        TEXT,                        -- 모유 left · right
   diaper      TEXT,                        -- pee · poo · both
+  color       TEXT,                        -- 변 색 yellow · brown · green · black · red · white (대변이 있을 때)
   note        TEXT,
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL                -- 가족 공유의 「늦게 고친 쪽이 이긴다」 기준

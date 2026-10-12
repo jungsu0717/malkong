@@ -270,6 +270,7 @@ def test_sync_events_alongside_records(app) -> None:
             "records": [record("r1", "몸무게 6.4kg", "2026-10-12T10:00:00.000Z")],
             "events": [
                 event("ev-1", "formula", "2026-10-12T10:00:00.000Z", amount=120),
+                event("ev-3", "diaper", "2026-10-12T10:10:00.000Z", diaper="poo", color="green"),
                 event(
                     "ev-2", "sleep", "2026-10-12T10:05:00.000Z", startAt="2026-10-12T10:05:00.000Z"
                 ),
@@ -282,7 +283,10 @@ def test_sync_events_alongside_records(app) -> None:
     assert {(e["id"], e["kind"], e["amount"], e["endAt"]) for e in got["events"]} == {
         ("ev-1", "formula", 120, None),
         ("ev-2", "sleep", None, None),
+        ("ev-3", "diaper", None, None),
     }
+    # 변 색도 그대로 온다(task log/002)
+    assert [e["color"] for e in got["events"] if e["id"] == "ev-3"] == ["green"]
     assert all("_event" not in e for e in got["events"])
 
     # b 가 잠을 끝내면(더 늦게 고침) a 에게 끝난 잠이 간다

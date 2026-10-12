@@ -107,7 +107,7 @@
 `consentedAt` 은 아기 · 건강 기록의 서버 저장 · 가족 공유에 동의한 때(ISO) — 구성원 행에 남는다.
 `baby` 는 기기 DB 의 `baby` 행 그대로(`id` · `name` · `birthDate` · `createdAt` · `updatedAt`), `records[]` 는 `record` 행 그대로에
 `deleted`(지운 기록 표시)를 더한 것. `events[]` 는 기록 탭의 빠른 기록 — `care_event` 행 그대로(`id` · `kind` · `startAt` ·
-`endAt` · `amount` · `side` · `diaper` · `note` · `createdAt` · `updatedAt`)에 `deleted` 를 더한 것이다(SPEC-LOG-07). `kind` 는
+`endAt` · `amount` · `side` · `diaper` · `color`(변 색) · `note` · `createdAt` · `updatedAt`)에 `deleted` 를 더한 것이다(SPEC-LOG-07). `kind` 는
 breast · formula · diaper · sleep · temp · weight · height 가운데 하나. 서버는 내용을 읽지 않고 맞추기만 한다 — 빠른 기록도
 기록과 같은 번호로 센다. 응답에 `events` 가 없으면 옛 서버다(앱은 빠른 기록을 올린 때를 넘기지 않는다).
 

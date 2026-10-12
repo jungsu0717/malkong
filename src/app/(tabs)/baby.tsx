@@ -14,6 +14,7 @@ import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { useChat } from '@/data/chat-context';
 import { buildProfile } from '@/data/knowledge-profile';
+import { useEvents } from '@/data/events-context';
 import { useRecords } from '@/data/records-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -46,6 +47,7 @@ export default function BabyScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
+  const { events } = useEvents();
   const { messages } = useChat();
   /** 탭에 올 때마다 등장 모션을 다시 */
   const [visit, setVisit] = useState(0);
@@ -58,7 +60,7 @@ export default function BabyScreen() {
     }, []),
   );
 
-  const profile = useMemo(() => (baby ? buildProfile(baby, records) : null), [baby, records]);
+  const profile = useMemo(() => (baby ? buildProfile(baby, records, events) : null), [baby, records, events]);
   const shown = useCountUp(profile?.percent ?? 0, visit);
 
   if (!baby || !age || !profile) return <ScreenLoading />;
@@ -117,7 +119,7 @@ export default function BabyScreen() {
             </View>
             {/* 함께한 시간 (SPEC-BABY-05) — 숫자 칸 대신 한 문장 */}
             <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
-              {togetherLine(baby.createdAt, questionCount(messages), records.length)}
+              {togetherLine(baby.createdAt, questionCount(messages), records.length + events.length)}
             </ThemedText>
           </View>
 

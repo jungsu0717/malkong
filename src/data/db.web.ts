@@ -176,7 +176,8 @@ export async function readEventRows(): Promise<CareEvent[]> {
   try {
     const raw = globalThis.localStorage?.getItem(EVENTS_KEY);
     const rows = raw ? (JSON.parse(raw) as CareEvent[]) : [];
-    return rows.sort((a, b) => a.startAt.localeCompare(b.startAt));
+    // 변 색 칸이 생기기 전에 저장한 줄도 읽게 메운다
+    return rows.map((r) => ({ ...r, color: r.color ?? null })).sort((a, b) => a.startAt.localeCompare(b.startAt));
   } catch {
     return [];
   }

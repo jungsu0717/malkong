@@ -86,7 +86,7 @@ export default function LogScreen() {
   const last = lastFeed(events);
   const lastStart = lastFeedStart(events);
   const reminder = feedReminderAt(events, feedReminder, now);
-  const warn = feverWarning(events, age?.month ?? null, now);
+  const warns = careWarnings(events, age?.month ?? null, now);
 
   const dayStart = useMemo(() => {
     const d = startOfDay(now);
@@ -148,8 +148,10 @@ export default function LogScreen() {
             </ThemedText>
           </View>
 
-          {/* 위험 신호 — 체온 기록이 기준을 넘으면 고정 안내(헌장 2, SPEC-ASK-02 와 같은 L1) */}
-          {warn && <FeverCard id={warn} />}
+          {/* 위험 신호 — 체온 · 변 기록이 기준에 닿으면 고정 안내(헌장 2, SPEC-ASK-02 와 같은 L1) */}
+          {warns.map((id) => (
+            <WarnCard key={id} id={id} />
+          ))}
 
           {/* 재는 중 (SPEC-LOG-02) */}
           {breast && (
@@ -287,8 +289,9 @@ export default function LogScreen() {
             </Pressable>
           </View>
 
-          <AdBanner />
         </ScrollView>
+        {/* 광고는 화면 바닥에 붙인다 — 하루 여러 번 여는 첫 화면이라 늘 보이게, 기록 단추와는 멀리(app-design 「광고 자리」) */}
+        <AdBanner anchored />
       </SafeAreaView>
 
       <LogSheet
@@ -353,19 +356,25 @@ function DayButton({
 }
 
 /**
- * 체온 기록이 위험 신호 기준을 넘었는가 — 12시간 안의 마지막 체온.
- * 40℃ 이상은 누구나(k-warn-0002), 3개월 미만은 38℃ 이상(k-warn-0001). 진단이 아니라 고정 안내다(헌장 2)
+ * 기록이 위험 신호 기준에 닿았는가 — 진단이 아니라 고정 안내다(헌장 2). 기준은 L1 위험 신호 항목 그대로.
+ * - 12시간 안의 마지막 체온: 40℃ 이상은 누구나(k-warn-0002), 3개월 미만은 38℃ 이상(k-warn-0001)
+ * - 24시간 안에 빨간 변을 적었으면 피 섞인 변(k-warn-0008)
  */
-function feverWarning(events: CareEvent[], month: number | null, now: Date): string | null {
+function careWarnings(events: CareEvent[], month: number | null, now: Date): string[] {
+  const ids: string[] = [];
   const temp = latestOf(events, 'temp');
-  if (!temp || temp.amount === null) return null;
-  if (now.getTime() - new Date(temp.startAt).getTime() > 12 * 60 * 60 * 1000) return null;
-  if (temp.amount >= 40) return 'k-warn-0002';
-  if (month !== null && month < 3 && temp.amount >= 38) return 'k-warn-0001';
-  return null;
+  if (temp && temp.amount !== null && now.getTime() - new Date(temp.startAt).getTime() <= 12 * 60 * 60 * 1000) {
+    if (temp.amount >= 40) ids.push('k-warn-0002');
+    else if (month !== null && month < 3 && temp.amount >= 38) ids.push('k-warn-0001');
+  }
+  const red = events.some(
+    (e) => e.kind === 'diaper' && e.color === 'red' && now.getTime() - new Date(e.startAt).getTime() <= DAY,
+  );
+  if (red) ids.push('k-warn-0008');
+  return ids;
 }
 
-function FeverCard({ id }: { id: string }) {
+function WarnCard({ id }: { id: string }) {
   const c = useTheme();
   const item = itemById(id);
   if (!item) return null;

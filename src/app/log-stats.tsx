@@ -3,15 +3,46 @@ import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { BarChart, LineChart } from '@/components/log/charts';
+import { ExternalLink } from '@/components/external-link';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, Card, Segmented } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useBaby } from '@/data/baby-context';
 import { durationLabel, lastDays, usual } from '@/data/event-summary';
 import { useEvents } from '@/data/events-context';
+import { itemById } from '@/data/l1';
 import { useTheme } from '@/hooks/use-theme';
 
 type Tab = 'feed' | 'sleep' | 'diaper' | 'growth';
+
+/**
+ * 기준표에 쓰는 L1 항목(SPEC-LOG-04) — 승인된 것만 나온다(itemById 는 승인 항목만 안다). 월령에 맞는 것만.
+ * 수유는 월령별 하루 양이 공공 자료에 없어 횟수 · 간격 기준을 보인다
+ */
+const NORMS: { label: string; ids: string[]; warn?: boolean }[] = [
+  { label: '수유', ids: ['k-feed-0001', 'k-feed-0002', 'k-feed-0201', 'k-feed-0604'] },
+  { label: '잠', ids: ['k-sleep-0006', 'k-sleep-0401', 'k-sleep-1201'] },
+  // 기저귀는 기준이 아니라 바로 진료가 필요한 신호(탈수)를 보인다
+  { label: '기저귀', ids: ['k-warn-0006'], warn: true },
+];
+
+function normsFor(month: number) {
+  return NORMS.map((n) => ({
+    label: n.label,
+    warn: n.warn ?? false,
+    items: n.ids.map((id) => itemById(id)).filter((i) => i !== undefined && i.months.includes(month)),
+  }));
+}
+
+/** 잠 기준의 시간 범위 — 「하루 12~16시간」 → [12, 16] */
+function sleepBand(month: number): [number, number] | null {
+  for (const item of normsFor(month).find((n) => n.label === '잠')?.items ?? []) {
+    const m = item!.title.match(/(\d+)~(\d+)시간/);
+    if (m) return [Number(m[1]), Number(m[2])];
+  }
+  return null;
+}
 
 /**
  * 일주일 그래프 (SPEC-LOG-04) — 수유 · 잠 · 기저귀는 최근 7일 막대와 평소(지난날 평균) 점선, 키와 몸무게는 기록한 날마다 선.
@@ -20,6 +51,8 @@ type Tab = 'feed' | 'sleep' | 'diaper' | 'growth';
 export default function LogStatsScreen() {
   const c = useTheme();
   const { events } = useEvents();
+  const { age } = useBaby();
+  const month = age?.month ?? 0;
   const [tab, setTab] = useState<Tab>('feed');
   const days = useMemo(() => lastDays(events, 7), [events]);
   const avg = useMemo(() => usual(lastDays(events, 8)), [events]);
@@ -30,6 +63,7 @@ export default function LogStatsScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
+        <Standards month={month} />
         <Segmented
           options={[
             { value: 'feed', label: '수유' },
@@ -61,9 +95,10 @@ export default function LogStatsScreen() {
               bars={bars((d) => Math.round((d.stats.sleepMin / 60) * 10) / 10)}
               format={(v) => `${v}`}
               avg={avg ? avg.sleepMin / 60 : null}
+              band={sleepBand(month)}
             />
             <ThemedText type="caption" style={{ color: c.textTertiary }}>
-              시간 단위 · 자정을 넘긴 잠은 날마다 나눠 셌어요
+              시간 단위 · 자정을 넘긴 잠은 날마다 나눠 셌어요{sleepBand(month) ? ' · 옅은 띠는 이 월령의 공공 기준' : ''}
             </ThemedText>
           </ChartCard>
         )}
@@ -107,6 +142,52 @@ export default function LogStatsScreen() {
   );
 }
 
+/** 이 월령의 기준표 — 맨 위(SPEC-LOG-04). 공공 기준이 없는 칸은 없다고 말한다 */
+function Standards({ month }: { month: number }) {
+  const c = useTheme();
+  const rows = normsFor(month);
+  return (
+    <Card tone="filled" style={styles.standards}>
+      <ThemedText type="heading">{month === 0 ? '첫 달' : `${month}개월`} 기준</ThemedText>
+      {rows.map((row) => (
+        <View key={row.label} style={styles.normRow}>
+          <ThemedText type="label" style={[styles.normLabel, { color: c.textSecondary }]}>
+            {row.label}
+          </ThemedText>
+          <View style={styles.normBody}>
+            {row.items.length === 0 ? (
+              <ThemedText type="small" style={{ color: c.textTertiary }}>
+                이 월령의 공공 기준은 아직 없어요
+              </ThemedText>
+            ) : (
+              row.items.map((item) => (
+                <View key={item!.id} style={styles.normItem}>
+                  {row.warn && (
+                    <ThemedText type="caption" style={{ color: c.danger, fontWeight: 600 }}>
+                      이럴 땐 바로 진료
+                    </ThemedText>
+                  )}
+                  <ThemedText type="small" style={{ fontWeight: 600 }}>
+                    {item!.title}
+                  </ThemedText>
+                  <ExternalLink href={item!.source.url as `https://${string}`}>
+                    <ThemedText type="caption" style={{ color: c.textSecondary, textDecorationLine: 'underline' }}>
+                      {item!.source.name}
+                    </ThemedText>
+                  </ExternalLink>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+      ))}
+      <ThemedText type="caption" style={{ color: c.textTertiary }}>
+        키 · 몸무게 기준(성장 도표)은 아직 없어요. 영유아 검진 때 함께 봐요.
+      </ThemedText>
+    </Card>
+  );
+}
+
 function ChartCard({ title, note, children }: { title: string; note: string | null; children: React.ReactNode }) {
   const c = useTheme();
   return (
@@ -145,5 +226,10 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   card: { gap: Spacing.three },
+  standards: { gap: 10 },
+  normRow: { flexDirection: 'row', gap: Spacing.two },
+  normLabel: { width: 44, fontWeight: 600, paddingTop: 2 },
+  normBody: { flex: 1, gap: 6 },
+  normItem: { gap: 1 },
   cardHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
 });

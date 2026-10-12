@@ -15,18 +15,28 @@ export function BarChart({
   bars,
   format,
   avg = null,
+  band = null,
   height = 132,
 }: {
   bars: Bar[];
   format: (v: number) => string;
   avg?: number | null;
+  /** 공공 기준의 범위 [아래, 위] — 옅은 띠로(그 월령의 L1 기준이 있을 때만) */
+  band?: [number, number] | null;
   height?: number;
 }) {
   const c = useTheme();
-  const max = Math.max(1, avg ?? 0, ...bars.map((b) => b.value));
+  const max = Math.max(1, avg ?? 0, band?.[1] ?? 0, ...bars.map((b) => b.value));
+  const scale = (v: number) => (v / max) * (height - 22);
   return (
     <View style={styles.chart}>
       <View style={[styles.plot, { height }]}>
+        {band && (
+          <View
+            pointerEvents="none"
+            style={[styles.band, { bottom: scale(band[0]), height: scale(band[1]) - scale(band[0]), backgroundColor: c.accentSoft }]}
+          />
+        )}
         {avg !== null && avg > 0 && (
           <View
             pointerEvents="none"
@@ -126,6 +136,7 @@ const styles = StyleSheet.create({
   col: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
   bar: { width: '70%', borderTopLeftRadius: 6, borderTopRightRadius: 6, borderBottomLeftRadius: 2, borderBottomRightRadius: 2 },
   avg: { position: 'absolute', left: 0, right: 0, borderTopWidth: 1, borderStyle: 'dashed' },
+  band: { position: 'absolute', left: 0, right: 0, borderRadius: 4 },
   labels: { flexDirection: 'row', gap: 8 },
   label: { flex: 1, textAlign: 'center' },
   range: { flexDirection: 'row', justifyContent: 'space-between' },

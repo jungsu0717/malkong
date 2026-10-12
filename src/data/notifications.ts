@@ -19,6 +19,13 @@ const NUDGE_TYPE = 'record-nudge';
 const BRIEFING_TYPE = 'briefing';
 const FEED_ID = 'feed-reminder';
 const FEED_CHANNEL_ID = 'feed-reminder';
+const DIAPER_ID = 'diaper-reminder';
+const SLEEP_ID = 'sleep-reminder';
+const TEMP_IDS = ['temp-morning', 'temp-evening'] as const;
+/** 기록 알림 묶음의 안드로이드 채널 — 수유 말고는 한 채널에 둔다 */
+const CARE_CHANNEL_ID = 'care-reminder';
+/** 체온 알림 시각 — 아침 · 저녁(SPEC-LOG-05) */
+const TEMP_HOURS = [8, 20];
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -152,4 +159,51 @@ export function onBriefingOpened(listener: () => void): () => void {
   handle(Notifications.getLastNotificationResponse());
   const sub = Notifications.addNotificationResponseReceivedListener(handle);
   return () => sub.remove();
+}
+
+async function careChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync(CARE_CHANNEL_ID, {
+    name: '기록 알림',
+    importance: Notifications.AndroidImportance.DEFAULT,
+  });
+}
+
+/** 한 번 거는 기록 알림 — null 이면 끈다. 글에는 아기 정보 · 기록 내용을 넣지 않는다 */
+async function scheduleOnce(id: string, at: Date | null, title: string, body: string): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(id).catch(() => undefined);
+  if (!at || !(await notificationsAllowed())) return;
+  await careChannel();
+  await Notifications.scheduleNotificationAsync({
+    identifier: id,
+    content: { title, body },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: CARE_CHANNEL_ID },
+  });
+}
+
+/** 기저귀 알림 (SPEC-LOG-05) — 마지막 기저귀 뒤 정한 시간 */
+export async function scheduleDiaperReminder(at: Date | null, afterLabel: string): Promise<void> {
+  await scheduleOnce(DIAPER_ID, at, `기저귀를 간 지 ${afterLabel}이 지났어요`, '한번 살펴볼 때가 됐을 수 있어요');
+}
+
+/** 잠 알림 (SPEC-LOG-05) — 깬 뒤 평소 깨어 있던 시간 */
+export async function scheduleSleepReminder(at: Date | null, afterLabel: string): Promise<void> {
+  await scheduleOnce(SLEEP_ID, at, `잠에서 깬 지 ${afterLabel}이 지났어요`, '졸려할 때가 됐을 수 있어요');
+}
+
+/** 체온 알림 (SPEC-LOG-05) — 매일 아침 8시 · 저녁 8시. 끄면 둘 다 지운다 */
+export async function scheduleTempReminders(on: boolean): Promise<void> {
+  for (const id of TEMP_IDS) await Notifications.cancelScheduledNotificationAsync(id).catch(() => undefined);
+  if (!on || !(await notificationsAllowed())) return;
+  await careChannel();
+  for (const [i, hour] of TEMP_HOURS.entries()) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: TEMP_IDS[i],
+      content: {
+        title: i === 0 ? '아침 체온을 재 볼 시간이에요' : '저녁 체온을 재 볼 시간이에요',
+        body: '기록 탭에서 바로 남길 수 있어요',
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute: 0, channelId: CARE_CHANNEL_ID },
+    });
+  }
 }

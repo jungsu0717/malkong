@@ -30,6 +30,21 @@
     "status": "approved"
   },
   {
+    "id": "k-feed-0201",
+    "months": [2, 3, 4, 5],
+    "kind": "수유",
+    "title": "2~5개월 분유는 보통 3~4시간마다",
+    "body": "분유를 먹는 아기는 첫 몇 주에서 몇 달 동안 보통 3~4시간마다 먹어요. 한 번에 먹는 양은 아기마다 달라서, 배고파하는 신호를 보고 먹이고 궁금하면 의료진과 상의해요.",
+    "source": {
+      "name": "미국 CDC 영유아 영양",
+      "url": "https://www.cdc.gov/infant-toddler-nutrition/formula-feeding/how-much-and-how-often.html",
+      "checked": "2026-10-12"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "draft"
+  },
+  {
     "id": "k-feed-0003",
     "months": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
     "kind": "수유",
@@ -433,6 +448,36 @@
     "confidence": "참고",
     "red_flag": false,
     "status": "approved"
+  },
+  {
+    "id": "k-sleep-0006",
+    "months": [0, 1, 2, 3],
+    "kind": "수면",
+    "title": "0~3개월엔 하루 14~17시간 잠",
+    "body": "생후 0~3개월 아기는 하루 14~17시간 자는 것이 권장돼요. 아기마다 차이가 있어요.",
+    "source": {
+      "name": "미국 CDC 수면",
+      "url": "https://www.cdc.gov/sleep/about/index.html",
+      "checked": "2026-10-12"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "draft"
+  },
+  {
+    "id": "k-sleep-1201",
+    "months": [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "수면",
+    "title": "1~2세엔 낮잠 포함 하루 11~14시간 잠",
+    "body": "1~2세 아이는 낮잠을 포함해 하루 11~14시간 자는 것이 권장돼요.",
+    "source": {
+      "name": "미국 CDC 수면",
+      "url": "https://www.cdc.gov/sleep/about/index.html",
+      "checked": "2026-10-12"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "draft"
   },
   {
     "id": "k-feed-0601",

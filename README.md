@@ -32,7 +32,8 @@
   폰끼리 맞춘다([my/007](docs/task/my/007-family-sharing.md)). revision 00016(2026-10-12)은 **대화 기억** — 대화 요약 · 질문 주제에 닿는 기록만 ·
   「무슨 상관이야」 같은 반박 알아듣기([ask/013](docs/task/ask/013-conversation-memory.md), [decisions/022](docs/decisions/022-conversation-memory.md)).
   revision 00017(같은 날)은 요약이 앞 내용을 잃지 않게 한 프롬프트 보강. Julian 이 폰으로 써 보는 것이 남음.
-  revision 00018(같은 날)은 가족 맞추기에 기록 탭의 빠른 기록(`events`)을 싣는 것([log/001](docs/task/log/001-quick-log-tab.md)). 자동 모드가 운영 배포를 막을 때는 Julian 이 server/AGENTS.md 「배포」 명령을 직접 친다(00012 · 00014 · 00015 가 그랬다)
+  revision 00018(같은 날)은 가족 맞추기에 기록 탭의 빠른 기록(`events`)을 싣는 것([log/001](docs/task/log/001-quick-log-tab.md)).
+  **배포 대기**: 변 색 맞추기([log/002](docs/task/log/002-log-detail-and-reminders.md)). **승인 대기 L1 초안 셋**(잠 0~3개월 · 1~2세, 분유 2~5개월 간격) — 승인해야 그래프 기준표에 나온다. 자동 모드가 운영 배포를 막을 때는 Julian 이 server/AGENTS.md 「배포」 명령을 직접 친다(00012 · 00014 · 00015 가 그랬다)
 - 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고는 개발 빌드부터
 - **홍보 자료(보관 — 배포 때 · 앱 첫 실행에 쓴다)**: 만화 「아빠가 육아 앱을 만든 이유」 5컷 · 릴스 30초(`marketing/toon/`, 앱 첫 실행에도 들어가 있다),
   스토어 첫 장 「검색 대신, 근거로 답해요」 — 지식층 · 답 파이프라인 흐름도 + 진짜 앱 화면(`marketing/store/`, 앱스토어 · 구글 플레이 두 크기).
