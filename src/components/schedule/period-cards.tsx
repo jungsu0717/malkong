@@ -7,7 +7,6 @@ import { ageFrom } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { todoOf } from '@/data/briefing';
 import { monthlyBriefing, weeklyBriefing } from '@/data/period-briefing';
-import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
 import { coveredIds, groupsToMark } from '@/data/schedule';
 import { getGaps, groupGaps, labelByKind, type GapGroup, type L1Item } from '@/data/timeline';
@@ -115,14 +114,13 @@ export function MonthlyCard({ month, onPick }: { month: number; onPick: (g: GapG
   const c = useTheme();
   const { baby } = useBaby();
   const { records } = useRecords();
-  const { scheduleOnly } = usePreferences();
   if (!baby) return null;
-  const m = monthlyBriefing(month, baby.birthDate, records, { scheduleOnly });
+  const m = monthlyBriefing(month, baby.birthDate, records);
   const currentMonth = ageFrom(baby.birthDate).month;
   // 지금 달의 월간이면 지난 달에서 남은 것도 — 놓친 것은 단정하지 않고 묻는다(SPEC-HOME-02)
   const leftover =
     month === currentMonth
-      ? groupGaps(getGaps(currentMonth, records, { scheduleOnly }).filter((g) => g.status !== 'soon' && g.item.months[0] < month))
+      ? groupGaps(getGaps(currentMonth, records).filter((g) => g.status !== 'soon' && g.item.months[0] < month))
       : [];
   const nextStart = new Date(m.start.getFullYear(), m.start.getMonth() + 1, m.start.getDate());
   return (

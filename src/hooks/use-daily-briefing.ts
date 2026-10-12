@@ -25,14 +25,12 @@ import {
   weeklyId,
   weeklySummary,
 } from '@/data/period-briefing';
-import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
 
 export function useDailyBriefing() {
   const { baby } = useBaby();
   const { messages, loading, append } = useChat();
   const { records, loading: recordsLoading } = useRecords();
-  const { scheduleOnly, loading: prefsLoading } = usePreferences();
   const { cards, loading: inboxLoading, add: addToInbox } = useInbox();
   const [today, setToday] = useState(() => dayKey(new Date().toISOString()));
   const made = useRef<string | null>(null);
@@ -66,14 +64,14 @@ export function useDailyBriefing() {
   }, [loading, inboxLoading, cards, messages, today, addToInbox]);
 
   useEffect(() => {
-    if (loading || recordsLoading || prefsLoading || !baby) return;
+    if (loading || recordsLoading || !baby) return;
     if (made.current === today) return;
     const exists = messages.some(
       (m) => m.role === 'malkong' && m.meta.type === 'briefing' && m.meta.day === today,
     );
     made.current = today;
     if (exists) return;
-    const briefing = buildBriefing(baby, records, messages, { scheduleOnly, day: today });
+    const briefing = buildBriefing(baby, records, messages, { day: today });
     const createdAt = new Date().toISOString();
     void append({
       id: newMessageId(),
@@ -91,11 +89,11 @@ export function useDailyBriefing() {
       readAt: null,
       createdAt,
     });
-  }, [today, loading, recordsLoading, prefsLoading, baby, messages, records, scheduleOnly, append, addToInbox]);
+  }, [today, loading, recordsLoading, baby, messages, records, append, addToInbox]);
 
   // 주간 · 월간 — 그 주 · 그 달 것이 알림함에 없으면 하나
   useEffect(() => {
-    if (inboxLoading || recordsLoading || prefsLoading || !baby) return;
+    if (inboxLoading || recordsLoading || !baby) return;
     const now = new Date();
     const { month } = ageFrom(baby.birthDate, now);
     const monday = mondayOf(now);
@@ -112,7 +110,7 @@ export function useDailyBriefing() {
       });
     }
     if (!cards.some((c) => c.id === monthlyId(month))) {
-      const m = monthlyBriefing(month, baby.birthDate, records, { scheduleOnly });
+      const m = monthlyBriefing(month, baby.birthDate, records);
       void addToInbox({
         id: monthlyId(month),
         kind: 'monthly',
@@ -123,7 +121,7 @@ export function useDailyBriefing() {
         createdAt: now.toISOString(),
       });
     }
-  }, [today, inboxLoading, recordsLoading, prefsLoading, baby, cards, records, scheduleOnly, addToInbox]);
+  }, [today, inboxLoading, recordsLoading, baby, cards, records, addToInbox]);
 
   return today;
 }

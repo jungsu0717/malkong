@@ -58,7 +58,7 @@ export type Monthly = {
   month: number;
   start: Date;
   headline: string | undefined;
-  /** 이 달에 시작하는 챙길 것 — 접종 · 검진(생활 항목은 「접종·검진만 보기」가 아니면). 상태는 그릴 때 기록으로 센다 */
+  /** 이 달에 시작하는 챙길 것 — 접종 · 검진과 생활 항목. 상태는 그릴 때 기록으로 센다 */
   items: L1Item[];
   /** 이 달의 발달 이정표 요약과 상담 안내(SPEC-HOME-03) */
   points: L1Item[];
@@ -68,16 +68,11 @@ export type Monthly = {
   next: L1Item[];
 };
 
-export function monthlyBriefing(
-  month: number,
-  birthDate: string,
-  records: BabyRecord[],
-  { scheduleOnly = false }: { scheduleOnly?: boolean } = {},
-): Monthly {
+export function monthlyBriefing(month: number, birthDate: string, records: BabyRecord[]): Monthly {
   const covered = new Set(records.flatMap((r) => r.covers));
   // 병원에 가는 일정이 먼저, 생활 항목은 뒤에
   const items = allItems()
-    .filter((i) => i.months[0] === month && (onCalendar(i) || (!scheduleOnly && isLifeKind(i.kind))))
+    .filter((i) => i.months[0] === month && (onCalendar(i) || isLifeKind(i.kind)))
     .sort((a, b) => Number(isLifeKind(a.kind)) - Number(isLifeKind(b.kind)));
   const points = allItems().filter((i) => i.kind === '발달' && i.months.includes(month));
   const firsts = itemsOfKind('발달').map((i) => i.months[0]);

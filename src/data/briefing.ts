@@ -140,7 +140,7 @@ export function buildBriefing(
   baby: Baby,
   records: BabyRecord[],
   messages: ChatMessage[],
-  { scheduleOnly = false, now = new Date(), day }: { scheduleOnly?: boolean; now?: Date; day: string },
+  { now = new Date(), day }: { now?: Date; day: string },
 ): Briefing {
   const name = baby.name ?? DEFAULT_BABY_NAME;
   const { month, days } = ageFrom(baby.birthDate, now);
@@ -153,8 +153,7 @@ export function buildBriefing(
       .slice(-RECENT_BRIEFINGS)
       .flatMap((b) => b.tips ?? []),
   );
-  // 「접종·검진만 보기」를 고른 사람에게는 생활 팁도 올리지 않는다(SPEC-HOME-02 생활 항목)
-  const tips = scheduleOnly ? [] : todayTips(month, records, recent, days);
+  const tips = todayTips(month, records, recent, days);
 
   return {
     day,

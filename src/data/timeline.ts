@@ -64,7 +64,7 @@ export function isLifeGroup(group: GapGroup): boolean {
 
 /**
  * 표준(L1) 대비 우리 아기 기록(L2)의 차집합 — 홈의 추천이 여기서 나온다.
- * `scheduleOnly` 면 접종·검진만 본다(설정 「접종·검진만 보기」).
+ * `scheduleOnly` 면 접종·검진만 본다(주간 브리핑의 「물어보기」가 쓴다 — 생활 항목은 마감이 없어 묻지 않는다).
  */
 export function getGaps(
   currentMonth: number,

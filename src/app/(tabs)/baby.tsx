@@ -113,9 +113,6 @@ export default function BabyScreen() {
                     아직 모르는 내용 {profile.totalCount - profile.knownCount}
                   </ThemedText>
                 </View>
-                <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-                  누르면 자세히 · 행성을 누르면 그 주제로
-                </ThemedText>
               </View>
             </View>
             {/* 함께한 시간 (SPEC-BABY-05) — 숫자 칸 대신 한 문장 */}

@@ -38,7 +38,7 @@ export default function MyScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { scheduleOnly, setScheduleOnly, briefingTime, nudgePush } = usePreferences();
+  const { briefingTime, nudgePush } = usePreferences();
   /**
    * 버전을 길게 누르면 열리는 숨은 메뉴 — 기기 키(가족 기기로 등록할 때 쓴다)와, 가족 기기면 「일반 사용자로 보기」
    * 스위치(backend 「운영자 기기」 · task common/015). 다시 길게 누르면 닫힌다
@@ -97,21 +97,6 @@ export default function MyScreen() {
                 title="알림"
                 detail={`아침 브리핑 ${briefingTime ? timeLabel(briefingTime) : '안 받음'} · 기록 요청 ${nudgePush ? '받음' : '안 받음'}`}
                 onPress={() => router.push('/notifications')}
-              />
-            </Card>
-          </View>
-
-          {/* 챙길 것에서 생활 항목을 뺄 수 있다 (SPEC-HOME-02 생활 항목) */}
-          <View style={styles.section}>
-            <SectionHeader title="설정" />
-            <Card style={styles.rows}>
-              <ListRow
-                icon="leaf-outline"
-                title="생활 팁도 챙길 것에 넣기"
-                detail="끄면 접종 · 검진만"
-                right={
-                  <Toggle label="생활 팁도 챙길 것에 넣기" value={!scheduleOnly} onChange={(on) => void setScheduleOnly(!on)} />
-                }
               />
             </Card>
           </View>

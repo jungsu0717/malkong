@@ -8,9 +8,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { readSetting, writeSetting } from './db';
 import { scheduleBriefing } from './notifications';
 
-/** 홈 「챙길 것」에서 생활 항목을 빼고 접종·검진만 보기 (SPEC-HOME-02 생활 항목) */
-const SCHEDULE_ONLY_KEY = 'todo_schedule_only';
-
 /** 아침 브리핑 알림 시각 `HH:MM`, 끄면 'off'. 정한 적이 없으면 오전 8시(SPEC-HOME-06) */
 const BRIEFING_TIME_KEY = 'briefing_time';
 export const DEFAULT_BRIEFING_TIME = '08:00';
@@ -25,8 +22,6 @@ const INTRO_SEEN_KEY = 'intro_seen';
 type PreferencesValue = {
   /** 기기에서 읽어오는 중 */
   loading: boolean;
-  scheduleOnly: boolean;
-  setScheduleOnly: (on: boolean) => Promise<void>;
   /** 아침 브리핑 알림 시각. null 이면 끔 */
   briefingTime: string | null;
   /** 바꾸면 알림을 다시 건다 — 허락은 부르는 쪽이 먼저 받는다 */
@@ -45,7 +40,6 @@ type PreferencesValue = {
 const PreferencesContext = createContext<PreferencesValue | null>(null);
 
 export function PreferencesProvider({ children }: { children: React.ReactNode }) {
-  const [scheduleOnly, setValue] = useState(false);
   const [briefingTime, setTime] = useState<string | null>(DEFAULT_BRIEFING_TIME);
   const [nudgePush, setPush] = useState(true);
   const [nudgeCard, setCard] = useState(true);
@@ -55,15 +49,13 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      readSetting(SCHEDULE_ONLY_KEY),
       readSetting(BRIEFING_TIME_KEY),
       readSetting(NUDGE_PUSH_KEY),
       readSetting(NUDGE_CARD_KEY),
       readSetting(INTRO_SEEN_KEY),
     ])
-      .then(([only, time, push, card, intro]) => {
+      .then(([time, push, card, intro]) => {
         if (cancelled) return;
-        setValue(only === 'true');
         setPush(push !== 'off');
         setCard(card !== 'off');
         setIntroSeen(intro === 'yes');
@@ -78,11 +70,6 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const setScheduleOnly = useCallback(async (on: boolean) => {
-    setValue(on);
-    await writeSetting(SCHEDULE_ONLY_KEY, on ? 'true' : 'false');
   }, []);
 
   const setBriefingTime = useCallback(async (time: string | null) => {
@@ -109,8 +96,6 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const value = useMemo(
     () => ({
       loading,
-      scheduleOnly,
-      setScheduleOnly,
       briefingTime,
       setBriefingTime,
       nudgePush,
@@ -120,7 +105,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
       introSeen,
       markIntroSeen,
     }),
-    [loading, scheduleOnly, setScheduleOnly, briefingTime, setBriefingTime, nudgePush, setNudgePush, nudgeCard, setNudgeCard, introSeen, markIntroSeen],
+    [loading, briefingTime, setBriefingTime, nudgePush, setNudgePush, nudgeCard, setNudgeCard, introSeen, markIntroSeen],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
