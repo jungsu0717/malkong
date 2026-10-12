@@ -15,7 +15,7 @@ import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { BRIEFING_TIMES, timeLabel } from '@/data/briefing';
 import { useBaby } from '@/data/baby-context';
 import { useEntitlements } from '@/data/entitlements-context';
-import { allItems, L1_VERSION, pendingReviewCount } from '@/data/l1';
+import { allItems, l1Version, pendingReviewCount } from '@/data/l1';
 import { askNotifications, notificationsAllowed, notificationsSupported } from '@/data/notifications';
 import { DEFAULT_BRIEFING_TIME, usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
@@ -246,7 +246,7 @@ export default function MyScreen() {
           {__DEV__ && (
             <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
               개발 빌드 · 표준 지식 {allItems().length}건(승인 대기 {pendingReviewCount()}건) · 기록 {records.length}건 · 판{' '}
-              {L1_VERSION}
+              {l1Version()}
             </ThemedText>
           )}
 

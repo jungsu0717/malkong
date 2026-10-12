@@ -35,7 +35,10 @@ L1_DIR = EVAL_DIR.parent.parent / "src" / "data" / "l1"
 def load_l1() -> dict[str, L1Snippet]:
     snippets = {}
     for path in sorted(L1_DIR.glob("*.json")):
-        for item in json.loads(path.read_text(encoding="utf-8")):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, list):
+            continue  # version.json — 판 번호 파일
+        for item in data:
             # 의료 게이트 — 앱과 똑같이 승인된 항목만 쓴다
             if item["status"] != "approved":
                 continue

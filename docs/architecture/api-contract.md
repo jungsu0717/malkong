@@ -72,12 +72,19 @@
 
 ## GET /v1/knowledge/version — L1 판 확인
 
-응답: `{ "version": "2026.09.1" }`. 앱은 자기 번들 판과 비교한다.
+응답: `{ "version": "2026.10.3" }`. 기기 키가 없어도 된다 — 공공 지식이라 숨길 것이 없고 한도와도 상관없다.
+앱은 하루에 한 번 자기 판(번들 판과 받아 둔 판 가운데 새 것)과 비교한다. 판은 `연도.월.순번` 꼴이고 숫자 토막씩 비교한다.
 
-## GET /v1/knowledge/bundle?since=<판> — L1 증분 갱신
+## GET /v1/knowledge/bundle — L1 묶음 내려받기
 
-응답: `{ "version": "...", "items": [ ...항목 스키마... ], "removedIds": [] }`.
-[l1-knowledge-base](l1-knowledge-base.md) 스키마 그대로.
+응답: `{ "version": "2026.10.3", "items": [ ...항목 스키마 그대로... ] }` — 승인된 항목 **전부**(2026-10 에 77건, 약 45KB).
+항목은 [l1-knowledge-base](l1-knowledge-base.md) 「항목 스키마」 그대로라(`red_flag` 도 그대로) 앱이 번들 파일 자리에 그대로 바꿔 끼운다.
+증분(`since` · `removedIds`)은 두지 않는다 — 묶음이 작아 통째로 받는 쪽이 지운 항목 관리까지 덜어 준다(task common/019).
+
+```
+평시 ▸ 앱은 받은 판이 자기 판보다 새 것이고 항목 규칙(출처 · 분류 · 월령 · id 중복)을 지킬 때만 바꿔 끼우고,
+       번들과 같은 의료 게이트로 승인된 항목만 쓴다. 서버에 닿지 못하면 번들 그대로다.
+```
 
 ## GET /v1/entitlements — 기기 자격
 
@@ -146,3 +153,4 @@ AdMob 의 서버 측 검증(SSV) 콜백. AdMob 은 GET 쿼리로 부른다(`user
 - 2026-10-06 한도 정책 v2 — 429 의 ecoAvailable 을 일반 기준 답 한도로, 503 DAILY_BUDGET_REACHED, 자격에 rewardPerAd (task common/014)
 - 2026-10-06 운영자 기기의 `X-As-User` 헤더, 자격에 operator (task common/015)
 - 2026-10-11 `/v1/ask` 요청에 `history`(바로 앞 대화 최대 6턴) — 앞 질문을 모른 채 답하던 것을 고침 (task ask/012)
+- 2026-10-12 `/v1/knowledge/version` · `/v1/knowledge/bundle` 을 구현 — 증분(`since` · `removedIds`) 대신 승인 항목 전부, 기기 키 없이 (task common/019)

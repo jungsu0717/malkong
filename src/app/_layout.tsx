@@ -7,7 +7,7 @@ import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -19,6 +19,7 @@ import { ChatProvider } from '@/data/chat-context';
 import { DraftProvider } from '@/data/draft-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
 import { InboxProvider } from '@/data/inbox-context';
+import { loadStoredKnowledge, refreshKnowledge } from '@/data/knowledge-update';
 import { PreferencesProvider, usePreferences } from '@/data/preferences-context';
 import { RecordsProvider } from '@/data/records-context';
 
@@ -49,9 +50,29 @@ function OnboardingGate() {
   return null;
 }
 
+/**
+ * 기기에 받아 둔 지식 판을 첫 화면 전에 얹고, 서버의 새 판은 뒤에서 받아 둔다 (task common/019).
+ * 저장소를 한 줄 읽는 일이라 글꼴보다 빨리 끝난다.
+ */
+function useKnowledge(): boolean {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    loadStoredKnowledge().finally(() => {
+      if (!cancelled) setReady(true);
+      void refreshKnowledge();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return ready;
+}
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const c = Colors[colorScheme === 'dark' ? 'dark' : 'light'];
+  const knowledgeReady = useKnowledge();
   // 글꼴을 읽는 동안은 시작 화면이 그대로 남는다 — 시스템 글꼴로 한 번 그렸다가 바뀌는 깜박임을 막는다.
   // 읽지 못해도(오류) 시스템 글꼴로 연다
   const [fontsLoaded, fontError] = useFonts({
@@ -60,7 +81,7 @@ export default function RootLayout() {
     [FontFamily.semibold]: IBMPlexSansKR_600SemiBold,
     [FontFamily.bold]: IBMPlexSansKR_700Bold,
   });
-  if (!fontsLoaded && !fontError) return null;
+  if ((!fontsLoaded && !fontError) || !knowledgeReady) return null;
 
   const base = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
   const theme = {

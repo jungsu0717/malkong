@@ -24,7 +24,8 @@
   근거 없이 답한 질문을 주제 × 월령 띠로 세는 로그([common/017](docs/task/common/017-ungrounded-count.md)) ·
   **답의 모양** 결론 → 왜(이 월령에 흔한 일인지) → 지금 할 것 → 진료 기준, 우리 아기 기록을 앞머리에([ask/010](docs/task/ask/010-answer-shape.md)))가
   올라가 있다. revision 00013(2026-10-11)은 바로 앞 대화를 보고 답하기 · 「일반적으로는」 접두어 걷기([ask/012](docs/task/ask/012-conversation-context.md)).
-  배포 안 된 서버 변경은 없다. 자동 모드가 운영 배포를 막을 때는 Julian 이 server/AGENTS.md 「배포」 명령을 직접 친다(00012 가 그랬다)
+  **배포 대기(2026-10-12)**: 지식 내려받기 — 판 확인 · 묶음(`/v1/knowledge/version` · `bundle`), 앱은 하루 한 번 비교해 새 판을 받는다
+  ([common/019](docs/task/common/019-knowledge-bundle-download.md)). 자동 모드가 운영 배포를 막을 때는 Julian 이 server/AGENTS.md 「배포」 명령을 직접 친다(00012 가 그랬다)
 - 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
 - **홍보 자료(보관 — 배포 때 · 앱 첫 실행에 쓴다)**: 만화 「아빠가 육아 앱을 만든 이유」 5컷 · 릴스 30초(`marketing/toon/`, 앱 첫 실행에도 들어가 있다),
   스토어 첫 장 「검색 대신, 근거로 답해요」 — 지식층 · 답 파이프라인 흐름도 + 진짜 앱 화면(`marketing/store/`, 앱스토어 · 구글 플레이 두 크기).
@@ -64,8 +65,9 @@
 7. **Julian 결정 대기(2026-10-08)**: ① 이어 묻기(「그럼 몇 시에 재워요?」)는 **됐다** — 바로 앞 대화를 질문과 함께 보낸다
    ([ask/012](docs/task/ask/012-conversation-context.md), revision 00013, 2026-10-11) ·
    ② 답변 피드백(좋아요 · 별로예요)이 실제로 눌리는지 보고 「셋 중 하나 고르기」로 바꿀지(온톨로지 세미나 5교시 사례).
-   ③ 답에 우리 아기 바탕 더 비추기([ask/011](docs/task/ask/011-our-baby-framing.md)) — 두 바퀴 재고 보류. 사실 답은 좋아졌으나 판단 답이
-   「아직이니 괜찮아요」로 흘러 서버 재생성이 난다. 3바퀴(호출 3회) 한 번 더 갈지, 여기서 끝낼지. 아기 이름은 서버로 보내지 않는다(결정, api-contract).
+   ③ 답에 우리 아기 바탕 더 비추기([ask/011](docs/task/ask/011-our-baby-framing.md)) — **끝냄**(Julian, 2026-10-12: 비용 적고 답이 명확하면 된다).
+   운영 프롬프트는 ask/010 그대로. 아기 이름은 서버로 보내지 않는다(결정, api-contract).
+   「별로예요」를 누르면 이유를 적는 글상자(선택)는 이미 있다(ask/003) — Julian 이 폰에서 확인.
    ④ 홈 화면 위젯(일정 · 브리핑) — **출시 뒤에 한다**(Julian 결정, 2026-10-08). 둘 다 개발 빌드가 있어야 한다(Expo Go 불가). iOS 는 Expo 공식
    `expo-widgets`(SDK 57 문서, 2026-03 알파), Android 는 커뮤니티 `react-native-android-widget`(갱신 최소 30분). 위젯은 앱이 미리 써 둔 요약을 읽는 구조.
    비용 · 수익 방향은 바뀔 수 있어 결정 기록으로 남기지 않는다(Julian, 2026-10-08)

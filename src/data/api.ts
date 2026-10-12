@@ -228,3 +228,12 @@ export type FeedbackRequest = {
 export function postFeedback(req: FeedbackRequest): Promise<void> {
   return withDeviceKey<void>('POST', '/v1/feedback', req, SHORT_TIMEOUT_MS);
 }
+
+/** 지식(L1) 판 확인 · 묶음 — 공공 지식이라 기기 키 없이 받는다. 항목 모양은 받는 쪽(knowledge-update)이 검사한다 */
+export function getKnowledgeVersion(): Promise<{ version: string }> {
+  return request<{ version: string }>('GET', '/v1/knowledge/version', undefined, SHORT_TIMEOUT_MS);
+}
+
+export function getKnowledgeBundle(): Promise<{ version: string; items: unknown }> {
+  return request<{ version: string; items: unknown }>('GET', '/v1/knowledge/bundle', undefined, SHORT_TIMEOUT_MS);
+}

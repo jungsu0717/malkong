@@ -15,17 +15,13 @@ from app.domain.entitlements.router import get_entitlements_service
 from app.domain.entitlements.schema import LimitExceededBody
 from app.domain.entitlements.service import EntitlementsService
 from app.domain.knowledge.repository import L1Repository
+from app.domain.knowledge.router import get_l1_repository
 from app.infra.llm.anthropic import AnthropicClient
 from app.infra.llm.base import LlmClient
 from app.infra.llm.gemini import GeminiClient
 
 router = APIRouter(tags=["ask"])
 logger = logging.getLogger("uvicorn.error")
-
-
-@lru_cache
-def get_l1_repository() -> L1Repository:
-    return L1Repository(get_settings().l1_dir)
 
 
 @lru_cache
