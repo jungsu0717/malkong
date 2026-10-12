@@ -62,9 +62,10 @@
    [ask/007](docs/task/ask/007-question-aware-trace.md) 「정한 것」 4) · 수면 · 수유 · 울음 · 변 같은 일상 주제 L1 늘리기(항목마다 Julian 승인) ·
    「모두에게 더 똑똑해지는」 고리 — 근거 없이 답한 질문을 주제 × 월령 띠로 세는 로그는 들어갔다([common/017](docs/task/common/017-ungrounded-count.md),
    배포 뒤 쌓인다, 보는 명령은 server/AGENTS.md). 많이 나온 주제부터 L1 초안 → Julian 승인. 자주 묻는 질문 캐시(backend ②′)는 그 뒤에. 지금 「쓸수록 똑똑해지는」 것은 우리 아기 기록(L2)뿐이다
-6. Claude 몫: 써 본 피드백 반영 → 답변 완성도 다듬기(위험 신호 — Julian 승인) → 스토어 등록 준비 — 첫 장은 됐고, 남은 것은
-   스크린샷 4장(아침 안부 · 위험 신호 · 일정 · 우리 아기, `marketing/store/capture.mjs` 로 진짜 화면) · 구글 플레이 그래픽 이미지(1024×500) ·
-   소개 문구([product-brief](docs/product/product-brief.md)) · 개인정보 처리방침 웹 주소
+6. Claude 몫: 써 본 피드백 반영 → 답변 완성도 다듬기(위험 신호 — Julian 승인) → 스토어 등록 준비 — 스크린샷 여섯 장(iOS · Play)과
+   구글 플레이 그래픽 이미지는 됐다(`marketing/store/out/`, [common/021](docs/task/common/021-store-screenshots.md), 2026-10-12 — Julian 이 보고
+   고칠 것을 말한다). 남은 것은 소개 문구([product-brief](docs/product/product-brief.md)의 슬로건 · 핵심 기능 문구를 스토어 칸에 맞게) ·
+   개인정보 처리방침 웹 주소(어디에 올릴지는 Julian)
 7. **Julian 결정 대기(2026-10-08)**: ① 이어 묻기(「그럼 몇 시에 재워요?」)는 **됐다** — 바로 앞 대화를 질문과 함께 보낸다
    ([ask/012](docs/task/ask/012-conversation-context.md), revision 00013, 2026-10-11) ·
    ② 답변 피드백(좋아요 · 별로예요)이 실제로 눌리는지 보고 「셋 중 하나 고르기」로 바꿀지(온톨로지 세미나 5교시 사례).

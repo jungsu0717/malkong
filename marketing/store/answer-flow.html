@@ -170,10 +170,10 @@
       add(`<svg class="abs" style="left:0;top:${outTop - 2}px" width="1290" height="${L.screenTop - outTop + 8}"><g stroke="#c64536" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <path d="M ${outX} 0 L ${outX} ${L.screenTop - outTop - 6}"/><path d="M ${outX - 9} ${L.screenTop - outTop - 18} L ${outX} ${L.screenTop - outTop - 6} L ${outX + 9} ${L.screenTop - outTop - 18}"/></g></svg>`);
 
-      // 진짜 앱 화면 — 질문과 답(shots/answer-qa.png 1170×930)
-      const k = L.screenW / 1170, sx = (1290 - L.screenW) / 2;
-      add(`<div class="screen" style="left:${sx}px;top:${L.screenTop}px;width:${L.screenW}px">
-        <img src="shots/answer-qa.png" style="width:${L.screenW}px;height:${930 * k}px"/>
+      // 진짜 앱 화면 — shots/answer.png(1170×2532)에서 질문과 답 부분(950~1880)만 CSS 로 잘라 보인다
+      const k = L.screenW / 1170, sx = (1290 - L.screenW) / 2, cropTop = 950, cropH = 930;
+      add(`<div class="screen" style="left:${sx}px;top:${L.screenTop}px;width:${L.screenW}px;height:${cropH * k}px">
+        <img src="shots/answer.png" style="width:${L.screenW}px;height:${2532 * k}px;margin-top:${-cropTop * k}px"/>
         <div class="ring" style="left:${44 * k}px;top:${640 * k}px;width:${520 * k}px;height:${178 * k}px"></div>
       </div>`);
       document.fonts.ready.then(() => document.body.setAttribute('data-ready', '1'));
