@@ -156,9 +156,6 @@ export default function ScheduleScreen() {
 
           <AdBanner />
 
-          <ThemedText type="caption" style={[styles.disclaimer, { color: c.textSecondary }]}>
-            날짜는 생일로 어림한 거예요. 정확한 접종일은 병원과 함께 정해 주세요
-          </ThemedText>
         </ScrollView>
 
         {justSaved && (
@@ -196,7 +193,6 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: 3 },
   ring: { backgroundColor: 'transparent', borderWidth: 1 },
   section: { gap: 10 },
-  disclaimer: { textAlign: 'center' },
   saved: {
     position: 'absolute',
     left: Gutter,

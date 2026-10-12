@@ -119,6 +119,7 @@ export default function RootLayout() {
                     <Stack.Screen name="records" options={{ ...header, title: '우리 아기 기록' }} />
                     <Stack.Screen name="knowledge" options={{ ...header, title: '버디가 아는 것' }} />
                     <Stack.Screen name="briefing" options={{ ...header, title: '브리핑' }} />
+                    <Stack.Screen name="notifications" options={{ ...header, title: '알림' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
                   {/* 하루 기록이 며칠 비면 묻는 카드와 알림 (SPEC-BABY-07) */}

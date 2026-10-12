@@ -96,9 +96,6 @@ export function KnowledgeView() {
           />
         </Card>
 
-        <ThemedText type="caption" style={[styles.note, { color: c.textSecondary }]}>
-          이 숫자는 이 폰에 저장된 기록으로만 세요. 서버로 보내지 않아요.
-        </ThemedText>
       </ScrollView>
       {sheet}
     </>
@@ -246,5 +243,4 @@ const styles = StyleSheet.create({
   factRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingTop: 10, borderTopWidth: 1 },
   together: { gap: 14 },
   rows: { paddingVertical: 2 },
-  note: { textAlign: 'center' },
 });

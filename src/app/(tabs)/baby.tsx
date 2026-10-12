@@ -130,9 +130,6 @@ export default function BabyScreen() {
             <DomainBars domains={profile.domains} onPress={(id) => router.push({ pathname: '/knowledge', params: { domain: id } })} />
           </View>
 
-          <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
-            이 숫자는 이 폰에 저장된 기록으로만 세요. 서버로 보내지 않아요.
-          </ThemedText>
         </ScrollView>
       </SafeAreaView>
     </ThemedView>

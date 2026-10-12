@@ -1,23 +1,21 @@
-import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BabyFaceIcon } from '@/components/baby-icons';
 import { NoAdsCard } from '@/components/no-ads-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Button, Card, Chip, ListRow, SectionHeader, Toggle } from '@/components/ui';
+import { Card, ListRow, SectionHeader, Toggle } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { storedDeviceKey } from '@/data/api';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
-import { BRIEFING_TIMES, timeLabel } from '@/data/briefing';
+import { timeLabel } from '@/data/briefing';
 import { useBaby } from '@/data/baby-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { allItems, l1Version, pendingReviewCount } from '@/data/l1';
-import { askNotifications, notificationsAllowed, notificationsSupported } from '@/data/notifications';
-import { DEFAULT_BRIEFING_TIME, usePreferences } from '@/data/preferences-context';
+import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -39,55 +37,13 @@ export default function MyScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const {
-    scheduleOnly,
-    setScheduleOnly,
-    briefingTime,
-    setBriefingTime,
-    nudgePush,
-    setNudgePush,
-    nudgeCard,
-    setNudgeCard,
-  } = usePreferences();
+  const { scheduleOnly, setScheduleOnly, briefingTime, nudgePush } = usePreferences();
   /**
    * 버전을 길게 누르면 열리는 숨은 메뉴 — 기기 키(가족 기기로 등록할 때 쓴다)와, 가족 기기면 「일반 사용자로 보기」
    * 스위치(backend 「운영자 기기」 · task common/015). 다시 길게 누르면 닫힌다
    */
   const [deviceKey, setDeviceKey] = useState<string | null>(null);
   const { operator, asUser, setAsUser } = useEntitlements();
-  /** 기기 알림 허락 — 설정 앱에서 바꾸고 돌아오면 다시 읽는다 */
-  const [allowed, setAllowed] = useState<boolean | null>(null);
-  const supported = notificationsSupported();
-
-  useEffect(() => {
-    if (!supported) return;
-    const read = () => void notificationsAllowed().then(setAllowed);
-    read();
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') read();
-    });
-    return () => sub.remove();
-  }, [supported]);
-
-  const briefingOn = briefingTime !== null && allowed === true;
-
-  const toggleBriefing = async (on: boolean) => {
-    if (!on) return setBriefingTime(null);
-    const ok = await askNotifications();
-    setAllowed(ok);
-    if (ok) await setBriefingTime(briefingTime ?? DEFAULT_BRIEFING_TIME);
-  };
-
-  // 기록 요청 알림(SPEC-BABY-07) — 거는 것은 record-nudge.tsx 가 이 값을 보고 한다
-  const nudgePushOn = nudgePush && allowed === true;
-  const toggleNudgePush = async (on: boolean) => {
-    if (!on) return setNudgePush(false);
-    const ok = await askNotifications();
-    setAllowed(ok);
-    if (ok) await setNudgePush(true);
-  };
-  /** 켜 두었는데 휴대폰 설정에서 막혀 있으면 「설정 열기」 */
-  const blocked = supported && allowed === false && (briefingTime !== null || nudgePush);
 
   return (
     <ThemedView style={styles.container}>
@@ -124,76 +80,22 @@ export default function MyScreen() {
               <ListRow
                 icon="document-text-outline"
                 title="우리 아기 기록"
-                detail={records.length > 0 ? `${records.length}개 · 보고 고치거나 지울 수 있어요` : '대화와 챙길 것에서 모은 기록이 여기 쌓여요'}
+                detail={records.length > 0 ? `${records.length}개` : '아직 없어요'}
                 onPress={() => router.push('/records')}
               />
             </Card>
           </View>
 
-          {/* 아침 브리핑 알림(SPEC-HOME-06 — 꺼도 브리핑은 앱을 열면 생긴다) · 기록 요청 알림과 카드(SPEC-BABY-07) */}
+          {/* 알림은 한 줄 요약만 — 켜고 끄기 · 시간은 상세(src/app/notifications.tsx)에서 (task common/020) */}
           <View style={styles.section}>
             <SectionHeader title="알림" />
             <Card style={styles.rows}>
               <ListRow
                 icon="notifications-outline"
-                title="아침 브리핑 알림"
-                detail={
-                  !supported
-                    ? '이 폰에서는 알림을 받을 수 없어요'
-                    : allowed === false && briefingTime !== null
-                      ? '휴대폰 설정에서 알림이 꺼져 있어요'
-                      : briefingOn
-                        ? `매일 ${timeLabel(briefingTime!)}에 알려 드려요`
-                        : '꺼도 앱을 열면 브리핑은 볼 수 있어요'
-                }
-                right={
-                  supported ? (
-                    <Toggle label="아침 브리핑 알림" value={briefingOn} onChange={(on) => void toggleBriefing(on)} />
-                  ) : null
-                }
+                title="알림"
+                detail={`아침 브리핑 ${briefingTime ? timeLabel(briefingTime) : '안 받음'} · 기록 요청 ${nudgePush ? '받음' : '안 받음'}`}
+                onPress={() => router.push('/notifications')}
               />
-              {briefingOn && (
-                <View style={styles.times}>
-                  {BRIEFING_TIMES.map((t) => (
-                    <Chip key={t} label={timeLabel(t)} selected={t === briefingTime} onPress={() => void setBriefingTime(t)} />
-                  ))}
-                </View>
-              )}
-              <ListRow
-                divider
-                icon="create-outline"
-                title="기록이 비면 알림"
-                detail={
-                  !supported
-                    ? '이 폰에서는 알림을 받을 수 없어요'
-                    : allowed === false && nudgePush
-                      ? '휴대폰 설정에서 알림이 꺼져 있어요'
-                      : nudgePushOn
-                        ? '하루 기록이 사흘째 비면 저녁 8시에 한 번 알려 드려요'
-                        : '꺼도 오늘 브리핑에서 언제든 적을 수 있어요'
-                }
-                right={
-                  supported ? (
-                    <Toggle label="기록이 비면 알림" value={nudgePushOn} onChange={(on) => void toggleNudgePush(on)} />
-                  ) : null
-                }
-              />
-              <ListRow
-                divider
-                icon="albums-outline"
-                title="기록이 비면 적을 칸 보여 주기"
-                detail={nudgeCard ? '앱을 열 때 적을 칸을 모아 보여 드려요' : '적지 않은 것은 대화하다 버디가 물어봐요'}
-                right={<Toggle label="기록이 비면 적을 칸 보여 주기" value={nudgeCard} onChange={(on) => void setNudgeCard(on)} />}
-              />
-              {blocked && (
-                <Button
-                  label="설정 열기"
-                  size="sm"
-                  variant="secondary"
-                  style={styles.settingsButton}
-                  onPress={() => void Linking.openSettings()}
-                />
-              )}
             </Card>
           </View>
 
@@ -204,7 +106,7 @@ export default function MyScreen() {
               <ListRow
                 icon="leaf-outline"
                 title="생활 팁도 챙길 것에 넣기"
-                detail="끄면 접종 · 검진만 보여요"
+                detail="끄면 접종 · 검진만"
                 right={
                   <Toggle label="생활 팁도 챙길 것에 넣기" value={!scheduleOnly} onChange={(on) => void setScheduleOnly(!on)} />
                 }
@@ -221,8 +123,7 @@ export default function MyScreen() {
               가족과 함께 보기 · 준비 중
             </ThemedText>
             <ThemedText type="caption" style={{ color: c.textSecondary }}>
-              로그인하면 폰을 바꿔도 기록을 옮기고, 가족과 같은 아기를 함께 볼 수 있게 할 거예요. 지금은 로그인 없이
-              모든 기능을 쓸 수 있어요.
+              가족 공유가 생기면 로그인이 같이 들어와요. 지금은 로그인 없이 다 써요.
             </ThemedText>
           </Card>
 
@@ -263,7 +164,7 @@ export default function MyScreen() {
             <Card style={styles.rows}>
               <ListRow
                 title="일반 사용자로 보기"
-                detail={asUser ? '일반 사용자와 같은 한도 · 광고로 써요' : '가족 폰이라 한도 없이 써요'}
+                detail={asUser ? '일반 사용자처럼 한도 · 광고 있음' : '가족 폰 · 한도 없음'}
                 right={<Toggle label="일반 사용자로 보기" value={asUser} onChange={(on) => void setAsUser(on)} />}
               />
             </Card>
@@ -295,8 +196,6 @@ const styles = StyleSheet.create({
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   section: { gap: 10 },
   rows: { paddingVertical: 2 },
-  times: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingBottom: 14 },
-  settingsButton: { alignSelf: 'flex-start', marginBottom: 14 },
   soon: { gap: 6 },
   center: { textAlign: 'center' },
 });

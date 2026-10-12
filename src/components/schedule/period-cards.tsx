@@ -89,7 +89,6 @@ function GroupRows({ groups, onPick }: { groups: GapGroup[]; onPick: (g: GapGrou
 
 /** 주간 브리핑 (SPEC-HOME-08 주간) — 그 주(월~일)에 무렵인 일정과 아직 안 한 것 */
 export function WeeklyCard({ monday, onPick }: { monday: Date; onPick: (g: GapGroup) => void }) {
-  const c = useTheme();
   const { baby } = useBaby();
   const { records } = useRecords();
   if (!baby) return null;
@@ -107,9 +106,6 @@ export function WeeklyCard({ monday, onPick }: { monday: Date; onPick: (g: GapGr
           <GroupRows groups={week.left} onPick={onPick} />
         </CardSection>
       )}
-      <ThemedText type="caption" style={[styles.foot, { color: c.textTertiary }]}>
-        날짜는 생일로 어림한 거예요
-      </ThemedText>
     </Card>
   );
 }
@@ -179,5 +175,4 @@ const styles = StyleSheet.create({
   empty: { paddingVertical: 10 },
   point: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingVertical: 6 },
   dot: { width: 6, height: 6, borderRadius: 3, marginTop: 8 },
-  foot: { paddingVertical: 10 },
 });
