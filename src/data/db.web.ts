@@ -17,7 +17,9 @@ const SETTING_PREFIX = 'malkong.setting.';
 export async function readBabyRow(): Promise<Baby | null> {
   try {
     const raw = globalThis.localStorage?.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Baby) : null;
+    if (!raw) return null;
+    const baby = JSON.parse(raw) as Baby;
+    return { ...baby, updatedAt: baby.updatedAt ?? baby.createdAt };
   } catch {
     return null;
   }
@@ -54,12 +56,13 @@ export async function readRecordRows(): Promise<BabyRecord[]> {
     const raw = globalThis.localStorage?.getItem(RECORDS_KEY);
     if (!raw) return [];
     // 칸이 늘기 전에 저장된 기록도 읽을 수 있게 메워 준다
-    type Stored = Omit<BabyRecord, 'sourceMessageId' | 'stale'> &
-      Partial<Pick<BabyRecord, 'sourceMessageId' | 'stale'>>;
+    type Stored = Omit<BabyRecord, 'sourceMessageId' | 'stale' | 'updatedAt'> &
+      Partial<Pick<BabyRecord, 'sourceMessageId' | 'stale' | 'updatedAt'>>;
     return (JSON.parse(raw) as Stored[]).map((record) => ({
       ...record,
       sourceMessageId: record.sourceMessageId ?? null,
       stale: record.stale ?? false,
+      updatedAt: record.updatedAt ?? record.createdAt,
     }));
   } catch {
     return [];
@@ -80,6 +83,14 @@ export async function insertRecordRow(record: BabyRecord): Promise<void> {
 
 export async function deleteRecordRow(id: string): Promise<void> {
   await writeRecordRows((await readRecordRows()).filter((r) => r.id !== id));
+}
+
+export async function upsertRecordRow(record: BabyRecord): Promise<void> {
+  const rows = await readRecordRows();
+  const index = rows.findIndex((r) => r.id === record.id);
+  if (index >= 0) rows[index] = record;
+  else rows.push(record);
+  await writeRecordRows(rows);
 }
 
 const CHAT_KEY = 'malkong.chat';
@@ -104,7 +115,9 @@ export async function insertChatRow(message: ChatMessage): Promise<void> {
 
 export async function updateRecordLabelRow(id: string, label: string): Promise<void> {
   await writeRecordRows(
-    (await readRecordRows()).map((r) => (r.id === id ? { ...r, label, stale: false } : r)),
+    (await readRecordRows()).map((r) =>
+      r.id === id ? { ...r, label, stale: false, updatedAt: new Date().toISOString() } : r,
+    ),
   );
 }
 

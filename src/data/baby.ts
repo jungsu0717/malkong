@@ -14,6 +14,8 @@ export type Baby = {
   /** YYYY-MM-DD */
   birthDate: string;
   createdAt: string;
+  /** 마지막으로 고친 때 — 가족 공유에서 늦게 고친 쪽이 이기는 기준(task my/007) */
+  updatedAt: string;
 };
 
 export type BabyAge = {
@@ -79,7 +81,14 @@ export async function saveBaby(input: { name: string | null; birthDate: string }
     name: input.name?.trim() ? input.name.trim() : null,
     birthDate: input.birthDate,
     createdAt: existing?.createdAt ?? new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
+  await writeBabyRow(baby);
+  return baby;
+}
+
+/** 가족에게서 받은 아기를 그대로 둔다 — 들어갈 때는 가족의 아기가 이긴다(task my/007) */
+export async function replaceBaby(baby: Baby): Promise<Baby> {
   await writeBabyRow(baby);
   return baby;
 }

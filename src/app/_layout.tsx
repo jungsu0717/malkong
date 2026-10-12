@@ -18,6 +18,7 @@ import { BabyProvider, useBaby } from '@/data/baby-context';
 import { ChatProvider } from '@/data/chat-context';
 import { DraftProvider } from '@/data/draft-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
+import { FamilyProvider } from '@/data/family-context';
 import { InboxProvider } from '@/data/inbox-context';
 import { loadStoredKnowledge, refreshKnowledge } from '@/data/knowledge-update';
 import { PreferencesProvider, usePreferences } from '@/data/preferences-context';
@@ -107,6 +108,7 @@ export default function RootLayout() {
           <PreferencesProvider>
             <BabyProvider>
               <RecordsProvider>
+                <FamilyProvider>
                 <ChatProvider>
                   <InboxProvider>
                   <DraftProvider>
@@ -120,6 +122,7 @@ export default function RootLayout() {
                     <Stack.Screen name="knowledge" options={{ ...header, title: '버디가 아는 것' }} />
                     <Stack.Screen name="briefing" options={{ ...header, title: '브리핑' }} />
                     <Stack.Screen name="notifications" options={{ ...header, title: '알림' }} />
+                    <Stack.Screen name="family" options={{ ...header, title: '가족과 함께 보기' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
                   {/* 하루 기록이 며칠 비면 묻는 카드와 알림 (SPEC-BABY-07) */}
@@ -127,6 +130,7 @@ export default function RootLayout() {
                   </DraftProvider>
                   </InboxProvider>
                 </ChatProvider>
+                </FamilyProvider>
               </RecordsProvider>
             </BabyProvider>
           </PreferencesProvider>

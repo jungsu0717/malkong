@@ -8,7 +8,7 @@
 import { CryptoDigestAlgorithm, digestStringAsync } from 'expo-crypto';
 
 import { readSetting, writeSetting } from './db';
-import type { RecordKind } from './records';
+import type { BabyRecord, RecordKind } from './records';
 
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? 'https://malkong-server-481623022922.asia-northeast3.run.app';
@@ -144,8 +144,10 @@ async function deviceHeaders(): Promise<Record<string, string>> {
   return { 'X-Device-Key': await getDeviceKey(), ...((await loadAsUser()) ? { 'X-As-User': '1' } : {}) };
 }
 
+type Method = 'GET' | 'POST' | 'DELETE';
+
 async function request<T>(
-  method: 'GET' | 'POST',
+  method: Method,
   path: string,
   body: unknown,
   timeoutMs: number,
@@ -193,7 +195,7 @@ async function request<T>(
  * 다시 보낸다. 서버가 모델을 부르기 전에 거절한 것이라 다시 보내도 모델 호출이 두 번 나가지 않는다.
  */
 async function withDeviceKey<T>(
-  method: 'GET' | 'POST',
+  method: Method,
   path: string,
   body: unknown,
   timeoutMs: number,
@@ -227,6 +229,38 @@ export type FeedbackRequest = {
 
 export function postFeedback(req: FeedbackRequest): Promise<void> {
   return withDeviceKey<void>('POST', '/v1/feedback', req, SHORT_TIMEOUT_MS);
+}
+
+// --- 가족 공유 (SPEC-MY-05, task my/007) — api-contract /v1/family ---
+
+export type FamilyInfo = { familyId: string; inviteCode: string; members: number };
+export type SyncBaby = { id: string; name: string | null; birthDate: string; createdAt: string; updatedAt: string };
+/** 기록 한 줄 그대로 + 지웠는지 */
+export type SyncRecord = BabyRecord & { deleted: boolean };
+export type SyncRequest = { since: number; baby?: SyncBaby; records: SyncRecord[] };
+export type SyncResponse = { seq: number; baby: SyncBaby | null; records: SyncRecord[]; members: number };
+
+/** 서버가 0 에서 깨어나는 시간을 더한 여유 — 맞추기는 뒤에서 조용히 도니 조금 길어도 된다 */
+const FAMILY_TIMEOUT_MS = 30_000;
+
+export function getFamily(): Promise<FamilyInfo> {
+  return withDeviceKey<FamilyInfo>('GET', '/v1/family', undefined, FAMILY_TIMEOUT_MS);
+}
+
+export function createFamily(consentedAt: string): Promise<FamilyInfo> {
+  return withDeviceKey<FamilyInfo>('POST', '/v1/family', { consentedAt }, FAMILY_TIMEOUT_MS);
+}
+
+export function joinFamily(code: string, consentedAt: string): Promise<FamilyInfo> {
+  return withDeviceKey<FamilyInfo>('POST', '/v1/family/join', { code, consentedAt }, FAMILY_TIMEOUT_MS);
+}
+
+export function leaveFamily(): Promise<void> {
+  return withDeviceKey<void>('DELETE', '/v1/family/me', undefined, FAMILY_TIMEOUT_MS);
+}
+
+export function syncFamily(req: SyncRequest): Promise<SyncResponse> {
+  return withDeviceKey<SyncResponse>('POST', '/v1/family/sync', req, FAMILY_TIMEOUT_MS);
 }
 
 /** 지식(L1) 판 확인 · 묶음 — 공공 지식이라 기기 키 없이 받는다. 항목 모양은 받는 쪽(knowledge-update)이 검사한다 */

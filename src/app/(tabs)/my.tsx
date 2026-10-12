@@ -14,6 +14,7 @@ import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { timeLabel } from '@/data/briefing';
 import { useBaby } from '@/data/baby-context';
 import { useEntitlements } from '@/data/entitlements-context';
+import { useFamily } from '@/data/family-context';
 import { allItems, l1Version, pendingReviewCount } from '@/data/l1';
 import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
@@ -44,6 +45,7 @@ export default function MyScreen() {
    */
   const [deviceKey, setDeviceKey] = useState<string | null>(null);
   const { operator, asUser, setAsUser } = useEntitlements();
+  const family = useFamily();
 
   return (
     <ThemedView style={styles.container}>
@@ -117,15 +119,22 @@ export default function MyScreen() {
           {/* 광고 없이 쓰기 — 구매·복원 (SPEC-MY-06) */}
           <NoAdsCard />
 
-          {/* 로그인은 가족 공유·기기 이전과 함께 들인다(SPEC-MY-04). 그 전엔 누를 단추를 두지 않는다 */}
-          <Card tone="filled" style={styles.soon}>
-            <ThemedText type="heading" style={{ fontSize: 15 }}>
-              가족과 함께 보기 · 준비 중
-            </ThemedText>
-            <ThemedText type="caption" style={{ color: c.textSecondary }}>
-              가족 공유가 생기면 로그인이 같이 들어와요. 지금은 로그인 없이 다 써요.
-            </ThemedText>
-          </Card>
+          {/* 가족 공유 — 초대 코드로, 로그인 없이 (SPEC-MY-05, task my/007) */}
+          <View style={styles.section}>
+            <SectionHeader title="가족" />
+            <Card style={styles.rows}>
+              <ListRow
+                icon="people-outline"
+                title="가족과 함께 보기"
+                detail={
+                  family.status === 'member' && family.state
+                    ? `함께 보는 폰 ${family.state.info.members}대 · 초대 코드 ${family.state.info.inviteCode}`
+                    : '초대 코드로 같은 아기를 함께 봐요'
+                }
+                onPress={() => router.push('/family')}
+              />
+            </Card>
+          </View>
 
           {MENU_SECTIONS.map((section) => (
             <View key={section.title} style={styles.section}>
@@ -196,6 +205,5 @@ const styles = StyleSheet.create({
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   section: { gap: 10 },
   rows: { paddingVertical: 2 },
-  soon: { gap: 6 },
   center: { textAlign: 'center' },
 });

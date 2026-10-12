@@ -63,6 +63,11 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
         );
         CREATE INDEX IF NOT EXISTS ix_inbox_created ON inbox_card(created_at);
       `);
+      // 나중에 더한 칸 — 아기의 고친 때(가족 공유의 「늦게 고친 쪽이 이긴다」 기준, task my/007)
+      const babyColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(baby)');
+      if (!babyColumns.some((col) => col.name === 'updated_at')) {
+        await db.execAsync('ALTER TABLE baby ADD COLUMN updated_at TEXT');
+      }
       return db;
     })();
   }
@@ -71,21 +76,22 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
 
 export async function readBabyRow(): Promise<Baby | null> {
   const db = await getDb();
-  const row = await db.getFirstAsync<Baby>(
-    'SELECT id, name, birth_date AS birthDate, created_at AS createdAt FROM baby LIMIT 1',
+  const row = await db.getFirstAsync<Omit<Baby, 'updatedAt'> & { updatedAt: string | null }>(
+    'SELECT id, name, birth_date AS birthDate, created_at AS createdAt, updated_at AS updatedAt FROM baby LIMIT 1',
   );
-  return row ?? null;
+  return row ? { ...row, updatedAt: row.updatedAt ?? row.createdAt } : null;
 }
 
 export async function writeBabyRow(baby: Baby): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO baby (id, name, birth_date, created_at) VALUES (?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET name = excluded.name, birth_date = excluded.birth_date`,
+    `INSERT INTO baby (id, name, birth_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET name = excluded.name, birth_date = excluded.birth_date, updated_at = excluded.updated_at`,
     baby.id,
     baby.name,
     baby.birthDate,
     baby.createdAt,
+    baby.updatedAt,
   );
 }
 
@@ -117,13 +123,14 @@ type RecordRow = {
   source_message_id: string | null;
   stale: number;
   created_at: string;
+  updated_at: string | null;
 };
 
 /** 기록 전체 — 오래된 것부터. 한 아기의 기록은 많지 않아서 한 번에 읽는다 */
 export async function readRecordRows(): Promise<BabyRecord[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<RecordRow>(
-    `SELECT id, kind, label, covers, when_label, source_message_id, stale, created_at
+    `SELECT id, kind, label, covers, when_label, source_message_id, stale, created_at, updated_at
      FROM record ORDER BY created_at`,
   );
   return rows.map((row) => ({
@@ -135,6 +142,7 @@ export async function readRecordRows(): Promise<BabyRecord[]> {
     sourceMessageId: row.source_message_id,
     stale: row.stale === 1,
     createdAt: row.created_at,
+    updatedAt: row.updated_at ?? row.created_at,
   }));
 }
 
@@ -151,7 +159,28 @@ export async function insertRecordRow(record: BabyRecord): Promise<void> {
     record.whenLabel,
     record.sourceMessageId,
     record.createdAt,
+    record.updatedAt,
+  );
+}
+
+/** 가족에게서 받은 기록 — 있으면 통째로 덮고 없으면 넣는다 (task my/007) */
+export async function upsertRecordRow(record: BabyRecord): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT INTO record (id, baby_id, kind, label, covers, when_label, source_message_id, stale, created_at, updated_at)
+     VALUES (?, (SELECT id FROM baby LIMIT 1), ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, label = excluded.label, covers = excluded.covers,
+       when_label = excluded.when_label, source_message_id = excluded.source_message_id, stale = excluded.stale,
+       created_at = excluded.created_at, updated_at = excluded.updated_at`,
+    record.id,
+    record.kind,
+    record.label,
+    JSON.stringify(record.covers),
+    record.whenLabel,
+    record.sourceMessageId,
+    record.stale ? 1 : 0,
     record.createdAt,
+    record.updatedAt,
   );
 }
 

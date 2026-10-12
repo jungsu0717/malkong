@@ -11,6 +11,7 @@ from app.common.core.exception import register_exception_handlers
 from app.domain.ask.router import router as ask_router
 from app.domain.devices.router import router as devices_router
 from app.domain.entitlements.router import router as entitlements_router
+from app.domain.family.router import router as family_router
 from app.domain.feedback.router import router as feedback_router
 from app.domain.knowledge.router import router as knowledge_router
 from app.domain.reward.router import router as reward_router
@@ -27,13 +28,14 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
-        allow_methods=["GET", "POST"],
+        allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["Content-Type", "X-Device-Key", "X-As-User"],
     )
 
     app.include_router(ask_router, prefix="/v1")
     app.include_router(devices_router, prefix="/v1")
     app.include_router(entitlements_router, prefix="/v1")
+    app.include_router(family_router, prefix="/v1")
     app.include_router(feedback_router, prefix="/v1")
     app.include_router(knowledge_router, prefix="/v1")
     app.include_router(reward_router, prefix="/v1")

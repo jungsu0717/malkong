@@ -86,6 +86,29 @@
        번들과 같은 의료 게이트로 승인된 항목만 쓴다. 서버에 닿지 못하면 번들 그대로다.
 ```
 
+## /v1/family — 가족 공유 (SPEC-MY-05)
+
+요청 머리 `X-Device-Key` 필수 — 구성원의 정체가 기기 키 해시다. 로그인은 없다([decisions/021](../decisions/021-family-by-invite-code.md)).
+
+| 호출 | 뜻 | 요청 · 응답 |
+|---|---|---|
+| `POST /v1/family` | 가족 만들기 | `{ consentedAt }` → 201 `{ familyId, inviteCode, members }`. 이미 가족이 있으면 409 `ALREADY_IN_FAMILY` |
+| `POST /v1/family/join` | 초대 코드로 들어가기 | `{ code, consentedAt }` → `{ familyId, inviteCode, members }`. 404 `INVITE_NOT_FOUND` · 409 `FAMILY_FULL`(6명) · 409 `ALREADY_IN_FAMILY`(다른 가족) · 429 `TOO_MANY_ATTEMPTS`(기기마다 하루 20번) |
+| `GET /v1/family` | 내 가족 | `{ familyId, inviteCode, members }`. 없으면 404 `NOT_IN_FAMILY` |
+| `DELETE /v1/family/me` | 나가기 | 204. 마지막 구성원이 나가면 가족과 데이터를 지운다 |
+| `POST /v1/family/sync` | 아기 · 기록 맞추기 | `{ since, baby?, records[] }` → `{ seq, baby, records[], members }` |
+
+`consentedAt` 은 아기 · 건강 기록의 서버 저장 · 가족 공유에 동의한 때(ISO) — 구성원 행에 남는다.
+`baby` 는 기기 DB 의 `baby` 행 그대로(`id` · `name` · `birthDate` · `createdAt` · `updatedAt`), `records[]` 는 `record` 행 그대로에
+`deleted`(지운 기록 표시)를 더한 것. 서버는 내용을 읽지 않고 맞추기만 한다.
+
+```
+평시 ▸ 늦게 고친 쪽이 이긴다 — 기록 · 아기 모두 updatedAt(ISO) 비교. 서버는 기록마다 늘어나는 번호(seq)를 매기고,
+       sync 는 since 보다 큰 번호의 기록 전부(지운 표시 포함)와 아기 · 구성원 수를 돌려준다. 처음이면 since=0.
+평시 ▸ 응답의 seq 가 다음 since 다. 올린 기록이 더 이르면(이미 더 늦게 고친 것이 있으면) 지지 않고 번호도 안 움직인다.
+금지 ▸ 대화(chat_message)는 이 API 로 올라가지 않는다.
+```
+
 ## GET /v1/entitlements — 기기 자격
 
 요청 머리 `X-Device-Key`. 응답: `{ "ads": true, "dailyLimit": 10, "rewardPerAd": 5, "rewardMaxPerDay": 2, "remaining": 7, "operator": false }`
@@ -154,3 +177,4 @@ AdMob 의 서버 측 검증(SSV) 콜백. AdMob 은 GET 쿼리로 부른다(`user
 - 2026-10-06 운영자 기기의 `X-As-User` 헤더, 자격에 operator (task common/015)
 - 2026-10-11 `/v1/ask` 요청에 `history`(바로 앞 대화 최대 6턴) — 앞 질문을 모른 채 답하던 것을 고침 (task ask/012)
 - 2026-10-12 `/v1/knowledge/version` · `/v1/knowledge/bundle` 을 구현 — 증분(`since` · `removedIds`) 대신 승인 항목 전부, 기기 키 없이 (task common/019)
+- 2026-10-12 `/v1/family` — 가족 만들기 · 초대 코드로 들어가기 · 나가기 · 아기 · 기록 맞추기(늦게 고친 쪽이 이김, seq) (task my/007)

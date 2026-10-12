@@ -43,6 +43,7 @@
 | 답변 피드백 | 서버가 받기로 한 것(SPEC-ASK-06). 기기 키와 떼어 두고, 질문·답 원문은 사용자가 그 피드백에서 함께 보내기를 골랐을 때만. 1년 보관 |
 | 캐시된 답변 (라우팅 ②) | 모두가 나눠 쓰는 자산이다 |
 | 운영자(가족) allowlist | 앱 안에서 풀 수 없어야 한다. 가족 기기 몇 대라 DB 대신 서버 비밀값(`MALKONG_OPERATOR_DEVICE_KEYS`)에 둔다 |
+| 가족 공유 사본 — 가족(초대 코드) · 구성원(기기 키 해시 · 동의한 때) · 아기(이름 · 생일) · 기록(L2) | 가족이 같은 아기를 보려면 폰 사이에 서버가 있어야 한다. 동의하고 켠 기기의 것만, 대화는 없다. 마지막 구성원이 나가면 지운다([task my/007](../task/my/007-family-sharing.md)) |
 | 근거 없음 로그 (분류 × 월령 띠 × 검색 건수) | 근거 없이 일반론으로 답한 질문이 어느 주제에 몰리는지는 여러 사용자를 합쳐야 보인다. DB 가 아니라 Cloud Run 로그 한 줄(기본 30일 보관), 질문 원문 · 기기 키는 없다 — [knowledge-layers](knowledge-layers.md) 「비어 있는 곳 찾기」 |
 
 ```
@@ -84,17 +85,17 @@
 
 | 단계 | 어디에 | 무엇을 |
 |---|---|---|
-| 지금 | **기기 sqlite** (expo-sqlite) | 챗 이력 · L2 기록 · 아기 프로필. 서버 전송 없음 |
+| 지금 | **기기 sqlite** (expo-sqlite) | 챗 이력 · L2 기록 · 아기 프로필. 가족 공유를 켜면 기록 · 아기만 서버 사본과 맞춘다 |
 | 지금 | **앱 내장 + 원격 갱신** | L1 지식(월령별 표준). 크기가 작아 앱에 실어 나가고 서버에서 판만 갱신 |
 | 지금 | **Neon** (서버리스 Postgres) | 운영 데이터 — 사용량·집계·피드백·캐시·allowlist. 아기 데이터는 넣지 않는다 |
-| 가족 공유부터 | 같은 **Neon** 에 테이블 추가 | 아기 프로필 + L2 기록의 동기화 사본. 로그인·명시 동의와 함께만 |
+| 지금 — 가족 공유를 켠 기기만 | 같은 **Neon** 에 `family` · `family_member` · `family_baby` · `family_record` | 아기 프로필 + L2 기록의 동기화 사본. 기기 키로 묶이고 명시 동의와 함께만. 로그인은 나중에 가족을 계정에 묶을 때(task my/007) |
 
 ```
 평시 ▸ 챗 이력은 기기 안에만 저장해야 한다. 가족 공유를 켜도 동기화 대상은 아기 프로필과
       L2 기록으로 한정하며, 무엇이 올라가는지 사용자에게 보여야 한다.
 ```
 
-가족 공유(한 아기를 여러 양육자가 함께 보기)가 서버 DB 를 도입하는 유일한 이유이자 시점이다 — SPEC-MY-05.
+가족 공유(한 아기를 여러 양육자가 함께 보기)가 서버가 아기 데이터를 갖는 유일한 이유다 — SPEC-MY-05. 2026-10-12 부터 초대 코드 · 기기 키로 돈다.
 
 ### 사진·파일 — 어디에 두는가
 
@@ -302,7 +303,8 @@ CREATE TABLE baby (                        -- 아기 프로필 (당분간 1행)
   id          TEXT PRIMARY KEY,
   name        TEXT,                        -- 선택
   birth_date  TEXT NOT NULL,               -- YYYY-MM-DD. 월령·D+일수는 저장하지 않고 계산한다
-  created_at  TEXT NOT NULL
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT                         -- 마지막으로 고친 때 — 가족 공유의 「늦게 고친 쪽이 이긴다」 기준
 );
 CREATE TABLE record (                      -- L2 — 기록과 요약
   id                 TEXT PRIMARY KEY,
@@ -340,7 +342,8 @@ CREATE INDEX ix_inbox_created ON inbox_card(created_at);
 
 - 월령은 항상 `birth_date` 에서 계산한다 — 저장해 두면 낡는다.
 - 사용량의 정본은 서버다. 기기에는 표시용 잔여 횟수만 캐시한다.
-- 가족 공유 도입 시 `baby`·`record` 만 동기화 대상이 된다(SPEC-MY-05). `chat_message` 는 올라가지 않는다.
+- 가족 공유(task my/007)에서 `baby`·`record` 만 동기화 대상이다(SPEC-MY-05). `chat_message` 는 올라가지 않는다.
+  폰 쪽 상태(가족 정보 · 받은 번호 · 올린 때 · 지운 기록 표시)는 `settings` 의 `family.*` 칸에 둔다.
 
 ## changelog
 
@@ -364,3 +367,4 @@ CREATE INDEX ix_inbox_created ON inbox_card(created_at);
   서버 전체 하루 비용 천장 (decisions/019, task common/014)
 - 2026-10-06 운영자 기기의 「일반 사용자로 보기」(`X-As-User`) (task common/015)
 - 2026-10-08 서버가 저장하는 것에 「근거 없음 로그」(분류 × 월령 띠, 원문 없음) 추가 (task common/017)
+- 2026-10-12 가족 공유 — 서버가 아기 · 기록 사본을 갖는다(초대 코드 · 기기 키, 동의 뒤). Neon 에 family 표 넷, 기기 baby 에 updated_at (task my/007)

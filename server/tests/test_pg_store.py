@@ -79,3 +79,65 @@ def test_feedback_is_saved() -> None:
         assert row == ("down",)
     finally:
         fb._pool.close()
+
+
+# --- 가족 공유 저장소 (task my/007) ---
+
+
+@pytest.fixture
+def family_store():
+    from app.infra.db.family_store import PostgresFamilyStore
+
+    store = PostgresFamilyStore(URL)
+    yield store
+    with store._conn() as conn:
+        conn.execute("DELETE FROM family WHERE id LIKE 'pgtest-%'")
+    store._pool.close()
+
+
+def test_family_create_join_sync_and_leave(family_store) -> None:
+    from app.infra.db.family_store import RecordRow
+
+    fam = family_store.create("pgtest-fam", "PGTEST", "pgtest-dev-a", "2026-10-12T09:00:00Z")
+    assert fam.invite_code == "PGTEST"
+    assert family_store.find_by_code("PGTEST").id == "pgtest-fam"
+    family_store.add_member("pgtest-fam", "pgtest-dev-b", "2026-10-12T09:01:00Z")
+    assert family_store.member_count("pgtest-fam") == 2
+    assert family_store.family_of("pgtest-dev-b").id == "pgtest-fam"
+
+    family_store.put_baby("pgtest-fam", {"name": "하율"}, "2026-10-12T10:00:00Z")
+    family_store.put_baby(
+        "pgtest-fam", {"name": "옛날"}, "2026-10-12T09:00:00Z"
+    )  # 더 이르면 지지 않는다
+    assert family_store.baby("pgtest-fam")[0]["name"] == "하율"
+
+    family_store.upsert_records(
+        "pgtest-fam",
+        [
+            RecordRow("r1", {"label": "a"}, "2026-10-12T10:00:00Z", False, 0),
+            RecordRow("r2", {"label": "b"}, "2026-10-12T10:00:00Z", False, 0),
+        ],
+    )
+    first = family_store.records_since("pgtest-fam", 0)
+    assert [r.id for r in first] == ["r1", "r2"] and first[0].seq < first[1].seq
+    last = first[-1].seq
+    # 더 이른 고침은 지지 않고 번호도 안 움직인다, 더 늦은 고침은 새 번호
+    family_store.upsert_records(
+        "pgtest-fam", [RecordRow("r1", {"label": "old"}, "2026-10-12T09:00:00Z", False, 0)]
+    )
+    assert family_store.records_since("pgtest-fam", last) == []
+    family_store.upsert_records(
+        "pgtest-fam", [RecordRow("r1", {"label": "new"}, "2026-10-12T11:00:00Z", True, 0)]
+    )
+    newer = family_store.records_since("pgtest-fam", last)
+    assert (
+        len(newer) == 1
+        and newer[0].id == "r1"
+        and newer[0].deleted
+        and newer[0].data["label"] == "new"
+    )
+
+    assert family_store.remove_member("pgtest-fam", "pgtest-dev-a") == 1
+    assert family_store.remove_member("pgtest-fam", "pgtest-dev-b") == 0
+    assert family_store.find_by_code("PGTEST") is None
+    assert family_store.records_since("pgtest-fam", 0) == []

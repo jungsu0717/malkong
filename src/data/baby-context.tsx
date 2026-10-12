@@ -8,6 +8,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 import { ageFrom, loadBaby, saveBaby, type Baby, type BabyAge } from './baby';
+import { requestSync } from './sync-events';
 
 type BabyContextValue = {
   baby: Baby | null;
@@ -16,6 +17,8 @@ type BabyContextValue = {
   /** 기기에서 읽어오는 중 */
   loading: boolean;
   save: (input: { name: string | null; birthDate: string }) => Promise<void>;
+  /** 가족에게서 받은 아기가 폰에 적용된 뒤 다시 읽는다(task my/007) */
+  reload: () => Promise<void>;
 };
 
 const BabyContext = createContext<BabyContextValue | null>(null);
@@ -41,6 +44,11 @@ export function BabyProvider({ children }: { children: React.ReactNode }) {
   const save = useCallback(async (input: { name: string | null; birthDate: string }) => {
     const saved = await saveBaby(input);
     setBaby(saved);
+    requestSync();
+  }, []);
+
+  const reload = useCallback(async () => {
+    setBaby(await loadBaby());
   }, []);
 
   const value = useMemo<BabyContextValue>(
@@ -49,8 +57,9 @@ export function BabyProvider({ children }: { children: React.ReactNode }) {
       age: baby ? ageFrom(baby.birthDate) : null,
       loading,
       save,
+      reload,
     }),
-    [baby, loading, save],
+    [baby, loading, save, reload],
   );
 
   return <BabyContext.Provider value={value}>{children}</BabyContext.Provider>;

@@ -9,7 +9,7 @@
  * 기기 DB 절의 record 테이블이다.
  */
 
-import { deleteRecordRow, insertRecordRow, readRecordRows, updateRecordLabelRow } from './db';
+import { deleteRecordRow, insertRecordRow, readRecordRows, updateRecordLabelRow, upsertRecordRow } from './db';
 
 export type RecordKind = '기록' | '요약';
 
@@ -26,6 +26,8 @@ export type BabyRecord = {
   /** 요약이 낡았다고 보는 표시. 그대로 단정하지 않고 재확인한다 */
   stale: boolean;
   createdAt: string;
+  /** 마지막으로 고친 때 — 가족 공유에서 늦게 고친 쪽이 이기는 기준(task my/007) */
+  updatedAt: string;
 };
 
 export async function loadRecords(): Promise<BabyRecord[]> {
@@ -42,9 +44,15 @@ export async function addRecord(
     id: `rec-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     stale: false,
     createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   };
   await insertRecordRow(record);
   return record;
+}
+
+/** 가족에게서 받은 기록을 그대로 둔다 — 있으면 덮고 없으면 넣는다(가족 공유, task my/007) */
+export async function upsertRecords(records: BabyRecord[]): Promise<void> {
+  for (const record of records) await upsertRecordRow(record);
 }
 
 export async function removeRecord(id: string): Promise<void> {

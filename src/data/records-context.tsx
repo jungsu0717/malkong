@@ -7,6 +7,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { noteDeleted } from './family';
 import {
   addRecord,
   loadRecords,
@@ -14,6 +15,7 @@ import {
   updateRecordLabel,
   type BabyRecord,
 } from './records';
+import { requestSync } from './sync-events';
 
 type RecordsContextValue = {
   records: BabyRecord[];
@@ -26,6 +28,8 @@ type RecordsContextValue = {
   remove: (id: string) => Promise<void>;
   /** 문구 고치기(SPEC-MY-02) — 홈 추천과 답변에 보내는 기록이 바로 따라 바뀐다 */
   update: (id: string, label: string) => Promise<void>;
+  /** 가족에게서 받은 기록이 폰에 적용된 뒤 다시 읽는다(task my/007) */
+  reload: () => Promise<void>;
 };
 
 const RecordsContext = createContext<RecordsContextValue | null>(null);
@@ -51,22 +55,31 @@ export function RecordsProvider({ children }: { children: React.ReactNode }) {
   const add = useCallback<RecordsContextValue['add']>(async (input) => {
     const record = await addRecord(input);
     setRecords((prev) => [...prev, record]);
+    requestSync();
     return record;
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    await noteDeleted(id);
     await removeRecord(id);
     setRecords((prev) => prev.filter((r) => r.id !== id));
+    requestSync();
   }, []);
 
   const update = useCallback(async (id: string, label: string) => {
     await updateRecordLabel(id, label);
-    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, label, stale: false } : r)));
+    const updatedAt = new Date().toISOString();
+    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, label, stale: false, updatedAt } : r)));
+    requestSync();
+  }, []);
+
+  const reload = useCallback(async () => {
+    setRecords(await loadRecords());
   }, []);
 
   const value = useMemo(
-    () => ({ records, loading, add, remove, update }),
-    [records, loading, add, remove, update],
+    () => ({ records, loading, add, remove, update, reload }),
+    [records, loading, add, remove, update, reload],
   );
 
   return <RecordsContext.Provider value={value}>{children}</RecordsContext.Provider>;
