@@ -8,7 +8,7 @@
  */
 
 import { useSegments } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { RecordNudgeCard, type LogEntryInput } from '@/components/record-nudge-card';
@@ -21,6 +21,7 @@ import { onRecordNudgeOpened, scheduleRecordNudge } from '@/data/notifications';
 import { usePreferences } from '@/data/preferences-context';
 import { monthDay } from '@/data/quick-ask';
 import { nextNudgeAt, nudgeDay, nudgeDue } from '@/data/record-nudge';
+import { useEvents } from '@/data/events-context';
 import { useRecords } from '@/data/records-context';
 
 /** 마지막으로 물은 때(ISO) — 없으면 처음 연 지금으로 둔다. 깔자마자 묻지 않게 */
@@ -43,6 +44,13 @@ export function RecordNudge() {
   /** 이번에 알림함에 남긴 줄 — 카드를 닫으면 읽음으로 */
   const inboxId = useRef<string | null>(null);
   const [since, setSince] = useState<Date | null>(null);
+  const { events } = useEvents();
+  // 기록 탭의 빠른 기록도 기록이다 — 그걸 남긴 날부터 센다(헌장 5, decisions/023)
+  const lastEventAt = events.length > 0 ? events[events.length - 1].startAt : null;
+  const from = useMemo(() => {
+    const last = lastEventAt ? new Date(lastEventAt) : null;
+    return since && last && last > since ? last : since;
+  }, [since, lastEventAt]);
   /** 셈의 기준 시각 — 앱이 앞으로 올 때마다 새로 */
   const [now, setNow] = useState(() => new Date());
   const [open, setOpen] = useState(false);
@@ -84,7 +92,7 @@ export function RecordNudge() {
 
   const ready = !!baby && !recordsLoading && !prefsLoading;
   const onboarding = segments[0] === 'onboarding';
-  const due = ready && since !== null && nudgeDue(records, since, now);
+  const due = ready && from !== null && nudgeDue(records, from, now);
 
   // 물을 때면 알림함에 한 줄, 카드 스위치가 켜져 있으면 카드도
   useEffect(() => {
@@ -92,7 +100,7 @@ export function RecordNudge() {
     const timer = setTimeout(() => {
       const at = new Date().toISOString();
       // 열쇠는 물을 날 — 카드를 끄고 알림만 둔 사람이 앱을 여러 번 열어도 한 번 비었을 때 한 줄만 쌓인다
-      inboxId.current = `nudge-${dayKey(nudgeDay(records, since!).toISOString())}`;
+      inboxId.current = `nudge-${dayKey(nudgeDay(records, from!).toISOString())}`;
       void addToInbox({
         id: inboxId.current,
         kind: 'nudge',
@@ -105,10 +113,10 @@ export function RecordNudge() {
       if (nudgeCard) openCard();
     }, OPEN_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [due, nudgeCard, nudgePush, onboarding, open, openCard, addToInbox, records, since, now]);
+  }, [due, nudgeCard, nudgePush, onboarding, open, openCard, addToInbox, records, from, now]);
 
   // 다음 알림 — 앱이 앞으로 올 때마다 다시 건다(설정 앱에서 알림을 나중에 허락해도 따라오게)
-  const nextAt = ready && since !== null ? nextNudgeAt(records, since, now).getTime() : null;
+  const nextAt = ready && from !== null ? nextNudgeAt(records, from, now).getTime() : null;
   useEffect(() => {
     if (nextAt === null) return;
     void scheduleRecordNudge(nudgePush ? new Date(nextAt) : null).catch(() => undefined);

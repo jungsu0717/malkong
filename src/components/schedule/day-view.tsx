@@ -104,7 +104,7 @@ export function DayView({
               icon="chatbubble-ellipses-outline"
               title={isToday ? '오늘 나눈 대화' : '이날 나눈 대화'}
               detail={`질문 ${chat.questions}개 · ${chat.firstQuestion}`}
-              onPress={() => router.navigate({ pathname: '/', params: { focus: chat.firstId, ft: String(Date.now()) } })}
+              onPress={() => router.navigate({ pathname: '/chat', params: { focus: chat.firstId, ft: String(Date.now()) } })}
             />
           )}
         </Card>

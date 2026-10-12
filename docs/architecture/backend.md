@@ -318,6 +318,19 @@ CREATE TABLE record (                      -- L2 — 기록과 요약
   created_at         TEXT NOT NULL,
   updated_at         TEXT NOT NULL
 );
+CREATE TABLE care_event (                  -- 빠른 기록 (SPEC-LOG-01, decisions/023) — 수유 · 기저귀 · 잠 · 체온 · 키와 몸무게
+  id          TEXT PRIMARY KEY,
+  kind        TEXT NOT NULL,               -- breast · formula · diaper · sleep · temp · weight · height
+  start_at    TEXT NOT NULL,               -- 그 일이 일어난(시작한) 때 ISO
+  end_at      TEXT,                        -- 모유 · 잠의 끝. 비어 있으면 재는 중
+  amount      REAL,                        -- 분유 ml · 체온 ℃ · 몸무게 kg · 키 cm
+  side        TEXT,                        -- 모유 left · right
+  diaper      TEXT,                        -- pee · poo · both
+  note        TEXT,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL                -- 가족 공유의 「늦게 고친 쪽이 이긴다」 기준
+);
+CREATE INDEX ix_event_start ON care_event(start_at);
 CREATE TABLE chat_message (                -- 대화 — 단일 타임라인 (스레드 없음, 날짜로 구분)
   id          TEXT PRIMARY KEY,
   role        TEXT NOT NULL CHECK (role IN ('user','malkong')),

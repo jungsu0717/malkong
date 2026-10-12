@@ -15,6 +15,8 @@
 import { topicsOf, type TopicKey } from './ask-trace';
 import type { ChatMessage } from './chat';
 import { recordsForQuestion } from './daily-log';
+import { contextLines } from './event-summary';
+import type { CareEvent } from './events';
 import type { BabyRecord } from './records';
 
 /** 앞 답을 문제 삼는 말. 「상관없어요?」처럼 보통 질문에도 나오는 말은 넣지 않는다 */
@@ -64,12 +66,17 @@ export function focusOf(question: string, messages: ChatMessage[], beforeId: str
  * 보낼 기록 — 주제에 닿는 것과 이번 시도에 막 저장한 것(되묻기에 고른 답). 하루 기록이 몰리지 않게 recordsForQuestion 으로 자른다.
  * 주제가 없는 질문에는 막 저장한 것 말고는 보내지 않는다.
  */
-export function recordsForAsk(records: BabyRecord[], focus: string, carriedIds: string[], max: number): BabyRecord[] {
+function topicKeys(focus: string): Set<TopicKey> {
   const keys = new Set<TopicKey>();
   for (const t of topicsOf(focus)) {
     keys.add(t.key);
     for (const k of ALSO[t.key] ?? []) keys.add(k);
   }
+  return keys;
+}
+
+export function recordsForAsk(records: BabyRecord[], focus: string, carriedIds: string[], max: number): BabyRecord[] {
+  const keys = topicKeys(focus);
   const carried = new Set(carriedIds);
   const near = records.filter((r) => carried.has(r.id) || topicsOf(r.label).some((t) => keys.has(t.key)));
   return recordsForQuestion(near, max);
@@ -85,4 +92,14 @@ export function latestSummary(messages: ChatMessage[], beforeId: string, now = D
     }
   }
   return undefined;
+}
+
+/**
+ * 빠른 기록의 요약 줄 가운데 이번 질문의 주제에 닿는 것(SPEC-LOG-06) — 「최근 24시간 수유 7번 …」.
+ * 기록 줄과 같은 규칙으로 고른다. 주제가 없는 질문에는 보내지 않는다
+ */
+export function eventLinesForAsk(events: CareEvent[], focus: string, now = new Date()): string[] {
+  const keys = topicKeys(focus);
+  if (keys.size === 0) return [];
+  return contextLines(events, now).filter((line) => topicsOf(line).some((t) => keys.has(t.key)));
 }

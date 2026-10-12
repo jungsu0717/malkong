@@ -11,6 +11,7 @@ from app.common.core.exception import ApiException
 from app.domain.entitlements.service import Device
 from app.domain.family.schema import (
     BabyIn,
+    EventIn,
     FamilyInfo,
     RecordIn,
     SyncRequest,
@@ -25,6 +26,8 @@ CODE_LENGTH = 6
 MAX_MEMBERS = 6
 # 코드 맞히기 시도 — 기기마다 하루. 메모리에서만 센다
 MAX_JOIN_ATTEMPTS_PER_DAY = 20
+# 빠른 기록(SPEC-LOG-07)을 기록 표에 함께 둘 때 JSON 에 다는 표시 — 돌려줄 때 기록과 가른다
+EVENT_MARK = "_event"
 
 
 def new_code() -> str:
@@ -120,20 +123,42 @@ class FamilyService:
                 self._store.put_baby(
                     family.id, req.baby.model_dump(by_alias=True), req.baby.updated_at
                 )
-            if req.records:
-                self._store.upsert_records(
-                    family.id,
-                    [
-                        RecordRow(r.id, r.model_dump(by_alias=True), r.updated_at, r.deleted, 0)
-                        for r in req.records
-                    ],
+            # 빠른 기록도 같은 표 · 같은 번호로 맞춘다 — JSON 에 EVENT_MARK 를 달아 돌려줄 때 가른다
+            rows_in = [
+                RecordRow(r.id, r.model_dump(by_alias=True), r.updated_at, r.deleted, 0)
+                for r in req.records
+            ] + [
+                RecordRow(
+                    e.id,
+                    {**e.model_dump(by_alias=True), EVENT_MARK: True},
+                    e.updated_at,
+                    e.deleted,
+                    0,
                 )
+                for e in req.events
+            ]
+            if rows_in:
+                self._store.upsert_records(family.id, rows_in)
             rows = self._store.records_since(family.id, req.since)
             baby = self._store.baby(family.id)
+            records = [r for r in rows if not r.data.get(EVENT_MARK)]
+            events = [r for r in rows if r.data.get(EVENT_MARK)]
             return SyncResponse(
                 seq=rows[-1].seq if rows else req.since,
                 baby=BabyIn.model_validate(baby[0]) if baby else None,
-                records=[RecordIn.model_validate({**r.data, "deleted": r.deleted}) for r in rows],
+                records=[
+                    RecordIn.model_validate({**r.data, "deleted": r.deleted}) for r in records
+                ],
+                events=[
+                    EventIn.model_validate(
+                        {
+                            k: v
+                            for k, v in {**r.data, "deleted": r.deleted}.items()
+                            if k != EVENT_MARK
+                        }
+                    )
+                    for r in events
+                ],
                 members=self._store.member_count(family.id),
             )
         except StoreError:

@@ -16,13 +16,14 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { watchRewardedAd } from '@/data/ads';
 import { ApiError, deviceKeyHash, getEntitlements, postAsk, type LimitInfo } from '@/data/api';
-import { focusOf, latestSummary, recordsForAsk } from '@/data/ask-context';
+import { eventLinesForAsk, focusOf, latestSummary, recordsForAsk } from '@/data/ask-context';
 import { doneTrace } from '@/data/ask-trace';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { newMessageId, recentTurns, type Guess, type MalkongMessage, type UserMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useEntitlements } from '@/data/entitlements-context';
+import { useEvents } from '@/data/events-context';
 import { monthDay } from '@/data/quick-ask';
 import type { BabyRecord } from '@/data/records';
 import { useRecords } from '@/data/records-context';
@@ -52,6 +53,7 @@ export function useMalkong() {
   const name = baby?.name ?? DEFAULT_BABY_NAME;
   const { messages, append, updateMeta } = useChat();
   const { records, add } = useRecords();
+  const { events } = useEvents();
   const { setRemaining } = useEntitlements();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [pending, setPending] = useState<PendingAsk | null>(null);
@@ -71,10 +73,15 @@ export function useMalkong() {
       setPendingId(attempt.questionId);
       // 기록은 이번 질문의 주제에 닿는 것만 — 반박이면 원래 질문의 주제로(decisions/022, ask-context.ts)
       const focus = focusOf(attempt.question, messages, attempt.questionId);
-      const sent = recordsForAsk(known, focus, attempt.carriedRecordIds, MAX_RECORDS_SENT).map((r) => ({
-        kind: r.kind,
-        label: r.label,
-      }));
+      // 빠른 기록의 요약 줄을 맨 앞에 — 「최근 24시간 수유 7번」처럼 숫자로 아는 것(SPEC-LOG-06)
+      const lines = eventLinesForAsk(events, focus).map((label) => ({ kind: '기록' as const, label }));
+      const sent = [
+        ...lines,
+        ...recordsForAsk(known, focus, attempt.carriedRecordIds, MAX_RECORDS_SENT - lines.length).map((r) => ({
+          kind: r.kind,
+          label: r.label,
+        })),
+      ];
       const labels = attempt.mode ? [] : sent.map((r) => r.label);
       setPending({ question: focus, records: labels });
       const conversationSummary = latestSummary(messages, attempt.questionId);
@@ -172,7 +179,7 @@ export function useMalkong() {
         setPending(null);
       }
     },
-    [age, name, messages, askServer, add, append, setRemaining],
+    [age, name, messages, events, askServer, add, append, setRemaining],
   );
 
   /** 버디의 짐작이 맞다 — 요약(L2)으로 저장하고 「기록했어요」 줄로 옮긴다. 시점은 지금 질문의 D+ */

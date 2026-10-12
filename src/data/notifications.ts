@@ -16,6 +16,9 @@ const NUDGE_ID = 'record-nudge';
 const NUDGE_CHANNEL_ID = 'record-nudge';
 /** 알림의 data.type — 누르면 이것으로 알아보고 카드를 연다 */
 const NUDGE_TYPE = 'record-nudge';
+const BRIEFING_TYPE = 'briefing';
+const FEED_ID = 'feed-reminder';
+const FEED_CHANNEL_ID = 'feed-reminder';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -58,6 +61,8 @@ export async function scheduleBriefing(time: string | null): Promise<void> {
     content: {
       title: '오늘의 브리핑',
       body: '버디가 오늘 안부와 챙길 것을 정리해 뒀어요',
+      // 누르면 버디 탭으로 연다 — 첫 화면이 기록 탭이라서(decisions/023)
+      data: { type: BRIEFING_TYPE },
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -98,6 +103,46 @@ export function onRecordNudgeOpened(listener: () => void): () => void {
     if (
       response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER ||
       response.notification.request.content.data?.type !== NUDGE_TYPE
+    ) {
+      return;
+    }
+    Notifications.clearLastNotificationResponse();
+    listener();
+  };
+  handle(Notifications.getLastNotificationResponse());
+  const sub = Notifications.addNotificationResponseReceivedListener(handle);
+  return () => sub.remove();
+}
+
+/**
+ * 수유 알림 (SPEC-LOG-05) — 정한 때 한 번. null 이면 끈다. 허락이 없으면 걸지 않는다.
+ * 글에는 아기 정보 · 기록 내용을 넣지 않는다 — 잠금 화면에 보이므로. `afterLabel` 은 「3시간」 같은 정한 시간뿐이다
+ */
+export async function scheduleFeedReminder(at: Date | null, afterLabel: string): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(FEED_ID).catch(() => undefined);
+  if (!at || !(await notificationsAllowed())) return;
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(FEED_CHANNEL_ID, {
+      name: '수유 알림',
+      importance: Notifications.AndroidImportance.HIGH,
+    });
+  }
+  await Notifications.scheduleNotificationAsync({
+    identifier: FEED_ID,
+    content: {
+      title: `마지막 수유 뒤 ${afterLabel}이 지났어요`,
+      body: '배고플 때가 됐을 수 있어요',
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: FEED_CHANNEL_ID },
+  });
+}
+
+/** 아침 브리핑 알림을 눌러 앱이 열리면 `listener` 를 부른다 — 버디 탭으로 보내려고. 돌려주는 함수로 그만 듣는다 */
+export function onBriefingOpened(listener: () => void): () => void {
+  const handle = (response: Notifications.NotificationResponse | null) => {
+    if (
+      response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER ||
+      response.notification.request.content.data?.type !== BRIEFING_TYPE
     ) {
       return;
     }

@@ -16,6 +16,10 @@ export const DEFAULT_BRIEFING_TIME = '08:00';
 const NUDGE_PUSH_KEY = 'record_nudge_push';
 const NUDGE_CARD_KEY = 'record_nudge_card';
 
+/** 수유 알림 (SPEC-LOG-05) — 마지막 수유 시작 뒤 몇 분에 알릴지, 끄면 'off'. 정한 적이 없으면 3시간 */
+const FEED_REMINDER_KEY = 'feed_reminder';
+export const DEFAULT_FEED_REMINDER = 180;
+
 type PreferencesValue = {
   /** 기기에서 읽어오는 중 */
   loading: boolean;
@@ -29,6 +33,9 @@ type PreferencesValue = {
   /** 기록 요청 카드 — 앱을 열 때 저절로 띄우기 */
   nudgeCard: boolean;
   setNudgeCard: (on: boolean) => Promise<void>;
+  /** 수유 알림 — 마지막 수유 시작 뒤 몇 분. null 이면 끔 */
+  feedReminder: number | null;
+  setFeedReminder: (minutes: number | null) => Promise<void>;
 };
 
 const PreferencesContext = createContext<PreferencesValue | null>(null);
@@ -37,6 +44,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const [briefingTime, setTime] = useState<string | null>(DEFAULT_BRIEFING_TIME);
   const [nudgePush, setPush] = useState(true);
   const [nudgeCard, setCard] = useState(true);
+  const [feedReminder, setFeed] = useState<number | null>(DEFAULT_FEED_REMINDER);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -45,11 +53,13 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
       readSetting(BRIEFING_TIME_KEY),
       readSetting(NUDGE_PUSH_KEY),
       readSetting(NUDGE_CARD_KEY),
+      readSetting(FEED_REMINDER_KEY),
     ])
-      .then(([time, push, card]) => {
+      .then(([time, push, card, feed]) => {
         if (cancelled) return;
         setPush(push !== 'off');
         setCard(card !== 'off');
+        setFeed(feed === 'off' ? null : Number(feed) || DEFAULT_FEED_REMINDER);
         const t = time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME);
         setTime(t);
         // 시작할 때마다 다시 건다 — 허락을 설정 앱에서 나중에 켰어도 따라오게. 허락이 없으면 아무 일도 없다
@@ -79,6 +89,11 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     await writeSetting(NUDGE_CARD_KEY, on ? 'on' : 'off');
   }, []);
 
+  const setFeedReminder = useCallback(async (minutes: number | null) => {
+    setFeed(minutes);
+    await writeSetting(FEED_REMINDER_KEY, minutes === null ? 'off' : String(minutes));
+  }, []);
+
   const value = useMemo(
     () => ({
       loading,
@@ -88,8 +103,10 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
       setNudgePush,
       nudgeCard,
       setNudgeCard,
+      feedReminder,
+      setFeedReminder,
     }),
-    [loading, briefingTime, setBriefingTime, nudgePush, setNudgePush, nudgeCard, setNudgeCard],
+    [loading, briefingTime, setBriefingTime, nudgePush, setNudgePush, nudgeCard, setNudgeCard, feedReminder, setFeedReminder],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;

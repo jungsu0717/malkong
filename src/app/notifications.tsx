@@ -1,5 +1,5 @@
 /**
- * 알림 설정 — 마이의 「알림」 한 줄에서 들어오는 상세 (SPEC-HOME-06 아침 브리핑 · SPEC-BABY-07 기록 요청, task common/020).
+ * 알림 설정 — 마이의 「알림」 한 줄에서 들어오는 상세 (SPEC-LOG-05 수유 알림 · SPEC-HOME-06 아침 브리핑 · SPEC-BABY-07 기록 요청, task common/020).
  * 마이 탭에는 요약 한 줄만 두고 켜고 끄기 · 시간 · 적을 칸은 여기서 한다(Julian, 2026-10-12 — 한눈 요약 + 상세 뎁스).
  */
 
@@ -11,11 +11,16 @@ import { ThemedView } from '@/components/themed-view';
 import { Button, Card, Chip, ListRow, Toggle } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { BRIEFING_TIMES, timeLabel } from '@/data/briefing';
+import { durationLabel } from '@/data/event-summary';
 import { askNotifications, notificationsAllowed, notificationsSupported } from '@/data/notifications';
-import { DEFAULT_BRIEFING_TIME, usePreferences } from '@/data/preferences-context';
+import { DEFAULT_BRIEFING_TIME, DEFAULT_FEED_REMINDER, usePreferences } from '@/data/preferences-context';
+
+/** 수유 알림 간격 — 분 */
+const FEED_GAPS = [120, 150, 180, 210, 240];
 
 export default function NotificationsScreen() {
-  const { briefingTime, setBriefingTime, nudgePush, setNudgePush, nudgeCard, setNudgeCard } = usePreferences();
+  const { briefingTime, setBriefingTime, nudgePush, setNudgePush, nudgeCard, setNudgeCard, feedReminder, setFeedReminder } =
+    usePreferences();
   /** 폰의 알림 허락 — 설정 앱에서 바꾸고 돌아오면 다시 읽는다 */
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const supported = notificationsSupported();
@@ -47,8 +52,17 @@ export default function NotificationsScreen() {
     if (ok) await setNudgePush(true);
   };
 
+  // 수유 알림(SPEC-LOG-05) — 거는 것은 events-context 가 기록이 바뀔 때마다 한다
+  const feedOn = feedReminder !== null && allowed === true;
+  const toggleFeed = async (on: boolean) => {
+    if (!on) return setFeedReminder(null);
+    const ok = await askNotifications();
+    setAllowed(ok);
+    if (ok) await setFeedReminder(feedReminder ?? DEFAULT_FEED_REMINDER);
+  };
+
   /** 켜 두었는데 폰 설정에서 막혀 있으면 「설정 열기」 */
-  const blocked = supported && allowed === false && (briefingTime !== null || nudgePush);
+  const blocked = supported && allowed === false && (briefingTime !== null || nudgePush || feedReminder !== null);
   const blockedText = !supported ? '이 폰에서는 알림을 받을 수 없어요' : '폰 설정에서 알림이 꺼져 있어요';
 
   return (
@@ -56,6 +70,26 @@ export default function NotificationsScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Card style={styles.rows}>
           <ListRow
+            icon="heart-outline"
+            title="수유 알림"
+            detail={
+              !supported || (allowed === false && feedReminder !== null)
+                ? blockedText
+                : feedOn
+                  ? `마지막 수유 ${durationLabel(feedReminder!)} 뒤에 한 번`
+                  : '안 받아요'
+            }
+            right={supported ? <Toggle label="수유 알림" value={feedOn} onChange={(on) => void toggleFeed(on)} /> : null}
+          />
+          {feedOn && (
+            <View style={styles.times}>
+              {FEED_GAPS.map((m) => (
+                <Chip key={m} label={durationLabel(m)} selected={m === feedReminder} onPress={() => void setFeedReminder(m)} />
+              ))}
+            </View>
+          )}
+          <ListRow
+            divider
             icon="notifications-outline"
             title="아침 브리핑"
             detail={

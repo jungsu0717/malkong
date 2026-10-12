@@ -8,6 +8,7 @@
 
 import type { Baby } from './baby';
 import type { ChatMessage } from './chat';
+import type { CareEvent } from './events';
 import type { InboxCard } from './inbox';
 import type { BabyRecord } from './records';
 
@@ -165,4 +166,38 @@ export async function insertInboxRow(card: InboxCard): Promise<void> {
 export async function markInboxReadRows(ids: string[], at: string): Promise<void> {
   const wanted = new Set(ids);
   writeInboxRows(readInboxSync().map((c) => (wanted.has(c.id) && !c.readAt ? { ...c, readAt: at } : c)));
+}
+
+// --- 빠른 기록 (SPEC-LOG-01) ---
+
+const EVENTS_KEY = 'malkong.events';
+
+export async function readEventRows(): Promise<CareEvent[]> {
+  try {
+    const raw = globalThis.localStorage?.getItem(EVENTS_KEY);
+    const rows = raw ? (JSON.parse(raw) as CareEvent[]) : [];
+    return rows.sort((a, b) => a.startAt.localeCompare(b.startAt));
+  } catch {
+    return [];
+  }
+}
+
+function writeEventRows(rows: CareEvent[]): void {
+  try {
+    globalThis.localStorage?.setItem(EVENTS_KEY, JSON.stringify(rows));
+  } catch {
+    // 저장이 막힌 브라우저에서도 화면은 그대로 동작해야 한다 (이번 실행에만 유지된다)
+  }
+}
+
+export async function upsertEventRow(e: CareEvent): Promise<void> {
+  const rows = await readEventRows();
+  const i = rows.findIndex((r) => r.id === e.id);
+  if (i >= 0) rows[i] = e;
+  else rows.push(e);
+  writeEventRows(rows);
+}
+
+export async function deleteEventRow(id: string): Promise<void> {
+  writeEventRows((await readEventRows()).filter((r) => r.id !== id));
 }

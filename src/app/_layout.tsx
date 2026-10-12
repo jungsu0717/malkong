@@ -18,9 +18,11 @@ import { BabyProvider, useBaby } from '@/data/baby-context';
 import { ChatProvider } from '@/data/chat-context';
 import { DraftProvider } from '@/data/draft-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
+import { EventsProvider } from '@/data/events-context';
 import { FamilyProvider } from '@/data/family-context';
 import { InboxProvider } from '@/data/inbox-context';
 import { loadStoredKnowledge, refreshKnowledge } from '@/data/knowledge-update';
+import { onBriefingOpened } from '@/data/notifications';
 import { PreferencesProvider } from '@/data/preferences-context';
 import { RecordsProvider } from '@/data/records-context';
 
@@ -41,6 +43,9 @@ function OnboardingGate() {
     if (loading) return;
     if (!baby && segments[0] !== 'onboarding') router.replace('/onboarding');
   }, [baby, loading, segments, router]);
+
+  // 아침 브리핑 알림을 누르고 들어오면 버디 탭으로 — 첫 화면이 기록 탭이라서(decisions/023)
+  useEffect(() => onBriefingOpened(() => router.navigate('/chat')), [router]);
 
   return null;
 }
@@ -102,6 +107,7 @@ export default function RootLayout() {
           <PreferencesProvider>
             <BabyProvider>
               <RecordsProvider>
+                <EventsProvider>
                 <FamilyProvider>
                 <ChatProvider>
                   <InboxProvider>
@@ -117,6 +123,7 @@ export default function RootLayout() {
                     <Stack.Screen name="briefing" options={{ ...header, title: '브리핑' }} />
                     <Stack.Screen name="notifications" options={{ ...header, title: '알림' }} />
                     <Stack.Screen name="family" options={{ ...header, title: '가족과 함께 보기' }} />
+                    <Stack.Screen name="log-stats" options={{ ...header, title: '일주일 그래프' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
                   {/* 하루 기록이 며칠 비면 묻는 카드와 알림 (SPEC-BABY-07) */}
@@ -125,6 +132,7 @@ export default function RootLayout() {
                   </InboxProvider>
                 </ChatProvider>
                 </FamilyProvider>
+                </EventsProvider>
               </RecordsProvider>
             </BabyProvider>
           </PreferencesProvider>

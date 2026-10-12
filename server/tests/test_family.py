@@ -236,3 +236,93 @@ def test_sync_baby_last_writer_wins(app) -> None:
 def test_sync_without_family(app) -> None:
     res = phone(app).post("/v1/family/sync", json={"since": 0})
     assert res.status_code == 404 and res.json()["code"] == "NOT_IN_FAMILY"
+
+
+# --- 빠른 기록 맞추기 (SPEC-LOG-07, task log/001) ---
+
+
+def event(eid: str, kind: str, updated: str, **over) -> dict:
+    out = {
+        "id": eid,
+        "kind": kind,
+        "startAt": "2026-10-12T09:00:00.000Z",
+        "endAt": None,
+        "amount": None,
+        "side": None,
+        "diaper": None,
+        "note": None,
+        "createdAt": "2026-10-12T09:00:00.000Z",
+        "updatedAt": updated,
+        "deleted": False,
+    }
+    return out | over
+
+
+def test_sync_events_alongside_records(app) -> None:
+    a, b = phone(app), phone(app)
+    code = a.post("/v1/family", json=CONSENT).json()["inviteCode"]
+    b.post("/v1/family/join", json={"code": code, **CONSENT})
+    # a 가 분유 · 재는 중인 잠과 기록 하나를 함께 올린다
+    a.post(
+        "/v1/family/sync",
+        json={
+            "since": 0,
+            "records": [record("r1", "몸무게 6.4kg", "2026-10-12T10:00:00.000Z")],
+            "events": [
+                event("ev-1", "formula", "2026-10-12T10:00:00.000Z", amount=120),
+                event(
+                    "ev-2", "sleep", "2026-10-12T10:05:00.000Z", startAt="2026-10-12T10:05:00.000Z"
+                ),
+            ],
+        },
+    )
+    got = b.post("/v1/family/sync", json={"since": 0}).json()
+    # 기록과 빠른 기록은 갈라서 온다 — 표시는 밖으로 새지 않는다
+    assert [r["id"] for r in got["records"]] == ["r1"]
+    assert {(e["id"], e["kind"], e["amount"], e["endAt"]) for e in got["events"]} == {
+        ("ev-1", "formula", 120, None),
+        ("ev-2", "sleep", None, None),
+    }
+    assert all("_event" not in e for e in got["events"])
+
+    # b 가 잠을 끝내면(더 늦게 고침) a 에게 끝난 잠이 간다
+    seq = got["seq"]
+    b.post(
+        "/v1/family/sync",
+        json={
+            "since": seq,
+            "events": [
+                event(
+                    "ev-2",
+                    "sleep",
+                    "2026-10-12T11:00:00.000Z",
+                    startAt="2026-10-12T10:05:00.000Z",
+                    endAt="2026-10-12T11:00:00.000Z",
+                )
+            ],
+        },
+    )
+    mine = a.post("/v1/family/sync", json={"since": seq}).json()
+    assert [(e["id"], e["endAt"]) for e in mine["events"]] == [("ev-2", "2026-10-12T11:00:00.000Z")]
+    assert mine["records"] == []
+
+    # 지운 빠른 기록도 「지웠다」로 간다
+    a.post(
+        "/v1/family/sync",
+        json={
+            "since": mine["seq"],
+            "events": [event("ev-1", "formula", "2026-10-12T12:00:00.000Z", deleted=True)],
+        },
+    )
+    after = b.post("/v1/family/sync", json={"since": mine["seq"]}).json()
+    assert [(e["id"], e["deleted"]) for e in after["events"]] == [("ev-1", True)]
+
+
+def test_sync_rejects_unknown_event_kind(app) -> None:
+    a = phone(app)
+    a.post("/v1/family", json=CONSENT)
+    res = a.post(
+        "/v1/family/sync",
+        json={"since": 0, "events": [event("ev-x", "photo", "2026-10-12T10:00:00.000Z")]},
+    )
+    assert res.status_code == 422

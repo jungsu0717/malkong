@@ -38,7 +38,7 @@ export function useBriefingAnswer() {
     if (option.prefill) {
       setDraft(option.prefill);
       requestFocus();
-      router.navigate('/');
+      router.navigate('/chat');
     }
   };
 

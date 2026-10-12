@@ -7,14 +7,26 @@
  * 처음 맞출 때(들어간 직후)는 아기를 싣지 않는다 — 가족의 아기가 이긴다. 가족에 아기가 없을 때만 내 아기를 올린다.
  */
 
-import { createFamily, getFamily, joinFamily, leaveFamily, syncFamily, type FamilyInfo, type SyncRecord } from './api';
+import {
+  createFamily,
+  getFamily,
+  joinFamily,
+  leaveFamily,
+  syncFamily,
+  type FamilyInfo,
+  type SyncEvent,
+  type SyncRecord,
+} from './api';
 import { loadBaby, replaceBaby } from './baby';
 import { readSetting, writeSetting } from './db';
+import { loadEvents, removeEvent, upsertEvents, type CareEvent } from './events';
 import { loadRecords, removeRecord, upsertRecords, type BabyRecord } from './records';
 
 const INFO_KEY = 'family.info';
 const SEQ_KEY = 'family.seq';
 const PUSHED_KEY = 'family.pushedAt';
+/** 빠른 기록을 마지막으로 올린 때 — 옛 서버는 events 를 버리므로, 받아 준 서버에서만 넘긴다 */
+const EVENTS_PUSHED_KEY = 'family.eventsPushedAt';
 const SYNCED_KEY = 'family.syncedAt';
 const TOMBSTONES_KEY = 'family.tombstones';
 const CONSENT_KEY = 'family.consentedAt';
@@ -32,6 +44,9 @@ export type FamilyState = {
 };
 
 type Tombstone = { id: string; deletedAt: string };
+
+/** 빠른 기록의 id 는 `ev-` 로 시작한다(events.ts newEventId) — 지운 표시를 기록과 가른다 */
+const isEventId = (id: string) => id.startsWith('ev-');
 
 export async function loadFamilyState(): Promise<FamilyState | null> {
   const raw = await readSetting(INFO_KEY);
@@ -61,6 +76,7 @@ async function clearState(): Promise<void> {
   await writeSetting(INFO_KEY, '');
   await writeSetting(SEQ_KEY, '');
   await writeSetting(PUSHED_KEY, '');
+  await writeSetting(EVENTS_PUSHED_KEY, '');
   await writeSetting(SYNCED_KEY, '');
   await writeSetting(TOMBSTONES_KEY, '');
 }
@@ -134,6 +150,22 @@ export async function recoverFamily(): Promise<FamilyState | null> {
 
 export type SyncOutcome = { state: FamilyState; changed: boolean };
 
+function eventTombstone(t: Tombstone): SyncEvent {
+  return {
+    id: t.id,
+    kind: 'diaper',
+    startAt: t.deletedAt,
+    endAt: null,
+    amount: null,
+    side: null,
+    diaper: null,
+    note: null,
+    createdAt: t.deletedAt,
+    updatedAt: t.deletedAt,
+    deleted: true,
+  };
+}
+
 function tombstoneOf(record: BabyRecord | Tombstone, deleted: boolean): SyncRecord {
   if (!deleted) return { ...(record as BabyRecord), deleted: false };
   const t = record as Tombstone;
@@ -158,19 +190,33 @@ function tombstoneOf(record: BabyRecord | Tombstone, deleted: boolean): SyncReco
 export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   const now = new Date().toISOString();
   const pushedAt = state.pushedAt ?? '';
-  const [records, baby, tombstones] = await Promise.all([loadRecords(), loadBaby(), loadTombstones()]);
+  const [records, events, baby, tombstones] = await Promise.all([loadRecords(), loadEvents(), loadBaby(), loadTombstones()]);
 
+  // 빠른 기록은 따로 센 때부터 — 들어간 직후(null)면 전부
+  const eventsPushedAt = state.pushedAt === null ? '' : ((await readSetting(EVENTS_PUSHED_KEY)) ?? '');
   const dirty = records.filter((r) => r.updatedAt > pushedAt).map((r) => tombstoneOf(r, false));
-  const deleted = tombstones.filter((t) => t.deletedAt > pushedAt).map((t) => tombstoneOf(t, true));
+  const deleted = tombstones.filter((t) => !isEventId(t.id) && t.deletedAt > pushedAt).map((t) => tombstoneOf(t, true));
+  // 빠른 기록(SPEC-LOG-07) — 고친 것과 지운 표시
+  const dirtyEvents: SyncEvent[] = [
+    ...events.filter((e) => e.updatedAt > eventsPushedAt).map((e) => ({ ...e, deleted: false })),
+    ...tombstones.filter((t) => isEventId(t.id) && t.deletedAt > eventsPushedAt).map(eventTombstone),
+  ];
   const first = state.pushedAt === null;
   const pushBaby = baby && !first && baby.updatedAt > pushedAt;
 
-  let res = await syncFamily({ since: state.seq, records: [...dirty, ...deleted], ...(pushBaby ? { baby } : {}) });
+  let res = await syncFamily({
+    since: state.seq,
+    records: [...dirty, ...deleted],
+    events: dirtyEvents,
+    ...(pushBaby ? { baby } : {}),
+  });
   const incoming = [...res.records];
+  const incomingEvents = [...(res.events ?? [])];
   // 들어간 직후 — 가족에 아기가 없을 때만 내 아기를 올린다
   if (first && res.baby === null && baby) {
     res = await syncFamily({ since: res.seq, records: [], baby });
     incoming.push(...res.records);
+    incomingEvents.push(...(res.events ?? []));
   }
 
   let changed = false;
@@ -196,6 +242,29 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
     await upsertRecords(toUpsert);
     changed = true;
   }
+
+  // 빠른 기록도 같은 규칙 — 늦게 고친 쪽이 이기고, 여기서 지운 것은 되살리지 않는다
+  const localEvents = new Map(events.map((e) => [e.id, e]));
+  const eventsToUpsert: CareEvent[] = [];
+  for (const e of incomingEvents) {
+    const deletedHere = byTombstone.get(e.id);
+    if (deletedHere && deletedHere >= e.updatedAt) continue;
+    const mine = localEvents.get(e.id);
+    if (mine && mine.updatedAt >= e.updatedAt) continue;
+    if (e.deleted) {
+      if (mine) {
+        await removeEvent(e.id);
+        changed = true;
+      }
+      continue;
+    }
+    const { deleted: _deleted, ...event } = e;
+    eventsToUpsert.push(event);
+  }
+  if (eventsToUpsert.length > 0) {
+    await upsertEvents(eventsToUpsert);
+    changed = true;
+  }
   if (res.baby && (first || !baby || res.baby.updatedAt > baby.updatedAt)) {
     const same =
       baby &&
@@ -210,7 +279,10 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   }
 
   // 올린 표시는 치운다 — 올린 때 이후 것만 남긴다
-  await saveTombstones(tombstones.filter((t) => t.deletedAt > now));
+  // 서버가 빠른 기록을 받아 줬는지 — 옛 서버는 events 칸이 없다. 못 받았으면 빠른 기록의 올린 때와 지운 표시를 남겨 둔다
+  const eventsAccepted = res.events !== undefined;
+  if (eventsAccepted) await writeSetting(EVENTS_PUSHED_KEY, now);
+  await saveTombstones(tombstones.filter((t) => t.deletedAt > now || (!eventsAccepted && isEventId(t.id))));
   const next: FamilyState = {
     info: { ...state.info, members: res.members },
     seq: res.seq,

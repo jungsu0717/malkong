@@ -48,15 +48,35 @@ class RecordIn(ApiModel):
     deleted: bool = False
 
 
+class EventIn(ApiModel):
+    """빠른 기록 한 줄(SPEC-LOG-07) — 폰의 care_event 모양 그대로."""
+
+    id: NonEmptyStr = Field(max_length=100)
+    kind: Literal["breast", "formula", "diaper", "sleep", "temp", "weight", "height"]
+    start_at: NonEmptyStr = Field(max_length=40)
+    # 비어 있으면 재는 중
+    end_at: str | None = Field(default=None, max_length=40)
+    amount: float | None = None
+    side: Literal["left", "right"] | None = None
+    diaper: Literal["pee", "poo", "both"] | None = None
+    note: str | None = Field(default=None, max_length=500)
+    created_at: NonEmptyStr = Field(max_length=40)
+    updated_at: NonEmptyStr = Field(max_length=40)
+    deleted: bool = False
+
+
 class SyncRequest(ApiModel):
     # 마지막으로 받은 번호 — 그 뒤에 바뀐 것만 받는다. 처음이면 0
     since: int = Field(default=0, ge=0)
     baby: BabyIn | None = None
     records: list[RecordIn] = Field(default=[], max_length=500)
+    # 빠른 기록 — 하루 수십 줄이라 기록보다 넉넉히(SPEC-LOG-07)
+    events: list[EventIn] = Field(default=[], max_length=2000)
 
 
 class SyncResponse(ApiModel):
     seq: int
     baby: BabyIn | None
     records: list[RecordIn]
+    events: list[EventIn] = []
     members: int

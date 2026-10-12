@@ -1,479 +1,430 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  TextInput,
-  View,
-} from 'react-native';
+import { router } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { BuddyMark } from '@/components/brand';
 import { AdBanner } from '@/components/ad-banner';
-import { BriefingSummary } from '@/components/briefing-card';
-import {
-  AnswerBubble,
-  DateDivider,
-  DoneTrace,
-  ErrorBubble,
-  FollowupBubble,
-  LimitBubble,
-  RedflagCard,
-  UserBubble,
-} from '@/components/chat-bubbles';
+import { ExternalLink } from '@/components/external-link';
+import { KIND_UI } from '@/components/log/kinds';
+import { LogSheet, type SheetTarget } from '@/components/log/log-sheet';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { ThinkingStatus } from '@/components/thinking-status';
-import { Chip, IconButton, tap } from '@/components/ui';
-import { FontFamily, Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
-import { canOfferRewardedAd } from '@/data/ads';
-import { waitingPhrases, waitingSteps } from '@/data/ask-trace';
+import { Button, Card, ListRow, SectionHeader, Tag, tap } from '@/components/ui';
+import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
-import { dayKey, dayLabel } from '@/data/chat';
-import { useChat } from '@/data/chat-context';
-import { useDraft } from '@/data/draft-context';
-import { useEntitlements } from '@/data/entitlements-context';
-import { useInbox } from '@/data/inbox-context';
-import { briefingHref } from '@/data/schedule';
-import { useRecords } from '@/data/records-context';
-import { useDailyBriefing } from '@/hooks/use-daily-briefing';
-import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
-import { useMalkong, type AskFailure } from '@/hooks/use-malkong';
+import {
+  agoLabel,
+  clockLabel,
+  durationLabel,
+  eventTime,
+  eventTitle,
+  feedReminderAt,
+  lastDays,
+  lastFeed,
+  lastFeedStart,
+  latestOf,
+  startOfDay,
+  todayStats,
+  usual,
+} from '@/data/event-summary';
+import { EVENT_KINDS, runningOf, type CareEvent, type EventInput, type EventKind, type Side } from '@/data/events';
+import { useEvents } from '@/data/events-context';
+import { itemById } from '@/data/l1';
+import { usePreferences } from '@/data/preferences-context';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 입력창 위의 빠른 질문 — 누르면 입력창에 담긴다(SPEC-ASK-04). 고쳐서 보낼 수 있게 바로 보내지 않는다 */
-const QUICK = [
-  '이번 달 예방접종 뭐가 있죠?',
-  '밤중 수유는 언제부터 줄여도 되나요?',
-  '낮잠을 30분밖에 안 자요',
-  '열이 38도예요. 병원에 가야 하나요?',
-  '수면 교육은 언제부터 시작하나요?',
-];
+const DAY = 24 * 60 * 60 * 1000;
+/** 날짜를 몇 날 전까지 넘겨 볼 수 있나 */
+const MAX_DAYS_BACK = 60;
 
-/** 켤 때 그리는 줄 수 — 최근 것부터. 「이전 대화 더 보기」로 이만큼씩 늘린다(SPEC-ASK-10, task ask/009) */
-const WINDOW = 50;
-
-function failureText(failure: AskFailure): string {
-  // 서버 전체의 오늘 모델 비용이 천장에 닿았다(decisions/019) — 위험 신호 안내는 그래도 나간다
-  if (failure.code === 'DAILY_BUDGET_REACHED')
-    return '오늘 질문은 여기까지예요. 자정이 지나면 다시 답할 수 있어요. 아기가 위험해 보이면 지금도 바로 알려 드려요.';
-  if (failure.status === 0) return '인터넷 연결이 불안정해서 답을 받지 못했어요. 연결을 확인하고 다시 시도해 주세요.';
-  if (failure.status === 503) return '버디가 지금은 답하지 못했어요. 잠시 뒤에 다시 시도해 주세요.';
-  if (failure.status === 422) return '질문을 알아듣지 못했어요. 조금 바꿔서 다시 물어봐 주세요.';
-  return '잠깐 문제가 생겼어요. 다시 시도해 주세요.';
+/** 재는 중이면 1초마다, 아니면 30초마다 — 「몇 분 전」과 타이머가 따라오게. 앱이 앞으로 오면 바로 */
+function useNow(fast: boolean): Date {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), fast ? 1000 : 30_000);
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') setNow(new Date());
+    });
+    return () => {
+      clearInterval(timer);
+      sub.remove();
+    };
+  }, [fast]);
+  return now;
 }
 
-/** 버디 탭 — 대화가 첫 화면이다 (decisions/012, 모양은 task ask/005) */
-export default function ChatScreen() {
+/** 재는 중 시계 — 「12:05」 · 「1:02:05」 */
+function stopwatch(from: string, now: Date): string {
+  const s = Math.max(0, Math.floor((now.getTime() - new Date(from).getTime()) / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = String(s % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${r}` : `${m}:${r}`;
+}
+
+/**
+ * 기록 — 첫 화면 (SPEC-LOG-01~05, decisions/023).
+ * 위에서부터 재는 중 · 마지막 수유와 오늘 합계 · 기록 단추 일곱 · 날짜별 기록 · 일주일 그래프 · 광고(맨 아래, 단추와 멀리).
+ */
+export default function LogScreen() {
   const c = useTheme();
-  const { age, baby, loading: babyLoading } = useBaby();
-  const { records, remove } = useRecords();
-  const { loading } = useChat();
-  // 그날 처음 열면 브리핑이 첫 메시지로 생긴다(SPEC-HOME-06)
-  const today = useDailyBriefing();
-  const {
-    messages,
-    pendingId,
-    pending,
-    failure,
-    openFollowup,
-    send,
-    reply,
-    retry,
-    answerInEco,
-    refillWithAd,
-    confirmGuess,
-    dismissGuess,
-  } = useMalkong();
-  /** 광고를 보는 중 — 한도 줄의 단추를 잠근다 */
-  const [watching, setWatching] = useState(false);
-  const [refillMissed, setRefillMissed] = useState(false);
-  const { dailyLimit, rewardPerAd, rewardMaxPerDay, remaining } = useEntitlements();
-  const typing = useKeyboardVisible();
-  // 기록 화면의 「대화 보기」에서 넘어온 질문 말풍선 id. ft 는 같은 줄을 다시 눌렀을 때의 구분값이다
-  const { focus, ft } = useLocalSearchParams<{ focus?: string; ft?: string }>();
-  const [shown, setShown] = useState(WINDOW);
-  // 넘어온 줄이 창 밖(더 오래된 대화)이면 그 줄까지 창을 넓힌다 — 그리는 중에 맞춘다. 읽는 중이면 다 읽은 뒤에
-  const [focusSeen, setFocusSeen] = useState<string | null>(null);
-  const focusKey = focus && !loading ? `${focus}-${ft}` : null;
-  if (focusKey !== focusSeen) {
-    setFocusSeen(focusKey);
-    const at = focus ? messages.findIndex((m) => m.id === focus) : -1;
-    if (at >= 0 && messages.length - at > shown) setShown(messages.length - at + 3);
-  }
-  // 알림함 배지 — 아직 열어 보지 않은 브리핑 · 알림의 수(SPEC-HOME-07)
-  const { unread, markDayRead } = useInbox();
-  /** 브리핑 자세히 — 상세 화면. 열어 봤으니 알림함에서도 읽은 것 */
-  const openDay = (day: string) => {
-    void markDayRead(day);
-    router.navigate(briefingHref(day, 'daily'));
-  };
-  // 입력창 글은 다른 탭이 말머리를 담을 수 있게 한곳에 둔다(draft-context)
-  const { draft: input, setDraft: setInput, focusRequest } = useDraft();
-  const inputRef = useRef<TextInput>(null);
-  const scrollRef = useRef<ScrollView>(null);
-  /** 줄 위치 — 「대화 보기」로 넘어오면 그 자리로 스크롤한다 */
-  const positions = useRef<Record<string, number>>({});
-  const focusedKey = useRef<string | null>(null);
-  /** 새 줄이 붙을 때 맨 끝을 따라갈지. 지난 질문 자리로 가 있는 동안은 끌어내리지 않는다 */
-  const stickToEnd = useRef(true);
+  const { baby, age } = useBaby();
+  const { events, loading, add, update, remove } = useEvents();
+  const { feedReminder } = usePreferences();
+  const breast = runningOf(events, 'breast');
+  const sleep = runningOf(events, 'sleep');
+  const now = useNow(!!breast || !!sleep);
+  const [sheet, setSheet] = useState<SheetTarget | null>(null);
+  const [round, setRound] = useState(0);
+  const [daysBack, setDaysBack] = useState(0);
 
-  const scrollToFocus = (id: string) => {
-    const key = `${focus}-${ft}`;
-    if (id !== focus || focusedKey.current === key) return;
-    const y = positions.current[id];
-    if (y === undefined) return;
-    focusedKey.current = key;
-    stickToEnd.current = false;
-    scrollRef.current?.scrollTo({ y: Math.max(0, y - Spacing.four), animated: true });
+  const today = todayStats(events, now);
+  const week = useMemo(() => usual(lastDays(events, 8, now)), [events, now]);
+  const last = lastFeed(events);
+  const lastStart = lastFeedStart(events);
+  const reminder = feedReminderAt(events, feedReminder, now);
+  const warn = feverWarning(events, age?.month ?? null, now);
+
+  const dayStart = useMemo(() => {
+    const d = startOfDay(now);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() - daysBack);
+  }, [now, daysBack]);
+  const dayEvents = useMemo(() => {
+    const from = dayStart.getTime();
+    const to = from + DAY;
+    return events
+      .filter((e) => {
+        const t = new Date(e.startAt).getTime();
+        return t >= from && t < to;
+      })
+      .reverse();
+  }, [events, dayStart]);
+
+  if (loading || !baby) return <ScreenLoading />;
+  const name = baby.name ?? DEFAULT_BABY_NAME;
+
+  const open = (kind: EventKind, editing: CareEvent | null = null) => {
+    setRound((r) => r + 1);
+    setSheet({ kind, editing });
   };
 
-  // 이미 그려진 화면으로 넘어온 경우 — 위치를 알고 있으니 바로 간다. 처음 그려질 때는 onLayout 이 맡는다
-  useEffect(() => {
-    if (focus) scrollToFocus(focus);
-  });
-
-  // 다른 탭에서 말머리를 담아 넘어오면 입력창에 커서를 둔다
-  useEffect(() => {
-    if (focusRequest) setTimeout(() => inputRef.current?.focus(), 300);
-  }, [focusRequest]);
-
-  if (babyLoading || !age || loading) return <ScreenLoading />;
-
-  const name = baby?.name ?? DEFAULT_BABY_NAME;
-  const canSend = !!input.trim() && !pendingId;
-
-  const submit = () => {
-    if (!canSend) return;
-    tap();
-    stickToEnd.current = true;
-    void send(input);
-    setInput('');
+  const start = async (kind: EventKind, side: Side | null) => {
+    setSheet(null);
+    const running = runningOf(events, kind);
+    if (running) await update(running.id, { endAt: new Date().toISOString() });
+    await add({ kind, side, startAt: new Date().toISOString(), endAt: null });
+    tap('success');
   };
 
-  // 타임라인 — 날짜가 바뀌는 자리마다 구분선(SPEC-ASK-10)
-  const rows: React.ReactNode[] = [];
-  // 답 → 그 답이 답한 원래 질문(되묻기 답을 거쳤으면 되묻기가 기억한 질문) — 피드백에 함께 보낼 때 쓴다
-  const textOf = new Map(messages.map((m) => [m.id, m.content]));
-  const questionOf = (questionId: string): string | null => {
-    const asked = messages.find((m) => m.id === questionId);
-    if (asked?.role === 'user' && asked.meta.replyTo) {
-      const followup = messages.find((m) => m.id === asked.meta.replyTo);
-      if (followup?.role === 'malkong' && followup.meta.type === 'followup') return followup.meta.question;
-    }
-    return textOf.get(questionId) ?? null;
+  const stop = async (e: CareEvent) => {
+    tap('success');
+    await update(e.id, { endAt: new Date().toISOString() });
   };
-  const start = Math.max(0, messages.length - shown);
-  if (start > 0) {
-    rows.push(
-      <Pressable
-        key="more"
-        accessibilityRole="button"
-        style={styles.more}
-        onPress={() => {
-          stickToEnd.current = false;
-          setShown((n) => n + WINDOW);
-        }}>
-        <ThemedText type="label" style={{ color: c.textSecondary }}>
-          이전 대화 더 보기
-        </ThemedText>
-      </Pressable>,
-    );
-  }
-  let lastDay = '';
-  for (const m of messages.slice(start)) {
-    const day = dayKey(m.createdAt);
-    const briefing = m.role === 'malkong' && m.meta.type === 'briefing';
-    if (day !== lastDay) {
-      // 하루가 브리핑으로 시작하면 브리핑이 날짜를 말하므로 구분선을 따로 긋지 않는다
-      if (!briefing) {
-        rows.push(<DateDivider key={`d-${day}`} label={dayLabel(m.createdAt, baby?.birthDate ?? null)} />);
-      }
-      lastDay = day;
-    }
-    if (m.role === 'user') {
-      const id = m.id;
-      rows.push(
-        <View
-          key={id}
-          onLayout={(e) => {
-            positions.current[id] = e.nativeEvent.layout.y;
-            scrollToFocus(id);
-          }}>
-          <UserBubble text={m.content} />
-        </View>,
-      );
-      continue;
-    }
-    if (m.meta.type === 'redflag') {
-      rows.push(
-        <View
-          key={m.id}
-          onLayout={(e) => {
-            positions.current[m.id] = e.nativeEvent.layout.y;
-            scrollToFocus(m.id);
-          }}>
-          <RedflagCard message={m} />
-        </View>,
-      );
-      continue;
-    }
-    if (m.meta.type === 'briefing') {
-      const isToday = m.meta.day === today;
-      rows.push(
-        // 대화에는 요약만 — 자세한 것은 일정 탭의 그날에서(SPEC-HOME-06)
-        <View
-          key={m.id}
-          onLayout={(e) => {
-            positions.current[m.id] = e.nativeEvent.layout.y;
-            scrollToFocus(m.id);
-          }}>
-          <BriefingSummary message={m} today={isToday} onOpen={() => openDay(m.meta.type === 'briefing' ? m.meta.day : today)} />
-        </View>,
-      );
-      continue;
-    }
-    rows.push(
-      <View
-        key={m.id}
-        style={styles.malkong}
-        onLayout={(e) => {
-          positions.current[m.id] = e.nativeEvent.layout.y;
-          scrollToFocus(m.id);
-        }}>
-        <DoneTrace trace={m.meta.trace} summary={m.meta.traceSummary} />
-        {m.meta.type === 'answer' ? (
-          <AnswerBubble
-            message={m}
-            question={questionOf(m.meta.questionId)}
-            records={records}
-            onRemoveRecord={remove}
-            onConfirmGuess={(label) => void confirmGuess(m, label)}
-            onDismissGuess={(label) => void dismissGuess(m, label)}
-          />
-        ) : (
-          <FollowupBubble
-            message={m}
-            open={m.id === openFollowup?.id && !pendingId}
-            onChip={(chip) => {
-              stickToEnd.current = true;
-              void reply(m, chip);
-            }}
-          />
-        )}
-      </View>,
-    );
-  }
-  if (pendingId) {
-    // 질문 · 그 주제의 기록 · 월령으로 만든 문구 — 질문마다 다르다(task ask/007)
-    const ctx = { question: pending?.question ?? '', records: pending?.records ?? [], month: age?.month ?? 0, name };
-    rows.push(
-      <ThinkingStatus
-        key={`p-${pendingId}`}
-        steps={waitingSteps(ctx).map((step) => ({ ...step, done: false }))}
-        phrases={waitingPhrases(ctx)}
-        done={false}
-      />,
-    );
-  } else if (failure?.code === 'LIMIT_EXCEEDED') {
-    rows.push(
-      <LimitBubble
-        key="limit"
-        dailyLimit={dailyLimit}
-        rewardPerAd={rewardPerAd}
-        rewardMaxPerDay={rewardMaxPerDay}
-        busy={watching}
-        note={refillMissed ? '광고 본 것을 확인하지 못했어요. 끝까지 봤다면 잠시 뒤 다시 눌러 주세요' : null}
-        onEco={
-          failure.limit?.ecoAvailable === false
-            ? undefined
-            : () => {
-                stickToEnd.current = true;
-                void answerInEco();
-              }
-        }
-        onReward={
-          failure.limit?.rewardAvailable && canOfferRewardedAd()
-            ? async () => {
-                setWatching(true);
-                setRefillMissed(false);
-                stickToEnd.current = true;
-                const ok = await refillWithAd();
-                setWatching(false);
-                setRefillMissed(!ok);
-              }
-            : undefined
-        }
-      />,
-    );
-  } else if (failure) {
-    rows.push(
-      <ErrorBubble
-        key="error"
-        text={failureText(failure)}
-        // 하루 비용 천장은 0시 전에는 다시 해도 같다 — 다시 시도를 두지 않는다
-        onRetry={failure.code === 'DAILY_BUDGET_REACHED' ? undefined : () => void retry()}
-      />,
-    );
-  }
 
-  const showQuick = !input && !pendingId && !openFollowup;
+  const save = async (input: EventInput, editingId: string | null) => {
+    setSheet(null);
+    if (editingId) {
+      const { kind: _kind, ...patch } = input;
+      await update(editingId, patch);
+    } else {
+      await add(input);
+    }
+  };
+
+  const lastAmount = (kind: EventKind) => latestOf(events, kind)?.amount ?? null;
+  const dayTitle = daysBack === 0 ? '오늘' : daysBack === 1 ? '어제' : `${dayStart.getMonth() + 1}월 ${dayStart.getDate()}일`;
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.flex} edges={['top']}>
-        <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.header}>
-            <BuddyMark size={24} />
-            <ThemedText type="heading" style={styles.brand}>
-              육아버디
+        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.head}>
+            <ThemedText type="display">기록</ThemedText>
+            <ThemedText type="small" style={{ color: c.textSecondary }}>
+              {name} · 태어난 지 {(age?.days ?? 0) + 1}일
             </ThemedText>
-            {/* 남은 맞춤 답 — 평소엔 숨기고 3회 이하일 때만 조용히(ask.md 한도 표시) */}
-            {remaining !== null && remaining <= 3 && (
-              <View style={[styles.pill, { backgroundColor: c.surface }]}>
-                <ThemedText type="caption" style={{ color: c.textSecondary, fontWeight: 500 }}>
-                  {remaining > 0 ? `맞춤 답 ${remaining}개 남았어요` : '오늘 맞춤 답은 다 썼어요 · 자정에 다시'}
-                </ThemedText>
-              </View>
-            )}
-            <IconButton icon="notifications-outline" label="알림함" badge={unread} onPress={() => router.push('/inbox')} />
           </View>
 
-          <ScrollView
-            ref={scrollRef}
-            style={styles.flex}
-            contentContainerStyle={styles.scroll}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="interactive"
-            // 위에 지난 대화를 더 붙여도 보던 자리가 밀리지 않게(iOS · Android)
-            maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
-            onContentSizeChange={() => {
-              if (messages.length && stickToEnd.current) scrollRef.current?.scrollToEnd({ animated: true });
-            }}>
-            {messages.length === 0 && (
-              <View style={styles.hello}>
-                <ThemedText type="display">
-                  안녕하세요,{'\n'}버디예요
+          {/* 위험 신호 — 체온 기록이 기준을 넘으면 고정 안내(헌장 2, SPEC-ASK-02 와 같은 L1) */}
+          {warn && <FeverCard id={warn} />}
+
+          {/* 재는 중 (SPEC-LOG-02) */}
+          {breast && (
+            <Card style={[styles.running, { borderColor: c.accent }]}>
+              <View style={styles.flex}>
+                <ThemedText type="label" style={{ color: c.accentText, fontWeight: 600 }}>
+                  모유 {breast.side === 'right' ? '오른쪽' : '왼쪽'} · {clockLabel(breast.startAt)}부터
                 </ThemedText>
-                <ThemedText type="body" style={{ color: c.textSecondary }}>
-                  만 {age.month}개월 {name}에 맞춰 답해요. 알려 주신 건 기억해 뒀다가 다음 답에 써요.
+                <ThemedText type="display" style={styles.timer}>
+                  {stopwatch(breast.startAt, now)}
                 </ThemedText>
               </View>
-            )}
-            {rows}
-          </ScrollView>
+              <View style={styles.runningActions}>
+                <Button label="끝" size="md" onPress={() => void stop(breast)} />
+                <Button
+                  label="반대쪽"
+                  size="sm"
+                  variant="secondary"
+                  onPress={() => void start('breast', breast.side === 'right' ? 'left' : 'right')}
+                />
+              </View>
+            </Card>
+          )}
+          {sleep && (
+            <Card style={[styles.running, { borderColor: c.accent }]}>
+              <View style={styles.flex}>
+                <ThemedText type="label" style={{ color: c.accentText, fontWeight: 600 }}>
+                  자는 중 · {clockLabel(sleep.startAt)}부터
+                </ThemedText>
+                <ThemedText type="display" style={styles.timer}>
+                  {stopwatch(sleep.startAt, now)}
+                </ThemedText>
+              </View>
+              <Button label="깼어요" size="md" onPress={() => void stop(sleep)} />
+            </Card>
+          )}
 
-          <View style={styles.composer}>
-            {showQuick && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyboardShouldPersistTaps="handled"
-                contentContainerStyle={styles.quick}>
-                {QUICK.map((q) => (
-                  <Chip
-                    key={q}
-                    label={q}
-                    onPress={() => {
-                      setInput(q);
-                      inputRef.current?.focus();
-                    }}
-                  />
-                ))}
-              </ScrollView>
+          {/* 마지막 수유와 오늘 합계 (SPEC-LOG-03) */}
+          <Card tone="filled" style={styles.summary}>
+            <ThemedText type="heading">
+              {last && lastStart ? `마지막 수유 ${agoLabel(lastStart, now)}` : '수유를 남기면 다음 수유 때를 알려 드려요'}
+            </ThemedText>
+            {last && (
+              <ThemedText type="small" style={{ color: c.textSecondary }}>
+                {eventTitle(last, now)} · {clockLabel(lastStart ?? last.startAt)}
+                {reminder ? ` · 알림 ${clockLabel(reminder)}` : ''}
+              </ThemedText>
             )}
-            <View style={[styles.inputBox, { backgroundColor: c.surface }]}>
-              <TextInput
-                ref={inputRef}
-                style={[styles.input, { color: c.text }]}
-                placeholder={openFollowup ? '위에서 고르거나 직접 적어 주세요' : `${name}에 대해 무엇이든 물어보세요`}
-                placeholderTextColor={c.textTertiary}
-                value={input}
-                onChangeText={setInput}
-                onSubmitEditing={submit}
-                submitBehavior="submit"
-                returnKeyType="send"
-                multiline
-                // 웹의 textarea 는 기본 두 줄 높이라 한 줄로 시작하게 한다
-                {...(Platform.OS === 'web' ? { numberOfLines: 1 } : {})}
-                maxLength={500}
-              />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="보내기"
-                accessibilityState={{ disabled: !canSend }}
-                style={[styles.send, { backgroundColor: canSend ? c.ink : c.surfaceStrong }]}
-                disabled={!canSend}
-                onPress={submit}>
-                <Ionicons name="arrow-up" size={20} color={canSend ? c.onInk : c.textTertiary} />
-              </Pressable>
+            <View style={styles.totals}>
+              <Total label="수유" value={`${today.feeds}번`} usual={week ? `${Math.round(week.feeds)}번` : null} />
+              <Total label="기저귀" value={`${today.diapers}번`} usual={week ? `${Math.round(week.diapers)}번` : null} />
+              <Total label="잠" value={durationLabel(today.sleepMin)} usual={week ? durationLabel(week.sleepMin) : null} />
             </View>
-            <ThemedText type="caption" style={[styles.disclaimer, { color: c.textSecondary }]}>
-              버디의 답은 응급 상황을 대신할 수 없어요
-            </ThemedText>
-            {/* 배너는 입력창 아래 바닥에 — 말풍선 사이에는 두지 않고, 글을 쓰는 동안은 숨긴다(app-design 광고 자리) */}
-            {!typing && <AdBanner anchored />}
+          </Card>
+
+          {/* 기록 단추 일곱 (SPEC-LOG-01) */}
+          <View style={styles.grid}>
+            {EVENT_KINDS.map((kind) => {
+              const on = (kind === 'breast' && !!breast) || (kind === 'sleep' && !!sleep);
+              return (
+                <Pressable
+                  key={kind}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${KIND_UI[kind].label} 기록`}
+                  onPress={() => {
+                    tap();
+                    if (kind === 'sleep' && sleep) void stop(sleep);
+                    else open(kind);
+                  }}
+                  style={({ pressed }) => [
+                    styles.tile,
+                    { backgroundColor: on ? c.accentSoft : pressed ? c.surfaceStrong : c.surface },
+                  ]}>
+                  <Ionicons name={KIND_UI[kind].icon} size={24} color={on ? c.accent : c.text} />
+                  <ThemedText type="label" style={{ color: on ? c.accentText : c.text, fontWeight: 600 }}>
+                    {kind === 'sleep' && sleep ? '깼어요' : KIND_UI[kind].label}
+                  </ThemedText>
+                </Pressable>
+              );
+            })}
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="일주일 그래프"
+              onPress={() => router.push('/log-stats')}
+              style={({ pressed }) => [styles.tile, { backgroundColor: pressed ? c.surfaceStrong : c.surface }]}>
+              <Ionicons name="bar-chart-outline" size={24} color={c.text} />
+              <ThemedText type="label" style={{ fontWeight: 600 }}>
+                그래프
+              </ThemedText>
+            </Pressable>
           </View>
-        </KeyboardAvoidingView>
+
+          {/* 날짜별 기록 — 누르면 고치기 · 지우기 (SPEC-LOG-03) */}
+          <View style={styles.section}>
+            <View style={styles.dayHead}>
+              <View style={styles.flex}>
+                <SectionHeader title={dayTitle} aside={dayEvents.length > 0 ? `${dayEvents.length}개` : undefined} />
+              </View>
+              <View style={styles.dayNav}>
+                <DayButton
+                  icon="chevron-back"
+                  label="전날"
+                  disabled={daysBack >= MAX_DAYS_BACK}
+                  onPress={() => setDaysBack((d) => d + 1)}
+                />
+                <DayButton icon="chevron-forward" label="다음 날" disabled={daysBack === 0} onPress={() => setDaysBack((d) => d - 1)} />
+              </View>
+            </View>
+            <Card style={styles.rows}>
+              {dayEvents.length === 0 ? (
+                <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
+                  {daysBack === 0
+                    ? '위 단추를 누르면 바로 기록돼요. 쌓이면 버디가 평소와 비교해 알려 줘요'
+                    : '이날은 남긴 기록이 없어요'}
+                </ThemedText>
+              ) : (
+                dayEvents.map((e, i) => (
+                  <ListRow
+                    key={e.id}
+                    divider={i > 0}
+                    icon={KIND_UI[e.kind].icon}
+                    iconTone={e.endAt === null && (e.kind === 'breast' || e.kind === 'sleep') ? 'accent' : 'neutral'}
+                    title={eventTitle(e, now)}
+                    detail={eventTime(e)}
+                    right={e.endAt === null && (e.kind === 'breast' || e.kind === 'sleep') ? <Tag label="재는 중" tone="accent" /> : undefined}
+                    onPress={() => open(e.kind, e)}
+                  />
+                ))
+              )}
+            </Card>
+            <Pressable accessibilityRole="button" onPress={() => router.push('/notifications')} hitSlop={8}>
+              <ThemedText type="caption" style={{ color: c.textSecondary }}>
+                수유 알림 {feedReminder ? `마지막 수유 ${durationLabel(feedReminder)} 뒤` : '꺼짐'} · 바꾸기
+              </ThemedText>
+            </Pressable>
+          </View>
+
+          <AdBanner />
+        </ScrollView>
       </SafeAreaView>
+
+      <LogSheet
+        key={round}
+        target={sheet}
+        lastAmount={sheet ? lastAmount(sheet.kind) : null}
+        onClose={() => setSheet(null)}
+        onSave={(input, id) => void save(input, id)}
+        onStart={(kind, side) => void start(kind, side)}
+        onDelete={(id) => {
+          setSheet(null);
+          void remove(id);
+        }}
+      />
     </ThemedView>
+  );
+}
+
+function Total({ label, value, usual: avg }: { label: string; value: string; usual: string | null }) {
+  const c = useTheme();
+  return (
+    <View style={styles.total}>
+      <ThemedText type="caption" style={{ color: c.textSecondary }}>
+        오늘 {label}
+      </ThemedText>
+      <ThemedText type="heading">{value}</ThemedText>
+      {avg && (
+        <ThemedText type="caption" style={{ color: c.textTertiary }}>
+          평소 {avg}
+        </ThemedText>
+      )}
+    </View>
+  );
+}
+
+function DayButton({
+  icon,
+  label,
+  disabled,
+  onPress,
+}: {
+  icon: 'chevron-back' | 'chevron-forward';
+  label: string;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const c = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      disabled={disabled}
+      hitSlop={8}
+      onPress={() => {
+        tap();
+        onPress();
+      }}
+      style={[styles.dayButton, { borderColor: c.border, opacity: disabled ? 0.35 : 1 }]}>
+      <Ionicons name={icon} size={16} color={c.text} />
+    </Pressable>
+  );
+}
+
+/**
+ * 체온 기록이 위험 신호 기준을 넘었는가 — 12시간 안의 마지막 체온.
+ * 40℃ 이상은 누구나(k-warn-0002), 3개월 미만은 38℃ 이상(k-warn-0001). 진단이 아니라 고정 안내다(헌장 2)
+ */
+function feverWarning(events: CareEvent[], month: number | null, now: Date): string | null {
+  const temp = latestOf(events, 'temp');
+  if (!temp || temp.amount === null) return null;
+  if (now.getTime() - new Date(temp.startAt).getTime() > 12 * 60 * 60 * 1000) return null;
+  if (temp.amount >= 40) return 'k-warn-0002';
+  if (month !== null && month < 3 && temp.amount >= 38) return 'k-warn-0001';
+  return null;
+}
+
+function FeverCard({ id }: { id: string }) {
+  const c = useTheme();
+  const item = itemById(id);
+  if (!item) return null;
+  return (
+    <View style={[styles.warn, { backgroundColor: c.dangerSoft }]}>
+      <View style={styles.warnHead}>
+        <Ionicons name="warning" size={18} color={c.danger} />
+        <ThemedText type="heading" style={{ color: c.danger }}>
+          바로 진료가 필요할 수 있어요
+        </ThemedText>
+      </View>
+      <ThemedText type="body" style={{ fontWeight: 600 }}>
+        {item.title}
+      </ThemedText>
+      <ThemedText type="small">{item.body}</ThemedText>
+      <ExternalLink href={item.source.url as `https://${string}`}>
+        <ThemedText type="caption" style={{ color: c.textSecondary, textDecorationLine: 'underline' }}>
+          {item.source.name}
+        </ThemedText>
+      </ExternalLink>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingHorizontal: Gutter,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.two,
-    minHeight: 52,
-  },
-  brand: { flex: 1, fontWeight: 700 },
-  pill: { borderRadius: Radius.pill, paddingHorizontal: 10, paddingVertical: 6 },
   scroll: {
     paddingHorizontal: Gutter,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.four,
-    gap: 20,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.six,
+    gap: Spacing.four,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
-  hello: { gap: Spacing.two, paddingTop: Spacing.four, paddingBottom: Spacing.two },
-  more: { alignSelf: 'center', paddingVertical: 6, paddingHorizontal: 14 },
-  malkong: { gap: 6 },
-  composer: { paddingTop: Spacing.one, gap: Spacing.two },
-  quick: { paddingHorizontal: Gutter - 4, gap: 6 },
-  inputBox: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginHorizontal: Spacing.three,
+  head: { gap: 2 },
+  running: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, borderWidth: 1.5 },
+  runningActions: { alignItems: 'stretch', gap: Spacing.two },
+  timer: { fontVariant: ['tabular-nums'] },
+  summary: { gap: 4 },
+  totals: { flexDirection: 'row', marginTop: Spacing.two },
+  total: { flex: 1, gap: 1 },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  tile: {
+    width: '23%',
+    flexGrow: 1,
+    minHeight: 76,
     borderRadius: Radius.lg,
-    paddingLeft: Spacing.three,
-    paddingRight: 6,
-    paddingVertical: 6,
-    gap: Spacing.two,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    fontFamily: FontFamily.regular,
-    lineHeight: 22,
-    maxHeight: 120,
-    paddingTop: 9,
-    paddingBottom: 9,
-  },
-  send: { width: 40, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  disclaimer: { textAlign: 'center', paddingBottom: Spacing.two },
+  section: { gap: 10 },
+  dayHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  dayNav: { flexDirection: 'row', gap: 6 },
+  dayButton: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  rows: { paddingVertical: 4 },
+  empty: { paddingVertical: Spacing.three, textAlign: 'center' },
+  warn: { borderRadius: Radius.lg, padding: Spacing.three, gap: 6 },
+  warnHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

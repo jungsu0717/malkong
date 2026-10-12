@@ -68,7 +68,7 @@ export function RecordsView() {
         <EmptyState
           title="아직 기록이 없어요"
           detail="버디에게 물어보거나 챙길 것을 하고 알리면 여기에 쌓여요"
-          action={{ label: '버디에게 물어보기', onPress: () => router.navigate('/') }}
+          action={{ label: '버디에게 물어보기', onPress: () => router.navigate('/chat') }}
         />
       ) : (
         <View style={styles.list}>
@@ -142,7 +142,7 @@ function RecordRow({ record }: { record: BabyRecord }) {
                 color={c.textSecondary}
                 onPress={() =>
                   router.navigate({
-                    pathname: '/',
+                    pathname: '/chat',
                     params: { focus: record.sourceMessageId!, ft: String(Date.now()) },
                   })
                 }

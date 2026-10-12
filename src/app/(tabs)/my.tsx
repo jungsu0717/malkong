@@ -11,6 +11,7 @@ import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { storedDeviceKey } from '@/data/api';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { timeLabel } from '@/data/briefing';
+import { durationLabel } from '@/data/event-summary';
 import { useBaby } from '@/data/baby-context';
 import { useEntitlements } from '@/data/entitlements-context';
 import { useFamily } from '@/data/family-context';
@@ -37,7 +38,7 @@ export default function MyScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { briefingTime, nudgePush } = usePreferences();
+  const { briefingTime, feedReminder } = usePreferences();
   /**
    * 버전을 길게 누르면 열리는 숨은 메뉴 — 기기 키(가족 기기로 등록할 때 쓴다)와, 가족 기기면 「일반 사용자로 보기」
    * 스위치(backend 「운영자 기기」 · task common/015). 다시 길게 누르면 닫힌다
@@ -102,7 +103,7 @@ export default function MyScreen() {
               <ListRow
                 icon="notifications-outline"
                 title="알림"
-                detail={`아침 브리핑 ${briefingTime ? timeLabel(briefingTime) : '안 받음'} · 기록 요청 ${nudgePush ? '받음' : '안 받음'}`}
+                detail={`수유 ${feedReminder ? `${durationLabel(feedReminder)} 뒤` : '안 받음'} · 아침 브리핑 ${briefingTime ? timeLabel(briefingTime) : '안 받음'}`}
                 onPress={() => router.push('/notifications')}
               />
             </Card>

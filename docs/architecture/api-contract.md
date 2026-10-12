@@ -102,11 +102,14 @@
 | `POST /v1/family/join` | 초대 코드로 들어가기 | `{ code, consentedAt }` → `{ familyId, inviteCode, members }`. 404 `INVITE_NOT_FOUND` · 409 `FAMILY_FULL`(6명) · 409 `ALREADY_IN_FAMILY`(다른 가족) · 429 `TOO_MANY_ATTEMPTS`(기기마다 하루 20번) |
 | `GET /v1/family` | 내 가족 | `{ familyId, inviteCode, members }`. 없으면 404 `NOT_IN_FAMILY` |
 | `DELETE /v1/family/me` | 나가기 | 204. 마지막 구성원이 나가면 가족과 데이터를 지운다 |
-| `POST /v1/family/sync` | 아기 · 기록 맞추기 | `{ since, baby?, records[] }` → `{ seq, baby, records[], members }` |
+| `POST /v1/family/sync` | 아기 · 기록 · 빠른 기록 맞추기 | `{ since, baby?, records[], events[] }` → `{ seq, baby, records[], events[], members }` |
 
 `consentedAt` 은 아기 · 건강 기록의 서버 저장 · 가족 공유에 동의한 때(ISO) — 구성원 행에 남는다.
 `baby` 는 기기 DB 의 `baby` 행 그대로(`id` · `name` · `birthDate` · `createdAt` · `updatedAt`), `records[]` 는 `record` 행 그대로에
-`deleted`(지운 기록 표시)를 더한 것. 서버는 내용을 읽지 않고 맞추기만 한다.
+`deleted`(지운 기록 표시)를 더한 것. `events[]` 는 기록 탭의 빠른 기록 — `care_event` 행 그대로(`id` · `kind` · `startAt` ·
+`endAt` · `amount` · `side` · `diaper` · `note` · `createdAt` · `updatedAt`)에 `deleted` 를 더한 것이다(SPEC-LOG-07). `kind` 는
+breast · formula · diaper · sleep · temp · weight · height 가운데 하나. 서버는 내용을 읽지 않고 맞추기만 한다 — 빠른 기록도
+기록과 같은 번호로 센다. 응답에 `events` 가 없으면 옛 서버다(앱은 빠른 기록을 올린 때를 넘기지 않는다).
 
 ```
 평시 ▸ 늦게 고친 쪽이 이긴다 — 기록 · 아기 모두 updatedAt(ISO) 비교. 서버는 기록마다 늘어나는 번호(seq)를 매기고,
@@ -185,3 +188,4 @@ AdMob 의 서버 측 검증(SSV) 콜백. AdMob 은 GET 쿼리로 부른다(`user
 - 2026-10-12 `/v1/knowledge/version` · `/v1/knowledge/bundle` 을 구현 — 증분(`since` · `removedIds`) 대신 승인 항목 전부, 기기 키 없이 (task common/019)
 - 2026-10-12 `/v1/family` — 가족 만들기 · 초대 코드로 들어가기 · 나가기 · 아기 · 기록 맞추기(늦게 고친 쪽이 이김, seq) (task my/007)
 - 2026-10-12 `/v1/ask` 요청에 `conversationSummary`, 답 · 되묻기 응답에 `conversationSummary` — 대화 요약은 폰이 들고 다닌다. `baby.records` 는 질문 주제에 닿는 것만 (decisions/022, task ask/013)
+- 2026-10-12 `/v1/family/sync` 에 `events[]` — 기록 탭의 빠른 기록(care_event 모양 + deleted). 서버는 기록과 같은 표 · 같은 번호로 맞추고 돌려줄 때 가른다. 옛 앱은 보내지 않아도 된다 (SPEC-LOG-07, task log/001)

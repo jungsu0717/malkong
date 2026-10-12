@@ -19,3 +19,9 @@ export async function scheduleRecordNudge(_at: Date | null): Promise<void> {}
 export function onRecordNudgeOpened(_listener: () => void): () => void {
   return () => undefined;
 }
+
+export async function scheduleFeedReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
+
+export function onBriefingOpened(_listener: () => void): () => void {
+  return () => undefined;
+}

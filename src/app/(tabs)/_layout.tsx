@@ -1,11 +1,11 @@
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 
-import { BabyFaceIcon, CalendarIcon, ChatBubbleIcon, TeddyIcon } from '@/components/baby-icons';
+import { BabyFaceIcon, BottleIcon, CalendarIcon, ChatBubbleIcon, TeddyIcon } from '@/components/baby-icons';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 탭 넷 — 버디(대화, 첫 화면) · 우리 아기(버디가 아는 것) · 일정(달력 · 여정) · 마이 (decisions/012 · 013 · 017) */
+/** 탭 다섯 — 기록(첫 화면) · 버디(대화) · 우리 아기(버디가 아는 것) · 일정(달력 · 여정) · 마이 (decisions/023 · 013 · 017) */
 export default function TabLayout() {
   const c = useTheme();
 
@@ -24,6 +24,13 @@ export default function TabLayout() {
       }}>
       <Tabs.Screen
         name="index"
+        options={{
+          title: '기록',
+          tabBarIcon: ({ color, size }) => <BottleIcon size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
         options={{
           title: '버디',
           tabBarIcon: ({ color, size }) => <ChatBubbleIcon size={size} color={color} />,

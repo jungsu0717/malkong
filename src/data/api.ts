@@ -8,6 +8,7 @@
 import { CryptoDigestAlgorithm, digestStringAsync } from 'expo-crypto';
 
 import { readSetting, writeSetting } from './db';
+import type { CareEvent } from './events';
 import type { BabyRecord, RecordKind } from './records';
 
 const API_URL =
@@ -241,8 +242,16 @@ export type FamilyInfo = { familyId: string; inviteCode: string; members: number
 export type SyncBaby = { id: string; name: string | null; birthDate: string; createdAt: string; updatedAt: string };
 /** 기록 한 줄 그대로 + 지웠는지 */
 export type SyncRecord = BabyRecord & { deleted: boolean };
-export type SyncRequest = { since: number; baby?: SyncBaby; records: SyncRecord[] };
-export type SyncResponse = { seq: number; baby: SyncBaby | null; records: SyncRecord[]; members: number };
+/** 빠른 기록 한 줄(SPEC-LOG-07) — 옛 서버는 events 를 모른다(없으면 빈 것으로) */
+export type SyncEvent = CareEvent & { deleted: boolean };
+export type SyncRequest = { since: number; baby?: SyncBaby; records: SyncRecord[]; events?: SyncEvent[] };
+export type SyncResponse = {
+  seq: number;
+  baby: SyncBaby | null;
+  records: SyncRecord[];
+  events?: SyncEvent[];
+  members: number;
+};
 
 /** 서버가 0 에서 깨어나는 시간을 더한 여유 — 맞추기는 뒤에서 조용히 도니 조금 길어도 된다 */
 const FAMILY_TIMEOUT_MS = 30_000;
