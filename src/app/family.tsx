@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   card: { gap: 10 },
-  code: { fontFamily: FontFamily.bold, fontSize: 34, letterSpacing: 6 },
+  code: { fontFamily: FontFamily.bold, fontSize: 34, lineHeight: 44, letterSpacing: 6 },
   consent: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 4 },
   row: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   actions: { gap: 10 },
