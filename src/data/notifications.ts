@@ -24,8 +24,6 @@ const SLEEP_ID = 'sleep-reminder';
 const TEMP_IDS = ['temp-morning', 'temp-evening'] as const;
 /** 기록 알림 묶음의 안드로이드 채널 — 수유 말고는 한 채널에 둔다 */
 const CARE_CHANNEL_ID = 'care-reminder';
-/** 체온 알림 시각 — 아침 · 저녁(SPEC-LOG-05) */
-const TEMP_HOURS = [8, 20];
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -191,12 +189,12 @@ export async function scheduleSleepReminder(at: Date | null, afterLabel: string)
   await scheduleOnce(SLEEP_ID, at, `잠에서 깬 지 ${afterLabel}이 지났어요`, '졸려할 때가 됐을 수 있어요');
 }
 
-/** 체온 알림 (SPEC-LOG-05) — 매일 아침 8시 · 저녁 8시. 끄면 둘 다 지운다 */
-export async function scheduleTempReminders(on: boolean): Promise<void> {
+/** 체온 알림 (SPEC-LOG-05) — 매일 아침 · 저녁 정한 시(care-reminders). null 이면 둘 다 지운다 */
+export async function scheduleTempReminders(hours: number[] | null): Promise<void> {
   for (const id of TEMP_IDS) await Notifications.cancelScheduledNotificationAsync(id).catch(() => undefined);
-  if (!on || !(await notificationsAllowed())) return;
+  if (!hours || !(await notificationsAllowed())) return;
   await careChannel();
-  for (const [i, hour] of TEMP_HOURS.entries()) {
+  for (const [i, hour] of hours.slice(0, TEMP_IDS.length).entries()) {
     await Notifications.scheduleNotificationAsync({
       identifier: TEMP_IDS[i],
       content: {

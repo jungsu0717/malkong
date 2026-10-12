@@ -30,4 +30,4 @@ export async function scheduleDiaperReminder(_at: Date | null, _afterLabel: stri
 
 export async function scheduleSleepReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
 
-export async function scheduleTempReminders(_on: boolean): Promise<void> {}
+export async function scheduleTempReminders(_hours: number[] | null): Promise<void> {}

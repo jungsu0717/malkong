@@ -15,6 +15,7 @@ import { Button, Card, ListRow, SectionHeader, Tag, tap } from '@/components/ui'
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
+import { reminderPlan } from '@/data/care-reminders';
 import {
   agoLabel,
   clockLabel,
@@ -73,7 +74,7 @@ export default function LogScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { events, loading, add, update, remove } = useEvents();
-  const { feedReminder } = usePreferences();
+  const { careReminders } = usePreferences();
   const breast = runningOf(events, 'breast');
   const sleep = runningOf(events, 'sleep');
   const now = useNow(!!breast || !!sleep);
@@ -85,7 +86,8 @@ export default function LogScreen() {
   const week = useMemo(() => usual(lastDays(events, 8, now)), [events, now]);
   const last = lastFeed(events);
   const lastStart = lastFeedStart(events);
-  const reminder = feedReminderAt(events, feedReminder, now);
+  const plan = reminderPlan(age?.month ?? 0, events, now);
+  const reminder = feedReminderAt(events, careReminders ? plan.feed.minutes : null, now);
   const warns = careWarnings(events, age?.month ?? null, now);
 
   const dayStart = useMemo(() => {
@@ -284,7 +286,7 @@ export default function LogScreen() {
             </Card>
             <Pressable accessibilityRole="button" onPress={() => router.push('/notifications')} hitSlop={8}>
               <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                수유 알림 {feedReminder ? `마지막 수유 ${durationLabel(feedReminder)} 뒤` : '꺼짐'} · 바꾸기
+                기록 알림 {careReminders ? `켜짐 · 수유는 마지막 수유 ${durationLabel(plan.feed.minutes)} 뒤` : '꺼짐'} · 바꾸기
               </ThemedText>
             </Pressable>
           </View>

@@ -38,7 +38,9 @@ export function openRecordNudge(): void {
 export function RecordNudge() {
   const { baby } = useBaby();
   const { records, loading: recordsLoading, add } = useRecords();
-  const { nudgePush, nudgeCard, setNudgePush, setNudgeCard, loading: prefsLoading } = usePreferences();
+  const { nudgePush: nudgeAllowed, nudgeCard, setNudgePush, setNudgeCard, careReminders, loading: prefsLoading } = usePreferences();
+  // 알림은 「기록 알림」 스위치를 따른다. 카드의 「다시 보지 않기」는 이 알림 하나만 끈다
+  const nudgePush = nudgeAllowed && careReminders;
   const segments = useSegments();
   const { add: addToInbox, markRead } = useInbox();
   /** 이번에 알림함에 남긴 줄 — 카드를 닫으면 읽음으로 */

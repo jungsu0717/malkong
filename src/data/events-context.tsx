@@ -9,6 +9,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 
 import { readSetting, writeSetting } from './db';
 import { useBaby } from './baby-context';
+import { TEMP_HOURS, reminderPlan } from './care-reminders';
 import { diaperReminderAt, durationLabel, feedReminderAt, sleepReminderAt } from './event-summary';
 import {
   loadEvents,
@@ -50,7 +51,7 @@ const EventsContext = createContext<EventsContextValue | null>(null);
 export function EventsProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = useState<CareEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const { feedReminder, diaperReminder, sleepReminder, tempReminder, loading: prefsLoading } = usePreferences();
+  const { careReminders, loading: prefsLoading } = usePreferences();
   const { age } = useBaby();
   const month = age?.month ?? 0;
   // 고칠 때 지금 줄을 찾는 자리 — 화면이 그려진 뒤의 목록
@@ -73,16 +74,17 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // 수유 · 기저귀 · 잠 알림 — 기록 · 설정이 바뀔 때마다 다시 건다(지난 때면 끈다, SPEC-LOG-05)
+  // 수유 · 기저귀 · 잠 알림 — 기록 · 월령 · 스위치가 바뀔 때마다 월령 기준(care-reminders)으로 다시 건다(지난 때면 끈다, SPEC-LOG-05)
   useEffect(() => {
     if (loading || prefsLoading) return;
-    void scheduleFeedReminder(feedReminderAt(events, feedReminder), durationLabel(feedReminder ?? 0)).catch(() => undefined);
-    void scheduleDiaperReminder(diaperReminderAt(events, diaperReminder), durationLabel(diaperReminder ?? 0)).catch(
-      () => undefined,
-    );
-    const sleep = sleepReminderAt(events, month, sleepReminder);
+    const plan = reminderPlan(month, events);
+    const feed = careReminders ? plan.feed.minutes : null;
+    const diaper = careReminders ? plan.diaper.minutes : null;
+    void scheduleFeedReminder(feedReminderAt(events, feed), durationLabel(plan.feed.minutes)).catch(() => undefined);
+    void scheduleDiaperReminder(diaperReminderAt(events, diaper), durationLabel(plan.diaper.minutes)).catch(() => undefined);
+    const sleep = sleepReminderAt(events, month, careReminders);
     void scheduleSleepReminder(sleep?.at ?? null, durationLabel(sleep?.minutes ?? 0)).catch(() => undefined);
-  }, [events, feedReminder, diaperReminder, sleepReminder, month, loading, prefsLoading]);
+  }, [events, careReminders, month, loading, prefsLoading]);
 
   const add = useCallback<EventsContextValue['add']>(
     async (input) => {
@@ -94,11 +96,11 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
       if (!(await readSetting(FEED_ASKED_KEY))) {
         await writeSetting(FEED_ASKED_KEY, 'yes');
         const ok = await askNotifications().catch(() => false);
-        if (ok && tempReminder) await scheduleTempReminders(true).catch(() => undefined);
+        if (ok && careReminders) await scheduleTempReminders(TEMP_HOURS).catch(() => undefined);
       }
       return event;
     },
-    [tempReminder],
+    [careReminders],
   );
 
   const update = useCallback<EventsContextValue['update']>(async (id, patch) => {

@@ -32,30 +32,12 @@ const MENU_SECTIONS: { title: string; items: { label: string; doc: string }[] }[
   },
 ];
 
-/** 알림 한 줄 요약 — 켜진 것만 이름으로(한눈 요약, 자세한 건 알림 화면) */
-function reminderSummary(p: {
-  feedReminder: number | null;
-  diaperReminder: number | null;
-  sleepReminder: boolean;
-  tempReminder: boolean;
-  briefingTime: string | null;
-}): string {
-  const on = [
-    p.feedReminder !== null && '수유',
-    p.diaperReminder !== null && '기저귀',
-    p.sleepReminder && '잠',
-    p.tempReminder && '체온',
-    p.briefingTime !== null && `아침 브리핑 ${timeLabel(p.briefingTime)}`,
-  ].filter(Boolean);
-  return on.length > 0 ? on.join(' · ') : '모두 꺼짐';
-}
-
 /** 마이 — 프로필 · 기록 · 알림 · 가족 · 도움말 · 약관 (task my/005 · baby/003). 광고 없이 쓰기(SPEC-MY-06)는 나중 */
 export default function MyScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { briefingTime, feedReminder, diaperReminder, sleepReminder, tempReminder } = usePreferences();
+  const { briefingTime, careReminders } = usePreferences();
   /**
    * 버전을 길게 누르면 열리는 숨은 메뉴 — 기기 키(가족 기기로 등록할 때 쓴다)와, 가족 기기면 「일반 사용자로 보기」
    * 스위치(backend 「운영자 기기」 · task common/015). 다시 길게 누르면 닫힌다
@@ -120,7 +102,7 @@ export default function MyScreen() {
               <ListRow
                 icon="notifications-outline"
                 title="알림"
-                detail={reminderSummary({ feedReminder, diaperReminder, sleepReminder, tempReminder, briefingTime })}
+                detail={`기록 알림 ${careReminders ? '켜짐' : '꺼짐'} · 아침 브리핑 ${briefingTime ? timeLabel(briefingTime) : '꺼짐'}`}
                 onPress={() => router.push('/notifications')}
               />
             </Card>
