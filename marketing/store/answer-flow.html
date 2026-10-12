@@ -114,13 +114,13 @@
         <div class="foot">승인 항목만 · 항목마다 출처</div></div>`);
       put(`<div class="layer" style="left:44px;top:640px;width:400px;height:462px">
         <div><span class="chip mono" style="background:var(--ink);color:#fff">L2</span><span class="t">우리 아기</span></div>
-        <ul><li>대화에서 쌓인 기록</li><li>되묻기에 답한 것</li></ul>
+        <ul><li>기록 탭의 수유 · 잠 · 기저귀</li><li>대화에서 알려 준 사실</li></ul>
         <div class="know">
           <div class="row"><span>버디가 아는 정도</span><b>꽤 잘 알아요</b></div>
           <div class="bar">${[1, 1, 1, 0, 0].map((on) => `<i class="${on ? 'on' : ''}"></i>`).join('')}</div>
           <div class="hint">쌓일수록 우리 아기에게 맞춘 답</div>
         </div>
-        <div class="foot">이 기기에만 저장</div></div>`);
+        <div class="foot">폰에 저장 · 가족 공유는 선택</div></div>`);
 
       // 파이프라인 — 서버 /v1/ask 의 순서
       const N = [

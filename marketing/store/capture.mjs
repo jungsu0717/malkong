@@ -82,22 +82,54 @@ const REDFLAG = {
 };
 const ENTITLEMENTS = { ads: false, dailyLimit: 10, rewardPerAd: 3, rewardMaxPerDay: 2, remaining: 9 };
 
+/** 기록 탭 장면(SPEC-LOG) — 지난 7일 분유 · 기저귀 · 잠을 3시간 텀으로 지어낸다. 오늘은 지금까지 */
+function careEvents() {
+  const out = [];
+  const now = Date.now();
+  const mk = (kind, start, extra = {}) => {
+    const iso = new Date(start).toISOString();
+    out.push({ id: `ev-${kind}-${start}`, kind, startAt: iso, endAt: null, amount: null, side: null, diaper: null, note: null, createdAt: iso, updatedAt: iso, ...extra });
+  };
+  const H = 3600 * 1000;
+  for (let d = 6; d >= 0; d--) {
+    const day = new Date(now - d * 24 * H);
+    day.setHours(0, 0, 0, 0);
+    const base = day.getTime();
+    [1, 4, 7, 10, 13, 16, 19, 22].forEach((h, i) => {
+      const t = base + h * H + ((d * 7 + i * 11) % 25) * 60 * 1000;
+      if (t > now - 40 * 60 * 1000) return;
+      mk('formula', t, { amount: [150, 160, 140, 170, 150, 160, 180, 150][(i + d) % 8] });
+      mk('diaper', t + 20 * 60 * 1000, { diaper: i % 3 === 1 ? 'poo' : 'pee' });
+    });
+    // 밤잠 · 낮잠
+    [[22.5, 6.5], [9.5, 11], [13.5, 15], [17, 18]].forEach(([a, b]) => {
+      const start = base + a * H - (a > 20 ? 24 * H : 0);
+      const end = base + b * H;
+      if (end < now - 10 * 60 * 1000) mk('sleep', start + d * 3 * 60 * 1000, { endAt: new Date(end).toISOString() });
+    });
+  }
+  mk('weight', now - 3 * 24 * H, { amount: 7.1 });
+  return out.sort((a, b) => a.startAt.localeCompare(b.startAt));
+}
+
 const SHOTS = {
   /** 첫 장 — 생후 3주, BCG 질문과 출처 */
-  answer: { born: 21, route: '/', ask: { q: 'BCG 언제 맞아요?', res: ANSWER_BCG, wait: '결핵을 막는' } },
+  answer: { born: 21, route: '/chat', ask: { q: 'BCG 언제 맞아요?', res: ANSWER_BCG, wait: '결핵을 막는' } },
   /** 2장 — 4개월, 접종 질문과 출처 */
-  vaccine4: { born: 130, records: RECORDS_4M, route: '/', ask: { q: '4개월 접종은 뭐 맞아요?', res: ANSWER_4M, wait: '폐렴구균 2차' } },
+  vaccine4: { born: 130, records: RECORDS_4M, route: '/chat', ask: { q: '4개월 접종은 뭐 맞아요?', res: ANSWER_4M, wait: '폐렴구균 2차' } },
   /** 3장 — 생후 2개월, 열 → 위험 신호 안내 */
-  redflag: { born: 60, route: '/', ask: { q: '열이 38.5도예요. 해열제 먹여도 돼요?', res: REDFLAG, wait: '바로 진료가 필요할' } },
+  redflag: { born: 60, route: '/chat', ask: { q: '열이 38.5도예요. 해열제 먹여도 돼요?', res: REDFLAG, wait: '바로 진료가 필요할' } },
   /** 4장 — 일정 탭. 오늘이 딱 4개월 되는 날이라 달력의 오늘에 접종 · 검진 무렵 점이 찍히고 그날 할 것이 보인다 */
   schedule: { born: 4, bornUnit: 'month', records: RECORDS_4M, route: '/schedule', wait: '개월별 챙길 것' },
+  /** 기록 탭 — 첫 화면. 일주일치 지어낸 기록 */
+  log: { born: 130, records: RECORDS_4M, events: careEvents(), route: '/', wait: '마지막 수유' },
   /** 5장 — 우리 아기 탭 */
   baby: { born: 130, records: RECORDS_4M, chat: QUESTIONS_4M, route: '/baby', wait: '알게 된 내용' },
   /** 1-2장 — 어제 저녁 열 기록 → 오늘 아침 안부. 아침 8시로 맞추고 대화 맨 위(안부)로 올린다 */
   briefing: {
     born: 150,
     records: [...RECORDS_4M, { ...rec('r-10', [], '체온 38.2℃ — 저녁에 좀 보챘어요', 1), createdAt: at(1, 19), updatedAt: at(1, 19) }],
-    route: '/', wait: '열', settle: 2500, clock: 8, scrollTop: true,
+    route: '/chat', wait: '열', settle: 2500, clock: 8, scrollTop: true,
   },
 };
 
@@ -226,6 +258,7 @@ function seedScript(shot) {
     localStorage.setItem('malkong.baby', ${JSON.stringify(JSON.stringify(baby))});
     localStorage.setItem('malkong.records', ${JSON.stringify(JSON.stringify(shot.records ?? []))});
     localStorage.setItem('malkong.chat', ${JSON.stringify(JSON.stringify(shot.chat ?? []))});
+    localStorage.setItem('malkong.events', ${JSON.stringify(JSON.stringify(shot.events ?? []))});
     ${Object.entries(settings).map(([k, v]) => `localStorage.setItem('malkong.setting.${k}', '${v}');`).join('\n    ')}
   } catch {}${clock}`;
 }
@@ -248,7 +281,9 @@ async function capture(name, shot) {
   await send('Page.navigate', { url: 'about:blank' });
   await sleep(300);
   await send('Page.navigate', { url: `${APP}${shot.route}` });
-  const ready = await until(async () => (await text())?.includes(shot.ask ? '무엇이든' : shot.wait));
+  const ready = await until(async () =>
+    shot.ask ? await run("!!document.querySelector('textarea')") : (await text())?.includes(shot.wait),
+  );
   if (!ready) console.log(`${name}: 화면이 안 떴어요 — ${(await text())?.slice(0, 200)}`);
   await sleep(shot.settle ?? 1500);
   if (shot.ask) {
