@@ -51,7 +51,15 @@ export default function MyScreen() {
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.flex} edges={['top']}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <ThemedText type="display">마이</ThemedText>
+          {/* 제목 줄 — 오른쪽 끝에 「육아버디 스토리」(만화 다섯 컷, SPEC-MY-07) */}
+          <View style={styles.titleRow}>
+            <ThemedText type="display">마이</ThemedText>
+            <Pressable accessibilityRole="button" accessibilityLabel="육아버디 스토리 — 만화 보기" hitSlop={8} onPress={() => router.push('/intro')}>
+              <ThemedText type="label" style={{ color: c.textSecondary }}>
+                육아버디 스토리
+              </ThemedText>
+            </Pressable>
+          </View>
 
           {/* 아기 프로필 — 저장된 생일과 거기서 계산한 월령 (SPEC-MY-02) */}
           {baby && age && (
@@ -154,12 +162,6 @@ export default function MyScreen() {
               육아버디 v1.0.0
             </ThemedText>
           </Pressable>
-          {/* 크레딧 한 줄 — 누르면 만화 「아빠가 육아 앱을 만든 이유」 (SPEC-MY-07, task my/008) */}
-          <Pressable accessibilityRole="button" accessibilityLabel="만든 이야기 보기" hitSlop={8} onPress={() => router.push('/intro')}>
-            <ThemedText type="caption" style={[styles.center, styles.credit, { color: c.textSecondary }]}>
-              아빠가 만들었어요 · 이야기 보기
-            </ThemedText>
-          </Pressable>
           {deviceKey && operator && (
             <Card style={styles.rows}>
               <ListRow
@@ -195,7 +197,7 @@ const styles = StyleSheet.create({
   profile: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   section: { gap: 10 },
-  credit: { marginTop: -Spacing.three, textDecorationLine: 'underline' },
+  titleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   rows: { paddingVertical: 2 },
   center: { textAlign: 'center' },
 });
