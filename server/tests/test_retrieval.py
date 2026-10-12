@@ -76,3 +76,23 @@ def test_next_uses_the_month_in_the_question() -> None:
 def test_common_verbs_do_not_pull_in_vaccines() -> None:
     assert not any(i.startswith("k-vacc") for i in ids("이유식 양이 맞는지 모르겠어요", 6))
     assert not any(i.startswith("k-vacc") for i in ids("질식 예방하려면 어떻게 해요", 8))
+
+
+@pytest.mark.parametrize(
+    ("question", "fever"),
+    [
+        ("창문 열어두고 재워도 돼요?", False),
+        ("에어컨 트는 거랑 창문 열어두는 거 중에 뭐가 나아요?", False),
+        ("열심히 먹어요", False),
+        ("열이 나요", True),
+        ("열나요", True),
+        ("고열이에요", True),
+        ("38.2도예요", True),
+        ("38도 열", True),
+    ],
+)
+def test_fever_word_is_not_the_verb_open(question: str, fever: bool) -> None:
+    # 「창문 열어」의 「열」이 발열로 잡혀 위험 신호 쪽 지식을 찾던 것(task ask/013)
+    from app.domain.ask.retrieval import question_kinds
+
+    assert ("대응" in question_kinds(question)) is fever

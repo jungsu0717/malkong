@@ -202,6 +202,8 @@ def test_followup_is_serialized_in_camel_case(app, client: TestClient) -> None:
             "chips": ["37.5 미만", "38 이상"],
             "recordLabel": "체온",
         },
+        # 대화 요약 — 모델이 쓰지 않았으면 null(decisions/022)
+        "conversationSummary": None,
     }
 
 
@@ -352,6 +354,112 @@ def test_question_pointing_back_retrieves_with_the_previous_question(
     ).json()
     assert "id: k-vacc-0001" in llm.requests[0].user
     assert body["sources"][0]["id"] == "k-vacc-0001"
+
+
+# --- 대화 기억: 반박 · 가리키는 말 · 대화 요약 (decisions/022, task ask/013) ---
+
+BCG_TURNS = [
+    {"role": "user", "text": "BCG 언제 맞아요?"},
+    {"role": "buddy", "text": "분유를 먹이고 계시니, 생후 4주 안에 한 번 맞히면 돼요."},
+]
+
+
+def _given_ids(user: str) -> list[str]:
+    return [
+        line.split("|")[0].removeprefix("- id: ").strip()
+        for line in user.splitlines()
+        if line.startswith("- id: ")
+    ]
+
+
+def test_objection_retrieves_with_the_original_question(app, client: TestClient) -> None:
+    # 「분유 먹이는 거랑 무슨 상관이에요?」— 낱말(분유)이 아니라 원래 질문(BCG)으로 찾는다
+    llm = FakeLlm(
+        model_out(
+            level="사실", answer="분유 이야기는 상관없었어요. 4주 안에요.", citedIds=["k-vacc-0001"]
+        )
+    )
+    use(app, llm)
+    body = client.post(
+        "/v1/ask", json=_with_history("분유 먹이는 거랑 무슨 상관이에요?", BCG_TURNS)
+    ).json()
+    user = llm.requests[0].user
+    assert "원래 질문: BCG 언제 맞아요?" in user
+    assert _given_ids(user) and all(i.startswith("k-vacc") for i in _given_ids(user))
+    assert body["sources"][0]["id"] == "k-vacc-0001"
+
+
+def test_objection_is_answered_not_asked_back(app, client: TestClient) -> None:
+    # 지적에 되물으면 흘려듣는 셈이다 — 되묻기가 오면 한 번 더, 이번엔 답으로
+    asked = model_out(
+        type="followup",
+        answer="",
+        followup={
+            "question": "수유 방식이 어떻게 돼요?",
+            "chips": ["모유", "분유"],
+            "recordLabel": "수유 방식",
+        },
+    )
+    llm = FakeLlm(asked, model_out(level="일반", answer="분유 이야기는 상관없었어요."))
+    use(app, llm)
+    body = client.post(
+        "/v1/ask", json=_with_history("그게 아니라 에어컨 얘기였어요", BCG_TURNS)
+    ).json()
+    assert body["type"] == "answer"
+    assert "이번에는 되묻지 않는다" in llm.requests[1].user
+
+
+def test_plain_question_is_not_an_objection(app, client: TestClient) -> None:
+    # 「상관없어요?」는 보통 질문이다 — 반박으로 보지 않는다
+    llm = FakeLlm(model_out(level="일반", answer="답"))
+    use(app, llm)
+    client.post("/v1/ask", json=_with_history("밤에 깨도 상관없어요?", BCG_TURNS))
+    assert "원래 질문:" not in llm.requests[0].user
+
+
+def test_new_question_does_not_borrow_the_previous_topic(app, client: TestClient) -> None:
+    # 가리키는 말이 없는 새 질문(에어컨)은 앞 질문(BCG)의 지식을 빌려 오지 않는다
+    llm = FakeLlm(model_out(level="일반", answer="답"))
+    use(app, llm)
+    client.post("/v1/ask", json=_with_history("에어컨 틀어도 돼요?", BCG_TURNS))
+    user = llm.requests[0].user
+    assert _given_ids(user) == []
+    assert "표준 지식:\n- 이 질문에 맞는 표준 지식 없음" in user
+
+
+def test_summary_goes_in_and_comes_back(app, client: TestClient) -> None:
+    llm = FakeLlm(
+        model_out(level="일반", answer="답", summary="  에어컨을 물었다.\n분유는 상관없다고 했다. ")
+    )
+    use(app, llm)
+    req = _with_history("창문은요?", BCG_TURNS) | {
+        "conversationSummary": "에어컨 질문에 답했다.\n부모가 분유는 상관없다고 했다."
+    }
+    body = client.post("/v1/ask", json=req).json()
+    user = llm.requests[0].user
+    assert "이전 대화 요약:\n- 에어컨 질문에 답했다. 부모가 분유는 상관없다고 했다." in user
+    assert user.index("이전 대화 요약:") < user.index("바로 앞 대화:")
+    assert body["conversationSummary"] == "에어컨을 물었다. 분유는 상관없다고 했다."
+
+
+def test_summary_is_optional_and_trimmed(app, client: TestClient) -> None:
+    llm = FakeLlm(model_out(level="일반", answer="답"), model_out(level="일반", answer="답"))
+    use(app, llm)
+    body = client.post("/v1/ask", json=VALID).json()
+    assert "이전 대화 요약:\n- 없음" in llm.requests[0].user
+    assert body["conversationSummary"] is None
+    long = VALID | {"clientMessageId": "m-long", "conversationSummary": "가" * 900}
+    assert client.post("/v1/ask", json=long).status_code == 200
+    assert "가" * 600 in llm.requests[1].user and "가" * 601 not in llm.requests[1].user
+
+
+def test_system_prompt_uses_records_only_when_they_change_the_answer() -> None:
+    from app.domain.ask.prompt import MODEL_OUTPUT_SCHEMA, SYSTEM_PROMPT
+
+    assert "첫 두 문장" not in SYSTEM_PROMPT
+    assert "답을 바꾸는 기록만" in SYSTEM_PROMPT
+    assert "## 대화 이어 가기" in SYSTEM_PROMPT
+    assert "summary" in MODEL_OUTPUT_SCHEMA["required"]
 
 
 def _ungrounded(caplog) -> list[str]:

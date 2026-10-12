@@ -87,8 +87,8 @@
 - 하루 기록(task home/005 → baby/003): `src/data/daily-log.ts` 의 `DAILY_LOGS` 넷 — 묻는 모양은 알려 주기와 같은 `QuickAsk`,
   여기에 기록을 알아보는 규칙(`match`)을 더했다. 오늘 브리핑 카드의 「오늘의 기록」(`briefing-card.tsx`, 홈 요약 카드의 줄에서
   상세로)에서 줄마다 가장 최근 값과 날짜(`latestLog()`)를 보이고 「적기」로 `ask-sheet.tsx` 를 연다(home/011). 저장하면 날짜를 붙인 기록 한 줄(「10월 3일 하루 수유량 820ml」).
-  질문에 실어 보내는 최근 30개는 `recordsForQuestion()` 이 고른다 — 하루 기록은 종류마다 최근 몇 개만,
-  나머지 자리는 한 번 알려 준 사실(수유 방식 · 알레르기 · 접종)에.
+  질문에 실어 보내는 기록은 먼저 `recordsForAsk()`(`src/data/ask-context.ts`)가 질문 주제에 닿는 것만 고르고(decisions/022),
+  그 안에서 `recordsForQuestion()` 이 30개까지 자른다 — 하루 기록은 종류마다 최근 몇 개만, 나머지 자리는 한 번 알려 준 사실에.
 - 기록 요청(task baby/003): 셈은 `src/data/record-nudge.ts` — 마지막 하루 기록과 마지막으로 물은 때(settings
   `record_nudge_since`, 처음 열 때 지금으로 둔다) 가운데 늦은 날부터 사흘째면 물을 때(`nudgeDue()`), 다음 알림은 그
   사흘째 저녁 8시(`nextNudgeAt()`). `src/components/record-nudge.tsx` 를 루트 레이아웃에 한 번 두어 앱이 앞으로 올 때마다

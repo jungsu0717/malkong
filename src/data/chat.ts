@@ -41,6 +41,8 @@ export type MalkongMeta =
       trace: TraceStep[];
       /** 접힌 처리 현황의 한 줄 — 「콩이 기록 2건과 출처 1곳을 보고 답했어요」(task ask/007). 예전 답에는 없다 */
       traceSummary?: string;
+      /** 이 답까지의 대화 요약 — 다음 질문에 붙인다(decisions/022). 예전 답에는 없다 */
+      summary?: string;
       /** 남긴 피드백(SPEC-ASK-06) — 다시 열어도 눌렀던 쪽이 보인다 */
       feedback?: 'up' | 'down';
       /** 버디의 짐작(해석) — 「맞아요」를 눌러야 요약 기록이 된다(SPEC-ASK-12). 누르기 전까지 여기 머문다. 예전 답에는 없다 */
@@ -54,6 +56,7 @@ export type MalkongMeta =
       followup: Followup;
       trace: TraceStep[];
       traceSummary?: string;
+      summary?: string;
     }
   | { type: 'redflag'; questionId: string; sources: Source[] }
   | ({

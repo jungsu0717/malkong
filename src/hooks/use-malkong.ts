@@ -16,13 +16,13 @@ import { useCallback, useMemo, useState } from 'react';
 
 import { watchRewardedAd } from '@/data/ads';
 import { ApiError, deviceKeyHash, getEntitlements, postAsk, type LimitInfo } from '@/data/api';
+import { focusOf, latestSummary, recordsForAsk } from '@/data/ask-context';
 import { doneTrace } from '@/data/ask-trace';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
 import { newMessageId, recentTurns, type Guess, type MalkongMessage, type UserMessage } from '@/data/chat';
 import { useChat } from '@/data/chat-context';
 import { useEntitlements } from '@/data/entitlements-context';
-import { recordsForQuestion } from '@/data/daily-log';
 import { monthDay } from '@/data/quick-ask';
 import type { BabyRecord } from '@/data/records';
 import { useRecords } from '@/data/records-context';
@@ -69,20 +69,28 @@ export function useMalkong() {
       if (!age) return;
       setFailure(null);
       setPendingId(attempt.questionId);
-      const sent = recordsForQuestion(known, MAX_RECORDS_SENT).map((r) => ({ kind: r.kind, label: r.label }));
+      // 기록은 이번 질문의 주제에 닿는 것만 — 반박이면 원래 질문의 주제로(decisions/022, ask-context.ts)
+      const focus = focusOf(attempt.question, messages, attempt.questionId);
+      const sent = recordsForAsk(known, focus, attempt.carriedRecordIds, MAX_RECORDS_SENT).map((r) => ({
+        kind: r.kind,
+        label: r.label,
+      }));
       const labels = attempt.mode ? [] : sent.map((r) => r.label);
-      setPending({ question: attempt.question, records: labels });
+      setPending({ question: focus, records: labels });
+      const conversationSummary = latestSummary(messages, attempt.questionId);
       try {
         const response = await askServer({
           question: attempt.question,
           baby: { months: age.month, records: sent },
-          // 바로 앞 대화 — 절약 모드에도 보낸다(질문 글과 같은 성격)
+          // 바로 앞 대화 · 대화 요약 — 절약 모드에도 보낸다(질문 글과 같은 성격)
           history: recentTurns(messages, attempt.questionId),
+          ...(conversationSummary ? { conversationSummary } : {}),
           clientMessageId: attempt.questionId,
           ...(attempt.mode ? { mode: attempt.mode } : {}),
         });
+        const summary = response.type === 'redflag' ? undefined : (response.conversationSummary ?? undefined);
         const { steps: trace, summary: traceSummary } = doneTrace(response, {
-          question: attempt.question,
+          question: focus,
           records: labels,
           month: age.month,
           name,
@@ -131,6 +139,7 @@ export function useMalkong() {
               usedRecords: response.eco ? 0 : sent.length,
               trace,
               traceSummary,
+              ...(summary ? { summary } : {}),
             },
           };
         } else if (response.type === 'followup') {
@@ -144,6 +153,7 @@ export function useMalkong() {
               followup: response.followup,
               trace,
               traceSummary,
+              ...(summary ? { summary } : {}),
             },
           };
         } else {

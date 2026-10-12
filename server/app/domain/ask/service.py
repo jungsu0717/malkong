@@ -19,6 +19,7 @@ from app.common.core.exception import ApiException
 from app.common.core.setting import Settings
 from app.domain.ask import redflag
 from app.domain.ask.cache import ResponseCache
+from app.domain.ask.memory import clean_summary, is_objection, previous_question, refers_back
 from app.domain.ask.prompt import (
     MODEL_OUTPUT_SCHEMA,
     RED_FLAG_IDS,
@@ -169,18 +170,31 @@ class AskService:
         # 바로 앞 대화 — 절약 모드에도 보낸다(질문 글과 같은 성격, 기기 안 기록이 아니다)
         history = trim_history([HistoryTurn(t.role, t.text) for t in req.history])
         approved = self._l1.approved()
-        items = retrieve(req.question, req.baby.months, approved)
-        if not items:
-            # 「몇 개월까지 그렇게 해요?」처럼 앞 말을 가리키는 질문 —
-            # 직전 질문의 주제로 한 번 더 찾는다
-            previous = next((t.text for t in reversed(history) if t.role == "user"), None)
-            if previous:
-                items = retrieve(previous, req.baby.months, approved)
+        previous = previous_question(history)
+        # 앞 답을 문제 삼는 말(「분유 먹이는 거랑 무슨 상관이에요?」)은 그 말 속 낱말이 아니라
+        # 원래 질문으로 찾는다 — 낱말에 끌려 엉뚱한 주제로 답하지 않게(decisions/022)
+        objection = is_objection(req.question, history)
+        query = previous if objection and previous else req.question
+        items = retrieve(query, req.baby.months, approved)
+        if not items and previous and not objection and refers_back(req.question):
+            # 「몇 개월까지 그렇게 해요?」처럼 앞 말을 가리키는 질문 — 직전 질문의 주제로
+            # 한 번 더 찾는다. 가리키는 말이 없는 새 질문은 앞 질문에 끌려가지 않는다
+            items = retrieve(previous, req.baby.months, approved)
         snippets = [L1Snippet(i.id, i.title, i.body, i.source_name) for i in items]
-        user = build_user_message(req.question, req.baby.months, records, snippets, history)
+        user = build_user_message(
+            req.question,
+            req.baby.months,
+            records,
+            snippets,
+            history,
+            summary=clean_summary(req.conversation_summary),
+            objection_to=previous if objection else None,
+        )
         if eco:
             user += ECO_NOTE
-        response = self._answer(user, {i.id: i for i in items}, eco, req.baby.months)
+        response = self._answer(
+            user, {i.id: i for i in items}, eco, req.baby.months, objection=objection
+        )
         ungrounded = (
             isinstance(response, AnswerResponse)
             and response.level == "일반"
@@ -203,12 +217,19 @@ class AskService:
         parts = [REDFLAG_HEAD, *(f"{i.title}\n{i.body}" for i in items), REDFLAG_TAIL]
         return RedflagResponse(answer="\n\n".join(parts), sources=[_source(i) for i in items])
 
-    def _answer(self, user: str, given: dict[str, L1Item], eco: bool, months: int) -> AskResponse:
+    def _answer(
+        self,
+        user: str,
+        given: dict[str, L1Item],
+        eco: bool,
+        months: int,
+        objection: bool = False,
+    ) -> AskResponse:
         note = ""
         last_problem = ""
         for _ in range(MAX_ATTEMPTS):
             out = self._generate(user + note)
-            problem, response = self._check(out, given, eco, months)
+            problem, response = self._check(out, given, eco, months, objection)
             if response is not None:
                 return response
             last_problem = problem
@@ -224,7 +245,12 @@ class AskService:
         )
 
     def _check(
-        self, out: ModelOutput | None, given: dict[str, L1Item], eco: bool, months: int
+        self,
+        out: ModelOutput | None,
+        given: dict[str, L1Item],
+        eco: bool,
+        months: int,
+        objection: bool = False,
     ) -> tuple[str, AskResponse | None]:
         """모델 출력을 검사한다. 통과하면 (\"\", 응답), 걸리면 (문제 이름, None)."""
         if out is None:
@@ -238,12 +264,16 @@ class AskService:
             return "", self._redflag([flag])
 
         if out.type == "followup":
-            if eco:
+            # 절약 모드는 기록이 없어 되물으면 같은 걸 또 묻게 되고, 앞 답을 문제 삼는 말에 되물으면
+            # 부모의 지적을 흘려듣는 셈이다 — 둘 다 되묻지 않고 답한다
+            if eco or objection:
                 return "no_followup", None
             followup = _clean_followup(out)
             if followup is None:
                 return "followup", None
-            return "", FollowupResponse(followup=followup)
+            return "", FollowupResponse(
+                followup=followup, conversation_summary=clean_summary(out.summary)
+            )
 
         if not out.answer.strip():
             return "empty", None
@@ -290,6 +320,7 @@ class AskService:
             ],
             usage=PENDING_USAGE,
             eco=eco,
+            conversation_summary=clean_summary(out.summary),
         )
 
 

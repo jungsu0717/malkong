@@ -10,26 +10,51 @@
 import type { AskResponse } from './api';
 import type { TraceStep } from './chat';
 
-type TopicKey = 'health' | 'vaccine' | 'checkup' | 'feed' | 'sleep' | 'stool' | 'skin' | 'development' | 'growth' | 'safety';
+export type TopicKey =
+  | 'health'
+  | 'vaccine'
+  | 'checkup'
+  | 'feed'
+  | 'sleep'
+  | 'stool'
+  | 'skin'
+  | 'development'
+  | 'growth'
+  | 'cry'
+  | 'safety';
 
-type Topic = { key: TopicKey; name: string; match: RegExp };
+export type Topic = { key: TopicKey; name: string; match: RegExp };
 
-/** 앞에 있을수록 먼저 — 아픈 이야기가 섞이면 그것부터 */
+/**
+ * 앞에 있을수록 먼저 — 아픈 이야기가 섞이면 그것부터. 보낼 기록을 고를 때도 이 주제로 고른다(ask-context.ts).
+ * 「열」은 열을 뜻할 때만 — 「창문 열어」가 건강으로 잡히지 않게(task ask/013)
+ */
 const TOPICS: Topic[] = [
-  { key: 'health', name: '건강', match: /열|체온|기침|콧물|아파|아픈|아프|병원|구토|토했|설사|숨|경련|해열|감기|다쳤|부딪/ },
+  {
+    key: 'health',
+    name: '건강',
+    match:
+      /열(?=\s*(이|은|도|나|났|있|올|내|감|날)|\s*\d|\s*$|\s*[?.!])|발열|미열|고열|해열|3[6-9](\.\d)?\s*(도|℃)|체온|기침|콧물|아파|아픈|아프|병원|구토|토했|설사|숨|경련|감기|다쳤|부딪/,
+  },
   { key: 'vaccine', name: '접종', match: /접종|주사|백신/ },
   { key: 'checkup', name: '검진', match: /검진/ },
-  { key: 'feed', name: '먹기', match: /수유|분유|모유|젖|먹|이유식|트림|게워|게움|ml|cc/i },
-  { key: 'sleep', name: '잠', match: /잠|재우|재워|낮잠|밤잠|깨|수면|통잠|눕/ },
+  { key: 'feed', name: '먹기', match: /수유|분유|모유|젖|먹|이유식|트림|게워|게움|알레르기|알러지|ml|cc/i },
+  { key: 'sleep', name: '잠', match: /잠|재우|재워|낮잠|밤잠|밤중|밤수|깨|수면|통잠|눕/ },
   { key: 'stool', name: '변', match: /변비|대변|응가|기저귀|똥/ },
   { key: 'skin', name: '피부', match: /피부|발진|태열|아토피|두드러기|로션|보습/ },
   { key: 'development', name: '발달', match: /발달|뒤집|옹알|앉|기어|걷|걸음|말을|낯가림|목\s*가누|이정표|웃/ },
   { key: 'growth', name: '키 · 몸무게', match: /몸무게|체중|키가|키는|성장|kg|cm/i },
+  { key: 'cry', name: '울음', match: /울어|울고|울음|우는|보채|보챔|칭얼|달래/ },
   { key: 'safety', name: '안전', match: /카시트|안전|떨어|삼켰|목욕|화상|질식/ },
 ];
 
 export function topicOf(question: string): Topic | null {
   return TOPICS.find((t) => t.match.test(question)) ?? null;
+}
+
+/** 글에 닿는 주제 모두 — 보낼 기록을 고를 때 쓴다 */
+export function topicsOf(text: string): Topic[] {
+  return TOPICS.filter((t) => t.match.test(text));
 }
 
 /** 같은 주제의 질문이라도 늘 같은 말이 되지 않게 — 질문 글로 고르는 결정적 순번 */

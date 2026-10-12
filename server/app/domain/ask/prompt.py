@@ -51,8 +51,19 @@ MODEL_OUTPUT_SCHEMA: dict = {
                 "additionalProperties": False,
             },
         },
+        # 이번 질문과 답까지 넣은 대화 요약 — 폰이 들고 있다가 다음 질문에 붙인다(decisions/022)
+        "summary": {"type": "string"},
     },
-    "required": ["redFlag", "level", "type", "answer", "citedIds", "followup", "records"],
+    "required": [
+        "redFlag",
+        "level",
+        "type",
+        "answer",
+        "citedIds",
+        "followup",
+        "records",
+        "summary",
+    ],
     "additionalProperties": False,
 }
 
@@ -82,6 +93,8 @@ class ModelOutput(ApiModel):
     cited_ids: list[str]
     followup: ModelFollowup
     records: list[ModelRecord]
+    # 대화 요약 — 옛 모델 출력에는 없을 수 있다
+    summary: str = ""
 
 
 @dataclass(frozen=True)
@@ -121,7 +134,14 @@ def build_user_message(
     records: list[BabyRecordLine],
     snippets: list[L1Snippet],
     history: list[HistoryTurn] | None = None,
+    summary: str | None = None,
+    objection_to: str | None = None,
 ) -> str:
+    """질문마다 바뀌는 것을 한 덩어리로.
+
+    summary 는 이전 대화 요약(폰이 들고 있던 것),
+    objection_to 는 부모가 앞 답을 문제 삼을 때의 원래 질문이다.
+    """
     record_lines = [f"- [{r.kind}] {r.label}" for r in records] or ["- 없음"]
     snippet_lines = [
         f"- id: {s.id} | {s.title} | {s.body} | 출처: {s.source_name}" for s in snippets
@@ -138,8 +158,15 @@ def build_user_message(
             *record_lines,
             "표준 지식:",
             *snippet_lines,
+            "이전 대화 요약:",
+            f"- {' '.join(summary.split())}" if summary else "- 없음",
             "바로 앞 대화:",
             *history_lines,
+            *(
+                ["", f"(이번 말은 바로 앞 버디의 답을 두고 하는 말이다. 원래 질문: {objection_to})"]
+                if objection_to
+                else []
+            ),
             "",
             f"질문: {question}",
         ]

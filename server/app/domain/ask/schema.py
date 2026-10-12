@@ -34,6 +34,10 @@ class AskRequest(ApiModel):
     client_message_id: NonEmptyStr
     # "eco" 면 L2 기록 없이 일반 기준으로 답한다(backend 일일 한도 절)
     mode: Literal["eco"] | None = None
+    # 이전 대화 요약 — 지난 답에서 서버가 돌려준 것을 폰이 들고 있다가 붙인다.
+    # 서버는 저장하지 않는다(decisions/022). 길면 서버가 자른다(memory.MAX_SUMMARY_CHARS)
+    # — 여기서 막으면 질문 자체가 실패한다
+    conversation_summary: str | None = Field(default=None, max_length=4000)
 
 
 # --- 응답 — type 으로 갈린다 ---
@@ -72,6 +76,8 @@ class AnswerResponse(ApiModel):
     records: list[RecordSuggestion] = []
     usage: Usage
     eco: bool = False
+    # 이번 질문과 답까지 넣은 대화 요약 — 폰이 들고 있다가 다음 질문에 conversationSummary 로 붙인다
+    conversation_summary: str | None = None
 
     @model_validator(mode="after")
     def _fact_needs_sources(self) -> "AnswerResponse":
@@ -90,6 +96,7 @@ class Followup(ApiModel):
 class FollowupResponse(ApiModel):
     type: Literal["followup"] = "followup"
     followup: Followup
+    conversation_summary: str | None = None
 
 
 class RedflagResponse(ApiModel):

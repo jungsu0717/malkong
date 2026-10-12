@@ -38,6 +38,8 @@ export type AskRequest = {
   clientMessageId: string;
   /** "eco" 면 기록 없이 일반 기준으로 답한다 */
   mode?: 'eco';
+  /** 이전 대화 요약 — 지난 답에서 서버가 돌려준 것. 서버는 모델에 넘길 뿐 저장하지 않는다(decisions/022) */
+  conversationSummary?: string;
 };
 
 export type AskAnswer = {
@@ -49,9 +51,11 @@ export type AskAnswer = {
   /** 오늘 남은 정밀 답변 수. 운영자(가족) 기기는 null */
   usage: { remaining: number | null };
   eco: boolean;
+  /** 이번 질문과 답까지 넣은 대화 요약 — 다음 질문에 conversationSummary 로 붙인다. 옛 서버는 보내지 않는다 */
+  conversationSummary?: string | null;
 };
 
-export type AskFollowup = { type: 'followup'; followup: Followup };
+export type AskFollowup = { type: 'followup'; followup: Followup; conversationSummary?: string | null };
 
 export type AskRedflag = { type: 'redflag'; answer: string; sources: Source[] };
 

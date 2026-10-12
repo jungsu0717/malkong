@@ -18,6 +18,7 @@
     { "role": "user", "text": "태열 예방하려면 얼마나 시원하게 해 줘야 해요?" },
     { "role": "buddy", "text": "실내는 22~24도 정도로…" }
   ],
+  "conversationSummary": "태열 예방으로 실내 온도를 물었고 22~24도를 안내했다.",
   "clientMessageId": "로컬 메시지 id (중복 방지)"
 }
 ```
@@ -26,6 +27,11 @@
 서버는 6턴을 넘으면 최근 것만 남기고 한 턴을 600자에서 자른다. 모델에 넘길 뿐 저장하지 않는다. 절약 모드에도 보낸다 —
 질문 글과 같은 성격이다(기기 안 기록은 보내지 않는다). 없으면 빈 배열이나 생략.
 
+`conversationSummary` 는 이전 대화 요약이다 — 지난 답(`answer` · `followup`)에서 서버가 돌려준 것을 폰이 들고 있다가 붙인다.
+하루가 지나면 붙이지 않는다. 서버는 600자에서 잘라 모델에 넘길 뿐 저장하지 않는다(decisions/022). 없으면 생략.
+
+`baby.records` 는 이번 질문의 주제에 닿는 기록만이다 — 앞 답을 문제 삼는 말이면 원래 질문의 주제로 고른다(폰 `src/data/ask-context.ts`).
+
 `baby` 에는 월령과 기록만 담는다. 아기 이름 · 생일은 보내지 않는다 — 개인정보 처리방침(`src/data/legal.ts`)이 그렇게
 약속하고 있고, 답을 「우리 아기」로 부르는 데 이름이 꼭 필요하지도 않다(Julian, 2026-10-08, task ask/011).
 
@@ -33,8 +39,8 @@
 
 | type | 뜻 | 함께 오는 것 |
 |---|---|---|
-| `answer` | 답변 | `answer`, `level`(사실·일반·판단), `sources[{id,name,url}]`, `records[]`(저장 제안 — kind·label·covers?), `usage{remaining}`(오늘 남은 정밀 답변 수, 운영자 기기는 null) |
-| `followup` | 답변 전 되묻기 | `followup{question, chips[], recordLabel}` — 답을 받으면 같은 API 로 재요청 |
+| `answer` | 답변 | `answer`, `level`(사실·일반·판단), `sources[{id,name,url}]`, `records[]`(저장 제안 — kind·label·covers?), `usage{remaining}`(오늘 남은 정밀 답변 수, 운영자 기기는 null), `conversationSummary`(이번까지의 대화 요약, 없으면 null) |
+| `followup` | 답변 전 되묻기 | `followup{question, chips[], recordLabel}`, `conversationSummary` — 답을 받으면 같은 API 로 재요청 |
 | `redflag` | 위험 신호 고정 응답 | `answer`(병원·119 안내), `sources[]` — LLM 미호출 |
 
 ```
@@ -178,3 +184,4 @@ AdMob 의 서버 측 검증(SSV) 콜백. AdMob 은 GET 쿼리로 부른다(`user
 - 2026-10-11 `/v1/ask` 요청에 `history`(바로 앞 대화 최대 6턴) — 앞 질문을 모른 채 답하던 것을 고침 (task ask/012)
 - 2026-10-12 `/v1/knowledge/version` · `/v1/knowledge/bundle` 을 구현 — 증분(`since` · `removedIds`) 대신 승인 항목 전부, 기기 키 없이 (task common/019)
 - 2026-10-12 `/v1/family` — 가족 만들기 · 초대 코드로 들어가기 · 나가기 · 아기 · 기록 맞추기(늦게 고친 쪽이 이김, seq) (task my/007)
+- 2026-10-12 `/v1/ask` 요청에 `conversationSummary`, 답 · 되묻기 응답에 `conversationSummary` — 대화 요약은 폰이 들고 다닌다. `baby.records` 는 질문 주제에 닿는 것만 (decisions/022, task ask/013)
