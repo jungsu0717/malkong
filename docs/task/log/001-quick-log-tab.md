@@ -1,6 +1,6 @@
 # 001 기록 탭 — 빠른 기록 · 재는 중 · 오늘 기록 · 일주일 그래프 · 수유 알림 · 가족 맞추기
 
-> 상태: 구현 완료 (2026-10-12) — 서버 배포(가족 맞추기의 events)는 Julian 승인 뒤, 폰 실측은 Julian
+> 상태: 구현 완료 (2026-10-12) — revision 00018 배포(Julian). 폰 실측은 Julian
 > 근거: [log](../../menu-spec/log.md) SPEC-LOG-01~07 · [constitution](../../constitution.md) 5 · [decisions/023](../../decisions/023-quick-log-first-tab.md)
 
 ## 목표
@@ -50,6 +50,6 @@ docs: constitution 5 · decisions/023 · menu-spec/log.md (새) · main-design �
 
 - [x] SPEC-LOG-01~05 · 07 구현, 06 은 질문 맥락까지(브리핑 요약은 다음)
 - [x] tsc · lint · 서버 시험 · 웹 한 바퀴
-- [ ] 서버 배포(Julian 승인) — 그 전에도 기록 탭은 돈다. 가족 맞추기의 빠른 기록만 배포 뒤
+- [x] 서버 배포 — revision 00018(Julian, 2026-10-12). 운영 주소에서 시험 키 둘로 가족을 만들어 분유 기록 하나가 Neon 을 거쳐 다른 폰에 오는 것(표시는 새지 않음)을 보고, 둘 다 나가 가족을 지웠다(코드 404). 모델 호출 0
 - [ ] Julian 폰 실측 — 알림이 정한 때 오는지, 앱을 껐다 켜도 재는 중이 이어지는지, 두 폰 맞추기
 - [x] 스토어 스크린샷에 기록 탭 한 장 — `02-log`, 나머지 장도 탭 다섯 화면으로 다시 찍음(첫 장 L2 칸 「폰에 저장 · 가족 공유는 선택」)
