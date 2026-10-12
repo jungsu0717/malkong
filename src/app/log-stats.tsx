@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
@@ -63,7 +64,6 @@ export default function LogStatsScreen() {
   return (
     <ThemedView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll}>
-        <Standards month={month} />
         <Segmented
           options={[
             { value: 'feed', label: '수유' },
@@ -74,6 +74,9 @@ export default function LogStatsScreen() {
           value={tab}
           onChange={(v) => setTab(v as Tab)}
         />
+
+        {/* 이 탭의 기준 — 그 월령의 승인 L1 이 있을 때만(SPEC-LOG-04). 없으면 아무것도 두지 않는다 */}
+        <Tip month={month} tab={tab} />
 
         {tab === 'feed' && (
           <>
@@ -142,49 +145,40 @@ export default function LogStatsScreen() {
   );
 }
 
-/** 이 월령의 기준표 — 맨 위(SPEC-LOG-04). 공공 기준이 없는 칸은 없다고 말한다 */
-function Standards({ month }: { month: number }) {
+/** 탭 → 기준표 줄 이름 */
+const TAB_NORM: Record<Tab, string | null> = { feed: '수유', sleep: '잠', diaper: '기저귀', growth: null };
+
+/**
+ * 이 탭의 기준 팁 상자 — 그 월령의 승인 L1 만, 출처와 함께. 기준이 없으면 그리지 않는다(Julian, 2026-10-12).
+ * 기저귀 탭은 기준이 아니라 바로 진료가 필요한 신호라 경고 색으로
+ */
+function Tip({ month, tab }: { month: number; tab: Tab }) {
   const c = useTheme();
-  const rows = normsFor(month);
+  const name = TAB_NORM[tab];
+  const row = name ? normsFor(month).find((n) => n.label === name) : undefined;
+  if (!row || row.items.length === 0) return null;
+  const warn = row.warn;
   return (
-    <Card tone="filled" style={styles.standards}>
-      <ThemedText type="heading">{month === 0 ? '첫 달' : `${month}개월`} 기준</ThemedText>
-      {rows.map((row) => (
-        <View key={row.label} style={styles.normRow}>
-          <ThemedText type="label" style={[styles.normLabel, { color: c.textSecondary }]}>
-            {row.label}
+    <View style={[styles.tip, { backgroundColor: warn ? c.dangerSoft : c.accentSoft }]}>
+      <View style={styles.tipHead}>
+        <Ionicons name={warn ? 'alert-circle-outline' : 'bulb-outline'} size={16} color={warn ? c.danger : c.accentText} />
+        <ThemedText type="label" style={{ color: warn ? c.danger : c.accentText, fontWeight: 700 }}>
+          {warn ? '이럴 땐 바로 진료' : `${month === 0 ? '첫 달' : `${month}개월`} 기준`}
+        </ThemedText>
+      </View>
+      {row.items.map((item) => (
+        <View key={item!.id} style={styles.tipItem}>
+          <ThemedText type="small" style={{ fontWeight: 600 }}>
+            {item!.title}
           </ThemedText>
-          <View style={styles.normBody}>
-            {row.items.length === 0 ? (
-              <ThemedText type="small" style={{ color: c.textTertiary }}>
-                이 월령의 공공 기준은 아직 없어요
-              </ThemedText>
-            ) : (
-              row.items.map((item) => (
-                <View key={item!.id} style={styles.normItem}>
-                  {row.warn && (
-                    <ThemedText type="caption" style={{ color: c.danger, fontWeight: 600 }}>
-                      이럴 땐 바로 진료
-                    </ThemedText>
-                  )}
-                  <ThemedText type="small" style={{ fontWeight: 600 }}>
-                    {item!.title}
-                  </ThemedText>
-                  <ExternalLink href={item!.source.url as `https://${string}`}>
-                    <ThemedText type="caption" style={{ color: c.textSecondary, textDecorationLine: 'underline' }}>
-                      {item!.source.name}
-                    </ThemedText>
-                  </ExternalLink>
-                </View>
-              ))
-            )}
-          </View>
+          <ExternalLink href={item!.source.url as `https://${string}`}>
+            <ThemedText type="caption" style={{ color: c.textSecondary, textDecorationLine: 'underline' }}>
+              {item!.source.name}
+            </ThemedText>
+          </ExternalLink>
         </View>
       ))}
-      <ThemedText type="caption" style={{ color: c.textTertiary }}>
-        키 · 몸무게 기준(성장 도표)은 아직 없어요. 영유아 검진 때 함께 봐요.
-      </ThemedText>
-    </Card>
+    </View>
   );
 }
 
@@ -226,10 +220,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   card: { gap: Spacing.three },
-  standards: { gap: 10 },
-  normRow: { flexDirection: 'row', gap: Spacing.two },
-  normLabel: { width: 44, fontWeight: 600, paddingTop: 2 },
-  normBody: { flex: 1, gap: 6 },
-  normItem: { gap: 1 },
+  tip: { borderRadius: 14, padding: Spacing.three, gap: 8 },
+  tipHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  tipItem: { gap: 1 },
   cardHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
 });
