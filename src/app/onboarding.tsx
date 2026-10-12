@@ -204,9 +204,6 @@ export default function OnboardingScreen() {
           </View>
 
           <View style={styles.footer}>
-            <ThemedText type="caption" style={[styles.notice, { color: c.textSecondary }]}>
-              입력한 내용은 이 폰 안에만 저장돼요
-            </ThemedText>
             <Button
               label={isEdit ? '저장' : '다음'}
               size="lg"

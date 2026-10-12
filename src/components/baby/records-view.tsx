@@ -39,7 +39,7 @@ export function RecordsView() {
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}>
       <ThemedText type="small" style={{ color: c.textSecondary }}>
-        버디가 대화와 챙길 것에서 모은 기록이에요. 다음 답에 쓰이고, 이 폰 안에만 저장돼요.
+        버디가 대화와 챙길 것에서 모은 기록이에요. 다음 답에 쓰여요.
       </ThemedText>
 
       <View style={[styles.addRow, { backgroundColor: c.surface }]}>

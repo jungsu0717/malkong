@@ -143,7 +143,7 @@ export default function ScheduleScreen() {
           />
 
           <View style={styles.section}>
-            <SectionHeader title="챙길 것 여정" aside="0개월부터" />
+            <SectionHeader title="개월별 챙길 것" aside="0개월부터" />
             <Journey
               birthDate={baby.birthDate}
               records={records}

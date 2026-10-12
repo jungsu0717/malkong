@@ -209,12 +209,12 @@ function StationLabel({ station, covered }: { station: Station; covered: Set<str
 }
 
 const STATE_TEXT: Record<Station['state'], string> = {
-  done: '다 챙긴 정류장',
-  partial: '지나온 정류장',
-  open: '지금 챙길 정류장',
-  missed: '지나온 정류장',
-  future: '앞으로',
-  now: '지금 여기',
+  done: '다 했어요',
+  partial: '지났어요',
+  open: '이번 달',
+  missed: '지났어요',
+  future: '다음',
+  now: '지금',
 };
 
 /**
@@ -270,10 +270,10 @@ export function Journey({
       <View style={[styles.board, { backgroundColor: c.space }]}>
         <View style={styles.boardHead}>
           <ThemedText type="label" style={{ color: c.onSpaceDim }}>
-            {name}의 챙길 것 여정
+            {name}의 개월별 챙길 것
           </ThemedText>
           <ThemedText type="title" style={{ color: c.onSpace }}>
-            {total > 0 ? `지금까지 ${total}개 중 ${done}개` : '여정을 막 시작했어요'}
+            {total > 0 ? `지금까지 ${total}개 중 ${done}개` : '아직 한 것이 없어요'}
           </ThemedText>
         </View>
         <View style={styles.rings}>
@@ -300,7 +300,7 @@ export function Journey({
                 key={station.month}
                 accessibilityRole="button"
                 accessibilityState={{ selected: i === selectedIndex }}
-                accessibilityLabel={`${station.month}개월 정류장, ${STATE_TEXT[station.state]}`}
+                accessibilityLabel={`${station.month}개월, ${STATE_TEXT[station.state]}`}
                 onPress={() => {
                   tap();
                   setPicked(i);
@@ -334,7 +334,7 @@ export function Journey({
             </View>
           ))}
           <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-            · 색이 찬 점은 한 것 · 정류장을 누르면 자세히 보여요
+            · 색이 찬 점은 한 것 · 달을 누르면 자세히
           </ThemedText>
         </View>
       </View>
@@ -352,7 +352,7 @@ export function Journey({
           {selected.items.length === 0 ? (
             <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
               이번 달에 새로 시작하는 접종 · 검진은 없어요.
-              {next ? ` 다음 정류장은 ${next.month}개월(${next.date.getMonth() + 1}월 ${next.date.getDate()}일 무렵)이에요` : ''}
+              {next ? ` 다음은 ${next.month}개월(${next.date.getMonth() + 1}월 ${next.date.getDate()}일 무렵)이에요` : ''}
             </ThemedText>
           ) : (
             <>

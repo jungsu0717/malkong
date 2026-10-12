@@ -416,7 +416,7 @@ export default function ChatScreen() {
               </Pressable>
             </View>
             <ThemedText type="caption" style={[styles.disclaimer, { color: c.textSecondary }]}>
-              급할 땐 버디 말고 119 · 소아청소년과로
+              버디의 답은 응급 상황을 대신할 수 없어요 · 급할 땐 119 나 응급실로
             </ThemedText>
             {/* 배너는 입력창 아래 바닥에 — 말풍선 사이에는 두지 않고, 글을 쓰는 동안은 숨긴다(app-design 광고 자리) */}
             {!typing && <AdBanner anchored />}

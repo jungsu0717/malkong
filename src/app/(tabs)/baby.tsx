@@ -106,11 +106,11 @@ export default function BabyScreen() {
                 <View style={styles.legend}>
                   <View style={[styles.dotFilled, { backgroundColor: c.onSpace }]} />
                   <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-                    알게 된 것 {profile.knownCount}
+                    알게 된 내용 {profile.knownCount}
                   </ThemedText>
                   <View style={[styles.dotHollow, { borderColor: c.onSpaceDim }]} />
                   <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-                    알아 갈 것 {profile.totalCount - profile.knownCount}
+                    아직 모르는 내용 {profile.totalCount - profile.knownCount}
                   </ThemedText>
                 </View>
                 <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
@@ -126,7 +126,7 @@ export default function BabyScreen() {
 
           {/* 주제별로 — 막대를 누르면 그 주제의 상세로 (SPEC-BABY-01) */}
           <View style={styles.section}>
-            <SectionHeader title="주제별로" aside={`알게 된 것 ${profile.knownCount} / ${profile.totalCount}`} />
+            <SectionHeader title="주제별로" aside={`알게 된 내용 ${profile.knownCount} / ${profile.totalCount}`} />
             <DomainBars domains={profile.domains} onPress={(id) => router.push({ pathname: '/knowledge', params: { domain: id } })} />
           </View>
 

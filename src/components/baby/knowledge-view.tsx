@@ -59,7 +59,7 @@ export function KnowledgeView() {
         <View style={styles.head}>
           <ThemedText type="display">{profile.percent}%</ThemedText>
           <ThemedText type="small" style={{ color: c.textSecondary }}>
-            {profile.level.step}단계 · {profile.level.name} · 알게 된 것 {profile.knownCount} / {profile.totalCount}
+            {profile.level.step}단계 · {profile.level.name} · 알게 된 내용 {profile.knownCount} / {profile.totalCount}
           </ThemedText>
         </View>
 
@@ -202,7 +202,7 @@ function Sparkline({ points, color }: { points: { day: number; total: number }[]
   return (
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ height: h }}>
       {width > 0 && (
-        <Svg width={width} height={h} accessibilityLabel={`알게 된 것 ${maxTotal}개까지 늘어난 흐름`}>
+        <Svg width={width} height={h} accessibilityLabel={`알게 된 내용 ${maxTotal}개까지 늘어난 흐름`}>
           <Defs>
             <LinearGradient id="area" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={color} stopOpacity={0.28} />
