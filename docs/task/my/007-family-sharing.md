@@ -1,6 +1,6 @@
 # 007 가족 공유 — 초대 코드로, 로그인 없이
 
-> 상태: 구현 완료 (2026-10-12) — 서버 배포는 Julian 승인 뒤
+> 상태: 끝 (2026-10-12) — Cloud Run revision 00015 에 올라가 있다
 > 근거: [my](../../menu-spec/my.md) SPEC-MY-05 가족 공유(이 task 에서 「나중」을 「평시」로 바꾼다) · SPEC-MY-04 로그인(그대로 「나중」) ·
 > [backend](../../architecture/backend.md) 「DB — 두 단계」 가족 공유 줄 · [api-contract](../../architecture/api-contract.md) `/v1/family` ·
 > [decisions/021](../../decisions/021-family-by-invite-code.md)
@@ -64,4 +64,6 @@ docs: api-contract · backend · my · decisions/021 · README
 - [x] 폰: 마이 → 가족 화면 → 동의 → 만들기 / 들어가기 → 코드 공유 → 나가기. 기록 · 아기가 바뀌면 1.5초 안에 올라가고 앱을 열면 받는다
 - [x] 개인정보 처리방침에 가족 공유 절(4번), SPEC-MY-05 평시, backend DB 표, api-contract, ADR 021
 - [x] tsc · lint · pytest · 두 창 시험
-- [ ] 서버 배포(Julian 승인) → Julian · 아내 폰으로 써 본다
+- [x] 서버 배포 — Julian 이 직접 쳐서 revision 00015(2026-10-12). 운영 주소에서 `/health` ok, 시험 키로 `GET /v1/family` → 404 NOT_IN_FAMILY
+  (Postgres 가족 표가 답했다 · 로그에 메모리 저장소로 돈다는 경고 없음), 키 없이 → 401, DELETE 프리플라이트 200
+- [ ] Julian · 아내 폰으로 써 본다

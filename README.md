@@ -26,7 +26,8 @@
   올라가 있다. revision 00013(2026-10-11)은 바로 앞 대화를 보고 답하기 · 「일반적으로는」 접두어 걷기([ask/012](docs/task/ask/012-conversation-context.md)).
   revision 00014(2026-10-12)는 **지식 내려받기** — 판 확인 · 승인 항목 묶음(`/v1/knowledge/version` · `bundle`, 기기 키 없이), 앱은 하루 한 번
   비교해 새 판을 받아 저장한다([common/019](docs/task/common/019-knowledge-bundle-download.md)). 지식을 고치면 승인 → `src/data/l1/version.json` 판 올리기 →
-  `sync_l1` → 서버 배포로 스토어 없이 나간다. **배포 대기(2026-10-12)**: 가족 공유 `/v1/family`([my/007](docs/task/my/007-family-sharing.md)). 자동 모드가 운영 배포를 막을 때는 Julian 이 server/AGENTS.md 「배포」 명령을 직접 친다(00012 · 00014 가 그랬다)
+  `sync_l1` → 서버 배포로 스토어 없이 나간다. revision 00015(2026-10-12)는 **가족 공유** `/v1/family` — 초대 코드 · 기기 키로 아기 · 기록을
+  폰끼리 맞춘다([my/007](docs/task/my/007-family-sharing.md)). 자동 모드가 운영 배포를 막을 때는 Julian 이 server/AGENTS.md 「배포」 명령을 직접 친다(00012 · 00014 · 00015 가 그랬다)
 - 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
 - **홍보 자료(보관 — 배포 때 · 앱 첫 실행에 쓴다)**: 만화 「아빠가 육아 앱을 만든 이유」 5컷 · 릴스 30초(`marketing/toon/`, 앱 첫 실행에도 들어가 있다),
   스토어 첫 장 「검색 대신, 근거로 답해요」 — 지식층 · 답 파이프라인 흐름도 + 진짜 앱 화면(`marketing/store/`, 앱스토어 · 구글 플레이 두 크기).
