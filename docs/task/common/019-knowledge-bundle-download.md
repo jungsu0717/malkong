@@ -1,6 +1,6 @@
 # 019 지식 내려받기 — 스토어 심사 없이 지식(L1)만 새로 받는다
 
-> 상태: 구현 완료 (2026-10-12) — 서버 배포는 Julian 승인 뒤
+> 상태: 완료 (2026-10-12) — Cloud Run revision 00014, Julian 이 배포 명령을 직접 침
 > 근거: [l1-knowledge-base](../../architecture/l1-knowledge-base.md) 「저장 위치와 로더」 평시 「항목에는 판 번호가 붙고, 앱은 자기 판과
 > 서버 최신 판을 비교해 갱신받는다」 · [api-contract](../../architecture/api-contract.md) GET /v1/knowledge/version · bundle
 > 횡단(common): 서버 + 앱 시작 흐름 + 지식 로더
@@ -60,4 +60,5 @@ docs/architecture/api-contract.md · l1-knowledge-base.md   계약과 갱신 절
 - [x] 앱이 받아 둔 판을 첫 화면 전에 얹고, 하루 한 번 서버와 비교해 새 판을 받아 저장한다
 - [x] 받은 묶음을 번들과 같은 규칙으로 검사하고 승인 항목만 쓴다. 낡은 판 · 빈 판 · 어긋난 판은 버린다
 - [x] 계약 · 지식베이스 문서가 구현과 같다
-- [ ] 서버 배포(Julian 승인) → 폰에서 마이 탭 개발 줄의 「판」이 바뀌는 것은 다음에 판을 올릴 때 본다
+- [x] 서버 배포 — revision 00014(2026-10-12). 운영 주소에서 `/v1/knowledge/version` → `2026.10.3`, `/v1/knowledge/bundle` → 200, 44,477 bytes, 77건(모델 호출 0).
+  폰에서 「판」이 바뀌는 것은 다음에 판을 올릴 때 본다
