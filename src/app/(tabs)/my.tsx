@@ -20,9 +20,15 @@ import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
 import { useTheme } from '@/hooks/use-theme';
 
-// 본문은 src/data/legal.ts (SPEC-MY-03)
-const MENU_SECTIONS: { title: string; items: { label: string; doc: string }[] }[] = [
-  { title: '도움말', items: [{ label: '자주 묻는 질문', doc: 'faq' }] },
+// 본문은 src/data/legal.ts (SPEC-MY-03). 만화는 src/app/intro.tsx (SPEC-MY-07)
+const MENU_SECTIONS: { title: string; items: { label: string; detail?: string; doc?: string; href?: '/intro' }[] }[] = [
+  {
+    title: '도움말',
+    items: [
+      { label: '아빠가 육아 앱을 만든 이유', detail: '만화 다섯 컷', href: '/intro' },
+      { label: '자주 묻는 질문', doc: 'faq' },
+    ],
+  },
   {
     title: '약관',
     items: [
@@ -127,10 +133,13 @@ export default function MyScreen() {
               <Card style={styles.rows}>
                 {section.items.map((item, i) => (
                   <ListRow
-                    key={item.doc}
+                    key={item.label}
                     divider={i > 0}
                     title={item.label}
-                    onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: item.doc } })}
+                    detail={item.detail}
+                    onPress={() =>
+                      item.href ? router.push(item.href) : router.push({ pathname: '/legal/[doc]', params: { doc: item.doc ?? 'faq' } })
+                    }
                   />
                 ))}
               </Card>

@@ -4,13 +4,13 @@
     <meta charset="utf-8" />
     <title>육아버디 — 구글 플레이 그래픽 이미지</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Gaegu:wght@700&display=block"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=block"
       rel="stylesheet"
     />
     <style>
       /*
-       * 구글 플레이 그래픽 이미지 1024×500 (store-toon.md 「쓰는 곳」 — 만화로). 앱 디자인 언어: 밝은 바탕 · 먹색 · 코랄 하나.
-       * 왼쪽에 슬로건(product-brief 「스토어 등록 소스」), 오른쪽에 만화 아빠와 버디.
+       * 구글 플레이 그래픽 이미지 1024×500. 앱 디자인 언어: 밝은 바탕 · 먹색 · 코랄 하나.
+       * 왼쪽에 슬로건(product-brief 「스토어 등록 소스」), 오른쪽에 버디(앱 캐릭터). 만화 아빠는 넣지 않는다(Julian, 2026-10-12).
        */
       :root { --ink: #16161a; --sub: #5e5e69; --accent: #c64536; }
       html, body { margin: 0; background: #f6f5f2; }
@@ -23,38 +23,19 @@
       h1 { position: absolute; left: 64px; top: 120px; margin: 0; font-size: 62px; font-weight: 700; line-height: 1.2; letter-spacing: -2.4px; }
       h1 em { font-style: normal; color: var(--accent); }
       .foot { position: absolute; left: 64px; top: 340px; font-size: 27px; font-weight: 500; color: var(--sub); line-height: 1.5; }
-      svg.art { position: absolute; left: 0; top: 0; }
-      .say {
-        position: absolute; transform: translate(-50%, -50%); text-align: center;
-        font-family: 'Gaegu', sans-serif; font-weight: 700; font-size: 30px; line-height: 1.1; white-space: pre-line; width: max-content;
-      }
       img.buddy { position: absolute; }
     </style>
   </head>
   <body>
-    <svg width="0" height="0" style="position: absolute">
-      <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="7" result="n" />
-        <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-    </svg>
     <div id="c"></div>
-    <script src="../toon/draw.js"></script>
     <script>
       const c = document.getElementById('c');
       const add = (html) => c.insertAdjacentHTML('beforeend', html);
       add(`<div class="name">육아버디 · 아빠가 만든 육아 비서</div>`);
       add(`<h1>육아의 모든 질문,<br><em>우리 아기 기준</em>으로</h1>`);
       add(`<div class="foot">공공 기관 출처로 답하고,<br>어제 일까지 기억해요</div>`);
-      // 오른쪽 — 감동한 아빠와 버디
-      const { dad, bubble } = window.T;
-      const x = 760, y = 300, s = 0.78;
-      add(`<svg class="art" width="1024" height="500" viewBox="0 0 1024 500"><g filter="url(#rough)">
-        ${dad(x, y, s, { expr: 'touched' })}
-        ${bubble(x - 80, 86, 150, 48, x - 110 * s, y - 20 * s, { w: 4 })}
-      </g></svg>`);
-      add(`<div class="say" style="left:${x - 80}px;top:86px">너… 기억하고 있었구나…</div>`);
-      add(`<img class="buddy" src="../../assets/images/mascot/standing.png" style="left:860px;top:262px;width:150px"/>`);
+      // 오른쪽 — 버디(앱 캐릭터, 360×506)
+      add(`<img class="buddy" src="../../assets/images/mascot/standing.png" style="left:700px;top:60px;width:270px"/>`);
       document.fonts.ready.then(() => document.body.setAttribute('data-ready', '1'));
     </script>
   </body>

@@ -21,7 +21,7 @@ import { EntitlementsProvider } from '@/data/entitlements-context';
 import { FamilyProvider } from '@/data/family-context';
 import { InboxProvider } from '@/data/inbox-context';
 import { loadStoredKnowledge, refreshKnowledge } from '@/data/knowledge-update';
-import { PreferencesProvider, usePreferences } from '@/data/preferences-context';
+import { PreferencesProvider } from '@/data/preferences-context';
 import { RecordsProvider } from '@/data/records-context';
 
 SplashScreen.preventAutoHideAsync();
@@ -30,23 +30,17 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 /**
- * 만화를 아직 닫지 않았으면 만화부터 — 생일이 있든 없든, 건너뛰거나 끝까지 볼 때까지 (SPEC-MY-07).
- * 그다음 저장된 생일이 없으면 온보딩으로 보낸다 (SPEC-MY-01).
+ * 저장된 생일이 없으면 온보딩으로 보낸다 (SPEC-MY-01). 만화는 처음 실행에 띄우지 않고 마이 → 도움말에서 본다 (SPEC-MY-07).
  */
 function OnboardingGate() {
   const { baby, loading } = useBaby();
-  const { introSeen, loading: prefsLoading } = usePreferences();
   const segments = useSegments();
   const router = useRouter();
 
   useEffect(() => {
-    if (loading || prefsLoading) return;
-    if (!introSeen) {
-      if (segments[0] !== 'intro') router.replace('/intro');
-    } else if (!baby && segments[0] !== 'onboarding') {
-      router.replace('/onboarding');
-    }
-  }, [baby, loading, prefsLoading, introSeen, segments, router]);
+    if (loading) return;
+    if (!baby && segments[0] !== 'onboarding') router.replace('/onboarding');
+  }, [baby, loading, segments, router]);
 
   return null;
 }

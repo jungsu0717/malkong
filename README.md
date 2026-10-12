@@ -12,7 +12,7 @@
   **마이**(알림 한 줄 → 상세 · 가족과 함께 보기(초대 코드) · 설정 · 광고 없이 쓰기 · 약관 초안).
   하루 기록이 사흘째 비면 적을 카드와 저녁 알림 한 번([decisions/016](docs/decisions/016-daily-log-out-of-briefing.md)).
   브리핑은 기기 안 규칙과 문구 틀로 만든다([decisions/018](docs/decisions/018-daily-care-briefing.md)). 부모 돌봄 L1 넷 승인(2026-10-04).
-  온보딩은 처음 실행 만화 5컷([my/006](docs/task/my/006-intro-toon.md) — 건너뛰거나 끝까지 볼 때까지는 생일이 있는 사람에게도 뜬다) → 생일 → 브리핑 알림 시각. 광고(AdMob 배너·보상형), 캐릭터 버디 아이콘
+  온보딩은 생일 → 브리핑 알림 시각. 만화 5컷([my/006](docs/task/my/006-intro-toon.md))은 마이 → 도움말에서 본다(처음 실행에는 안 뜸, [my/008](docs/task/my/008-intro-in-my.md), 2026-10-12). 광고(AdMob 배너·보상형), 캐릭터 버디 아이콘
 - **Expo 계정** `@julian-malkong/malkong` 연결, 앱 식별자 `kr.malkong.app`. Julian 아이폰(Expo Go)으로 볼 수 있다
 - **지식(L1)**: 승인된 77건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호·부모 돌봄(미국 CDC)
 - **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 재시도 안전, 피드백,
@@ -49,7 +49,7 @@
    일반 사용자 화면(남은 횟수 · 광고 자리 · 한도 말풍선)을 오가며 본다. 안 보이면 비밀값에 빈 값이 들어간 것 — 005 「출시 전에 Julian 이 할 것」 마지막 칸
 2. **Julian 이 아이폰(Expo Go)으로 며칠 써 본다** — 답 · 안부 브리핑 · 일정 탭 · 알림함 · 지식 지도 · 디자인에서 걸리는 것을 모은다.
    맥에서 `REACT_NATIVE_PACKAGER_HOSTNAME=<맥 IP> npx expo start --go` 로 켠다(아래 「실행」 — `--go` 를 빼면 Expo Go 가 못 연다).
-   웹으로는 못 본 것: 처음 실행 만화를 손가락으로 넘기기(아직 닫지 않았으니 다음에 열면 뜬다) · 기록이 사흘 비었을 때 저녁 8시 알림과
+   웹으로는 못 본 것: 만화(마이 → 도움말)를 손가락으로 넘기기 · 기록이 사흘 비었을 때 저녁 8시 알림과
    그 알림을 누르면 뜨는 카드 · 일정 탭 여정 그래픽의 움직임과 가로 넘기기 · 시트를 열었을 때 키보드.
    안부 문구(`src/data/care-signals.ts`) 검토는 나중에(Julian). 하루 천장에 닿으면 메일로 알리는 설정은 Julian 이 받을 메일 주소를 정하면 건다
 3. **가족 공유는 초대 코드 · 기기 키로 됐다**([my/007](docs/task/my/007-family-sharing.md), [decisions/021](docs/decisions/021-family-by-invite-code.md), 2026-10-12).
@@ -63,8 +63,8 @@
    「모두에게 더 똑똑해지는」 고리 — 근거 없이 답한 질문을 주제 × 월령 띠로 세는 로그는 들어갔다([common/017](docs/task/common/017-ungrounded-count.md),
    배포 뒤 쌓인다, 보는 명령은 server/AGENTS.md). 많이 나온 주제부터 L1 초안 → Julian 승인. 자주 묻는 질문 캐시(backend ②′)는 그 뒤에. 지금 「쓸수록 똑똑해지는」 것은 우리 아기 기록(L2)뿐이다
 6. Claude 몫: 써 본 피드백 반영 → 답변 완성도 다듬기(위험 신호 — Julian 승인) → 스토어 등록 준비 — 스크린샷 여섯 장(iOS · Play)과
-   구글 플레이 그래픽 이미지는 됐다(`marketing/store/out/`, [common/021](docs/task/common/021-store-screenshots.md), 2026-10-12 — Julian 이 보고
-   고칠 것을 말한다). 소개 문구 초안도 [product-brief](docs/product/product-brief.md) 「스토어 문안 초안」에 있다(Julian 확인 전).
+   구글 플레이 그래픽 이미지는 됐다(`marketing/store/out/`, [common/021](docs/task/common/021-store-screenshots.md), 2026-10-12 — 만화 캐릭터 없이,
+   Julian 이 보고 고칠 것을 말한다). 소개 문구 초안도 [product-brief](docs/product/product-brief.md) 「스토어 문안 초안」에 있다(Julian 확인 전).
    남은 것은 개인정보 처리방침 웹 주소(어디에 올릴지는 Julian — 저장소의 GitHub Pages 가 가장 싸다)
 7. **Julian 결정 대기(2026-10-08)**: ① 이어 묻기(「그럼 몇 시에 재워요?」)는 **됐다** — 바로 앞 대화를 질문과 함께 보낸다
    ([ask/012](docs/task/ask/012-conversation-context.md), revision 00013, 2026-10-11) ·

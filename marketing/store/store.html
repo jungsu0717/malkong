@@ -4,13 +4,13 @@
     <meta charset="utf-8" />
     <title>육아버디 스토어 — 2~6장</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Gaegu:wght@700&display=block"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=block"
       rel="stylesheet"
     />
     <style>
       /*
-       * 스토어 2~6장 — 문구 한 줄 + 진짜 앱 화면 + 만화 아빠 한 컷(docs/product/store-toon.md 「스토어 스크린샷」, task common/021).
-       * 첫 장(answer-flow.html)과 같은 디자인 언어: 밝은 바탕 · 먹색 · 코랄 하나 · IBM Plex Sans KR. 아빠는 marketing/toon/draw.js 의 손그림.
+       * 스토어 2~6장 — 문구 한 줄 + 진짜 앱 화면(docs/product/store-toon.md 「스토어 스크린샷」, task common/021).
+       * 첫 장(answer-flow.html)과 같은 디자인 언어: 밝은 바탕 · 먹색 · 코랄 하나 · IBM Plex Sans KR. 만화 캐릭터는 넣지 않는다(Julian, 2026-10-12).
        * ?p=briefing|sources|redflag|schedule|baby, ?v=ios(1290×2796) | play(1290×2293 을 0.8372 배로 → 1080×1920)
        */
       :root { --ink: #16161a; --sub: #5e5e69; --mute: #8a8a95; --line: #dedee4; --accent: #c64536; --accentSoft: #fcebe8; }
@@ -30,43 +30,29 @@
       .screen .part { overflow: hidden; }
       .screen img { display: block; }
       .ring { position: absolute; border: 4px solid var(--accent); border-radius: 26px; }
-      svg.art { position: absolute; left: 0; top: 0; }
-      .say {
-        position: absolute; transform: translate(-50%, -50%); text-align: center;
-        font-family: 'Gaegu', sans-serif; font-weight: 700; line-height: 1.12; white-space: pre-line; letter-spacing: -0.5px; width: max-content;
-      }
     </style>
   </head>
   <body>
-    <svg width="0" height="0" style="position: absolute">
-      <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
-        <feTurbulence type="fractalNoise" baseFrequency="0.02" numOctaves="2" seed="7" result="n" />
-        <feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G" />
-      </filter>
-    </svg>
     <div id="c"></div>
-    <script src="../toon/draw.js"></script>
     <script>
       const q = new URLSearchParams(location.search);
       const ios = (q.get('v') ?? 'ios') !== 'play';
       const key = q.get('p') ?? 'briefing';
       const H = ios ? 2796 : 2293;
-      // 자리 — 아이폰(1290×2796)과 구글 플레이(1290×2293, 나중에 0.8372 배). dadY 는 바닥에서 얼굴 가운데까지
-      const L = ios
-        ? { h1Top: 150, h1: 104, screenTop: 520, screenW: 1060, dad: 1.4, dadX: 960, dadY: 560, say: 46, sayDx: -430, sayDy: -300 }
-        : { h1Top: 90, h1: 86, screenTop: 400, screenW: 900, dad: 1.15, dadX: 1010, dadY: 450, say: 40, sayDx: -360, sayDy: -250 };
+      // 자리 — 아이폰(1290×2796)과 구글 플레이(1290×2293, 나중에 0.8372 배)
+      const L = ios ? { h1Top: 150, h1: 104, screenTop: 520, screenW: 1060 } : { h1Top: 90, h1: 86, screenTop: 400, screenW: 900 };
 
       /*
        * 장면 — 앱 화면(shots/*.png, 1170×2532)을 그대로 보이거나 crop 으로 이어 붙인다:
        *   head 는 앱 머리 줄(0~head), body 는 그 아래 이어 붙일 시작 줄(브리핑 카드를 건너뛰어 질문부터).
-       * ring 은 앱 화면 좌표 [x, y, w, h] 의 코랄 테. bub 은 말풍선 [rx, ry]
+       * ring 은 앱 화면 좌표 [x, y, w, h] 의 코랄 테
        */
       const PAGES = {
-        briefing: { title: '어제 일까지 <em>기억하는</em><br>육아 비서', shot: 'briefing', expr: 'touched', say: '너… 기억하고\n있었구나…', ring: [52, 536, 1066, 664] },
-        sources: { title: '공공 기관 <em>출처</em>가 있으면<br>함께 보여 줘요', shot: 'vaccine4', crop: { head: 150, body: 800 }, expr: 'suspicious', say: '흠… 진짜\n출처네?', ring: [44, 1592, 690, 200] },
-        redflag: { title: '위험할 땐 답 대신<br><em>병원 안내</em>', shot: 'redflag', crop: { head: 150, body: 560 }, expr: 'focused', say: '…병원 가자.' },
-        schedule: { title: '접종 · 검진 날짜가<br><em>달력</em>에', shot: 'schedule', crop: { body: 230 }, expr: 'proud', say: '다 챙겼다!', ring: [52, 284, 1066, 512], dadY: -20 },
-        baby: { title: '대화할수록 우리 아기를<br><em>더 잘</em> 알아요', shot: 'baby', expr: 'sleep', say: '쿨쿨', plain: true, baby: true, dadY: 240, dadScale: 1.2, sayDx: 170, sayDy: -230 },
+        briefing: { title: '어제 일까지 <em>기억하는</em><br>육아 비서', shot: 'briefing', ring: [52, 536, 1066, 664] },
+        sources: { title: '공공 기관 <em>출처</em>가 있으면<br>함께 보여 줘요', shot: 'vaccine4', ring: [44, 1592, 690, 200] },
+        redflag: { title: '위험할 땐 답 대신<br><em>병원 안내</em>', shot: 'redflag' },
+        schedule: { title: '접종 · 검진 날짜가<br><em>달력</em>에', shot: 'schedule', ring: [52, 284, 1066, 512] },
+        baby: { title: '대화할수록 우리 아기를<br><em>더 잘</em> 알아요', shot: 'baby' },
       };
       const p = PAGES[key];
       const c = document.getElementById('c');
@@ -85,26 +71,13 @@
       const ring = p.ring
         ? `<div class="ring" style="left:${p.ring[0] * k}px;top:${ty(p.ring[1])}px;width:${p.ring[2] * k}px;height:${p.ring[3] * k}px"></div>`
         : '';
-      // 높이는 이어 붙인 화면만큼 — 전체 화면이면 바닥 아래로 잘리고, 잘라 붙인 화면이면 폰 아래 모서리가 보인다
-      const screenH = Math.min((head + 2532 - body) * k, H - L.screenTop + 60);
-      add(`<div class="screen" style="left:${sx}px;top:${L.screenTop}px;width:${L.screenW}px;height:${screenH}px">${parts}${ring}</div>`);
+      // 높이는 이어 붙인 화면만큼 — 전체 화면이면 바닥 아래로 잘리고, 잘라 붙인 화면이면 제목 아래 남은 자리 가운데에 둔다
+      const room = H - L.screenTop - 60;
+      const contentH = (head + 2532 - body) * k;
+      const screenH = Math.min(contentH, room + 120);
+      const screenTop = contentH < room ? L.screenTop + (room - contentH) / 2 : L.screenTop;
+      add(`<div class="screen" style="left:${sx}px;top:${screenTop}px;width:${L.screenW}px;height:${screenH}px">${parts}${ring}</div>`);
 
-      // 만화 아빠 — 오른쪽 아래에서 고개를 내민다. 몸은 아래로 잘린다
-      const s = p.dadScale ?? L.dad;
-      const x = L.dadX, y = H - L.dadY - (p.dadY ?? 0);
-      const { dad, baby, armAt, SH_L, bubble } = window.T;
-      const opts = p.baby
-        ? { expr: p.expr, front: baby(-20, 300, 0.85, { expr: 'sleep' }), arm: () => [armAt(SH_L, [-215, 500], [40, 505], { hand: 'open', thumb: -1, handDeg: -58, hs: 0.9 })] }
-        : { expr: p.expr };
-      const sayX = x + (p.sayDx ?? L.sayDx), sayY = y + (p.sayDy ?? L.sayDy);
-      const lines = p.say.split('\n').length;
-      const [rx, ry] = p.bub ?? (ios ? (lines > 1 ? [230, 110] : [210, 76]) : lines > 1 ? [200, 96] : [180, 66]);
-      // plain 이면 말풍선 없이 효과음처럼 글만(「쿨쿨」)
-      add(`<svg class="art" width="1290" height="${H}" viewBox="0 0 1290 ${H}"><g filter="url(#rough)">
-        ${dad(x, y, s, opts)}
-        ${p.plain ? '' : bubble(sayX, sayY, rx, ry, x - 120 * s, y + 30 * s, { w: 4 })}
-      </g></svg>`);
-      add(`<div class="say" style="left:${sayX}px;top:${sayY}px;font-size:${p.plain ? L.say + 10 : L.say}px;${p.plain ? 'transform:translate(-50%,-50%) rotate(-8deg);color:var(--sub)' : ''}">${p.say}</div>`);
       document.fonts.ready.then(() => document.body.setAttribute('data-ready', '1'));
     </script>
   </body>

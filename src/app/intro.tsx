@@ -8,13 +8,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
-import { useBaby } from '@/data/baby-context';
-import { usePreferences } from '@/data/preferences-context';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
- * 처음 실행 만화 — 온보딩 전에 「아빠가 육아 앱을 만든 이유」 다섯 컷 (SPEC-MY-07, task my/006).
- * 그림은 marketing/toon 에서 그려 `./render.sh app` 으로 옮긴 것이다. label 은 화면 읽기 프로그램이 읽는 줄거리.
+ * 만화 「아빠가 육아 앱을 만든 이유」 다섯 컷 — 마이 → 도움말에서 연다 (SPEC-MY-07, task my/006 · my/008).
+ * 처음 실행에는 띄우지 않는다(Julian, 2026-10-12). 그림은 marketing/toon 에서 그려 `./render.sh app` 으로 옮긴 것이다.
+ * label 은 화면 읽기 프로그램이 읽는 줄거리.
  */
 const CUTS = [
   {
@@ -45,12 +44,9 @@ const CHROME_HEIGHT = 220;
 export default function IntroScreen() {
   const c = useTheme();
   const router = useRouter();
-  const { markIntroSeen } = usePreferences();
-  const { baby } = useBaby();
   const { width, height } = useWindowDimensions();
   const scroller = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
-  const [leaving, setLeaving] = useState(false);
   const [area, setArea] = useState(0);
 
   const page = Math.min(width, MaxContentWidth);
@@ -71,15 +67,10 @@ export default function IntroScreen() {
     if (i !== index && i >= 0 && i < CUTS.length) setIndex(i);
   };
 
-  /** 끝까지 봤거나 건너뛰면 다시 띄우지 않는다 — 생일이 없으면 온보딩, 이미 쓰던 사람은 홈으로 */
-  const finish = async () => {
-    setLeaving(true);
-    try {
-      await markIntroSeen();
-      router.replace(baby ? '/' : '/onboarding');
-    } finally {
-      setLeaving(false);
-    }
+  /** 닫기 — 온 곳(마이)으로 돌아간다. 주소로 바로 열었으면 홈으로 */
+  const finish = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/');
   };
 
   return (
@@ -89,14 +80,9 @@ export default function IntroScreen() {
           <ThemedText type="label" style={{ color: c.textSecondary }}>
             {index + 1} / {CUTS.length}
           </ThemedText>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="만화 건너뛰기"
-            hitSlop={12}
-            disabled={leaving}
-            onPress={() => void finish()}>
+          <Pressable accessibilityRole="button" accessibilityLabel="만화 닫기" hitSlop={12} onPress={finish}>
             <ThemedText type="label" style={{ color: c.textSecondary }}>
-              건너뛰기
+              닫기
             </ThemedText>
           </Pressable>
         </View>
@@ -130,15 +116,8 @@ export default function IntroScreen() {
         </View>
 
         <View style={[styles.footer, { width: page }]}>
-          <Button label="이전" variant="secondary" size="lg" disabled={index === 0 || leaving} onPress={() => go(index - 1)} style={styles.flex} />
-          <Button
-            label={last ? '시작하기' : '다음'}
-            size="lg"
-            busy={leaving && last}
-            disabled={leaving}
-            onPress={() => (last ? void finish() : go(index + 1))}
-            style={styles.flex}
-          />
+          <Button label="이전" variant="secondary" size="lg" disabled={index === 0} onPress={() => go(index - 1)} style={styles.flex} />
+          <Button label={last ? '닫기' : '다음'} size="lg" onPress={() => (last ? finish() : go(index + 1))} style={styles.flex} />
         </View>
       </SafeAreaView>
     </ThemedView>
