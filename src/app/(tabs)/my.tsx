@@ -20,15 +20,9 @@ import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
 import { useTheme } from '@/hooks/use-theme';
 
-// 본문은 src/data/legal.ts (SPEC-MY-03). 만화는 src/app/intro.tsx (SPEC-MY-07)
-const MENU_SECTIONS: { title: string; items: { label: string; detail?: string; doc?: string; href?: '/intro' }[] }[] = [
-  {
-    title: '도움말',
-    items: [
-      { label: '아빠가 육아 앱을 만든 이유', detail: '만화 다섯 컷', href: '/intro' },
-      { label: '자주 묻는 질문', doc: 'faq' },
-    ],
-  },
+// 본문은 src/data/legal.ts (SPEC-MY-03)
+const MENU_SECTIONS: { title: string; items: { label: string; doc: string }[] }[] = [
+  { title: '도움말', items: [{ label: '자주 묻는 질문', doc: 'faq' }] },
   {
     title: '약관',
     items: [
@@ -133,13 +127,10 @@ export default function MyScreen() {
               <Card style={styles.rows}>
                 {section.items.map((item, i) => (
                   <ListRow
-                    key={item.label}
+                    key={item.doc}
                     divider={i > 0}
                     title={item.label}
-                    detail={item.detail}
-                    onPress={() =>
-                      item.href ? router.push(item.href) : router.push({ pathname: '/legal/[doc]', params: { doc: item.doc ?? 'faq' } })
-                    }
+                    onPress={() => router.push({ pathname: '/legal/[doc]', params: { doc: item.doc } })}
                   />
                 ))}
               </Card>
@@ -161,6 +152,12 @@ export default function MyScreen() {
             delayLongPress={800}>
             <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
               육아버디 v1.0.0
+            </ThemedText>
+          </Pressable>
+          {/* 크레딧 한 줄 — 누르면 만화 「아빠가 육아 앱을 만든 이유」 (SPEC-MY-07, task my/008) */}
+          <Pressable accessibilityRole="button" accessibilityLabel="만든 이야기 보기" hitSlop={8} onPress={() => router.push('/intro')}>
+            <ThemedText type="caption" style={[styles.center, styles.credit, { color: c.textSecondary }]}>
+              아빠가 만들었어요 · 이야기 보기
             </ThemedText>
           </Pressable>
           {deviceKey && operator && (
@@ -198,6 +195,7 @@ const styles = StyleSheet.create({
   profile: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   avatar: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   section: { gap: 10 },
+  credit: { marginTop: -Spacing.three, textDecorationLine: 'underline' },
   rows: { paddingVertical: 2 },
   center: { textAlign: 'center' },
 });
