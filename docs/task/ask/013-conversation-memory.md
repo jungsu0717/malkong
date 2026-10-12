@@ -1,6 +1,6 @@
 # 013 대화 기억 — 대화 요약 · 주제에 닿는 기록만 · 반박 알아듣기
 
-> 상태: 진행 (2026-10-12) — revision 00016 배포(Julian), Claude 가벼운 실측 끝. 요약 규칙 보강은 다음 배포 대기, Julian 폰 실측 남음
+> 상태: 진행 (2026-10-12) — revision 00016 · 00017 배포(Julian), Claude 가벼운 실측과 요약 규칙 보강 끝. Julian 폰 실측 남음
 > 근거: [decisions/022](../../decisions/022-conversation-memory.md) · [ask](../../menu-spec/ask.md) SPEC-ASK-01 ·
 > [api-contract](../../architecture/api-contract.md) POST /v1/ask(`conversationSummary`)
 
@@ -62,7 +62,7 @@ docs: decisions/022 · ask.md · baby.md · api-contract · README
 
 요약이 앞 내용을 잃던 것은 프롬프트를 「이전 요약을 먼저 그대로 옮기고 이번 질문과 답을 한 문장 덧붙인다, 바로잡은 것은 지우지 않는다」로
 고쳤다. 무료 키 로컬 서버로 같은 「몇 도로?」 한 마디만 다시 재니(호출 1회) 새 요약이 앞 내용 · 「분유 이야기가 상관없었다」 · 이번 답을
-모두 담았다. 이 보강은 다음 배포에 나간다.
+모두 담았다. 이 보강은 revision 00017 로 나갔다.
 
 기억과 상관없는 답 내용 두 가지(습도 단위, 창문 · 감기)는 일반 답의 품질 문제라 이 task 에서 고치지 않고 Julian 판단에 맡긴다.
 
@@ -73,5 +73,5 @@ docs: decisions/022 · ask.md · baby.md · api-contract · README
 - [x] 문서: 결정 022 · SPEC-ASK-01 · api-contract · 개인정보 처리방침(보내는 것)
 - [x] 서버 배포 — revision 00016(Julian, 2026-10-12)
 - [x] Claude 가벼운 실측 — 위 표, 요약 규칙 보강
-- [ ] 요약 규칙 보강 배포(Julian 승인)
+- [x] 요약 규칙 보강 배포 — revision 00017(Julian, 2026-10-12)
 - [ ] Julian 이 폰으로 실측 — 에어컨 · 창문 질문, 「무슨 상관이야」, 긴 대화에서 앞 이야기를 기억하는지

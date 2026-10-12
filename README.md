@@ -29,7 +29,7 @@
   `sync_l1` → 서버 배포로 스토어 없이 나간다. revision 00015(2026-10-12)는 **가족 공유** `/v1/family` — 초대 코드 · 기기 키로 아기 · 기록을
   폰끼리 맞춘다([my/007](docs/task/my/007-family-sharing.md)). revision 00016(2026-10-12)은 **대화 기억** — 대화 요약 · 질문 주제에 닿는 기록만 ·
   「무슨 상관이야」 같은 반박 알아듣기([ask/013](docs/task/ask/013-conversation-memory.md), [decisions/022](docs/decisions/022-conversation-memory.md)).
-  **배포 대기**: 요약이 앞 내용을 잃지 않게 한 프롬프트 보강(같은 task). 자동 모드가 운영 배포를 막을 때는 Julian 이 server/AGENTS.md 「배포」 명령을 직접 친다(00012 · 00014 · 00015 가 그랬다)
+  revision 00017(같은 날)은 요약이 앞 내용을 잃지 않게 한 프롬프트 보강. Julian 이 폰으로 써 보는 것이 남음. 자동 모드가 운영 배포를 막을 때는 Julian 이 server/AGENTS.md 「배포」 명령을 직접 친다(00012 · 00014 · 00015 가 그랬다)
 - 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
 - **홍보 자료(보관 — 배포 때 · 앱 첫 실행에 쓴다)**: 만화 「아빠가 육아 앱을 만든 이유」 5컷 · 릴스 30초(`marketing/toon/`, 앱 첫 실행에도 들어가 있다),
   스토어 첫 장 「검색 대신, 근거로 답해요」 — 지식층 · 답 파이프라인 흐름도 + 진짜 앱 화면(`marketing/store/`, 앱스토어 · 구글 플레이 두 크기).
