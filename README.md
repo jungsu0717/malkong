@@ -9,7 +9,7 @@
   **버디**(첫 화면 · 데일리 브리핑(아기 안부 · 부모 안부 · 오늘 챙길 것) · 알림함 · 진짜 답 · 질문마다 다른 처리 현황 · 되묻기와 기록 · 버디의 짐작(맞아요 · 아니에요) · 위험 신호 · 피드백 · 하루 한도 · 최근 50줄부터) ·
   **우리 아기**(3D 지식 지도 — 누르면 「버디가 아는 것」 상세 · 주제별 가로 막대 · 함께한 시간 한 줄, [baby/004](docs/task/baby/004-overview-and-depth.md)) ·
   **일정**(달력 · 고른 날의 브리핑과 그날 나눈 대화 줄 · 챙길 것 여정 그래픽 · 주간 · 월간 브리핑, [decisions/017](docs/decisions/017-schedule-tab-and-inbox.md)) ·
-  **마이**(알림 한 줄 → 상세 · 가족과 함께 보기(초대 코드) · 설정 · 광고 없이 쓰기 · 약관 초안).
+  **마이**(알림 한 줄 → 상세 · 가족과 함께 보기(초대 코드) · 약관 초안). 광고 없이 쓰기(결제)는 첫 출시에서 뺐다(광고만, 2026-10-12).
   하루 기록이 사흘째 비면 적을 카드와 저녁 알림 한 번([decisions/016](docs/decisions/016-daily-log-out-of-briefing.md)).
   브리핑은 기기 안 규칙과 문구 틀로 만든다([decisions/018](docs/decisions/018-daily-care-briefing.md)). 부모 돌봄 L1 넷 승인(2026-10-04).
   온보딩은 생일 → 브리핑 알림 시각. 만화 5컷([my/006](docs/task/my/006-intro-toon.md))은 마이 제목 줄 오른쪽 「육아버디 스토리」에서 본다(처음 실행에는 안 뜸, [my/008](docs/task/my/008-intro-in-my.md), 2026-10-12). 광고(AdMob 배너·보상형), 캐릭터 버디 아이콘
@@ -30,7 +30,7 @@
   폰끼리 맞춘다([my/007](docs/task/my/007-family-sharing.md)). revision 00016(2026-10-12)은 **대화 기억** — 대화 요약 · 질문 주제에 닿는 기록만 ·
   「무슨 상관이야」 같은 반박 알아듣기([ask/013](docs/task/ask/013-conversation-memory.md), [decisions/022](docs/decisions/022-conversation-memory.md)).
   revision 00017(같은 날)은 요약이 앞 내용을 잃지 않게 한 프롬프트 보강. Julian 이 폰으로 써 보는 것이 남음. 자동 모드가 운영 배포를 막을 때는 Julian 이 server/AGENTS.md 「배포」 명령을 직접 친다(00012 · 00014 · 00015 가 그랬다)
-- 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고·결제는 개발 빌드부터
+- 웹 화면 몰아 시험 통과(시안 B 포함, [common/008](docs/task/common/008-first-release-check.md)). 아이콘·광고는 개발 빌드부터
 - **홍보 자료(보관 — 배포 때 · 앱 첫 실행에 쓴다)**: 만화 「아빠가 육아 앱을 만든 이유」 5컷 · 릴스 30초(`marketing/toon/`, 앱 첫 실행에도 들어가 있다),
   스토어 첫 장 「검색 대신, 근거로 답해요」 — 지식층 · 답 파이프라인 흐름도 + 진짜 앱 화면(`marketing/store/`, 앱스토어 · 구글 플레이 두 크기).
   정본 · 규칙은 [store-toon](docs/product/store-toon.md)
@@ -77,8 +77,8 @@
    ④ 홈 화면 위젯(일정 · 브리핑) — **출시 뒤에 한다**(Julian 결정, 2026-10-08). 둘 다 개발 빌드가 있어야 한다(Expo Go 불가). iOS 는 Expo 공식
    `expo-widgets`(SDK 57 문서, 2026-03 알파), Android 는 커뮤니티 `react-native-android-widget`(갱신 최소 30분). 위젯은 앱이 미리 써 둔 요약을 읽는 구조.
    비용 · 수익 방향은 바뀔 수 있어 결정 기록으로 남기지 않는다(Julian, 2026-10-08)
-8. 출시 전 Julian 몫(계정·결제·법률): Apple 개발자($99) → 개발 빌드로 아이콘·광고·결제 확인 → AdMob · 스토어 계정 ·
-   RevenueCat · 약관 정보 → 「육아버디」 상표 출원(변리사) · 주소(선택). 목록은
+8. **출시 전 Julian 몫 — 순서대로 정리했다**([common/008](docs/task/common/008-first-release-check.md) 「Julian 이 할 일」, 2026-10-12, 광고만).
+   구글 개발자 계정과 테스터 12명 · 14일이 가장 오래 걸려서 맨 앞이다. 목록은
    [common/008](docs/task/common/008-first-release-check.md) · [common/011](docs/task/common/011-rename-yugabuddy.md)
 
 ## 다른 PC 에서 시작하기

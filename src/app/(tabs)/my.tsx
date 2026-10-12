@@ -4,7 +4,6 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BabyFaceIcon } from '@/components/baby-icons';
-import { NoAdsCard } from '@/components/no-ads-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Card, ListRow, SectionHeader, Toggle } from '@/components/ui';
@@ -33,7 +32,7 @@ const MENU_SECTIONS: { title: string; items: { label: string; doc: string }[] }[
   },
 ];
 
-/** 마이 — 프로필 · 알림 · 설정 · 광고 없이 쓰기 · 약관 (task my/005 · baby/003) */
+/** 마이 — 프로필 · 기록 · 알림 · 가족 · 도움말 · 약관 (task my/005 · baby/003). 광고 없이 쓰기(SPEC-MY-06)는 나중 */
 export default function MyScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
@@ -108,9 +107,6 @@ export default function MyScreen() {
               />
             </Card>
           </View>
-
-          {/* 광고 없이 쓰기 — 구매·복원 (SPEC-MY-06) */}
-          <NoAdsCard />
 
           {/* 가족 공유 — 초대 코드로, 로그인 없이 (SPEC-MY-05, task my/007) */}
           <View style={styles.section}>
