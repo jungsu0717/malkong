@@ -8,6 +8,7 @@ Julian 이 혼자 만드는 앱을 한 저장소에 모아 둔 곳입니다. 일
 | 폴더 | 서비스 | 지금 |
 |---|---|---|
 | [apps/malkong](apps/malkong/README.md) | 육아버디 — 아기 기록과 육아 질문에 출처와 함께 답하는 앱 | 첫 iOS 출시 준비 |
+| [apps/planned](apps/planned/README.md) | Planned(플랜드) — 상황마다 할 일을 적고, 끝낸 할 일이 쌓여 다음에 먼저 보여 주는 앱 | 설계 시작 |
 
 각 앱의 진행 상황은 그 앱 `README.md` 의 「지금 상태」「다음 시작점」에 있습니다.
 
