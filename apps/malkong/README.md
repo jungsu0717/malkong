@@ -5,6 +5,7 @@
 
 ## 지금 상태 (2026-10-12)
 
+- **저장소**: 2026-10-14 에 저장소가 여러 앱을 담는 `julian-studio` 가 되면서 육아버디는 `apps/malkong/` 으로 옮겼다. 모든 앱에 통하는 규칙은 루트 [AGENTS.md](../../AGENTS.md)
 - **앱**: 시안 B 「단정한 비서」([decisions/012](docs/decisions/012-chat-first-three-tabs.md)), 탭 다섯 —
   **기록**(첫 화면, 2026-10-12 · 모유 · 분유 · 기저귀 · 잠 · 체온 · 몸무게 · 키를 한두 번 눌러 · 재는 중 타이머 · 날짜별 기록 · 일주일 그래프 ·
   수유 알림 · 체온 위험 안내, [log/001](docs/task/log/001-quick-log-tab.md), 헌장 5조 변경 [decisions/023](docs/decisions/023-quick-log-first-tab.md)) ·
@@ -87,31 +88,12 @@
 
 ## 다른 PC 에서 시작하기
 
-Claude Code 의 메모리는 PC 마다 따로라서, 이어받는 기준은 이 README 와 `docs/task/` 다. Julian 과 일하는 방식도
-메모리가 아니라 [AGENTS.md](AGENTS.md) 「Julian 과 일하는 방식」에 둔다. 명령어는 AGENTS.md(앱)와
-[server/AGENTS.md](server/AGENTS.md)(서버)에 있다. 아래는 git 에 없어서 PC 마다 새로 준비해야 하는 것만 적는다.
-새 PC 의 Claude 에게는 "README 다른 PC 에서 시작하기대로 준비해 줘" 라고 하면 된다.
+코드 받기, git 계정, Node, Expo 로그인, WSL 터널처럼 모든 앱에 공통인 준비는 저장소 루트
+[README.md](../../README.md) 「다른 PC 에서 시작하기」에 있다. 여기는 육아버디만 더 필요한 것이다.
+Julian 과 일하는 방식은 루트 [AGENTS.md](../../AGENTS.md) 와 이 폴더의 [AGENTS.md](AGENTS.md), 서버 명령은
+[server/AGENTS.md](server/AGENTS.md)에 있다.
 
-- **코드 받기**: GitHub CLI(`gh`)를 깔고 `gh auth login`(개인 계정 jungsu0717, Julian 이 직접) →
-  `gh repo clone jungsu0717/malkong`. 이미 받아 둔 PC 면 repo 안에서 `git pull`
-- **git 계정**: 이 repo 는 개인 계정(jungsu0717)으로만 커밋한다. 회사 계정과 섞이지 않게 **repo 로컬 설정**만 쓰고
-  전역 설정은 건드리지 않는다. 받은 repo 안에서:
-  ```bash
-  git config --local user.name jungsu0717
-  git config --local user.email 6903839+jungsu0717@users.noreply.github.com
-  git config --local --add credential.https://github.com.helper ''
-  git config --local --add credential.https://github.com.helper '!gh auth git-credential'
-  ```
-  (빈 helper 줄이 키체인에 남은 다른 계정 자격을 먼저 끊는다)
-- **앱**: Node 22.13 이상을 설치하고 `npm install` (22.8 은 경고가 뜨지만 돈다). 앱은 기본으로 배포된 Cloud Run 서버에
-  묻기 때문에 앱만 고칠 때는 키도 서버도 필요 없다
-- **Expo 로그인(아이폰 Expo Go 로 볼 때)**: 2026년부터 아이폰 Expo Go 는 PC 의 Expo CLI 와 **같은 계정으로 로그인**되어 있어야
-  개발 서버의 앱을 연다. 계정은 구글로 가입한 `julian-malkong`(비밀번호 없음) 이라 `npx expo login` 대신
-  `npx eas-cli@latest login --device` 로 — 터미널에 뜨는 주소를 브라우저에서 열어 구글로 승인한다(Expo CLI · EAS CLI 가 로그인을 공유).
-  폰의 Expo Go 도 같은 계정으로 로그인
-- **WSL(윈도우) PC 에서 폰으로 볼 때**: WSL 은 윈도우 안의 가상 네트워크라 맥처럼 와이파이 주소로는 폰이 못 들어온다. 터널로 켠다 —
-  `npm i -g @expo/ngrok` 한 번, 그 뒤 `npx expo start --go --tunnel`(QR 을 폰 카메라로). 인터넷을 한 번 거쳐 느리지만 어느 와이파이든 된다.
-  이 창의 `!` 명령은 비밀번호 · 승인 입력을 못 받으므로 로그인과 개발 서버는 따로 연 터미널에서
+- **앱**: 이 폴더(`apps/malkong/`)에서 `npm install`. 앱은 기본으로 배포된 Cloud Run 서버에 묻기 때문에 앱만 고칠 때는 키도 서버도 필요 없다
 - **서버**: uv 를 설치하고 `server/` 에서 `uv sync` (Python 3.13 은 uv 가 받는다)
 - **Gemini 키(서버를 로컬에서 돌릴 때만)**: git 에 없다. https://aistudio.google.com/apikey 의 「Default Gemini Project」
   무료 키를 `server/.env` 에 `MALKONG_GEMINI_API_KEY=...` 한 줄로 둔다(Julian 이 직접). 무료 키라
@@ -131,8 +113,8 @@ Claude Code 의 메모리는 PC 마다 따로라서, 이어받는 기준은 이 
 
 ## 문서
 
-설계가 정본이고 코드보다 먼저 읽는다. 진입점은 [docs/README.md](docs/README.md) — 문서 지도,
-작성 규칙, SPEC ID 규칙, 작업 사이클이 거기 있다.
+설계가 정본이고 코드보다 먼저 읽는다. 진입점은 [docs/README.md](docs/README.md)(문서 지도와 메뉴 코드)이고,
+작성 규칙과 작업 순서는 저장소 공통 [conventions](../../docs/governance/conventions.md)에 있다.
 
 | 폴더 | 담는 것 |
 |---|---|
@@ -145,6 +127,8 @@ Claude Code 의 메모리는 PC 마다 따로라서, 이어받는 기준은 이 
 | `docs/task/` | SPEC 을 코드로 만드는 작업 단위 |
 
 ## 실행
+
+모든 명령은 이 폴더(`apps/malkong/`)에서 친다. 저장소를 받은 곳에서 `cd apps/malkong` 부터.
 
 ```bash
 npm install

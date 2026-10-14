@@ -1,0 +1,10 @@
+# 앱마다 쓰는 무시 목록은 apps/<앱>/.gitignore 에 있다. 여기는 저장소 전체에 해당하는 것만.
+
+# macOS
+.DS_Store
+
+# Playwright MCP 검증 기록 (스냅샷, 콘솔 로그) — 세션을 연 폴더에 생긴다
+.playwright-mcp/
+
+# 루트에서 실수로 npm install 했을 때
+node_modules/
