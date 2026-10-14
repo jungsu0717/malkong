@@ -21,10 +21,10 @@ Julian 이 아이폰(Expo Go)에서 오늘 탭에 할 일을 한 줄로 적고, 
 ## 손댈 파일
 
 ```
-apps/planned/package.json · app.json · tsconfig.json · eslint.config.js
-apps/planned/src/app/_layout.tsx · (tabs)/_layout.tsx · (tabs)/index.tsx · (tabs)/topics.tsx · (tabs)/my.tsx · topic/[id].tsx
-apps/planned/src/data/db.ts · items.ts · topics.ts · due-parse.ts
-apps/planned/src/components/ … (육아버디에서 복사)
+apps/planmory/package.json · app.json · tsconfig.json · eslint.config.js
+apps/planmory/src/app/_layout.tsx · (tabs)/_layout.tsx · (tabs)/index.tsx · (tabs)/topics.tsx · (tabs)/my.tsx · topic/[id].tsx
+apps/planmory/src/data/db.ts · items.ts · topics.ts · due-parse.ts
+apps/planmory/src/components/ … (육아버디에서 복사)
 ```
 
 ## 완료 조건

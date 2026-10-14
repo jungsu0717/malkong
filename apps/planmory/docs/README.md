@@ -1,6 +1,6 @@
-# Planned 문서 지도
+# Planmory 문서 지도
 
-이 폴더가 Planned 설계의 정본이다. 문서 흐름(constitution → architecture → menu-spec → task → 코드 → 확인), SPEC 번호,
+이 폴더가 Planmory 설계의 정본이다. 문서 흐름(constitution → architecture → menu-spec → task → 코드 → 확인), SPEC 번호,
 작성 규칙, 작업 순서는 저장소 공통 [conventions](../../../docs/governance/conventions.md) 를 따른다.
 
 | 문서 | 담는 것 |

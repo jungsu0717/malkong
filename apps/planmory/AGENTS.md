@@ -1,7 +1,7 @@
-# Planned(플랜드, 코드명 planned) — 이 앱만의 규칙
+# Planmory(플랜모리, 코드명 planmory) — 이 앱만의 규칙
 
 먼저 저장소 루트 [AGENTS.md](../../AGENTS.md) 를 읽는다(하지 말 것 1순위, Julian 과 일하는 방식, Expo 규칙). 이 파일은 거기에
-Planned 만의 것을 더한다. 명령은 이 폴더(`apps/planned/`)에서 실행한다.
+Planmory 만의 것을 더한다. 명령은 이 폴더(`apps/planmory/`)에서 실행한다.
 
 ## 하네스 — 설계와 작업의 정본
 
@@ -14,7 +14,7 @@ Planned 만의 것을 더한다. 명령은 이 폴더(`apps/planned/`)에서 실
 - 방향과 스토어 문구의 원천: [docs/product/product-brief.md](docs/product/product-brief.md)
 - 화면 구조, 데이터, 서버: [docs/architecture/main-design.md](docs/architecture/main-design.md)
 
-## Planned 만의 규칙
+## Planmory 만의 규칙
 
 - **데이터는 서버가 원본이다**(육아버디와 반대 — [decisions/002](docs/decisions/002-server-as-source.md)). 그래도 탈퇴하면 서버의 기록을
   전부 지우고, 붙여 넣은 원문도 같은 규칙을 따른다

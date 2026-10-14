@@ -8,6 +8,6 @@
 
 | 번호 | 결정 |
 |---|---|
-| [001](001-name-planned.md) | 이름은 Planned(플랜드) |
+| [001](001-name-planmory.md) | 이름은 Planmory(플랜모리) — Planned 는 같은 분야 앱이 있어 접음 |
 | [002](002-server-as-source.md) | 서버가 원본, 폰은 복사본, Apple 로그인 먼저 |
 | [003](003-ai-two-uses.md) | AI 모델은 붙여 넣기와 시작 목록 두 곳에만, 광고로 비용을 덮는다 |
