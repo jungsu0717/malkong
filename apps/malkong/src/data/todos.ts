@@ -333,20 +333,6 @@ export function spawnedBy(done: Todo, todos: Todo[]): Todo | undefined {
   );
 }
 
-/**
- * 아침 알림에 넣을 날짜별 할 일 제목(SPEC-TOPIC-09) — 오늘부터 `count` 일.
- * 그날 할 일 = 안 끝낸 것 중 기한이 그날까지인 것(지난 것 포함) + `checkups`(지금 기간인 접종 · 검진 이름, 날마다 같이 넣는다).
- */
-export function morningDays(todos: Todo[], checkups: string[], now = new Date(), count = 7): { day: Date; titles: string[] }[] {
-  const open = sortOpen(todos.filter((t) => !t.doneAt && t.dueAt));
-  return Array.from({ length: count }, (_, i) => {
-    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
-    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i + 1).toISOString();
-    const titles = open.filter((t) => (t.dueAt as string) < end).map((t) => t.title);
-    return { day, titles: [...new Set([...titles, ...checkups])] };
-  });
-}
-
 export type RepeatSuggestion = {
   /** 「다시 보지 않기」에 남기는 열쇠 — 주제 id 와 띄어쓰기를 뺀 제목 */
   key: string;

@@ -34,4 +34,19 @@ export async function scheduleSleepReminder(_at: Date | null, _afterLabel: strin
 
 export async function scheduleTempReminders(_hours: number[] | null): Promise<void> {}
 
-export async function scheduleTodoReminders(_items: { id: string; at: Date; title: string }[]): Promise<void> {}
+export type TodoReminder = { id: string; at: Date; title: string; body?: string | null; silent?: boolean };
+export type AlertAction = 'done' | 'snooze';
+
+export async function scheduleTodoReminders(_items: TodoReminder[]): Promise<void> {}
+
+export async function snoozeTodo(_todoId: string, _title: string, _body: string | null): Promise<void> {}
+
+export async function cancelSnooze(_todoId: string): Promise<void> {}
+
+export async function scheduleEveningAlerts(_on: boolean, _days: MorningDay[], _hour: number): Promise<void> {}
+
+export async function scheduleDeliveryChecks(_items: { id: string; title: string; at: Date }[]): Promise<void> {}
+
+export function onAlertAction(_listener: (action: AlertAction, todoId: string, title: string, body: string | null) => void): () => void {
+  return () => undefined;
+}

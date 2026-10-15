@@ -14,7 +14,19 @@ import { autoRulesToAdd, birthOf } from './auto-todos';
 import { useBaby } from './baby-context';
 import { checkupGroups } from './checkup-todos';
 import { readSetting, writeSetting } from './db';
-import { askNotifications, scheduleMorningAlerts, scheduleTodoReminders } from './notifications';
+import { EVENING_HOUR, deliveryChecks, eveningPlan, morningPlan, reminderBody } from './alert-plan';
+import { runningOf } from './events';
+import { useEvents } from './events-context';
+import {
+  askNotifications,
+  cancelSnooze,
+  onAlertAction,
+  scheduleDeliveryChecks,
+  scheduleEveningAlerts,
+  scheduleMorningAlerts,
+  scheduleTodoReminders,
+  snoozeTodo,
+} from './notifications';
 import { usePreferences } from './preferences-context';
 import { useRecords } from './records-context';
 import type { Repeat } from './repeat';
@@ -26,7 +38,6 @@ import {
   loadTopics,
   makeTodo,
   makeTopic,
-  morningDays,
   nextRepeatTodo,
   removeTodo,
   repeatStart,
@@ -167,24 +178,39 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // 할 일 알림 — 시각이 있고, 안 끝냈고, 아직 오지 않은 것만(SPEC-TOPIC-09)
+  // 할 일 알림 — 시각이 있고, 안 끝냈고, 아직 오지 않은 것만(SPEC-TOPIC-09). 반복 할 일은 「7일 만이에요」,
+  // 기록 탭에 잠이 재는 중이면 앞으로 3시간 안의 것은 소리 없이(task topic/006)
+  const { events } = useEvents();
+  const sleeping = !!runningOf(events, 'sleep');
   useEffect(() => {
     if (loading) return;
     const now = Date.now();
+    const quietUntil = sleeping ? now + 3 * 60 * 60 * 1000 : 0;
     const items = todos
       .filter((t) => t.hasTime && t.dueAt && !t.doneAt && new Date(t.dueAt).getTime() > now)
-      .map((t) => ({ id: t.id, at: new Date(t.dueAt as string), title: t.title }));
+      .map((t) => {
+        const at = new Date(t.dueAt as string);
+        return { id: t.id, at, title: t.title, body: reminderBody(t, todos), silent: at.getTime() < quietUntil };
+      });
     enqueue(() => scheduleTodoReminders(items));
-  }, [todos, loading, enqueue]);
+  }, [todos, loading, sleeping, enqueue]);
 
-  // 아침 알림 — 일주일 치를 날짜마다 그날 할 일 제목으로(SPEC-TOPIC-09). 지금 기간인 접종 · 검진 이름도 넣는다
+  // 아침 알림 · 전날 저녁 · 받으셨나요(SPEC-TOPIC-09 · SPEC-SHOP-04) — 일주일 치를 날짜마다.
+  // 아침에는 지금 기간인 접종 · 검진 이름과 도착 예정도 넣는다. 전날 저녁은 아침 알림을 켰을 때만
   const month = age?.month ?? null;
   useEffect(() => {
     if (loading || prefsLoading) return;
     const checkups = month === null ? [] : checkupGroups(records, month).filter((g) => g.status === 'open').map((g) => g.label);
-    const days = morningDays(todos, checkups);
-    enqueue(() => scheduleMorningAlerts(briefingTime, days));
-  }, [todos, loading, prefsLoading, briefingTime, records, month, enqueue]);
+    const shopIds = new Set(topics.filter((t) => t.kind === 'shopping').map((t) => t.id));
+    const morning = morningPlan(todos, checkups);
+    const evening = eveningPlan(todos, shopIds);
+    const checks = deliveryChecks(todos);
+    enqueue(async () => {
+      await scheduleMorningAlerts(briefingTime, morning);
+      await scheduleEveningAlerts(briefingTime !== null, evening, EVENING_HOUR);
+      await scheduleDeliveryChecks(checks);
+    });
+  }, [todos, topics, loading, prefsLoading, briefingTime, records, month, enqueue]);
 
   // 앱이 채워 주는 할 일 — 기한 전 보일 날이 되면 그 주제의 할 일로 만든다(SPEC-TOPIC-11). 숨긴 주제에는 만들지 않는다
   const birthDate = baby?.birthDate ?? null;
@@ -283,6 +309,24 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     },
     [update, remove],
   );
+
+  // 알림 단추(SPEC-TOPIC-09) — 완료 · 받았어요는 완료로, 1시간 뒤는 같은 알림을 한 번 더
+  const toggleRef = useRef(toggleDone);
+  useEffect(() => {
+    toggleRef.current = toggleDone;
+  }, [toggleDone]);
+  useEffect(() => {
+    if (loading) return;
+    return onAlertAction((action, todoId, title, body) => {
+      if (action === 'snooze') {
+        void snoozeTodo(todoId, title, body).catch(() => undefined);
+        return;
+      }
+      void cancelSnooze(todoId).catch(() => undefined);
+      const todo = currentTodos.current.find((t) => t.id === todoId);
+      if (todo && !todo.doneAt) void toggleRef.current(todoId);
+    });
+  }, [loading]);
 
   const acceptRepeat = useCallback<TodosContextValue['acceptRepeat']>(
     async (s, rule) => {

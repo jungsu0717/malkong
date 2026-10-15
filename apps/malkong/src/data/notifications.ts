@@ -22,8 +22,22 @@ const BRIEFING_TYPE = 'briefing';
 const TODO_TYPE = 'todo';
 const TODO_PREFIX = 'todo-';
 const TODO_CHANNEL_ID = 'todo-reminder';
-/** 한 번에 걸어 두는 할 일 알림 수 — iOS 는 앱 하나에 걸어 둘 수 있는 알림 수에 한도가 있어 가까운 것부터 */
-const TODO_LIMIT = 40;
+/**
+ * 한 번에 걸어 두는 할 일 알림 수 — iOS 는 앱 하나에 걸어 둘 수 있는 알림이 64개라 가까운 것부터.
+ * 아침 7 · 전날 저녁 7 · 받으셨나요 · 미룬 것 · 기록 알림을 더해도 넘지 않게(task topic/006)
+ */
+const TODO_LIMIT = 30;
+/** 전날 저녁 미리(task topic/006) */
+const EVENING_PREFIX = 'evening-day-';
+/** 받으셨나요(SPEC-SHOP-04) */
+const DELIVERY_PREFIX = 'delivery-';
+const DELIVERY_TYPE = 'delivery';
+/** 「1시간 뒤」로 미룬 할 일 알림 — 할 일 알림을 다시 걸 때 지우지 않게 앞머리를 따로 둔다 */
+const SNOOZE_PREFIX = 'snooze-';
+/** 알림 단추 묶음(카테고리) — 이름에 「-」 「:」를 쓰지 않는다(Expo 문서) */
+const TODO_CATEGORY = 'todoActions';
+const DELIVERY_CATEGORY = 'deliveryActions';
+export type AlertAction = 'done' | 'snooze';
 const FEED_ID = 'feed-reminder';
 const FEED_CHANNEL_ID = 'feed-reminder';
 const DIAPER_ID = 'diaper-reminder';
@@ -170,7 +184,10 @@ export async function scheduleFeedReminder(at: Date | null, afterLabel: string):
 export function onTodoAlertOpened(listener: () => void): () => void {
   const handle = (response: Notifications.NotificationResponse | null) => {
     const type = response?.notification.request.content.data?.type;
-    if (response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER || (type !== BRIEFING_TYPE && type !== TODO_TYPE)) {
+    if (
+      response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER ||
+      (type !== BRIEFING_TYPE && type !== TODO_TYPE && type !== DELIVERY_TYPE)
+    ) {
       return;
     }
     Notifications.clearLastNotificationResponse();
@@ -228,11 +245,43 @@ export async function scheduleTempReminders(hours: number[] | null): Promise<voi
   }
 }
 
+/** 알림 단추 — 할 일: 완료 · 1시간 뒤, 배송: 받았어요. 앱을 열지 않고 처리한다 */
+let categoriesReady = false;
+async function ensureCategories(): Promise<void> {
+  if (categoriesReady) return;
+  await Notifications.setNotificationCategoryAsync(TODO_CATEGORY, [
+    { identifier: 'done', buttonTitle: '완료', options: { opensAppToForeground: false } },
+    { identifier: 'snooze', buttonTitle: '1시간 뒤', options: { opensAppToForeground: false } },
+  ]);
+  await Notifications.setNotificationCategoryAsync(DELIVERY_CATEGORY, [
+    { identifier: 'done', buttonTitle: '받았어요', options: { opensAppToForeground: false } },
+  ]);
+  categoriesReady = true;
+}
+
+async function todoChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync(TODO_CHANNEL_ID, {
+    name: '할 일 알림',
+    importance: Notifications.AndroidImportance.HIGH,
+  });
+}
+
+export type TodoReminder = {
+  id: string;
+  at: Date;
+  title: string;
+  /** 반복 할 일이면 「7일 만이에요」 */
+  body?: string | null;
+  /** 아기가 자는 중이면 소리 없이(task topic/006) */
+  silent?: boolean;
+};
+
 /**
- * 할 일 알림 (SPEC-TOPIC-09) — 시각을 정한 할 일마다 한 번. 할 일이 바뀔 때마다 통째로 다시 건다.
+ * 할 일 알림 (SPEC-TOPIC-09) — 시각을 정한 할 일마다 한 번, 「완료」 · 「1시간 뒤」 단추와 함께. 할 일이 바뀔 때마다 통째로 다시 건다.
  * 허락이 없으면 걸지 않는다. 가까운 것부터 TODO_LIMIT 개까지.
  */
-export async function scheduleTodoReminders(items: { id: string; at: Date; title: string }[]): Promise<void> {
+export async function scheduleTodoReminders(items: TodoReminder[]): Promise<void> {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
   for (const n of scheduled) {
     if (n.identifier.startsWith(TODO_PREFIX)) {
@@ -240,18 +289,113 @@ export async function scheduleTodoReminders(items: { id: string; at: Date; title
     }
   }
   if (items.length === 0 || !(await notificationsAllowed())) return;
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(TODO_CHANNEL_ID, {
-      name: '할 일 알림',
-      importance: Notifications.AndroidImportance.HIGH,
-    });
-  }
+  await todoChannel();
+  await ensureCategories().catch(() => undefined);
   const upcoming = [...items].sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, TODO_LIMIT);
   for (const item of upcoming) {
     await Notifications.scheduleNotificationAsync({
       identifier: `${TODO_PREFIX}${item.id}`,
-      content: { title: '할 일', body: item.title, data: { type: TODO_TYPE } },
+      content: {
+        title: item.title,
+        body: item.body ?? '할 일 시간이에요',
+        data: { type: TODO_TYPE, todoId: item.id },
+        categoryIdentifier: TODO_CATEGORY,
+        sound: item.silent ? false : 'default',
+      },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: item.at, channelId: TODO_CHANNEL_ID },
     });
   }
+}
+
+/** 「1시간 뒤」 — 같은 알림을 한 시간 뒤에 한 번 더 */
+export async function snoozeTodo(todoId: string, title: string, body: string | null): Promise<void> {
+  if (!(await notificationsAllowed())) return;
+  await todoChannel();
+  await ensureCategories().catch(() => undefined);
+  await Notifications.scheduleNotificationAsync({
+    identifier: `${SNOOZE_PREFIX}${todoId}`,
+    content: {
+      title,
+      body: body ?? '할 일 시간이에요',
+      data: { type: TODO_TYPE, todoId },
+      categoryIdentifier: TODO_CATEGORY,
+      sound: 'default',
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(Date.now() + 60 * 60 * 1000), channelId: TODO_CHANNEL_ID },
+  });
+}
+
+/** 완료한 할 일의 미룬 알림을 지운다 */
+export async function cancelSnooze(todoId: string): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(`${SNOOZE_PREFIX}${todoId}`).catch(() => undefined);
+}
+
+/** 앞머리가 같은 알림을 모두 지운다 */
+async function cancelPrefix(prefix: string): Promise<void> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+  for (const n of scheduled) {
+    if (n.identifier.startsWith(prefix)) await Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => undefined);
+  }
+}
+
+/** 전날 저녁 미리(task topic/006) — `on` 이 false 면 모두 끈다. 할 일이 없는 저녁과 지난 때는 걸지 않는다 */
+export async function scheduleEveningAlerts(on: boolean, days: MorningDay[], hour: number): Promise<void> {
+  await cancelPrefix(EVENING_PREFIX);
+  if (!on || !(await notificationsAllowed())) return;
+  const now = Date.now();
+  for (const { day, titles } of days) {
+    const at = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour);
+    if (titles.length === 0 || at.getTime() <= now) continue;
+    const rest = titles.length - MORNING_TITLES;
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${EVENING_PREFIX}${at.getFullYear()}-${at.getMonth() + 1}-${at.getDate()}`,
+      content: {
+        title: `내일 할 일 ${titles.length}개`,
+        body: titles.slice(0, MORNING_TITLES).join(', ') + (rest > 0 ? ` 외 ${rest}개` : ''),
+        data: { type: BRIEFING_TYPE },
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: CHANNEL_ID },
+    });
+  }
+}
+
+/** 받으셨나요(SPEC-SHOP-04) — 도착 예정일 저녁에 아직 배송 중인 살 것마다 한 번, 「받았어요」 단추와 함께 */
+export async function scheduleDeliveryChecks(items: { id: string; title: string; at: Date }[]): Promise<void> {
+  await cancelPrefix(DELIVERY_PREFIX);
+  if (items.length === 0 || !(await notificationsAllowed())) return;
+  await todoChannel();
+  await ensureCategories().catch(() => undefined);
+  for (const item of items) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${DELIVERY_PREFIX}${item.id}`,
+      content: {
+        title: `${item.title} 받으셨나요?`,
+        body: '오늘 도착 예정이었어요. 받았으면 체크해 주세요',
+        data: { type: DELIVERY_TYPE, todoId: item.id },
+        categoryIdentifier: DELIVERY_CATEGORY,
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: item.at, channelId: TODO_CHANNEL_ID },
+    });
+  }
+}
+
+/**
+ * 알림 단추(완료 · 1시간 뒤 · 받았어요)를 누르면 `listener` 를 부른다. 앱이 꺼져 있다가 그 단추로 깨어난 경우도 마지막 응답으로 한 번 본다.
+ * 돌려주는 함수로 그만 듣는다
+ */
+export function onAlertAction(listener: (action: AlertAction, todoId: string, title: string, body: string | null) => void): () => void {
+  const handle = (response: Notifications.NotificationResponse | null) => {
+    if (!response) return;
+    const action = response.actionIdentifier;
+    if (action !== 'done' && action !== 'snooze') return;
+    const content = response.notification.request.content;
+    const todoId = content.data?.todoId;
+    if (typeof todoId !== 'string') return;
+    Notifications.clearLastNotificationResponse();
+    void Notifications.dismissNotificationAsync(response.notification.request.identifier).catch(() => undefined);
+    listener(action, todoId, content.title ?? '', content.body ?? null);
+  };
+  handle(Notifications.getLastNotificationResponse());
+  const sub = Notifications.addNotificationResponseReceivedListener(handle);
+  return () => sub.remove();
 }

@@ -1,5 +1,5 @@
 /**
- * 알림 설정 — 마이의 「알림」 한 줄에서 들어오는 상세 (SPEC-LOG-05 기록 알림 · SPEC-TOPIC-09 아침 알림).
+ * 알림 설정 — 마이의 「알림」 한 줄에서 들어오는 상세 (SPEC-LOG-05 기록 알림 · SPEC-TOPIC-09 아침 알림과 전날 저녁 알림).
  *
  * 큰 묶음 둘만 켜고 끈다(Julian, 2026-10-12). 할 일 알림은 할 일에 시각을 넣으면 따로 켤 것 없이 온다. 언제 보내는지는 부모가 고르지 않고 아기 월령의 공공 기준으로 앱이 정하며,
  * 스위치 아래에 어떤 기준으로 보내는지만 작게 적는다(care-reminders.ts).
@@ -93,7 +93,7 @@ export default function NotificationsScreen() {
               !supported || (allowed === false && briefingTime !== null)
                 ? blockedText
                 : briefingOn
-                  ? `매일 ${timeLabel(briefingTime!)} · 오늘 할 일`
+                  ? `${timeLabel(briefingTime!)} 오늘 할 일 · 저녁 8시 내일 할 일`
                   : '안 받아요'
             }
             right={

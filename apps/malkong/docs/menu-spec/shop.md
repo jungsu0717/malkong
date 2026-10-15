@@ -26,13 +26,21 @@
 평시 ▸ 완료한 것은 지우지 않고 접어 두며(헌장 2), 누르면 되돌린다.
 ```
 
+### SPEC-SHOP-04 배송 알림
+```
+평시 ▸ 도착 예정일 아침 알림 목록에 「기저귀 4단계 도착 예정」이 들어가야 한다(SPEC-TOPIC-09).
+평시 ▸ 도착 예정일 저녁 7시까지 받음 체크가 없으면 「기저귀 4단계 받으셨나요?」를 한 번 알리고, 「받았어요」 단추로 앱을 열지 않고 완료할 수 있어야 한다.
+       받음 체크를 하거나 주문을 취소하면 그 알림은 지운다.
+```
+
 ## HOW
 
 - 장보기 줄은 할 일과 같은 `todo` 줄이고 장보기 주제(kind `shopping`)에 있다. 칸 `ordered_at`(주문한 때, 있으면 배송 중) · `arrive_at`(도착 예정일) ·
   `store`(어디서)(backend 「기기 DB 스키마」)
 - 계산: `shopLists` · `buyAgain` · `recentStores`(`src/data/todos.ts`). 화면 `src/app/(tabs)/shop.tsx`, 시트 `src/components/todo/order-sheet.tsx`
-- 도착 예정일 아침 알림 · 「받으셨나요?」는 알림 task 에서(SPEC-TOPIC-09 를 그때 갱신)
+- 알림: `alert-plan.ts` `morningPlan` · `deliveryChecks`, `notifications.ts` `scheduleDeliveryChecks`(task topic/006)
 
 ## changelog
 
 - 2026-10-15 최초 작성 (Julian, decisions/026, task topic/004)
+- 2026-10-15 SPEC-SHOP-04 배송 알림 (task topic/006)
