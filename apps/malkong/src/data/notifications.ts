@@ -1,10 +1,9 @@
 /**
- * 기기가 스스로 띄우는 로컬 알림 둘 — 아침 브리핑(SPEC-HOME-06, task home/004)과 기록 요청(SPEC-BABY-07, task baby/003).
+ * 기기가 스스로 띄우는 로컬 알림 — 아침 알림(SPEC-TOPIC-09), 할 일 알림(SPEC-TOPIC-09), 기록 알림(SPEC-LOG-05).
  *
- * 서버 푸시가 아니다 — 기기 토큰을 서버에 두지 않는다. 브리핑 알림을 누르면 앱이 열리고 그날 첫 화면에서
- * 브리핑이 만들어진다(use-daily-briefing). 기록 요청 알림을 누르면 적을 카드가 열린다(record-nudge.tsx).
- * 알림 본문에는 아기 정보를 넣지 않는다 — 잠금 화면에 보이므로.
- * 브리핑은 하루 한 번, 기록 요청은 하루 기록이 비었을 때 사흘에 한 번까지(`record-nudge.ts`). 웹은 notifications.web.ts.
+ * 서버 푸시가 아니다 — 기기 토큰을 서버에 두지 않는다. 아침 알림과 할 일 알림을 누르면 할 일 탭으로 연다.
+ * 알림 본문에는 아기 이름과 기록 내용을 넣지 않는다 — 잠금 화면에 보이므로. 할 일 알림은 사용자가 적은 할 일 제목만 보인다.
+ * 웹은 notifications.web.ts.
  */
 
 import * as Notifications from 'expo-notifications';
@@ -17,6 +16,11 @@ const NUDGE_CHANNEL_ID = 'record-nudge';
 /** 알림의 data.type — 누르면 이것으로 알아보고 카드를 연다 */
 const NUDGE_TYPE = 'record-nudge';
 const BRIEFING_TYPE = 'briefing';
+const TODO_TYPE = 'todo';
+const TODO_PREFIX = 'todo-';
+const TODO_CHANNEL_ID = 'todo-reminder';
+/** 한 번에 걸어 두는 할 일 알림 수 — iOS 는 앱 하나에 걸어 둘 수 있는 알림 수에 한도가 있어 가까운 것부터 */
+const TODO_LIMIT = 40;
 const FEED_ID = 'feed-reminder';
 const FEED_CHANNEL_ID = 'feed-reminder';
 const DIAPER_ID = 'diaper-reminder';
@@ -56,7 +60,7 @@ export async function scheduleBriefing(time: string | null): Promise<void> {
   if (!time || !(await notificationsAllowed())) return;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: '아침 브리핑',
+      name: '아침 알림',
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
@@ -64,9 +68,9 @@ export async function scheduleBriefing(time: string | null): Promise<void> {
   await Notifications.scheduleNotificationAsync({
     identifier: BRIEFING_ID,
     content: {
-      title: '오늘의 브리핑',
-      body: '버디가 오늘 안부와 챙길 것을 정리해 뒀어요',
-      // 누르면 버디 탭으로 연다 — 첫 화면이 기록 탭이라서(decisions/023)
+      title: '오늘 할 일',
+      body: '오늘 할 일과 챙길 것을 확인해 보세요',
+      // 누르면 할 일 탭으로 연다 — 첫 화면이 기록 탭이라서(decisions/024)
       data: { type: BRIEFING_TYPE },
     },
     trigger: {
@@ -142,13 +146,11 @@ export async function scheduleFeedReminder(at: Date | null, afterLabel: string):
   });
 }
 
-/** 아침 브리핑 알림을 눌러 앱이 열리면 `listener` 를 부른다 — 버디 탭으로 보내려고. 돌려주는 함수로 그만 듣는다 */
-export function onBriefingOpened(listener: () => void): () => void {
+/** 아침 알림 · 할 일 알림을 눌러 앱이 열리면 `listener` 를 부른다 — 할 일 탭으로 보내려고. 돌려주는 함수로 그만 듣는다 */
+export function onTodoAlertOpened(listener: () => void): () => void {
   const handle = (response: Notifications.NotificationResponse | null) => {
-    if (
-      response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER ||
-      response.notification.request.content.data?.type !== BRIEFING_TYPE
-    ) {
+    const type = response?.notification.request.content.data?.type;
+    if (response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER || (type !== BRIEFING_TYPE && type !== TODO_TYPE)) {
       return;
     }
     Notifications.clearLastNotificationResponse();
@@ -202,6 +204,34 @@ export async function scheduleTempReminders(hours: number[] | null): Promise<voi
         body: '기록 탭에서 바로 남길 수 있어요',
       },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute: 0, channelId: CARE_CHANNEL_ID },
+    });
+  }
+}
+
+/**
+ * 할 일 알림 (SPEC-TOPIC-09) — 시각을 정한 할 일마다 한 번. 할 일이 바뀔 때마다 통째로 다시 건다.
+ * 허락이 없으면 걸지 않는다. 가까운 것부터 TODO_LIMIT 개까지.
+ */
+export async function scheduleTodoReminders(items: { id: string; at: Date; title: string }[]): Promise<void> {
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+  for (const n of scheduled) {
+    if (n.identifier.startsWith(TODO_PREFIX)) {
+      await Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => undefined);
+    }
+  }
+  if (items.length === 0 || !(await notificationsAllowed())) return;
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(TODO_CHANNEL_ID, {
+      name: '할 일 알림',
+      importance: Notifications.AndroidImportance.HIGH,
+    });
+  }
+  const upcoming = [...items].sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, TODO_LIMIT);
+  for (const item of upcoming) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${TODO_PREFIX}${item.id}`,
+      content: { title: '할 일', body: item.title, data: { type: TODO_TYPE } },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: item.at, channelId: TODO_CHANNEL_ID },
     });
   }
 }

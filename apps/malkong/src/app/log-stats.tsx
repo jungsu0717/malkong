@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
@@ -7,7 +6,7 @@ import { BarChart, LineChart } from '@/components/log/charts';
 import { ExternalLink } from '@/components/external-link';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Button, Card, Segmented } from '@/components/ui';
+import { Card, Segmented } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { durationLabel, lastDays, usual } from '@/data/event-summary';
@@ -47,7 +46,7 @@ function sleepBand(month: number): [number, number] | null {
 
 /**
  * 일주일 그래프 (SPEC-LOG-04) — 수유 · 잠 · 기저귀는 최근 7일 막대와 평소(지난날 평균) 점선, 키와 몸무게는 기록한 날마다 선.
- * 숫자로 정상 · 이상을 판정하지 않는다(헌장 2) — 걱정되면 버디에게 묻도록 잇는다.
+ * 숫자로 정상 · 이상을 판정하지 않는다(헌장 5).
  */
 export default function LogStatsScreen() {
   const c = useTheme();
@@ -137,9 +136,8 @@ export default function LogStatsScreen() {
         )}
 
         <ThemedText type="caption" style={{ color: c.textSecondary }}>
-          점선은 지난 며칠 가운데 기록한 날의 평균이에요. 숫자로 괜찮은지 판단해 드리지는 않아요. 걱정되면 버디에게 물어보세요.
+          점선은 지난 며칠 가운데 기록한 날의 평균이에요. 숫자로 괜찮은지 판단해 드리지는 않아요. 걱정되면 소아청소년과에 문의하세요.
         </ThemedText>
-        <Button label="버디에게 물어보기" variant="secondary" icon="chatbubble-ellipses-outline" onPress={() => router.navigate('/chat')} />
       </ScrollView>
     </ThemedView>
   );

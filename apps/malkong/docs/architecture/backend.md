@@ -332,7 +332,30 @@ CREATE TABLE care_event (                  -- 빠른 기록 (SPEC-LOG-01, decisi
   updated_at  TEXT NOT NULL                -- 가족 공유의 「늦게 고친 쪽이 이긴다」 기준
 );
 CREATE INDEX ix_event_start ON care_event(start_at);
-CREATE TABLE chat_message (                -- 대화 — 단일 타임라인 (스레드 없음, 날짜로 구분)
+CREATE TABLE topic (                       -- 할 일 주제 (SPEC-TOPIC-01, decisions/024)
+  id          TEXT PRIMARY KEY,            -- tp-…
+  kind        TEXT NOT NULL,               -- feeding · diaper · checkup · outing · sick · solids · shopping · general · custom
+  title       TEXT NOT NULL,
+  hidden      INTEGER NOT NULL DEFAULT 0,  -- 숨긴 주제 — 지우지 않는다
+  sort        INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+CREATE TABLE todo (                        -- 할 일 (SPEC-TOPIC-02 · 03) — 끝낸 것도 지우지 않는다(헌장 2)
+  id          TEXT PRIMARY KEY,            -- td-…
+  topic_id    TEXT NOT NULL,
+  title       TEXT NOT NULL,
+  note        TEXT,
+  due_at      TEXT,                        -- 기한 ISO — 시각이 없으면 그날 0시
+  has_time    INTEGER NOT NULL DEFAULT 0,  -- 시각까지 정했으면 1 — 그 시각에 알림(SPEC-TOPIC-09)
+  buy         INTEGER NOT NULL DEFAULT 0,  -- 살 것 — 장보기 주제에도 모인다
+  source      TEXT NOT NULL,               -- manual · starter (나중: paste · repeat)
+  done_at     TEXT,                        -- 끝낸 때. 되돌리면 비운다. 반복 할 일은 새 줄로 쌓는다
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+CREATE INDEX ix_todo_topic ON todo(topic_id);
+CREATE TABLE chat_message (                -- 대화 — 2026-10-15 부터 쓰지 않는다(decisions/024). 옛 기기의 표는 남는다
   id          TEXT PRIMARY KEY,
   role        TEXT NOT NULL CHECK (role IN ('user','malkong')),
   content     TEXT NOT NULL,
@@ -343,7 +366,7 @@ CREATE TABLE settings (                    -- 작은 설정값 (광고 제거 �
   key    TEXT PRIMARY KEY,
   value  TEXT NOT NULL
 );
-CREATE TABLE inbox_card (                  -- 알림함 (SPEC-HOME-07) — 브리핑이 온 것 · 앱 알림
+CREATE TABLE inbox_card (                  -- 알림함 — 2026-10-15 부터 쓰지 않는다(decisions/024). 옛 기기의 표는 남는다
   id           TEXT PRIMARY KEY,           -- daily-<날짜> · weekly-<월요일> · monthly-<월령> · nudge-<날짜>
   kind         TEXT NOT NULL,              -- daily · weekly · monthly · nudge (나중: family)
   payload_json TEXT NOT NULL,              -- 제목 · 요약 한 줄 · 가리키는 날짜

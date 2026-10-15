@@ -16,7 +16,6 @@ import { useEntitlements } from '@/data/entitlements-context';
 import { useFamily } from '@/data/family-context';
 import { allItems, l1Version, pendingReviewCount } from '@/data/l1';
 import { usePreferences } from '@/data/preferences-context';
-import { useRecords } from '@/data/records-context';
 import { useTheme } from '@/hooks/use-theme';
 
 // 본문은 src/data/legal.ts (SPEC-MY-03)
@@ -32,11 +31,10 @@ const MENU_SECTIONS: { title: string; items: { label: string; doc: string }[] }[
   },
 ];
 
-/** 마이 — 프로필 · 기록 · 알림 · 가족 · 도움말 · 약관 (task my/005 · baby/003). 광고 없이 쓰기(SPEC-MY-06)는 나중 */
+/** 마이 — 프로필 · 알림 · 가족 · 도움말 · 약관 (task my/005). 광고 없이 쓰기(SPEC-MY-06)는 나중 */
 export default function MyScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
-  const { records } = useRecords();
   const { briefingTime, careReminders } = usePreferences();
   /**
    * 버전을 길게 누르면 열리는 숨은 메뉴 — 기기 키(가족 기기로 등록할 때 쓴다)와, 가족 기기면 「일반 사용자로 보기」
@@ -83,18 +81,6 @@ export default function MyScreen() {
             </Pressable>
           )}
 
-          <View style={styles.section}>
-            <SectionHeader title="우리 아기" />
-            <Card style={styles.rows}>
-              <ListRow
-                icon="document-text-outline"
-                title="우리 아기 기록"
-                detail={records.length > 0 ? `${records.length}개` : '아직 없어요'}
-                onPress={() => router.push('/records')}
-              />
-            </Card>
-          </View>
-
           {/* 알림은 한 줄 요약만 — 켜고 끄기 · 시간은 상세(src/app/notifications.tsx)에서 (task common/020) */}
           <View style={styles.section}>
             <SectionHeader title="알림" />
@@ -102,7 +88,7 @@ export default function MyScreen() {
               <ListRow
                 icon="notifications-outline"
                 title="알림"
-                detail={`기록 알림 ${careReminders ? '켜짐' : '꺼짐'} · 아침 브리핑 ${briefingTime ? timeLabel(briefingTime) : '꺼짐'}`}
+                detail={`기록 알림 ${careReminders ? '켜짐' : '꺼짐'} · 아침 알림 ${briefingTime ? timeLabel(briefingTime) : '꺼짐'}`}
                 onPress={() => router.push('/notifications')}
               />
             </Card>
@@ -144,7 +130,7 @@ export default function MyScreen() {
           {/* 구축 중에만 두는 칸 — L1 지식이 쌓인 정도. 개발 빌드에서만 보인다 */}
           {__DEV__ && (
             <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
-              개발 빌드 · 공공 지식 {allItems().length}개(승인 대기 {pendingReviewCount()}개) · 기록 {records.length}개 · 판{' '}
+              개발 빌드 · 공공 지식 {allItems().length}개(승인 대기 {pendingReviewCount()}개) · 판{' '}
               {l1Version()}
             </ThemedText>
           )}

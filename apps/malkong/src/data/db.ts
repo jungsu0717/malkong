@@ -14,6 +14,7 @@ import type { ChatMessage } from './chat';
 import type { CareEvent } from './events';
 import type { InboxCard } from './inbox';
 import type { BabyRecord } from './records';
+import type { Todo, Topic } from './todos';
 
 const DB_NAME = 'malkong.db';
 
@@ -77,6 +78,29 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           updated_at  TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ix_event_start ON care_event(start_at);
+        CREATE TABLE IF NOT EXISTS topic (
+          id          TEXT PRIMARY KEY,
+          kind        TEXT NOT NULL,
+          title       TEXT NOT NULL,
+          hidden      INTEGER NOT NULL DEFAULT 0,
+          sort        INTEGER NOT NULL DEFAULT 0,
+          created_at  TEXT NOT NULL,
+          updated_at  TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS todo (
+          id          TEXT PRIMARY KEY,
+          topic_id    TEXT NOT NULL,
+          title       TEXT NOT NULL,
+          note        TEXT,
+          due_at      TEXT,
+          has_time    INTEGER NOT NULL DEFAULT 0,
+          buy         INTEGER NOT NULL DEFAULT 0,
+          source      TEXT NOT NULL,
+          done_at     TEXT,
+          created_at  TEXT NOT NULL,
+          updated_at  TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_todo_topic ON todo(topic_id);
       `);
       // 나중에 더한 칸 — 아기의 고친 때(가족 공유의 「늦게 고친 쪽이 이긴다」 기준, task my/007)
       const babyColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(baby)');
@@ -338,4 +362,70 @@ export async function upsertEventRow(e: CareEvent): Promise<void> {
 export async function deleteEventRow(id: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM care_event WHERE id = ?', id);
+}
+
+// --- 주제별 할 일 (SPEC-TOPIC-01~03, decisions/024) ---
+
+type TopicRow = Omit<Topic, 'hidden'> & { hidden: number };
+type TodoRow = Omit<Todo, 'hasTime' | 'buy'> & { hasTime: number; buy: number };
+
+export async function readTopicRows(): Promise<Topic[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<TopicRow>(
+    `SELECT id, kind, title, hidden, sort, created_at AS createdAt, updated_at AS updatedAt FROM topic ORDER BY sort`,
+  );
+  return rows.map((r) => ({ ...r, hidden: r.hidden === 1 }));
+}
+
+export async function upsertTopicRow(t: Topic): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT INTO topic (id, kind, title, hidden, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, title = excluded.title, hidden = excluded.hidden,
+       sort = excluded.sort, updated_at = excluded.updated_at`,
+    t.id,
+    t.kind,
+    t.title,
+    t.hidden ? 1 : 0,
+    t.sort,
+    t.createdAt,
+    t.updatedAt,
+  );
+}
+
+export async function readTodoRows(): Promise<Todo[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<TodoRow>(
+    `SELECT id, topic_id AS topicId, title, note, due_at AS dueAt, has_time AS hasTime, buy, source, done_at AS doneAt,
+            created_at AS createdAt, updated_at AS updatedAt
+       FROM todo ORDER BY created_at`,
+  );
+  return rows.map((r) => ({ ...r, hasTime: r.hasTime === 1, buy: r.buy === 1 }));
+}
+
+export async function upsertTodoRow(t: Todo): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT INTO todo (id, topic_id, title, note, due_at, has_time, buy, source, done_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET topic_id = excluded.topic_id, title = excluded.title, note = excluded.note,
+       due_at = excluded.due_at, has_time = excluded.has_time, buy = excluded.buy, source = excluded.source,
+       done_at = excluded.done_at, updated_at = excluded.updated_at`,
+    t.id,
+    t.topicId,
+    t.title,
+    t.note,
+    t.dueAt,
+    t.hasTime ? 1 : 0,
+    t.buy ? 1 : 0,
+    t.source,
+    t.doneAt,
+    t.createdAt,
+    t.updatedAt,
+  );
+}
+
+export async function deleteTodoRow(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM todo WHERE id = ?', id);
 }

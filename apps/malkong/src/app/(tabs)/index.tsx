@@ -33,8 +33,12 @@ import {
 } from '@/data/event-summary';
 import { EVENT_KINDS, runningOf, type CareEvent, type EventInput, type EventKind, type Side } from '@/data/events';
 import { useEvents } from '@/data/events-context';
+import { checkupGroups } from '@/data/checkup-todos';
 import { itemById } from '@/data/l1';
 import { usePreferences } from '@/data/preferences-context';
+import { useRecords } from '@/data/records-context';
+import { todayTodos } from '@/data/todos';
+import { useTodos } from '@/data/todos-context';
 import { useTheme } from '@/hooks/use-theme';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -74,6 +78,8 @@ export default function LogScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { events, loading, add, update, remove } = useEvents();
+  const { todos } = useTodos();
+  const { records } = useRecords();
   const { careReminders } = usePreferences();
   const breast = runningOf(events, 'breast');
   const sleep = runningOf(events, 'sleep');
@@ -89,6 +95,9 @@ export default function LogScreen() {
   const plan = reminderPlan(age?.month ?? 0, events, now);
   const reminder = feedReminderAt(events, careReminders ? plan.feed.minutes : null, now);
   const warns = careWarnings(events, age?.month ?? null, now);
+  // 오늘 할 일 수 — 기한이 오늘이거나 지난 할 일 + 지금 기간인 접종 · 검진(SPEC-LOG-06)
+  const todoCount =
+    todayTodos(todos, now).open.length + (age ? checkupGroups(records, age.month).filter((g) => g.status === 'open').length : 0);
 
   const dayStart = useMemo(() => {
     const d = startOfDay(now);
@@ -150,7 +159,7 @@ export default function LogScreen() {
             </ThemedText>
           </View>
 
-          {/* 위험 신호 — 체온 · 변 기록이 기준에 닿으면 고정 안내(헌장 2, SPEC-ASK-02 와 같은 L1) */}
+          {/* 위험 신호 — 체온 · 변 기록이 기준에 닿으면 고정 안내(헌장 5, L1 위험 신호 항목) */}
           {warns.map((id) => (
             <WarnCard key={id} id={id} />
           ))}
@@ -207,6 +216,17 @@ export default function LogScreen() {
               <Total label="기저귀" value={`${today.diapers}번`} usual={week ? `${Math.round(week.diapers)}번` : null} />
               <Total label="잠" value={durationLabel(today.sleepMin)} usual={week ? durationLabel(week.sleepMin) : null} />
             </View>
+            {/* 오늘 할 일 한 줄 — 누르면 할 일 탭 (SPEC-LOG-06) */}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.navigate('/todo')}
+              style={({ pressed }) => [styles.todoLine, { borderTopColor: c.divider }, pressed && { opacity: 0.6 }]}>
+              <Ionicons name="checkbox-outline" size={16} color={c.textSecondary} />
+              <ThemedText type="small" style={{ flex: 1, color: c.textSecondary }}>
+                {todoCount > 0 ? `오늘 할 일 ${todoCount}개` : '오늘 할 일이 없어요'}
+              </ThemedText>
+              <Ionicons name="chevron-forward" size={14} color={c.textTertiary} />
+            </Pressable>
           </Card>
 
           {/* 기록 단추 일곱 (SPEC-LOG-01) */}
@@ -266,7 +286,7 @@ export default function LogScreen() {
               {dayEvents.length === 0 ? (
                 <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
                   {daysBack === 0
-                    ? '위 단추를 누르면 바로 기록돼요. 쌓이면 버디가 평소와 비교해 알려 줘요'
+                    ? '위 단추를 누르면 바로 기록돼요. 쌓이면 평소와 비교해 보여 드려요'
                     : '이날은 남긴 기록이 없어요'}
                 </ThemedText>
               ) : (
@@ -358,7 +378,7 @@ function DayButton({
 }
 
 /**
- * 기록이 위험 신호 기준에 닿았는가 — 진단이 아니라 고정 안내다(헌장 2). 기준은 L1 위험 신호 항목 그대로.
+ * 기록이 위험 신호 기준에 닿았는가 — 진단이 아니라 고정 안내다(헌장 5). 기준은 L1 위험 신호 항목 그대로.
  * - 12시간 안의 마지막 체온: 40℃ 이상은 누구나(k-warn-0002), 3개월 미만은 38℃ 이상(k-warn-0001)
  * - 24시간 안에 빨간 변을 적었으면 피 섞인 변(k-warn-0008)
  */
@@ -419,6 +439,14 @@ const styles = StyleSheet.create({
   timer: { fontVariant: ['tabular-nums'] },
   summary: { gap: 4 },
   totals: { flexDirection: 'row', marginTop: Spacing.two },
+  todoLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: Spacing.two,
+    paddingTop: Spacing.two,
+    borderTopWidth: StyleSheet.hairlineWidth * 2,
+  },
   total: { flex: 1, gap: 1 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   tile: {

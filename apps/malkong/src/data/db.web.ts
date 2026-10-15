@@ -11,6 +11,7 @@ import type { ChatMessage } from './chat';
 import type { CareEvent } from './events';
 import type { InboxCard } from './inbox';
 import type { BabyRecord } from './records';
+import type { Todo, Topic } from './todos';
 
 const KEY = 'malkong.baby';
 const SETTING_PREFIX = 'malkong.setting.';
@@ -201,4 +202,54 @@ export async function upsertEventRow(e: CareEvent): Promise<void> {
 
 export async function deleteEventRow(id: string): Promise<void> {
   writeEventRows((await readEventRows()).filter((r) => r.id !== id));
+}
+
+// --- 주제별 할 일 (SPEC-TOPIC-01~03) ---
+
+const TOPICS_KEY = 'malkong.topics';
+const TODOS_KEY = 'malkong.todos';
+
+function readList<T>(key: string): T[] {
+  try {
+    const raw = globalThis.localStorage?.getItem(key);
+    return raw ? (JSON.parse(raw) as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeList<T>(key: string, rows: T[]): void {
+  try {
+    globalThis.localStorage?.setItem(key, JSON.stringify(rows));
+  } catch {
+    // 저장이 막힌 브라우저에서도 화면은 그대로 동작해야 한다 (이번 실행에만 유지된다)
+  }
+}
+
+function upsertIn<T extends { id: string }>(key: string, row: T): void {
+  const rows = readList<T>(key);
+  const i = rows.findIndex((r) => r.id === row.id);
+  if (i >= 0) rows[i] = row;
+  else rows.push(row);
+  writeList(key, rows);
+}
+
+export async function readTopicRows(): Promise<Topic[]> {
+  return readList<Topic>(TOPICS_KEY).sort((a, b) => a.sort - b.sort);
+}
+
+export async function upsertTopicRow(t: Topic): Promise<void> {
+  upsertIn(TOPICS_KEY, t);
+}
+
+export async function readTodoRows(): Promise<Todo[]> {
+  return readList<Todo>(TODOS_KEY).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
+export async function upsertTodoRow(t: Todo): Promise<void> {
+  upsertIn(TODOS_KEY, t);
+}
+
+export async function deleteTodoRow(id: string): Promise<void> {
+  writeList(TODOS_KEY, readList<Todo>(TODOS_KEY).filter((r) => r.id !== id));
 }

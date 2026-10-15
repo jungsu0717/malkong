@@ -22,7 +22,7 @@ export function onRecordNudgeOpened(_listener: () => void): () => void {
 
 export async function scheduleFeedReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
 
-export function onBriefingOpened(_listener: () => void): () => void {
+export function onTodoAlertOpened(_listener: () => void): () => void {
   return () => undefined;
 }
 
@@ -31,3 +31,5 @@ export async function scheduleDiaperReminder(_at: Date | null, _afterLabel: stri
 export async function scheduleSleepReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
 
 export async function scheduleTempReminders(_hours: number[] | null): Promise<void> {}
+
+export async function scheduleTodoReminders(_items: { id: string; at: Date; title: string }[]): Promise<void> {}

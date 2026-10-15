@@ -1,11 +1,12 @@
+import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 
-import { BabyFaceIcon, BottleIcon, CalendarIcon, ChatBubbleIcon, TeddyIcon } from '@/components/baby-icons';
+import { BottleIcon, TeddyIcon } from '@/components/baby-icons';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 탭 다섯 — 기록(첫 화면) · 버디(대화) · 우리 아기(버디가 아는 것) · 일정(달력 · 여정) · 마이 (decisions/023 · 013 · 017) */
+/** 탭 셋 — 기록(첫 화면) · 할 일(주제별) · 마이 (decisions/023 · 024) */
 export default function TabLayout() {
   const c = useTheme();
 
@@ -30,24 +31,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
+        name="todo"
         options={{
-          title: '버디',
-          tabBarIcon: ({ color, size }) => <ChatBubbleIcon size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="baby"
-        options={{
-          title: '우리 아기',
-          tabBarIcon: ({ color, size }) => <BabyFaceIcon size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="schedule"
-        options={{
-          title: '일정',
-          tabBarIcon: ({ color, size }) => <CalendarIcon size={size} color={color} />,
+          title: '할 일',
+          tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
