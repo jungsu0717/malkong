@@ -1,14 +1,14 @@
 /**
- * 할 일 탭 (SPEC-TOPIC-01 · 02 · 03 · 06 · 07 · 10, task topic/001 · 002, decisions/024).
+ * 할 일 탭 (SPEC-TOPIC-01 · 02 · 03 · 06 · 07 · 10 · 11, task topic/001~003, decisions/024 · 025).
  *
- * 맨 위에 행성 그림(주제별 이번 달 할 일과 반복 할 일, 이번 주 완료 수와 오늘 남은 수), 그 아래 오늘 할 일(기한이 오늘이거나
- * 지난 것, 지금 기간인 접종 · 검진), 반복 추천, 주제 그리드. 그림 높이를 줄여 첫 화면에 오늘 할 일이 같이 보이게 한다.
- * 바닥 칸에 적으면 주제를 고르지 않아도 제목으로 짐작해 넣고, 날짜를 안 적으면 오늘 할 일로 둔다 — 이 화면은 「오늘」을 보는 곳이라서.
+ * 보통 할 일 앱처럼 오늘 · 예정 · 날짜 없음으로 본다. 오늘에는 내가 적은 할 일과 앱이 채워 준 할 일(신청 · 서류, 기념일, 사이즈 바꾸기),
+ * 지금 기간인 접종 · 검진이 함께 보인다. 맨 위에 행성 그림, 아래에 주제 그리드.
+ * 바닥 칸에 적으면 「내 할 일」에 들어가고, 날짜를 안 적으면 오늘 할 일이 된다 — 이 화면은 「오늘」을 보는 곳이라서.
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -23,18 +23,20 @@ import { TodoSheet } from '@/components/todo/todo-sheet';
 import { TopicGalaxy, type GalaxyPlanet } from '@/components/todo/topic-galaxy';
 import { TopicGrid } from '@/components/todo/topic-grid';
 import { TOPIC_ICONS, topicColor } from '@/components/todo/topic-icons';
-import { TopicSheet } from '@/components/todo/topic-sheet';
 import { TodoRow } from '@/components/todo-row';
-import { Card, ListRow, SectionHeader } from '@/components/ui';
+import { Card, Folded, ListRow, SectionHeader } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { todoOf } from '@/data/briefing';
 import { checkupGroups } from '@/data/checkup-todos';
 import { useRecords } from '@/data/records-context';
 import {
+  isLegacyKind,
+  laterTodos,
   monthTodos,
   nowCount,
   repeatSuggestion,
+  sortOpen,
   todayTodos,
   todosOfTopic,
   visibleTopics,
@@ -46,7 +48,7 @@ import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
 import { useMarkDone } from '@/hooks/use-mark-done';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 행성 그림 높이 — 첫 화면에 오늘 할 일이 같이 보이게 예전(330)보다 낮게 */
+/** 행성 그림 높이 — 첫 화면에 오늘 할 일이 같이 보이게 */
 const GALAXY_HEIGHT = 240;
 /** 행성 하나에 그리는 할 일 점 수 */
 const MAX_DOTS = 10;
@@ -55,7 +57,11 @@ export default function TodoScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { topics, todos, loading, add, update, toggleDone, remove, addTopic, updateTopic, dismissed } = useTodos();
+  const { topics, todos, loading, add, update, toggleDone, remove, updateTopic, dismissed } = useTodos();
+  const markDone = useMarkDone();
+  const typing = useKeyboardVisible();
+  const [editing, setEditing] = useState<Todo | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
   // 탭에 들어올 때마다 그림 등장 모션을 다시, 안 보일 때는 멈춘다
   const [visit, setVisit] = useState(0);
   const [focused, setFocused] = useState(false);
@@ -66,22 +72,14 @@ export default function TodoScreen() {
       return () => setFocused(false);
     }, []),
   );
-  const markDone = useMarkDone();
-  const typing = useKeyboardVisible();
-  const [editing, setEditing] = useState<Todo | null>(null);
-  const [newTopic, setNewTopic] = useState(false);
-  const [pickTopic, setPickTopic] = useState<string | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
-  /** 방금 추가한 곳 — 「분유에 추가했어요」를 잠깐 보인다. 날짜가 있는 할 일은 오늘 목록에 안 보이므로 */
-  const [added, setAdded] = useState<string | null>(null);
-  useEffect(() => {
-    if (!added) return;
-    const timer = setTimeout(() => setAdded(null), 2500);
-    return () => clearTimeout(timer);
-  }, [added]);
 
   const month = age?.month ?? 0;
-  const shown = useMemo(() => visibleTopics(topics, todos, month), [topics, todos, month]);
+  const shown = useMemo(() => visibleTopics(topics), [topics]);
+  // 숨긴 주제의 할 일은 첫 화면에 올리지 않는다
+  const visibleTodos = useMemo(() => {
+    const ids = new Set(shown.map((t) => t.id));
+    return todos.filter((t) => ids.has(t.topicId));
+  }, [shown, todos]);
   const groups = useMemo(() => checkupGroups(records, month), [records, month]);
   // 오늘에는 지금 기간인 것만 — 지난 일정은 접종 · 검진 주제 안에서 「했다면 알려 주세요」로 본다
   const dueGroups = useMemo(() => groups.filter((g) => g.status === 'open'), [groups]);
@@ -111,17 +109,32 @@ export default function TodoScreen() {
   }, [shown, todos, dueGroups]);
 
   if (!baby || !age || loading) return <ScreenLoading />;
-  const hidden = topics.filter((t) => t.hidden);
-  const { open, doneToday } = todayTodos(todos);
-  const nameOf = (topicId: string) => topics.find((t) => t.id === topicId)?.title ?? null;
+  const general = shown.find((t) => t.kind === 'general');
+  // 사용자가 숨긴 주제만 — 예전 기본 주제(decisions/025)는 다시 보이지 않는다
+  const hidden = topics.filter((t) => t.hidden && !isLegacyKind(t.kind));
+  const { open, doneToday } = todayTodos(visibleTodos);
+  const later = laterTodos(visibleTodos);
+  const undated = sortOpen(visibleTodos.filter((t) => !t.doneAt && !t.dueAt && t.topicId === general?.id));
+  // 「내 할 일」은 이름을 붙이지 않는다 — 앱이 채운 할 일에만 주제 이름
+  const nameOf = (topicId: string) => (topicId === general?.id ? null : (topics.find((t) => t.id === topicId)?.title ?? null));
   const empty = open.length === 0 && dueGroups.length === 0 && doneToday.length === 0;
   const left = open.length + dueGroups.length;
-  const weekDone = weekDoneCount(todos);
+  const weekDone = weekDoneCount(visibleTodos);
   const summary =
     [weekDone > 0 ? `이번 주 ${weekDone}개 완료` : null, left > 0 ? `오늘 ${left}개 남았어요` : null].filter(Boolean).join(' · ') ||
-    (todos.length === 0 ? '할 일을 추가하면 주제마다 점으로 보여요' : '오늘 남은 할 일이 없어요');
-  const suggestion = repeatSuggestion(todos, dismissed);
+    '오늘 남은 할 일이 없어요';
+  const suggestion = repeatSuggestion(visibleTodos, dismissed);
   const openTopic = (id: string) => router.push({ pathname: '/topic/[id]', params: { id } });
+  const row = (t: Todo, i: number) => (
+    <TodoItem
+      key={t.id}
+      todo={t}
+      topicName={nameOf(t.topicId)}
+      divider={i > 0}
+      onToggle={() => void toggleDone(t.id)}
+      onEdit={() => setEditing(t)}
+    />
+  );
 
   return (
     <ThemedView style={styles.container}>
@@ -150,26 +163,24 @@ export default function TodoScreen() {
                 <ThemedText type="label" style={{ color: c.onSpace, fontWeight: 600 }}>
                   {summary}
                 </ThemedText>
-                {todos.length > 0 && (
-                  <View style={styles.legend}>
-                    <View style={[styles.dotFilled, { backgroundColor: c.onSpaceDim }]} />
-                    <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-                      완료
-                    </ThemedText>
-                    <View style={[styles.dotHollow, { borderColor: c.onSpaceDim }]} />
-                    <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-                      남은 할 일
-                    </ThemedText>
-                    <View style={[styles.dotMoon, { backgroundColor: c.onSpaceDim }]} />
-                    <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
-                      반복
-                    </ThemedText>
-                  </View>
-                )}
+                <View style={styles.legend}>
+                  <View style={[styles.dotFilled, { backgroundColor: c.onSpaceDim }]} />
+                  <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
+                    완료
+                  </ThemedText>
+                  <View style={[styles.dotHollow, { borderColor: c.onSpaceDim }]} />
+                  <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
+                    남은 할 일
+                  </ThemedText>
+                  <View style={[styles.dotMoon, { backgroundColor: c.onSpaceDim }]} />
+                  <ThemedText type="caption" style={{ color: c.onSpaceDim }}>
+                    반복
+                  </ThemedText>
+                </View>
               </View>
             </View>
 
-            {/* 오늘 할 일 (SPEC-TOPIC-02) */}
+            {/* 오늘 (SPEC-TOPIC-02) */}
             <View style={styles.section}>
               <SectionHeader title="오늘" />
               <Card style={styles.rows}>
@@ -189,20 +200,28 @@ export default function TodoScreen() {
                         onPick={() => markDone.pick(g)}
                       />
                     ))}
-                    {[...open, ...doneToday].map((t, i) => (
-                      <TodoItem
-                        key={t.id}
-                        todo={t}
-                        topicName={nameOf(t.topicId)}
-                        divider={dueGroups.length + i > 0}
-                        onToggle={() => void toggleDone(t.id)}
-                        onEdit={() => setEditing(t)}
-                      />
-                    ))}
+                    {[...open, ...doneToday].map((t, i) => row(t, dueGroups.length + i))}
                   </>
                 )}
               </Card>
             </View>
+
+            {/* 예정 — 내일부터. 앱이 채운 할 일도 기한 전부터 여기 보인다(SPEC-TOPIC-11) */}
+            {later.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader title="예정" />
+                <Card style={styles.rows}>
+                  <Folded limit={5}>{later.map(row)}</Folded>
+                </Card>
+              </View>
+            )}
+
+            {undated.length > 0 && (
+              <View style={styles.section}>
+                <SectionHeader title="날짜 없음" />
+                <Card style={styles.rows}>{undated.map(row)}</Card>
+              </View>
+            )}
 
             {/* 반복 추천 (SPEC-TOPIC-06) */}
             {suggestion && <RepeatSuggest suggestion={suggestion} />}
@@ -218,7 +237,6 @@ export default function TodoScreen() {
                   count: nowCount(t, todos) + (t.kind === 'checkup' ? dueGroups.length : 0),
                 }))}
                 onOpen={openTopic}
-                onAdd={() => setNewTopic(true)}
               />
               {hidden.length > 0 && (
                 <Pressable accessibilityRole="button" onPress={() => setShowHidden((v) => !v)} style={styles.hiddenToggle}>
@@ -254,29 +272,13 @@ export default function TodoScreen() {
             {!typing && <AdBanner />}
           </ScrollView>
 
-          {added && (
-            <ThemedText type="caption" style={[styles.added, { color: c.textSecondary }]}>
-              {added}
-            </ThemedText>
-          )}
           <TodoInput
             placeholder="할 일 추가 (예: 내일 오전 10시 분유 주문)"
-            topics={shown}
-            topicId={pickTopic}
-            onTopic={setPickTopic}
             onAdd={(p) => {
               // 이 화면은 「오늘」을 보는 곳 — 날짜를 안 적으면 오늘 할 일로
               const today = new Date();
               const dueAt = p.dueAt ?? new Date(today.getFullYear(), today.getMonth(), today.getDate());
-              void add({
-                title: p.title,
-                dueAt: dueAt.toISOString(),
-                hasTime: p.hasTime,
-                repeat: p.repeat,
-                topicId: pickTopic ?? undefined,
-              }).then((t) => {
-                if (t) setAdded(`${nameOf(t.topicId) ?? '할 일'}에 추가했어요`);
-              });
+              void add({ title: p.title, dueAt: dueAt.toISOString(), hasTime: p.hasTime, repeat: p.repeat });
             }}
           />
         </KeyboardAvoidingView>
@@ -286,7 +288,7 @@ export default function TodoScreen() {
       <TodoSheet
         key={editing?.id ?? 'none'}
         todo={editing}
-        topics={topics.filter((t) => !t.hidden)}
+        topics={shown}
         onClose={() => setEditing(null)}
         onSave={(patch) => {
           if (editing) void update(editing.id, patch);
@@ -295,16 +297,6 @@ export default function TodoScreen() {
         onDelete={() => {
           if (editing) void remove(editing.id);
           setEditing(null);
-        }}
-      />
-      <TopicSheet
-        key={newTopic ? 'open' : 'closed'}
-        open={newTopic}
-        topic={null}
-        onClose={() => setNewTopic(false)}
-        onSave={(title) => {
-          setNewTopic(false);
-          void addTopic(title).then((t) => router.push({ pathname: '/topic/[id]', params: { id: t.id } }));
         }}
       />
     </ThemedView>
@@ -333,5 +325,4 @@ const styles = StyleSheet.create({
   rows: { paddingVertical: 2 },
   empty: { paddingVertical: Spacing.three },
   hiddenToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center', paddingVertical: 6 },
-  added: { textAlign: 'center', paddingTop: Spacing.one },
 });

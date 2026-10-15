@@ -1,13 +1,16 @@
 /**
- * 할 일 한 줄 (SPEC-TOPIC-02) — 누르면 끝냄 ↔ 되돌림, 오른쪽 단추나 길게 누르기로 고치기.
- * 작은 글씨는 기한 · 반복 · 주제 · 살 것만 짧게. 끝낸 줄은 흐리게 긋는다(지우지 않는다).
+ * 할 일 한 줄 (SPEC-TOPIC-02 · 11) — 누르면 끝냄 ↔ 되돌림, 오른쪽 단추나 길게 누르기로 편집.
+ * 작은 글씨는 기한 · 반복 · 주제만 짧게. 주제 화면에서는 앱이 채운 할 일의 안내 한 줄과 링크(정부24 · 복지로)도 보인다.
+ * 끝낸 줄은 흐리게 긋는다(지우지 않는다).
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { openBrowserAsync } from 'expo-web-browser';
+import { Linking, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { tap } from '@/components/ui';
+import type { AutoLink } from '@/data/auto-todos';
 import { dueLabel } from '@/data/due-parse';
 import { repeatLabel } from '@/data/repeat';
 import type { Todo } from '@/data/todos';
@@ -16,13 +19,18 @@ import { useTheme } from '@/hooks/use-theme';
 export function TodoItem({
   todo,
   topicName,
+  note,
+  link,
   divider = false,
   onToggle,
   onEdit,
 }: {
   todo: Todo;
-  /** 다른 주제에서 모여 온 줄이면 그 주제 이름 */
+  /** 오늘 · 예정에 모여 보일 때 그 주제 이름 */
   topicName?: string | null;
+  /** 안내 한 줄 — 앱이 채운 할 일의 기한 설명 */
+  note?: string | null;
+  link?: AutoLink | null;
   divider?: boolean;
   onToggle: () => void;
   onEdit: () => void;
@@ -36,7 +44,6 @@ export function TodoItem({
     due ? dueLabel(due, todo.hasTime, now) : null,
     todo.repeat && !done ? `${repeatLabel(todo.repeat)} 반복` : null,
     topicName ?? null,
-    todo.buy ? '살 것' : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -66,6 +73,24 @@ export function TodoItem({
               {detail}
             </ThemedText>
           ) : null}
+          {note && !done ? (
+            <ThemedText type="caption" style={{ color: c.textSecondary }}>
+              {note}
+            </ThemedText>
+          ) : null}
+          {link && !done ? (
+            <Pressable
+              accessibilityRole="link"
+              accessibilityLabel={`${link.label} 열기`}
+              hitSlop={6}
+              onPress={() => void (Platform.OS === 'web' ? Linking.openURL(link.url) : openBrowserAsync(link.url))}
+              style={styles.link}>
+              <ThemedText type="caption" style={{ color: c.accentText, fontWeight: 600 }}>
+                {link.label} 열기
+              </ThemedText>
+              <Ionicons name="open-outline" size={12} color={c.accentText} />
+            </Pressable>
+          ) : null}
         </View>
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel={`${todo.title} 편집`} hitSlop={8} onPress={onEdit} style={styles.edit}>
@@ -80,4 +105,5 @@ const styles = StyleSheet.create({
   main: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   text: { flex: 1, gap: 2 },
   edit: { paddingHorizontal: 6, paddingVertical: 10 },
+  link: { flexDirection: 'row', alignItems: 'center', gap: 3, alignSelf: 'flex-start', paddingTop: 2 },
 });

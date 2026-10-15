@@ -334,7 +334,7 @@ CREATE TABLE care_event (                  -- 빠른 기록 (SPEC-LOG-01, decisi
 CREATE INDEX ix_event_start ON care_event(start_at);
 CREATE TABLE topic (                       -- 할 일 주제 (SPEC-TOPIC-01, decisions/024)
   id          TEXT PRIMARY KEY,            -- tp-…
-  kind        TEXT NOT NULL,               -- feeding · diaper · checkup · outing · sick · solids · shopping · general · custom
+  kind        TEXT NOT NULL,               -- checkup · paperwork · milestone · size · routine · general(내 할 일) · custom. 예전 feeding · diaper · outing · sick · solids · shopping 은 숨김
   title       TEXT NOT NULL,
   hidden      INTEGER NOT NULL DEFAULT 0,  -- 숨긴 주제 — 지우지 않는다
   sort        INTEGER NOT NULL DEFAULT 0,
@@ -349,9 +349,10 @@ CREATE TABLE todo (                        -- 할 일 (SPEC-TOPIC-02 · 03) — 
   due_at      TEXT,                        -- 기한 ISO — 시각이 없으면 그날 0시
   has_time    INTEGER NOT NULL DEFAULT 0,  -- 시각까지 정했으면 1 — 그 시각에 알림(SPEC-TOPIC-09)
   buy         INTEGER NOT NULL DEFAULT 0,  -- 살 것 — 장보기 주제에도 모인다
-  source      TEXT NOT NULL,               -- manual · starter · repeat(반복 할 일을 완료해 생긴 다음 차례) (나중: paste)
+  source      TEXT NOT NULL,               -- manual · starter · repeat(반복 할 일을 완료해 생긴 다음 차례) · auto(앱이 생일로 만듦) (나중: paste)
   done_at     TEXT,                        -- 끝낸 때. 되돌리면 비운다. 반복 할 일은 완료할 때 다음 날짜로 새 줄을 쌓는다
   repeat      TEXT,                        -- 반복 규칙(SPEC-TOPIC-06) — daily · weekly:2,5 · monthly:1 · every:3. 없으면 비움
+  ref         TEXT,                        -- 앱이 만든 할 일의 규칙 열쇠(SPEC-TOPIC-11, auto-todos.ts) — paper:birth-report 등. 직접 적은 할 일은 비움
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );

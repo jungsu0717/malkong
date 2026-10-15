@@ -1,14 +1,21 @@
 /**
- * 주제별 육아 할 일 (SPEC-TOPIC-01~04, decisions/024).
+ * 육아 할 일 (SPEC-TOPIC-01~03 · 06 · 11, decisions/024 · 025).
  *
- * 할 일은 주제에 속한다(헌장 1). 끝낸 할 일은 지우지 않고 `doneAt` 으로 남는다(헌장 2). 반복 · 남은 양 같은 해석은
+ * 기본 주제는 앱이 할 일을 채워 주는 다섯(접종 · 검진, 신청 · 서류, 기념일, 사이즈 바꾸기, 생활 루틴)이고, 사용자가 적는 할 일은
+ * 「내 할 일」(kind general) 하나에 모인다(헌장 1). 끝낸 할 일은 지우지 않고 `doneAt` 으로 남는다(헌장 2). 반복 추천 같은 해석은
  * 저장하지 않고 볼 때마다 센다(헌장 3). 기기 DB `topic` · `todo`(backend 「기기 DB 스키마」).
  */
 
 import { deleteTodoRow, readTodoRows, readTopicRows, upsertTodoRow, upsertTopicRow } from './db';
 import { SUGGEST_AFTER, firstDate, nextDate, startOfDay, suggestRepeat, withTimeOf, type Repeat } from './repeat';
 
-export type TopicKind = 'feeding' | 'diaper' | 'checkup' | 'outing' | 'sick' | 'solids' | 'shopping' | 'general' | 'custom';
+/** 2026-10-15 까지 쓰던 기본 주제(decisions/025 로 뺐다) — 숨기고, 거기 적힌 할 일은 「내 할 일」로 옮긴다 */
+export const LEGACY_KINDS = ['feeding', 'diaper', 'outing', 'sick', 'solids', 'shopping'] as const;
+type LegacyKind = (typeof LEGACY_KINDS)[number];
+
+export type TopicKind = 'checkup' | 'paperwork' | 'milestone' | 'size' | 'routine' | 'general' | 'custom' | LegacyKind;
+
+export const isLegacyKind = (kind: TopicKind) => (LEGACY_KINDS as readonly string[]).includes(kind);
 
 export type Topic = {
   id: string;
@@ -22,8 +29,8 @@ export type Topic = {
   updatedAt: string;
 };
 
-/** 어디서 생겼나 — 직접 적음 · 추천에서 추가 · 반복 할 일을 완료해서 다음 차례로 생김 */
-export type TodoSource = 'manual' | 'starter' | 'repeat';
+/** 어디서 생겼나 — 직접 적음 · 추천에서 추가 · 반복 할 일을 완료해서 다음 차례로 생김 · 앱이 생일로 만듦(SPEC-TOPIC-11) */
+export type TodoSource = 'manual' | 'starter' | 'repeat' | 'auto';
 
 export type Todo = {
   id: string;
@@ -34,42 +41,40 @@ export type Todo = {
   dueAt: string | null;
   /** 시각까지 정했나 — 정했으면 그 시각에 알린다(SPEC-TOPIC-09) */
   hasTime: boolean;
-  /** 살 것 — 장보기 주제에도 모여 보인다(SPEC-TOPIC-01) */
+  /** 살 것 — 2026-10-15 까지 장보기에 모으던 표시. 지금은 화면에서 쓰지 않고 값만 남는다 */
   buy: boolean;
   source: TodoSource;
   /** 끝낸 때. 되돌리면 null */
   doneAt: string | null;
   /** 반복 규칙(SPEC-TOPIC-06) — 완료하면 다음 날짜로 새 줄이 생긴다 */
   repeat: Repeat | null;
+  /** 앱이 만든 할 일이면 그 규칙의 열쇠(auto-todos.ts) — 같은 것을 두 번 만들지 않게 */
+  ref: string | null;
   createdAt: string;
   updatedAt: string;
 };
 
-/** 기본 주제 — 처음 실행할 때 만든다(SPEC-TOPIC-01). 「기타」는 주제를 못 고른 한 줄이 들어가는 곳 */
+/** 예전 기본 주제 이름 → 지금 이름. 사용자가 바꾸지 않은 기본 주제만 바꾼다 */
+export const RENAMED_TITLES: Record<string, string> = { '분유 · 수유': '분유', '그 밖의 할 일': '내 할 일', 기타: '내 할 일' };
 
-/** 예전 기본 주제 이름 → 지금 이름(2026-10-15 Julian: 「분유 · 수유」가 아니라 「분유」). 고치지 않은 기본 주제만 바꾼다 */
-export const RENAMED_TITLES: Record<string, string> = { '분유 · 수유': '분유', '그 밖의 할 일': '기타' };
+/** 기본 주제(SPEC-TOPIC-01) — 처음 실행할 때, 그리고 예전 기기에 없으면 만든다. 「내 할 일」은 사용자가 적는 목록 */
 export const DEFAULT_TOPICS: { kind: TopicKind; title: string }[] = [
-  { kind: 'feeding', title: '분유' },
-  { kind: 'diaper', title: '기저귀' },
   { kind: 'checkup', title: '접종 · 검진' },
-  { kind: 'outing', title: '외출' },
-  { kind: 'sick', title: '아플 때' },
-  { kind: 'solids', title: '이유식' },
-  { kind: 'shopping', title: '장보기' },
-  { kind: 'general', title: '기타' },
+  { kind: 'paperwork', title: '신청 · 서류' },
+  { kind: 'milestone', title: '기념일' },
+  { kind: 'size', title: '사이즈 바꾸기' },
+  { kind: 'routine', title: '생활 루틴' },
+  { kind: 'general', title: '내 할 일' },
 ];
 
-/** 이유식은 이 월령부터 보인다(SPEC-TOPIC-01) */
-export const SOLIDS_FROM_MONTH = 5;
+export type Starter = { title: string; repeat?: Repeat };
 
 /**
- * 기본 주제의 추천 목록 — 한 번 만들어 두고 자주 고치지 않는다(헌장 8). 약 · 처치 · 증상 판단은 넣지 않는다(헌장 5).
- * 정본 표는 menu-spec/topic.md 「기본 주제와 추천 목록」.
+ * 추천 목록 — 한 번 만들어 두고 자주 고치지 않는다(헌장 8). 약 · 처치 · 증상 판단은 넣지 않는다(헌장 5).
+ * 생활 루틴은 반복 할 일로 추가된다. 간격은 제품 안내에서 흔히 보는 값이고 사용자가 편집할 수 있다.
+ * 정본 표는 menu-spec/topic.md 「기본 주제」.
  */
-export const STARTERS: Partial<Record<TopicKind, { title: string; buy?: boolean }[]>> = {
-  feeding: [{ title: '분유 주문', buy: true }, { title: '젖병 소독' }, { title: '젖병 솔 바꾸기' }, { title: '젖꼭지 바꾸기' }],
-  diaper: [{ title: '기저귀 주문', buy: true }, { title: '물티슈 주문', buy: true }, { title: '기저귀 휴지통 비우기' }],
+export const STARTERS: Partial<Record<TopicKind, Starter[]>> = {
   checkup: [
     { title: '아기수첩 챙기기' },
     { title: '모바일 건강보험증 챙기기' },
@@ -78,46 +83,16 @@ export const STARTERS: Partial<Record<TopicKind, { title: string; buy?: boolean 
     { title: '분유와 젖병 챙기기' },
     { title: '겉싸개나 담요 챙기기' },
   ],
-  outing: [
-    { title: '기저귀와 물티슈' },
-    { title: '여벌 옷' },
-    { title: '분유 · 젖병 · 보온병' },
-    { title: '손수건과 턱받이' },
-    { title: '쪽쪽이' },
-    { title: '작은 장난감' },
-    { title: '겉싸개나 담요' },
-    { title: '기저귀 담을 비닐봉지' },
+  routine: [
+    { title: '손톱 깎기', repeat: { kind: 'every', days: 7 } },
+    { title: '쪽쪽이 바꾸기', repeat: { kind: 'every', days: 60 } },
+    { title: '젖꼭지 바꾸기', repeat: { kind: 'every', days: 60 } },
+    { title: '젖병 솔 바꾸기', repeat: { kind: 'every', days: 30 } },
+    { title: '가습기 청소', repeat: { kind: 'every', days: 7 } },
+    { title: '장난감 소독', repeat: { kind: 'every', days: 7 } },
+    { title: '아기 침구 빨래', repeat: { kind: 'every', days: 7 } },
   ],
-  sick: [
-    { title: '아기수첩 챙기기' },
-    { title: '모바일 건강보험증 챙기기' },
-    { title: '체온 · 수유 기록 보여 주기' },
-    { title: '기저귀와 물티슈 챙기기' },
-    { title: '여벌 옷 챙기기' },
-    { title: '분유와 젖병 챙기기' },
-  ],
-  solids: [{ title: '재료 장보기', buy: true }, { title: '이유식 용기 소독' }, { title: '이유식 만들어 얼리기' }, { title: '숟가락과 턱받이 챙기기' }],
 };
-
-/** 주제를 고르지 않고 적은 한 줄이 어느 주제인지 — 낱말로 짐작한다(앞의 것이 이긴다) */
-const GUESS: { kind: TopicKind; pattern: RegExp }[] = [
-  { kind: 'checkup', pattern: /접종|검진|예방주사/ },
-  { kind: 'solids', pattern: /이유식|미음|퓨레/ },
-  { kind: 'outing', pattern: /외출|나들이|여행|기저귀 ?가방/ },
-  { kind: 'feeding', pattern: /분유|수유|젖병|젖꼭지|모유|유축/ },
-  { kind: 'diaper', pattern: /기저귀|물티슈/ },
-  { kind: 'sick', pattern: /병원|약국/ },
-  { kind: 'shopping', pattern: /장보기|마트|사기|사 오기|사오기|주문|구매/ },
-];
-
-export function guessTopicKind(title: string): TopicKind {
-  return GUESS.find((g) => g.pattern.test(title))?.kind ?? 'general';
-}
-
-/** 살 것인지 — 「주문」 「사기」가 들어가면 장보기에도 모인다 */
-export function looksLikeBuy(title: string): boolean {
-  return /주문|사기|사 오기|사오기|구매|장보기/.test(title);
-}
 
 export function newTopicId(): string {
   return `tp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -133,7 +108,7 @@ export function makeTopic(kind: TopicKind, title: string, sort: number, now = ne
 }
 
 export type TodoInput = { topicId: string; title: string } & Partial<
-  Pick<Todo, 'note' | 'dueAt' | 'hasTime' | 'buy' | 'source' | 'repeat'>
+  Pick<Todo, 'note' | 'dueAt' | 'hasTime' | 'buy' | 'source' | 'repeat' | 'ref'>
 >;
 
 export function makeTodo(input: TodoInput, now = new Date()): Todo {
@@ -145,10 +120,11 @@ export function makeTodo(input: TodoInput, now = new Date()): Todo {
     note: input.note ?? null,
     dueAt: input.dueAt ?? null,
     hasTime: input.hasTime ?? false,
-    buy: input.buy ?? looksLikeBuy(input.title),
+    buy: input.buy ?? false,
     source: input.source ?? 'manual',
     doneAt: null,
     repeat: input.repeat ?? null,
+    ref: input.ref ?? null,
     createdAt: at,
     updatedAt: at,
   };
@@ -166,6 +142,12 @@ export function todayTodos(todos: Todo[], now = new Date()): { open: Todo[]; don
   return { open: sortOpen(open), doneToday };
 }
 
+/** 예정 — 안 끝낸 것 중 기한이 내일부터인 것, 가까운 순(SPEC-TOPIC-02) */
+export function laterTodos(todos: Todo[], now = new Date()): Todo[] {
+  const end = endOfToday(now).toISOString();
+  return sortOpen(todos.filter((t) => !t.doneAt && t.dueAt !== null && t.dueAt >= end));
+}
+
 /** 안 끝낸 것 — 기한 가까운 순, 기한 없는 것은 적은 순으로 뒤에 */
 export function sortOpen(todos: Todo[]): Todo[] {
   return [...todos].sort((a, b) => {
@@ -181,23 +163,14 @@ export function sortDone(todos: Todo[]): Todo[] {
   return [...todos].sort((a, b) => (b.doneAt ?? '').localeCompare(a.doneAt ?? ''));
 }
 
-/** 한 주제에 보이는 할 일 — 장보기는 다른 주제의 살 것까지 모은다(SPEC-TOPIC-01) */
+/** 한 주제의 할 일 */
 export function todosOfTopic(topic: Topic, todos: Todo[]): Todo[] {
-  if (topic.kind === 'shopping') return todos.filter((t) => t.topicId === topic.id || t.buy);
   return todos.filter((t) => t.topicId === topic.id);
 }
 
-export function topicCount(topic: Topic, todos: Todo[]): { done: number; total: number } {
-  const list = todosOfTopic(topic, todos);
-  return { done: list.filter((t) => t.doneAt).length, total: list.length };
-}
-
-/** 주제 목록에 보일 것 — 숨긴 것 빼고, 이유식은 그 월령부터(할 일이 있으면 늘) */
-export function visibleTopics(topics: Topic[], todos: Todo[], month: number): Topic[] {
-  return [...topics]
-    .filter((t) => !t.hidden)
-    .filter((t) => t.kind !== 'solids' || month >= SOLIDS_FROM_MONTH || todos.some((d) => d.topicId === t.id))
-    .sort((a, b) => a.sort - b.sort);
+/** 보이는 주제 — 숨긴 것과 예전 기본 주제를 빼고 순서대로 */
+export function visibleTopics(topics: Topic[]): Topic[] {
+  return [...topics].filter((t) => !t.hidden && !isLegacyKind(t.kind)).sort((a, b) => a.sort - b.sort);
 }
 
 /** 같은 할 일인지 볼 때 — 띄어쓰기를 뺀 제목 */

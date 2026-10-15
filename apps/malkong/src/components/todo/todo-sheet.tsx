@@ -1,5 +1,5 @@
 /**
- * 할 일 편집 (SPEC-TOPIC-02 · 03 · 06) — 제목, 기한(「내일 오전 10시」처럼 말로), 반복, 살 것, 주제 바꾸기, 삭제.
+ * 할 일 편집 (SPEC-TOPIC-02 · 03 · 06) — 제목, 기한(「내일 오전 10시」처럼 말로), 반복, 주제 바꾸기, 삭제.
  * 반복을 정하고 기한이 없으면 오늘부터 맞는 첫날이 기한이 된다(todos-context 가 저장할 때 채운다).
  */
 
@@ -8,7 +8,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleShee
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { Button, Chip, Toggle } from '@/components/ui';
+import { Button, Chip } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { dueLabel, parseDue } from '@/data/due-parse';
 import { WEEKDAY_NAMES, type Repeat } from '@/data/repeat';
@@ -57,7 +57,6 @@ export function TodoSheet({
   const [title, setTitle] = useState(todo?.title ?? '');
   const [dueText, setDueText] = useState('');
   const [cleared, setCleared] = useState(false);
-  const [buy, setBuy] = useState(todo?.buy ?? false);
   const [topicId, setTopicId] = useState(todo?.topicId ?? null);
   // 반복 — 처음 값은 지금 규칙, 없으면 기한(없으면 오늘)의 요일 · 날짜
   const base = todo?.dueAt ? new Date(todo.dueAt) : new Date();
@@ -167,16 +166,6 @@ export function TodoSheet({
               </ThemedText>
             )}
 
-            <View style={styles.toggleRow}>
-              <View style={{ flex: 1 }}>
-                <ThemedText type="body">살 것</ThemedText>
-                <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                  장보기에도 함께 보여요
-                </ThemedText>
-              </View>
-              <Toggle label="살 것" value={buy} onChange={setBuy} />
-            </View>
-
             <ThemedText type="label" style={{ color: c.textSecondary }}>
               주제
             </ThemedText>
@@ -196,7 +185,7 @@ export function TodoSheet({
                 title: title.trim(),
                 dueAt: due ? due.at.toISOString() : null,
                 hasTime: due?.hasTime ?? false,
-                buy,
+                buy: todo?.buy ?? false,
                 topicId: topicId ?? todo?.topicId ?? '',
                 repeat: repeat ?? null,
               })
@@ -229,7 +218,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.regular,
   },
   dueRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  toggleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.one },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   numberRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   number: { width: 72, textAlign: 'center' },

@@ -1,6 +1,6 @@
 /**
  * 주제 그리드 (SPEC-TOPIC-01, task topic/002) — 한 줄에 4개, 동그라미 아이콘 아래 이름, 오른쪽 위에 지금 할 것의 수.
- * 끝에 「주제 추가」. 아이콘은 먹색 한 가지, 숫자 표시만 코랄.
+ * `onAdd` 를 주면 끝에 「주제 추가」. 아이콘은 먹색 한 가지, 숫자 표시만 코랄.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +21,7 @@ export function TopicGrid({
 }: {
   topics: GridTopic[];
   onOpen: (id: string) => void;
-  onAdd: () => void;
+  onAdd?: () => void;
 }) {
   return (
     <View style={styles.grid}>
@@ -35,7 +35,7 @@ export function TopicGrid({
           onPress={() => onOpen(t.id)}
         />
       ))}
-      <Cell icon="add" title="주제 추가" count={0} label="주제 추가" onPress={onAdd} dashed />
+      {onAdd && <Cell icon="add" title="주제 추가" count={0} label="주제 추가" onPress={onAdd} dashed />}
     </View>
   );
 }

@@ -37,7 +37,7 @@ import { checkupGroups } from '@/data/checkup-todos';
 import { itemById } from '@/data/l1';
 import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
-import { todayTodos } from '@/data/todos';
+import { todayTodos, visibleTopics } from '@/data/todos';
 import { useTodos } from '@/data/todos-context';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -78,7 +78,7 @@ export default function LogScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { events, loading, add, update, remove } = useEvents();
-  const { todos } = useTodos();
+  const { todos, topics } = useTodos();
   const { records } = useRecords();
   const { careReminders } = usePreferences();
   const breast = runningOf(events, 'breast');
@@ -95,9 +95,13 @@ export default function LogScreen() {
   const plan = reminderPlan(age?.month ?? 0, events, now);
   const reminder = feedReminderAt(events, careReminders ? plan.feed.minutes : null, now);
   const warns = careWarnings(events, age?.month ?? null, now);
-  // 오늘 할 일 수 — 기한이 오늘이거나 지난 할 일 + 지금 기간인 접종 · 검진(SPEC-LOG-06)
+  // 오늘 할 일 수 — 할 일 탭 「오늘」과 같게: 보이는 주제에서 기한이 오늘이거나 지난 할 일 + 지금 기간인 접종 · 검진(SPEC-LOG-06)
+  const shownIds = new Set(visibleTopics(topics).map((t) => t.id));
   const todoCount =
-    todayTodos(todos, now).open.length + (age ? checkupGroups(records, age.month).filter((g) => g.status === 'open').length : 0);
+    todayTodos(
+      todos.filter((t) => shownIds.has(t.topicId)),
+      now,
+    ).open.length + (age ? checkupGroups(records, age.month).filter((g) => g.status === 'open').length : 0);
 
   const dayStart = useMemo(() => {
     const d = startOfDay(now);

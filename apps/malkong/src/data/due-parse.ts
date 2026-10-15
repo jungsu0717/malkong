@@ -147,7 +147,7 @@ function monthDay(today: Date, month: number, date: number): Date | null {
   return thisYear < today ? new Date(today.getFullYear() + 1, month - 1, date) : thisYear;
 }
 
-/** 할 일 줄에 보이는 기한 — 「오늘」 「내일 10:00」 「10월 20일 (화)」 */
+/** 할 일 줄에 보이는 기한 — 「오늘」 「내일 10:00」 「10월 20일 (화)」, 다른 해면 「2028년 8월 20일 (일)」 */
 export function dueLabel(dueAt: Date, hasTime: boolean, now = new Date()): string {
   const diff = Math.round((startOfDay(dueAt).getTime() - startOfDay(now).getTime()) / 86_400_000);
   const dayText =
@@ -159,7 +159,7 @@ export function dueLabel(dueAt: Date, hasTime: boolean, now = new Date()): strin
           ? '모레'
           : diff === -1
             ? '어제'
-            : `${dueAt.getMonth() + 1}월 ${dueAt.getDate()}일 (${WEEKDAYS[dueAt.getDay()]})`;
+            : `${dueAt.getFullYear() !== now.getFullYear() ? `${dueAt.getFullYear()}년 ` : ''}${dueAt.getMonth() + 1}월 ${dueAt.getDate()}일 (${WEEKDAYS[dueAt.getDay()]})`;
   if (!hasTime) return dayText;
   const hh = String(dueAt.getHours()).padStart(2, '0');
   const mm = String(dueAt.getMinutes()).padStart(2, '0');
