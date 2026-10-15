@@ -1,11 +1,12 @@
 /**
- * 주제 하나 (SPEC-TOPIC-01 · 02 · 03 · 06 · 07 · 11, task topic/001~003).
+ * 주제 하나 (SPEC-TOPIC-01 · 02 · 03 · 06 · 07 · 11 · 12, task topic/001~005).
  *
  * 할 일(안 끝낸 것) → 주제마다 더 보이는 것 → 완료(접어 둠).
  * - 접종 · 검진: 맨 위에 공공 일정, 할 일 이름은 「준비물」, 준비물 추천
  * - 사이즈 바꾸기: 앱이 생일로 만들 다가오는 할 일(아직 목록에 없는 것)과 날짜, 할 일마다 안내 한 줄
  * - 기념일: 맨 위에 50일 · 100일 · 돌 · 두 돌 날짜, 다가오는 할 일
  * - 생활 루틴: 반복 할 일 추천(한 번 눌러 추가)
+ * - 직접 만든 주제: 완료 아래 「모두 체크 해제」(외출 가방처럼 다시 쓰는 목록)
  * 바닥 칸에 적으면 이 주제에 들어간다. 장보기 주제는 장보기 탭으로 보낸다.
  */
 
@@ -53,7 +54,7 @@ export default function TopicScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { topics, todos, loading, add, update, toggleDone, remove, updateTopic, dismissed, autoRemoved } = useTodos();
+  const { topics, todos, loading, add, update, toggleDone, remove, updateTopic, resetTopic, dismissed, autoRemoved } = useTodos();
   const markDone = useMarkDone();
   const [editing, setEditing] = useState<Todo | null>(null);
   const [editTopic, setEditTopic] = useState(false);
@@ -292,13 +293,24 @@ export default function TopicScreen() {
               </View>
             )}
 
-            {/* 완료 — 지우지 않는다(헌장 2) */}
+            {/* 완료 — 지우지 않는다(헌장 2). 직접 만든 주제는 외출 가방처럼 다시 쓰게 「모두 체크 해제」(SPEC-TOPIC-12) */}
             {done.length > 0 && (
               <View style={styles.section}>
                 <SectionHeader title="완료" aside={`${done.length}개`} />
                 <Card style={styles.rows}>
                   <Folded limit={3}>{done.map(todoRow)}</Folded>
                 </Card>
+                {topic.kind === 'custom' && done.some((t) => !t.repeat) && (
+                  <Button
+                    label="모두 체크 해제"
+                    size="sm"
+                    variant="secondary"
+                    onPress={() => {
+                      tap();
+                      void resetTopic(topic.id);
+                    }}
+                  />
+                )}
               </View>
             )}
 
@@ -339,9 +351,9 @@ export default function TopicScreen() {
         open={editTopic}
         topic={topic}
         onClose={() => setEditTopic(false)}
-        onSave={(title) => {
+        onSave={(title, icon) => {
           setEditTopic(false);
-          void updateTopic(topic.id, { title });
+          void updateTopic(topic.id, icon ? { title, icon } : { title });
         }}
         // 「내 할 일」은 숨기지 않는다 — 첫 화면에서 적은 할 일이 들어가는 곳이라서
         onHide={

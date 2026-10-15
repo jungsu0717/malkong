@@ -8,7 +8,7 @@
 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -21,7 +21,8 @@ import { TodoInput } from '@/components/todo/todo-input';
 import { TodoItem } from '@/components/todo/todo-item';
 import { TodoSheet } from '@/components/todo/todo-sheet';
 import { TopicGrid } from '@/components/todo/topic-grid';
-import { TOPIC_ICONS } from '@/components/todo/topic-icons';
+import { iconOf } from '@/components/todo/topic-icons';
+import { TopicSheet } from '@/components/todo/topic-sheet';
 import { TodoRow } from '@/components/todo-row';
 import { Card, Folded, ListRow, SectionHeader } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -39,11 +40,21 @@ export default function TodoScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { topics, todos, loading, add, update, toggleDone, remove, updateTopic, dismissed } = useTodos();
+  const { topics, todos, loading, add, update, toggleDone, remove, addTopic, updateTopic, dismissed } = useTodos();
   const markDone = useMarkDone();
   const typing = useKeyboardVisible();
   const [editing, setEditing] = useState<Todo | null>(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [newTopic, setNewTopic] = useState(false);
+  /** 입력칸에서 고른 주제 — 없으면 「내 할 일」 */
+  const [pickTopic, setPickTopic] = useState<string | null>(null);
+  /** 다른 주제에 넣었을 때 「어린이집 준비에 추가했어요」를 잠깐 — 날짜 없는 할 일은 이 화면 목록에 안 보이므로 */
+  const [added, setAdded] = useState<string | null>(null);
+  useEffect(() => {
+    if (!added) return;
+    const timer = setTimeout(() => setAdded(null), 2500);
+    return () => clearTimeout(timer);
+  }, [added]);
 
   const month = age?.month ?? 0;
   // 장보기는 탭이 따로 있어 이 화면의 목록과 그리드에서 뺀다
@@ -59,6 +70,7 @@ export default function TodoScreen() {
 
   if (!baby || !age || loading) return <ScreenLoading />;
   const general = shown.find((t) => t.kind === 'general');
+  const customs = shown.filter((t) => t.kind === 'custom');
   // 사용자가 숨긴 주제만 — 예전 기본 주제(decisions/025)는 다시 보이지 않는다
   const hidden = topics.filter((t) => t.hidden && !isLegacyKind(t.kind));
   const { open, doneToday } = todayTodos(visibleTodos);
@@ -145,10 +157,11 @@ export default function TodoScreen() {
                 topics={shown.map((t) => ({
                   id: t.id,
                   title: t.title,
-                  icon: TOPIC_ICONS[t.kind],
+                  icon: iconOf(t),
                   count: nowCount(t, todos) + (t.kind === 'checkup' ? dueGroups.length : 0),
                 }))}
                 onOpen={openTopic}
+                onAdd={() => setNewTopic(true)}
               />
               {hidden.length > 0 && (
                 <Pressable accessibilityRole="button" onPress={() => setShowHidden((v) => !v)} style={styles.hiddenToggle}>
@@ -164,7 +177,7 @@ export default function TodoScreen() {
                     <ListRow
                       key={t.id}
                       divider={i > 0}
-                      icon={TOPIC_ICONS[t.kind]}
+                      icon={iconOf(t)}
                       title={t.title}
                       detail="숨김"
                       right={
@@ -184,19 +197,41 @@ export default function TodoScreen() {
             {!typing && <AdBanner />}
           </ScrollView>
 
+          {added && (
+            <ThemedText type="caption" style={[styles.added, { color: c.textSecondary }]}>
+              {added}
+            </ThemedText>
+          )}
           <TodoInput
             placeholder="할 일 추가 (예: 내일 오전 10시 분유 주문)"
+            // 직접 만든 주제가 있으면 칩으로 고른다(SPEC-TOPIC-03)
+            topics={customs.length > 0 ? customs : undefined}
+            topicId={pickTopic}
+            onTopic={setPickTopic}
             onAdd={(p) => {
-              // 이 화면은 「오늘」을 보는 곳 — 날짜를 안 적으면 오늘 할 일로
+              const target = customs.find((t) => t.id === pickTopic);
+              // 내 할 일은 「오늘」을 보는 이 화면에 맞게 날짜가 없으면 오늘로, 직접 만든 주제(체크리스트)는 날짜 없이
               const today = new Date();
-              const dueAt = p.dueAt ?? new Date(today.getFullYear(), today.getMonth(), today.getDate());
-              void add({ title: p.title, dueAt: dueAt.toISOString(), hasTime: p.hasTime, repeat: p.repeat });
+              const dueAt = p.dueAt ?? (target ? null : new Date(today.getFullYear(), today.getMonth(), today.getDate()));
+              void add({ title: p.title, dueAt: dueAt ? dueAt.toISOString() : null, hasTime: p.hasTime, repeat: p.repeat, topicId: target?.id });
+              if (target) setAdded(`${target.title}에 추가했어요`);
             }}
           />
         </KeyboardAvoidingView>
       </SafeAreaView>
 
       {markDone.sheet}
+      <TopicSheet
+        key={newTopic ? 'open' : 'closed'}
+        open={newTopic}
+        topic={null}
+        existingTitles={topics.map((t) => t.title)}
+        onClose={() => setNewTopic(false)}
+        onSave={(title, icon, items) => {
+          setNewTopic(false);
+          void addTopic(title, icon, items).then((t) => openTopic(t.id));
+        }}
+      />
       <TodoSheet
         key={editing?.id ?? 'none'}
         todo={editing}
@@ -231,4 +266,5 @@ const styles = StyleSheet.create({
   rows: { paddingVertical: 2 },
   empty: { paddingVertical: Spacing.three },
   hiddenToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center', paddingVertical: 6 },
+  added: { textAlign: 'center', paddingTop: Spacing.one },
 });

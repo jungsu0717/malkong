@@ -235,7 +235,10 @@ function upsertIn<T extends { id: string }>(key: string, row: T): void {
 }
 
 export async function readTopicRows(): Promise<Topic[]> {
-  return readList<Topic>(TOPICS_KEY).sort((a, b) => a.sort - b.sort);
+  // 아이콘 칸(task topic/005) 전에 저장한 주제에는 icon 이 없다
+  return readList<Topic>(TOPICS_KEY)
+    .map((t) => ({ ...t, icon: t.icon ?? null }))
+    .sort((a, b) => a.sort - b.sort);
 }
 
 export async function upsertTopicRow(t: Topic): Promise<void> {

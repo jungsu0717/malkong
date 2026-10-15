@@ -48,9 +48,10 @@ export function TodoInput({
 
   return (
     <View style={styles.wrap}>
-      {topics && onTopic && focused && (
+      {/* 칩을 누르는 순간 입력칸이 포커스를 잃어도 칩이 사라지지 않게 — 적는 중이거나 주제를 골라 둔 동안에도 보인다 */}
+      {topics && onTopic && (focused || !!text || !!topicId) && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.chips}>
-          <Chip label="자동 분류" selected={!topicId} onPress={() => onTopic(null)} />
+          <Chip label="내 할 일" selected={!topicId} onPress={() => onTopic(null)} />
           {topics.map((t) => (
             <Chip key={t.id} label={t.title} selected={topicId === t.id} onPress={() => onTopic(t.id)} />
           ))}
@@ -74,7 +75,8 @@ export function TodoInput({
           value={text}
           onChangeText={setText}
           onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          // 칩을 누를 때 먼저 오는 blur 로 칩이 사라지면 누른 것이 무시된다 — 조금 늦게 접는다
+          onBlur={() => setTimeout(() => setFocused(false), 200)}
           onSubmitEditing={submit}
           submitBehavior="submit"
           returnKeyType="done"

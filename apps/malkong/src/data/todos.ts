@@ -25,6 +25,8 @@ export type Topic = {
   hidden: boolean;
   /** 목록 순서 */
   sort: number;
+  /** 직접 만든 주제의 아이콘(Ionicons 이름) — 없으면 kind 의 기본 아이콘 */
+  icon: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -103,6 +105,52 @@ export const STARTERS: Partial<Record<TopicKind, Starter[]>> = {
   ],
 };
 
+/**
+ * 추천 주제(SPEC-TOPIC-12) — 공공에서 챙겨 주지 않는 준비. 누르면 이 이름 · 아이콘으로 주제를 만들고 할 일을 날짜 없이 채운다.
+ * 한 번 만들어 두고 고치지 않는다(헌장 8). 약 · 처치는 넣지 않는다(헌장 5).
+ */
+export const TOPIC_TEMPLATES: { title: string; icon: string; items: string[] }[] = [
+  {
+    title: '어린이집 준비',
+    icon: 'school-outline',
+    items: ['입소 대기 신청', '상담 날짜 잡기', '이름 스티커 주문', '낮잠 이불', '여벌 옷과 양말', '기저귀와 물티슈', '개인 컵과 수저', '가방'],
+  },
+  {
+    title: '여행 짐',
+    icon: 'airplane-outline',
+    items: [
+      '기저귀와 물티슈',
+      '여벌 옷',
+      '분유 · 젖병 · 보온병',
+      '젖병 세정제와 솔',
+      '아기수첩',
+      '휴대용 유모차',
+      '아기띠',
+      '쪽쪽이',
+      '작은 장난감',
+      '겉싸개나 담요',
+      '기저귀 담을 비닐봉지',
+    ],
+  },
+  {
+    title: '외출 가방',
+    icon: 'bag-handle-outline',
+    items: ['기저귀와 물티슈', '여벌 옷', '분유 · 젖병 · 보온병', '손수건과 턱받이', '쪽쪽이', '작은 장난감', '겉싸개나 담요', '기저귀 담을 비닐봉지'],
+  },
+];
+
+/** 직접 만드는 주제의 아이콘 — 첫 번째가 기본 */
+export const CUSTOM_ICONS = [
+  'folder-open-outline',
+  'school-outline',
+  'airplane-outline',
+  'bag-handle-outline',
+  'home-outline',
+  'car-outline',
+  'heart-outline',
+  'star-outline',
+] as const;
+
 export function newTopicId(): string {
   return `tp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -111,9 +159,9 @@ export function newTodoId(): string {
   return `td-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function makeTopic(kind: TopicKind, title: string, sort: number, now = new Date()): Topic {
+export function makeTopic(kind: TopicKind, title: string, sort: number, icon: string | null = null, now = new Date()): Topic {
   const at = now.toISOString();
-  return { id: newTopicId(), kind, title, hidden: false, sort, createdAt: at, updatedAt: at };
+  return { id: newTopicId(), kind, title, hidden: false, sort, icon, createdAt: at, updatedAt: at };
 }
 
 export type TodoInput = { topicId: string; title: string } & Partial<

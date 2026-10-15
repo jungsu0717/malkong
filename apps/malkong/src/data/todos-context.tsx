@@ -69,8 +69,11 @@ type TodosContextValue = {
   /** 끝냄 ↔ 되돌림 */
   toggleDone: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
-  addTopic: (title: string) => Promise<Topic>;
-  updateTopic: (id: string, patch: Partial<Pick<Topic, 'title' | 'hidden'>>) => Promise<void>;
+  /** 주제 만들기 — 아이콘과, 추천 주제면 날짜 없이 채울 할 일 제목들(SPEC-TOPIC-12) */
+  addTopic: (title: string, icon?: string | null, items?: string[]) => Promise<Topic>;
+  updateTopic: (id: string, patch: Partial<Pick<Topic, 'title' | 'hidden' | 'icon'>>) => Promise<void>;
+  /** 모두 체크 해제 — 그 주제에서 완료한 할 일(반복 없는 것)을 되돌린다 */
+  resetTopic: (id: string) => Promise<void>;
   topicOfKind: (kind: TopicKind) => Topic | undefined;
   /** 반복 추천에서 「다시 보지 않기」를 누른 열쇠들 */
   dismissed: string[];
@@ -311,12 +314,25 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     await writeSetting(DISMISSED_KEY, JSON.stringify(next));
   }, []);
 
-  const addTopic = useCallback(async (title: string) => {
+  const addTopic = useCallback<TodosContextValue['addTopic']>(async (title, icon = null, items = []) => {
     const sort = Math.max(0, ...currentTopics.current.map((t) => t.sort)) + 1;
-    const topic = makeTopic('custom', title.trim(), sort);
+    const topic = makeTopic('custom', title.trim(), sort, icon);
     await saveTopic(topic);
     setTopics((prev) => [...prev, topic]);
+    const made = items.map((item) => makeTodo({ topicId: topic.id, title: item, source: 'starter' }));
+    for (const t of made) await saveTodo(t);
+    if (made.length > 0) setTodos((prev) => [...prev, ...made]);
     return topic;
+  }, []);
+
+  const resetTopic = useCallback(async (id: string) => {
+    const at = new Date().toISOString();
+    const undone = currentTodos.current
+      .filter((t) => t.topicId === id && t.doneAt && !t.repeat)
+      .map((t) => ({ ...t, doneAt: null, updatedAt: at }));
+    for (const t of undone) await saveTodo(t);
+    const ids = new Map(undone.map((t) => [t.id, t]));
+    setTodos((prev) => prev.map((t) => ids.get(t.id) ?? t));
   }, []);
 
   const updateTopic = useCallback<TodosContextValue['updateTopic']>(async (id, patch) => {
@@ -338,6 +354,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       remove,
       addTopic,
       updateTopic,
+      resetTopic,
       topicOfKind,
       dismissed,
       acceptRepeat,
@@ -354,6 +371,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       remove,
       addTopic,
       updateTopic,
+      resetTopic,
       topicOfKind,
       dismissed,
       acceptRepeat,

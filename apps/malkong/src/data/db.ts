@@ -85,6 +85,7 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           title       TEXT NOT NULL,
           hidden      INTEGER NOT NULL DEFAULT 0,
           sort        INTEGER NOT NULL DEFAULT 0,
+          icon        TEXT,
           created_at  TEXT NOT NULL,
           updated_at  TEXT NOT NULL
         );
@@ -126,6 +127,11 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
       // 앱이 만든 할 일의 규칙 열쇠(task topic/003)
       if (!todoColumns.some((col) => col.name === 'ref')) {
         await db.execAsync('ALTER TABLE todo ADD COLUMN ref TEXT');
+      }
+      // 직접 만든 주제의 아이콘(task topic/005)
+      const topicColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(topic)');
+      if (!topicColumns.some((col) => col.name === 'icon')) {
+        await db.execAsync('ALTER TABLE topic ADD COLUMN icon TEXT');
       }
       // 장보기 — 주문한 때 · 도착 예정일 · 어디서(task topic/004)
       for (const col of ['ordered_at', 'arrive_at', 'store']) {
@@ -391,7 +397,7 @@ type TodoRow = Omit<Todo, 'hasTime' | 'buy' | 'repeat'> & { hasTime: number; buy
 export async function readTopicRows(): Promise<Topic[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<TopicRow>(
-    `SELECT id, kind, title, hidden, sort, created_at AS createdAt, updated_at AS updatedAt FROM topic ORDER BY sort`,
+    `SELECT id, kind, title, hidden, sort, icon, created_at AS createdAt, updated_at AS updatedAt FROM topic ORDER BY sort`,
   );
   return rows.map((r) => ({ ...r, hidden: r.hidden === 1 }));
 }
@@ -399,14 +405,15 @@ export async function readTopicRows(): Promise<Topic[]> {
 export async function upsertTopicRow(t: Topic): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO topic (id, kind, title, hidden, sort, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO topic (id, kind, title, hidden, sort, icon, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, title = excluded.title, hidden = excluded.hidden,
-       sort = excluded.sort, updated_at = excluded.updated_at`,
+       sort = excluded.sort, icon = excluded.icon, updated_at = excluded.updated_at`,
     t.id,
     t.kind,
     t.title,
     t.hidden ? 1 : 0,
     t.sort,
+    t.icon,
     t.createdAt,
     t.updatedAt,
   );

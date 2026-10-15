@@ -338,6 +338,7 @@ CREATE TABLE topic (                       -- 할 일 주제 (SPEC-TOPIC-01, dec
   title       TEXT NOT NULL,
   hidden      INTEGER NOT NULL DEFAULT 0,  -- 숨긴 주제 — 지우지 않는다
   sort        INTEGER NOT NULL DEFAULT 0,
+  icon        TEXT,                        -- 직접 만든 주제의 아이콘(Ionicons 이름, SPEC-TOPIC-12). 기본 주제는 비움
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );

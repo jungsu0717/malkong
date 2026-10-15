@@ -1,5 +1,5 @@
 import type { IconName } from '@/components/ui';
-import type { TopicKind } from '@/data/todos';
+import type { Topic, TopicKind } from '@/data/todos';
 
 /** 주제 아이콘 — 먹색 한 가지로, 색은 늘리지 않는다. 예전 기본 주제(decisions/025)는 숨긴 주제 목록에만 보인다 */
 export const TOPIC_ICONS: Record<TopicKind, IconName> = {
@@ -17,6 +17,11 @@ export const TOPIC_ICONS: Record<TopicKind, IconName> = {
   shopping: 'cart-outline',
   paperwork: 'document-text-outline',
 };
+
+/** 주제의 아이콘 — 직접 만든 주제는 고른 아이콘 */
+export function iconOf(topic: Pick<Topic, 'kind' | 'icon'>): IconName {
+  return (topic.icon as IconName | null) ?? TOPIC_ICONS[topic.kind];
+}
 
 /**
  * 행성 그림의 행성 색(SPEC-TOPIC-10) — 어두운 우주 카드 안에서만 쓴다. 밝은 화면의 아이콘 · 글자에는 쓰지 않는다.
