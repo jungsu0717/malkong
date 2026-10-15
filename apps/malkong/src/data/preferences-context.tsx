@@ -21,7 +21,7 @@ const NUDGE_PUSH_KEY = 'record_nudge_push';
 const NUDGE_CARD_KEY = 'record_nudge_card';
 
 /**
- * 기록 알림 (SPEC-LOG-05) — 수유 · 기저귀 · 잠 · 체온 · 기록이 비었을 때를 한 스위치로. 'on' · 'off', 정한 적이 없으면 켜짐.
+ * 기록 알림 (SPEC-LOG-05) — 수유 · 기저귀 · 잠 · 체온 · 기록이 비었을 때를 한 스위치로. 'on' · 'off', 정한 적이 없으면 꺼짐(decisions/027).
  * 때는 부모가 고르지 않고 월령 기준으로 앱이 정한다(care-reminders.ts)
  */
 const CARE_REMINDERS_KEY = 'care_reminders';
@@ -50,7 +50,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const [briefingTime, setTime] = useState<string | null>(DEFAULT_BRIEFING_TIME);
   const [nudgePush, setPush] = useState(true);
   const [nudgeCard, setCard] = useState(true);
-  const [careReminders, setCare] = useState(true);
+  const [careReminders, setCare] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,8 +65,9 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
         if (cancelled) return;
         setPush(push !== 'off');
         setCard(card !== 'off');
-        setCare(care !== 'off');
-        void scheduleTempReminders(care !== 'off' ? TEMP_HOURS : null).catch(() => undefined);
+        // 기록 알림은 켠 사람만(decisions/027 — 기록이 탭에서 빠졌다). 정한 적이 없으면 꺼짐
+        setCare(care === 'on');
+        void scheduleTempReminders(care === 'on' ? TEMP_HOURS : null).catch(() => undefined);
         setTime(time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME));
       })
       .finally(() => {

@@ -205,9 +205,10 @@ export default function TodoScreen() {
           <TodoInput
             placeholder="할 일 추가 (예: 내일 오전 10시 분유 주문)"
             // 직접 만든 주제가 있으면 칩으로 고른다(SPEC-TOPIC-03)
-            topics={customs.length > 0 ? customs : undefined}
-            topicId={pickTopic}
-            onTopic={setPickTopic}
+            options={customs.length > 0 ? customs.map((t) => ({ id: t.id, label: t.title })) : undefined}
+            selected={pickTopic}
+            onSelect={setPickTopic}
+            noneLabel="내 할 일"
             onAdd={(p) => {
               const target = customs.find((t) => t.id === pickTopic);
               // 내 할 일은 「오늘」을 보는 이 화면에 맞게 날짜가 없으면 오늘로, 직접 만든 주제(체크리스트)는 날짜 없이

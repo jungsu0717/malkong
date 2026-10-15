@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 
-import { BottleIcon, TeddyIcon } from '@/components/baby-icons';
+import { TeddyIcon } from '@/components/baby-icons';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 탭 다섯 — 홈(첫 화면, 한눈 요약) · 할 일 · 장보기 · 기록 · 마이 (decisions/026, Julian 2026-10-15) */
+/** 탭 넷 — 홈(첫 화면, 한눈 요약) · 할 일 · 장보기 · 마이. 기록은 마이 → 기록으로 옮겼다 (decisions/026 · 027, Julian 2026-10-15) */
 export default function TabLayout() {
   const c = useTheme();
 
@@ -42,13 +42,6 @@ export default function TabLayout() {
         options={{
           title: '장보기',
           tabBarIcon: ({ color, size }) => <Ionicons name="cart-outline" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="log"
-        options={{
-          title: '기록',
-          tabBarIcon: ({ color, size }) => <BottleIcon size={size} color={color} />,
         }}
       />
       <Tabs.Screen

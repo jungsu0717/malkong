@@ -154,10 +154,10 @@ export default function LogScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.flex} edges={['top']}>
+      {/* 마이 → 기록에서 들어오는 화면(decisions/027) — 제목은 머리줄에 */}
+      <SafeAreaView style={styles.flex} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.head}>
-            <ThemedText type="display">기록</ThemedText>
             <ThemedText type="small" style={{ color: c.textSecondary }}>
               {name} · 태어난 지 {(age?.days ?? 0) + 1}일
             </ThemedText>

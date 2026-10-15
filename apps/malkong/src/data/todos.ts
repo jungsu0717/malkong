@@ -245,27 +245,77 @@ export function shopLists(shop: Topic | undefined, todos: Todo[]): { toBuy: Todo
   };
 }
 
-/** 다시 담기 — 지난번 산 것 중 지금 살 것 · 배송 중에 없는 것, 최근 순으로 `limit` 개 */
-export function buyAgain(shop: Topic | undefined, todos: Todo[], limit = 10): string[] {
+/** 살 곳 — 「온라인」 묶음에만 「주문했어요」가 있다(SPEC-SHOP-01 · 02) */
+export const ONLINE = '온라인';
+/** 처음부터 있는 살 곳 — 상호는 넣지 않는다. 다이소 같은 곳은 사용자가 한 번 적으면 칩으로 남는다 */
+const DEFAULT_PLACES = ['마트', ONLINE];
+
+/** 살 것의 살 곳 — 주문한 것은 「온라인」(store 에는 주문한 쇼핑몰 이름이 들어 있을 수 있다) */
+export const placeOf = (t: Todo): string | null => (t.orderedAt ? ONLINE : t.store?.trim() || null);
+
+/** 살 곳 칩 — 사용자가 쓴 곳(최근 순)과 기본(마트 · 온라인) */
+export function shopPlaces(shop: Topic | undefined, todos: Todo[], limit = 8): string[] {
+  const list = shop ? todos.filter((t) => t.topicId === shop.id) : [];
+  const used = [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(placeOf);
+  const places: string[] = [];
+  for (const p of [...used, ...DEFAULT_PLACES]) if (p && !places.includes(p)) places.push(p);
+  return places.slice(0, limit);
+}
+
+/** 살 것을 살 곳별로 — 매장(칩 순서) → 온라인 → 살 곳을 안 정한 것 */
+export function toBuyGroups(toBuy: Todo[], places: string[]): { place: string | null; items: Todo[] }[] {
+  const order = [...places.filter((p) => p !== ONLINE), ONLINE];
+  for (const t of toBuy) {
+    const p = placeOf(t);
+    if (p && !order.includes(p)) order.splice(order.length - 1, 0, p);
+  }
+  const groups = order.map((place) => ({ place: place as string | null, items: toBuy.filter((t) => placeOf(t) === place) }));
+  groups.push({ place: null, items: toBuy.filter((t) => !placeOf(t)) });
+  return groups.filter((g) => g.items.length > 0);
+}
+
+/** 다시 담기 — 지난번 산 것 중 지금 살 것 · 배송 중에 없는 것, 최근 순으로 `limit` 개. 살 곳도 함께 */
+export function buyAgain(shop: Topic | undefined, todos: Todo[], limit = 10): { title: string; place: string | null }[] {
   const { toBuy, shipping, done } = shopLists(shop, todos);
   const now = new Set([...toBuy, ...shipping].map((t) => titleKey(t.title)));
   const seen = new Set<string>();
-  const titles: string[] = [];
+  const items: { title: string; place: string | null }[] = [];
   for (const t of done) {
     const key = titleKey(t.title);
     if (now.has(key) || seen.has(key)) continue;
     seen.add(key);
-    titles.push(t.title);
-    if (titles.length >= limit) break;
+    items.push({ title: t.title, place: placeOf(t) });
+    if (items.length >= limit) break;
   }
-  return titles;
+  return items;
 }
 
-/** 주문할 때 「어디서」 칩 — 사용자가 전에 적은 이름, 최근 순. 앱이 쇼핑몰 이름을 미리 넣지 않는다 */
+/**
+ * 지난번 목록 다시 담기(SPEC-SHOP-03) — 매장마다 마지막으로 장 본 날 함께 산 것(둘 이상) 중 지금 목록에 없는 것.
+ * 이유식 재료처럼 늘 같이 사는 묶음을 한 번에 담는다. 온라인 주문은 뺀다
+ */
+export function lastTrips(shop: Topic | undefined, todos: Todo[]): { place: string; titles: string[] }[] {
+  const { toBuy, shipping, done } = shopLists(shop, todos);
+  const now = new Set([...toBuy, ...shipping].map((t) => titleKey(t.title)));
+  const day = (iso: string) => iso.slice(0, 10);
+  const trips: { place: string; titles: string[] }[] = [];
+  const offline = done.filter((t) => !t.orderedAt && t.store?.trim());
+  for (const place of [...new Set(offline.map((t) => (t.store as string).trim()))]) {
+    const atPlace = offline.filter((t) => (t.store as string).trim() === place);
+    const lastDay = day(atPlace[0].doneAt as string);
+    const titles = [...new Set(atPlace.filter((t) => day(t.doneAt as string) === lastDay).map((t) => t.title))].filter(
+      (title) => !now.has(titleKey(title)),
+    );
+    if (titles.length >= 2) trips.push({ place, titles });
+  }
+  return trips;
+}
+
+/** 주문할 때 「주문한 곳」 칩 — 사용자가 전에 적은 쇼핑몰 이름, 최근 순. 앱이 쇼핑몰 이름을 미리 넣지 않는다 */
 export function recentStores(todos: Todo[], limit = 6): string[] {
   const seen = new Set<string>();
   return [...todos]
-    .filter((t) => t.store && t.orderedAt)
+    .filter((t) => t.store && t.orderedAt && t.store.trim() !== ONLINE)
     .sort((a, b) => (b.orderedAt ?? '').localeCompare(a.orderedAt ?? ''))
     .map((t) => (t.store as string).trim())
     .filter((s) => s && !seen.has(s) && seen.add(s))

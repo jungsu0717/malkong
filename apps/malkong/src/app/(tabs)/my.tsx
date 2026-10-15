@@ -81,6 +81,19 @@ export default function MyScreen() {
             </Pressable>
           )}
 
+          {/* 기록 — 탭에서 빼고 여기로 옮겼다(decisions/027). 수유 · 기저귀 · 잠 · 체온 · 키와 몸무게 */}
+          <View style={styles.section}>
+            <SectionHeader title="기록" />
+            <Card style={styles.rows}>
+              <ListRow
+                icon="create-outline"
+                title="기록"
+                detail="수유 · 기저귀 · 잠 · 체온 · 키와 몸무게"
+                onPress={() => router.push('/log')}
+              />
+            </Card>
+          </View>
+
           {/* 알림은 한 줄 요약만 — 켜고 끄기 · 시간은 상세(src/app/notifications.tsx)에서 (task common/020) */}
           <View style={styles.section}>
             <SectionHeader title="알림" />

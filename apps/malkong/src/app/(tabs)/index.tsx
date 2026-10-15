@@ -30,11 +30,13 @@ import { useRecords } from '@/data/records-context';
 import {
   monthTodos,
   shopLists,
+  shopPlaces,
   sortDone,
   sortOpen,
   titleKey,
   todayTodos,
   todosOfTopic,
+  toBuyGroups,
   visibleTopics,
   weekDoneCount,
   type Todo,
@@ -135,7 +137,9 @@ export default function HomeScreen() {
     ? `${first.title} ${first.arriveAt ? `${dueLabel(new Date(first.arriveAt), false, now)} 도착 예정` : '배송 중'}` +
       (shipping.length > 1 ? ` 외 ${shipping.length - 1}개` : '')
     : toBuy.length > 0
-      ? `살 것: ${joinTitles(toBuy.map((t) => t.title))}`
+      ? `살 것: ${toBuyGroups(toBuy, shopPlaces(topicOf('shopping'), todos))
+          .map((g) => `${g.place ?? '기타'} ${g.items.length}개`)
+          .join(', ')}`
       : '살 것이 없어요';
 
   // 다가오는 날 — 접종 · 검진, 50일 · 100일 · 돌, 사이즈 확인 중 가까운 둘
@@ -187,7 +191,7 @@ export default function HomeScreen() {
           <View>
             <ThemedText type="display">{baby.name ?? DEFAULT_BABY_NAME}</ThemedText>
             <ThemedText type="small" style={{ color: c.textSecondary }}>
-              태어난 지 {age.days}일 · {age.month}개월
+              태어난 지 {age.days + 1}일 · {age.month}개월
             </ThemedText>
           </View>
 

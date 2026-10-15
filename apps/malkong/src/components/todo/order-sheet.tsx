@@ -1,6 +1,6 @@
 /**
- * 주문 정보 (SPEC-SHOP-02) — 「주문했어요」를 누르면 어디서 · 언제 도착하는지 적는다. 배송 중인 것은 고치거나 주문 취소 · 삭제.
- * 어디서는 사용자가 전에 적은 이름만 칩으로 보인다(앱이 쇼핑몰 이름을 미리 넣지 않는다).
+ * 주문 정보 (SPEC-SHOP-02) — 온라인 묶음의 「주문했어요」를 누르면 주문한 곳(안 적어도 된다) · 언제 도착하는지 적는다.
+ * 배송 중인 것은 고치거나 주문 취소 · 삭제. 주문한 곳은 사용자가 전에 적은 이름만 칩으로 보인다(앱이 쇼핑몰 이름을 미리 넣지 않는다).
  */
 
 import { useState } from 'react';
@@ -11,7 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button, Chip } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { dueLabel, parseDue } from '@/data/due-parse';
-import type { Todo } from '@/data/todos';
+import { ONLINE, type Todo } from '@/data/todos';
 import { useTheme } from '@/hooks/use-theme';
 
 export type OrderPatch = Pick<Todo, 'store' | 'arriveAt' | 'orderedAt'>;
@@ -45,7 +45,8 @@ export function OrderSheet({
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const ordered = !!todo?.orderedAt;
-  const [store, setStore] = useState(todo?.store ?? '');
+  // 살 곳 「온라인」은 주문한 곳이 아니므로 비워 두고 시작한다
+  const [store, setStore] = useState(todo?.store && todo.store !== ONLINE ? todo.store : '');
   const [arrive, setArrive] = useState<Date | null>(todo?.arriveAt ? new Date(todo.arriveAt) : null);
   const [arriveText, setArriveText] = useState('');
   // 날짜 칸에 적은 말이 있으면 그것을 읽는다(「10/20」 「금요일」)
@@ -63,7 +64,7 @@ export function OrderSheet({
             <ThemedText type="title">{todo?.title}</ThemedText>
 
             <ThemedText type="label" style={{ color: c.textSecondary }}>
-              어디서 샀나요
+              주문한 곳
             </ThemedText>
             <TextInput
               style={[styles.field, { color: c.text, backgroundColor: c.surface }]}
@@ -127,7 +128,7 @@ export function OrderSheet({
             disabled={unread}
             onPress={() =>
               onSave({
-                store: store.trim() || null,
+                store: store.trim() || ONLINE,
                 arriveAt: shown ? shown.toISOString() : null,
                 orderedAt: todo?.orderedAt ?? new Date().toISOString(),
               })

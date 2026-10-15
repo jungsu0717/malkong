@@ -1,7 +1,7 @@
 /**
  * 할 일 적는 칸 (SPEC-TOPIC-03) — 화면 바닥에 늘 있다. 칸을 누르고 쓰고 완료, 두 번 터치로 한 줄이 생긴다.
  * 「내일 오전 10시」 같은 말은 바로 읽어 칸 위에 미리 보여 주고, 적은 뒤에도 칸을 비워 둔 채 키보드를 남겨 이어 적게 한다.
- * 주제 칩을 주면(할 일 탭 첫 화면) 어느 주제에 넣을지 고를 수 있다 — 고르지 않으면 제목으로 짐작한다.
+ * 칩을 주면 어디에 넣을지 고를 수 있다 — 할 일 탭은 내 할 일 · 직접 만든 주제, 장보기 탭은 살 곳(마트 · 온라인 …).
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -13,23 +13,25 @@ import { Chip, tap } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { dueLabel, parseDue, type ParsedDue } from '@/data/due-parse';
 import { repeatLabel } from '@/data/repeat';
-import type { Topic } from '@/data/todos';
 import { useTheme } from '@/hooks/use-theme';
 
 export function TodoInput({
   placeholder,
   onAdd,
-  topics,
-  topicId,
-  onTopic,
+  options,
+  selected = null,
+  onSelect,
+  noneLabel,
 }: {
   placeholder: string;
   onAdd: (parsed: ParsedDue) => void;
-  /** 고를 수 있는 주제 — 주면 칸 위에 칩으로 보인다 */
-  topics?: Topic[];
-  /** 고른 주제 — null 이면 짐작 */
-  topicId?: string | null;
-  onTopic?: (id: string | null) => void;
+  /** 고를 수 있는 것 — 주면 칸 위에 칩으로 보인다 */
+  options?: { id: string; label: string }[];
+  /** 고른 것 — null 이면 `noneLabel` */
+  selected?: string | null;
+  onSelect?: (id: string | null) => void;
+  /** 아무것도 고르지 않았을 때의 칩 이름(예: 「내 할 일」). 없으면 그 칩을 두지 않는다 */
+  noneLabel?: string;
 }) {
   const c = useTheme();
   const [text, setText] = useState('');
@@ -49,11 +51,11 @@ export function TodoInput({
   return (
     <View style={styles.wrap}>
       {/* 칩을 누르는 순간 입력칸이 포커스를 잃어도 칩이 사라지지 않게 — 적는 중이거나 주제를 골라 둔 동안에도 보인다 */}
-      {topics && onTopic && (focused || !!text || !!topicId) && (
+      {options && onSelect && (focused || !!text || !!selected) && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.chips}>
-          <Chip label="내 할 일" selected={!topicId} onPress={() => onTopic(null)} />
-          {topics.map((t) => (
-            <Chip key={t.id} label={t.title} selected={topicId === t.id} onPress={() => onTopic(t.id)} />
+          {noneLabel && <Chip label={noneLabel} selected={!selected} onPress={() => onSelect(null)} />}
+          {options.map((o) => (
+            <Chip key={o.id} label={o.label} selected={selected === o.id} onPress={() => onSelect(o.id)} />
           ))}
         </ScrollView>
       )}
