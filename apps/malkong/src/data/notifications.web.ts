@@ -12,7 +12,9 @@ export async function askNotifications(): Promise<boolean> {
   return false;
 }
 
-export async function scheduleBriefing(_time: string | null): Promise<void> {}
+export type MorningDay = { day: Date; titles: string[] };
+
+export async function scheduleMorningAlerts(_time: string | null, _days: MorningDay[]): Promise<void> {}
 
 export async function scheduleRecordNudge(_at: Date | null): Promise<void> {}
 

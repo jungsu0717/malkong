@@ -14,6 +14,7 @@ import type { ChatMessage } from './chat';
 import type { CareEvent } from './events';
 import type { InboxCard } from './inbox';
 import type { BabyRecord } from './records';
+import { repeatFromText, repeatToText } from './repeat';
 import type { Todo, Topic } from './todos';
 
 const DB_NAME = 'malkong.db';
@@ -97,6 +98,7 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           buy         INTEGER NOT NULL DEFAULT 0,
           source      TEXT NOT NULL,
           done_at     TEXT,
+          repeat      TEXT,
           created_at  TEXT NOT NULL,
           updated_at  TEXT NOT NULL
         );
@@ -111,6 +113,11 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
       const eventColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(care_event)');
       if (!eventColumns.some((col) => col.name === 'color')) {
         await db.execAsync('ALTER TABLE care_event ADD COLUMN color TEXT');
+      }
+      // 반복 규칙(task topic/002) — 그 전에 만든 할 일 표에는 없다
+      const todoColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(todo)');
+      if (!todoColumns.some((col) => col.name === 'repeat')) {
+        await db.execAsync('ALTER TABLE todo ADD COLUMN repeat TEXT');
       }
       return db;
     })();
@@ -367,7 +374,7 @@ export async function deleteEventRow(id: string): Promise<void> {
 // --- 주제별 할 일 (SPEC-TOPIC-01~03, decisions/024) ---
 
 type TopicRow = Omit<Topic, 'hidden'> & { hidden: number };
-type TodoRow = Omit<Todo, 'hasTime' | 'buy'> & { hasTime: number; buy: number };
+type TodoRow = Omit<Todo, 'hasTime' | 'buy' | 'repeat'> & { hasTime: number; buy: number; repeat: string | null };
 
 export async function readTopicRows(): Promise<Topic[]> {
   const db = await getDb();
@@ -397,20 +404,20 @@ export async function readTodoRows(): Promise<Todo[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<TodoRow>(
     `SELECT id, topic_id AS topicId, title, note, due_at AS dueAt, has_time AS hasTime, buy, source, done_at AS doneAt,
-            created_at AS createdAt, updated_at AS updatedAt
+            repeat, created_at AS createdAt, updated_at AS updatedAt
        FROM todo ORDER BY created_at`,
   );
-  return rows.map((r) => ({ ...r, hasTime: r.hasTime === 1, buy: r.buy === 1 }));
+  return rows.map((r) => ({ ...r, hasTime: r.hasTime === 1, buy: r.buy === 1, repeat: repeatFromText(r.repeat) }));
 }
 
 export async function upsertTodoRow(t: Todo): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO todo (id, topic_id, title, note, due_at, has_time, buy, source, done_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO todo (id, topic_id, title, note, due_at, has_time, buy, source, done_at, repeat, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET topic_id = excluded.topic_id, title = excluded.title, note = excluded.note,
        due_at = excluded.due_at, has_time = excluded.has_time, buy = excluded.buy, source = excluded.source,
-       done_at = excluded.done_at, updated_at = excluded.updated_at`,
+       done_at = excluded.done_at, repeat = excluded.repeat, updated_at = excluded.updated_at`,
     t.id,
     t.topicId,
     t.title,
@@ -420,6 +427,7 @@ export async function upsertTodoRow(t: Todo): Promise<void> {
     t.buy ? 1 : 0,
     t.source,
     t.doneAt,
+    repeatToText(t.repeat),
     t.createdAt,
     t.updatedAt,
   );

@@ -6,6 +6,7 @@
  */
 
 import { deleteTodoRow, readTodoRows, readTopicRows, upsertTodoRow, upsertTopicRow } from './db';
+import { SUGGEST_AFTER, firstDate, nextDate, startOfDay, suggestRepeat, withTimeOf, type Repeat } from './repeat';
 
 export type TopicKind = 'feeding' | 'diaper' | 'checkup' | 'outing' | 'sick' | 'solids' | 'shopping' | 'general' | 'custom';
 
@@ -21,7 +22,8 @@ export type Topic = {
   updatedAt: string;
 };
 
-export type TodoSource = 'manual' | 'starter';
+/** 어디서 생겼나 — 직접 적음 · 추천에서 추가 · 반복 할 일을 완료해서 다음 차례로 생김 */
+export type TodoSource = 'manual' | 'starter' | 'repeat';
 
 export type Todo = {
   id: string;
@@ -37,6 +39,8 @@ export type Todo = {
   source: TodoSource;
   /** 끝낸 때. 되돌리면 null */
   doneAt: string | null;
+  /** 반복 규칙(SPEC-TOPIC-06) — 완료하면 다음 날짜로 새 줄이 생긴다 */
+  repeat: Repeat | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -128,7 +132,9 @@ export function makeTopic(kind: TopicKind, title: string, sort: number, now = ne
   return { id: newTopicId(), kind, title, hidden: false, sort, createdAt: at, updatedAt: at };
 }
 
-export type TodoInput = { topicId: string; title: string } & Partial<Pick<Todo, 'note' | 'dueAt' | 'hasTime' | 'buy' | 'source'>>;
+export type TodoInput = { topicId: string; title: string } & Partial<
+  Pick<Todo, 'note' | 'dueAt' | 'hasTime' | 'buy' | 'source' | 'repeat'>
+>;
 
 export function makeTodo(input: TodoInput, now = new Date()): Todo {
   const at = now.toISOString();
@@ -142,6 +148,7 @@ export function makeTodo(input: TodoInput, now = new Date()): Todo {
     buy: input.buy ?? looksLikeBuy(input.title),
     source: input.source ?? 'manual',
     doneAt: null,
+    repeat: input.repeat ?? null,
     createdAt: at,
     updatedAt: at,
   };
@@ -191,6 +198,119 @@ export function visibleTopics(topics: Topic[], todos: Todo[], month: number): To
     .filter((t) => !t.hidden)
     .filter((t) => t.kind !== 'solids' || month >= SOLIDS_FROM_MONTH || todos.some((d) => d.topicId === t.id))
     .sort((a, b) => a.sort - b.sort);
+}
+
+/** 같은 할 일인지 볼 때 — 띄어쓰기를 뺀 제목 */
+export const titleKey = (title: string) => title.replace(/\s+/g, '');
+
+/** 주제 그리드의 숫자 — 안 끝낸 것 중 기한이 오늘까지거나 없는 것(SPEC-TOPIC-01) */
+export function nowCount(topic: Topic, todos: Todo[], now = new Date()): number {
+  const end = endOfToday(now).toISOString();
+  return todosOfTopic(topic, todos).filter((t) => !t.doneAt && (t.dueAt === null || t.dueAt < end)).length;
+}
+
+/** 이번 달 할 일 — 이번 달에 완료한 것 + 안 끝낸 것 중 기한이 이번 달 안이거나 지났거나 없는 것(SPEC-TOPIC-10) */
+export function monthTodos(topic: Topic, todos: Todo[], now = new Date()): Todo[] {
+  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const next = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+  return todosOfTopic(topic, todos).filter((t) => (t.doneAt ? t.doneAt >= start : t.dueAt === null || t.dueAt < next));
+}
+
+/** 이번 주(월요일부터) 완료한 수 */
+export function weekDoneCount(todos: Todo[], now = new Date()): number {
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7)).toISOString();
+  return todos.filter((t) => t.doneAt && t.doneAt >= monday).length;
+}
+
+/** 반복을 새로 붙일 때 첫 기한 — 마지막으로 완료한 날의 다음 차례, 그날이 지났으면 오늘부터 맞는 첫날 */
+export function repeatStart(rule: Repeat, lastDone: Date | null, now = new Date()): Date {
+  const today = startOfDay(now);
+  const next = lastDone ? nextDate(rule, null, lastDone) : firstDate(rule, today);
+  return next < today ? firstDate(rule, today) : next;
+}
+
+/** 반복 할 일을 완료했을 때 다음 차례 줄(SPEC-TOPIC-06) — 반복이 없으면 null. 시각을 정했으면 같은 시각 */
+export function nextRepeatTodo(done: Todo, doneAt: Date): Todo | null {
+  if (!done.repeat) return null;
+  const due = done.dueAt ? new Date(done.dueAt) : null;
+  const day = nextDate(done.repeat, due, doneAt);
+  return makeTodo({
+    topicId: done.topicId,
+    title: done.title,
+    note: done.note,
+    buy: done.buy,
+    repeat: done.repeat,
+    source: 'repeat',
+    hasTime: done.hasTime,
+    dueAt: withTimeOf(day, done.hasTime ? due : null).toISOString(),
+  });
+}
+
+/** 완료를 되돌릴 때 지울 다음 차례 줄 — 그 완료로 생겼고 아직 손대지 않은 것만 */
+export function spawnedBy(done: Todo, todos: Todo[]): Todo | undefined {
+  if (!done.repeat || !done.doneAt) return undefined;
+  const key = titleKey(done.title);
+  return todos.find(
+    (t) =>
+      t.source === 'repeat' &&
+      !t.doneAt &&
+      t.topicId === done.topicId &&
+      titleKey(t.title) === key &&
+      t.createdAt >= (done.doneAt as string) &&
+      t.updatedAt === t.createdAt,
+  );
+}
+
+/**
+ * 아침 알림에 넣을 날짜별 할 일 제목(SPEC-TOPIC-09) — 오늘부터 `count` 일.
+ * 그날 할 일 = 안 끝낸 것 중 기한이 그날까지인 것(지난 것 포함) + `checkups`(지금 기간인 접종 · 검진 이름, 날마다 같이 넣는다).
+ */
+export function morningDays(todos: Todo[], checkups: string[], now = new Date(), count = 7): { day: Date; titles: string[] }[] {
+  const open = sortOpen(todos.filter((t) => !t.doneAt && t.dueAt));
+  return Array.from({ length: count }, (_, i) => {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i + 1).toISOString();
+    const titles = open.filter((t) => (t.dueAt as string) < end).map((t) => t.title);
+    return { day, titles: [...new Set([...titles, ...checkups])] };
+  });
+}
+
+export type RepeatSuggestion = {
+  /** 「다시 보지 않기」에 남기는 열쇠 — 주제 id 와 띄어쓰기를 뺀 제목 */
+  key: string;
+  topicId: string;
+  title: string;
+  /** 완료한 횟수 */
+  count: number;
+  rule: Repeat;
+  /** 가장 최근에 완료한 줄 — 새 반복 할 일의 살 것 · 메모를 여기서 가져온다 */
+  last: Todo;
+};
+
+/**
+ * 반복 추천(SPEC-TOPIC-06) — 같은 주제에서 제목이 같은 할 일을 세 번 이상 완료했고, 반복을 한 번도 정한 적이 없으면.
+ * 여럿이면 가장 최근에 완료한 것 하나. `topicId` 를 주면 그 주제 안에서만 찾는다.
+ */
+export function repeatSuggestion(todos: Todo[], dismissed: string[], topicId?: string): RepeatSuggestion | null {
+  const groups = new Map<string, Todo[]>();
+  for (const t of todos) {
+    if (topicId && t.topicId !== topicId) continue;
+    const key = `${t.topicId}:${titleKey(t.title)}`;
+    groups.set(key, [...(groups.get(key) ?? []), t]);
+  }
+  let best: RepeatSuggestion | null = null;
+  for (const [key, list] of groups) {
+    if (dismissed.includes(key) || list.some((t) => t.repeat)) continue;
+    const done = list.filter((t) => t.doneAt);
+    if (done.length < SUGGEST_AFTER) continue;
+    const rule = suggestRepeat(done.map((t) => new Date(t.doneAt as string)));
+    if (!rule) continue;
+    const last = sortDone(done)[0];
+    if (!best || (last.doneAt ?? '') > (best.last.doneAt ?? '')) {
+      best = { key, topicId: last.topicId, title: last.title, count: done.length, rule, last };
+    }
+  }
+  return best;
 }
 
 export async function loadTopics(): Promise<Topic[]> {

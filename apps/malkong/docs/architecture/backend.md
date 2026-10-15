@@ -349,8 +349,9 @@ CREATE TABLE todo (                        -- 할 일 (SPEC-TOPIC-02 · 03) — 
   due_at      TEXT,                        -- 기한 ISO — 시각이 없으면 그날 0시
   has_time    INTEGER NOT NULL DEFAULT 0,  -- 시각까지 정했으면 1 — 그 시각에 알림(SPEC-TOPIC-09)
   buy         INTEGER NOT NULL DEFAULT 0,  -- 살 것 — 장보기 주제에도 모인다
-  source      TEXT NOT NULL,               -- manual · starter (나중: paste · repeat)
-  done_at     TEXT,                        -- 끝낸 때. 되돌리면 비운다. 반복 할 일은 새 줄로 쌓는다
+  source      TEXT NOT NULL,               -- manual · starter · repeat(반복 할 일을 완료해 생긴 다음 차례) (나중: paste)
+  done_at     TEXT,                        -- 끝낸 때. 되돌리면 비운다. 반복 할 일은 완료할 때 다음 날짜로 새 줄을 쌓는다
+  repeat      TEXT,                        -- 반복 규칙(SPEC-TOPIC-06) — daily · weekly:2,5 · monthly:1 · every:3. 없으면 비움
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL
 );

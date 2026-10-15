@@ -12,6 +12,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Chip, tap } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import { dueLabel, parseDue, type ParsedDue } from '@/data/due-parse';
+import { repeatLabel } from '@/data/repeat';
 import type { Topic } from '@/data/todos';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -57,7 +58,11 @@ export function TodoInput({
       )}
       {parsed?.dueAt && (
         <ThemedText type="caption" style={[styles.preview, { color: c.accentText }]}>
-          {parsed.hasTime ? `${dueLabel(parsed.dueAt, true)}에 알려 드려요` : `기한 ${dueLabel(parsed.dueAt, false)}`}
+          {parsed.repeat
+            ? `${repeatLabel(parsed.repeat)} 반복 · ${dueLabel(parsed.dueAt, parsed.hasTime)}부터`
+            : parsed.hasTime
+              ? `${dueLabel(parsed.dueAt, true)}에 알려 드려요`
+              : `기한 ${dueLabel(parsed.dueAt, false)}`}
         </ThemedText>
       )}
       <View style={[styles.box, { backgroundColor: c.surface }]}>

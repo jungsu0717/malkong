@@ -76,7 +76,7 @@ export type Briefing = {
 };
 
 /** 받침이 있으면 true — "콩이는" / "하준이는" / "하은은" 같은 조사 고르기 */
-function hasBatchim(word: string): boolean {
+export function hasBatchim(word: string): boolean {
   const last = word.trim().slice(-1);
   const code = last.charCodeAt(0) - 0xac00;
   if (code < 0 || code > 11171) return false;

@@ -36,7 +36,7 @@ export const Colors = {
     onDanger: '#FFFFFF',
     /** 시트 뒤를 덮는 막 */
     scrim: 'rgba(22, 22, 26, 0.4)',
-    /** 지식 지도 카드 — 밝은 모드에서도 우주처럼 어둡다 */
+    /** 할 일 탭 행성 그림 카드 — 밝은 모드에서도 우주처럼 어둡다 */
     space: '#0B0B10',
     onSpace: '#FFFFFF',
     onSpaceDim: 'rgba(255, 255, 255, 0.68)',

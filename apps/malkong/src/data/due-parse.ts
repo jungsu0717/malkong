@@ -6,16 +6,21 @@
  * 시각: 「오전 10시」 「오후 3시 30분」 「저녁 8시」 「1시 반」 「10:30」. 오전 · 오후가 없고 7시 전이면 오후로 본다(「3시」는 보통 15시).
  * 읽은 말은 제목에서 뺀다. 시각이 있으면 알림 시각도 된다. 날짜만 있으면 그날 0시를 기한으로 두고 알림은 없다.
  * 시각만 있으면 오늘, 이미 지났으면 내일이다.
+ * 반복(SPEC-TOPIC-06): 「매일」 「매주」 「매주 화요일」 「매주 화, 금요일」 「매달 1일」 「매월」 「3일마다」 「2주마다」.
+ * 반복이 있고 날짜가 없으면 오늘부터 맞는 첫날이 기한이다(시각이 이미 지났으면 그다음 맞는 날).
  *
- * 이 파일은 다른 모듈을 가져오지 않는다 — `node --test` 로 바로 시험한다(due-parse.test.ts).
+ * `node --test` 로 바로 시험한다(due-parse.test.ts) — 가져오는 파일도 `.ts` 를 붙여 적는다.
  */
 
+import { firstDate, type Repeat } from './repeat.ts';
+
 export type ParsedDue = {
-  /** 날짜 · 시각 말을 뺀 제목. 다 빼고 남는 게 없으면 처음 글 그대로 */
+  /** 날짜 · 시각 · 반복 말을 뺀 제목. 다 빼고 남는 게 없으면 처음 글 그대로 */
   title: string;
   /** 기한 — 시각이 없으면 그날 0시 */
   dueAt: Date | null;
   hasTime: boolean;
+  repeat: Repeat | null;
 };
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -32,6 +37,7 @@ export function parseDue(input: string, now = new Date()): ParsedDue {
   let text = ` ${input} `;
   let day: Date | null = null;
   let time: { h: number; m: number } | null = null;
+  let repeat: Repeat | null = null;
 
   /** 처음 맞는 곳을 읽고 그 말을 글에서 뺀다 */
   const take = (pattern: RegExp, read: (m: RegExpExecArray) => void): boolean => {
@@ -41,6 +47,29 @@ export function parseDue(input: string, now = new Date()): ParsedDue {
     text = `${text.slice(0, m.index)} ${text.slice(m.index + m[0].length)}`;
     return true;
   };
+
+  // --- 반복 (먼저 맞은 하나만) — 「매주 화요일」의 요일이 날짜로 읽히지 않게 날짜보다 먼저 ---
+  // 낱말 앞뒤가 띄어져 있어야 한다 — 「매일유업」 같은 이름은 반복으로 읽지 않는다
+  take(new RegExp(`\\s매일${TAIL}(?=\\s)`), () => {
+    repeat = { kind: 'daily' };
+  }) ||
+    take(new RegExp(`매주\\s*([월화수목금토일](?:\\s*[,·]\\s*[월화수목금토일])*)\\s*요일${TAIL}`), (m) => {
+      repeat = { kind: 'weekly', days: [...new Set([...m[1].matchAll(/[월화수목금토일]/g)].map((x) => WEEKDAYS.indexOf(x[0])))] };
+    }) ||
+    take(new RegExp(`\\s매주${TAIL}(?=\\s)`), () => {
+      repeat = { kind: 'weekly', days: [today.getDay()] };
+    }) ||
+    take(new RegExp(`(?:매달|매월)\\s*(\\d{1,2})\\s*일${TAIL}`), (m) => {
+      const n = Number(m[1]);
+      if (n >= 1 && n <= 31) repeat = { kind: 'monthly', day: n };
+    }) ||
+    take(new RegExp(`\\s(?:매달|매월)${TAIL}(?=\\s)`), () => {
+      repeat = { kind: 'monthly', day: today.getDate() };
+    }) ||
+    take(new RegExp(`(\\d{1,3})\\s*(일|주)\\s*마다`), (m) => {
+      const n = Number(m[1]) * (m[2] === '주' ? 7 : 1);
+      if (n >= 1 && n <= 365) repeat = { kind: 'every', days: n };
+    });
 
   // --- 날짜 (먼저 맞은 하나만) ---
   const dated =
@@ -92,16 +121,23 @@ export function parseDue(input: string, now = new Date()): ParsedDue {
     });
 
   const title = text.replace(/\s+/g, ' ').trim() || input.trim();
-  if (!dated && !time) return { title: input.trim(), dueAt: null, hasTime: false };
+  const rule = repeat as Repeat | null;
+  if (!dated && !time && !rule) return { title: input.trim(), dueAt: null, hasTime: false, repeat: null };
 
   const t = time as { h: number; m: number } | null;
+  // 날짜를 따로 적지 않았으면 — 반복이 있으면 오늘부터 맞는 첫날, 없으면 오늘
+  const explicit = day as Date | null;
+  const first = explicit ?? (rule ? firstDate(rule, today) : null);
   if (t) {
-    const base: Date = day ?? today;
+    const base: Date = first ?? today;
     let at = new Date(base.getFullYear(), base.getMonth(), base.getDate(), t.h, t.m);
-    if (!day && at <= now) at = new Date(at.getFullYear(), at.getMonth(), at.getDate() + 1, t.h, t.m);
-    return { title, dueAt: at, hasTime: true };
+    if (!explicit && at <= now) {
+      const next = rule ? firstDate(rule, addDays(base, 1)) : addDays(base, 1);
+      at = new Date(next.getFullYear(), next.getMonth(), next.getDate(), t.h, t.m);
+    }
+    return { title, dueAt: at, hasTime: true, repeat: rule };
   }
-  return { title, dueAt: day, hasTime: false };
+  return { title, dueAt: first, hasTime: false, repeat: rule };
 }
 
 /** 그해의 그날 — 이미 지났으면 내년 */

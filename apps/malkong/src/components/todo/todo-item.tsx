@@ -1,6 +1,6 @@
 /**
  * 할 일 한 줄 (SPEC-TOPIC-02) — 누르면 끝냄 ↔ 되돌림, 오른쪽 단추나 길게 누르기로 고치기.
- * 작은 글씨는 기한 · 주제 · 살 것만 짧게. 끝낸 줄은 흐리게 긋는다(지우지 않는다).
+ * 작은 글씨는 기한 · 반복 · 주제 · 살 것만 짧게. 끝낸 줄은 흐리게 긋는다(지우지 않는다).
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { tap } from '@/components/ui';
 import { dueLabel } from '@/data/due-parse';
+import { repeatLabel } from '@/data/repeat';
 import type { Todo } from '@/data/todos';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -31,7 +32,14 @@ export function TodoItem({
   const now = new Date();
   const due = todo.dueAt ? new Date(todo.dueAt) : null;
   const overdue = !done && due !== null && (todo.hasTime ? due < now : due.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime());
-  const detail = [due ? dueLabel(due, todo.hasTime, now) : null, topicName ?? null, todo.buy ? '살 것' : null].filter(Boolean).join(' · ');
+  const detail = [
+    due ? dueLabel(due, todo.hasTime, now) : null,
+    todo.repeat && !done ? `${repeatLabel(todo.repeat)} 반복` : null,
+    topicName ?? null,
+    todo.buy ? '살 것' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <View style={[styles.row, divider && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider }]}>

@@ -1,5 +1,5 @@
 /**
- * 기기가 스스로 띄우는 로컬 알림 — 아침 알림(SPEC-TOPIC-09), 할 일 알림(SPEC-TOPIC-09), 기록 알림(SPEC-LOG-05).
+ * 기기가 스스로 띄우는 로컬 알림 — 아침 알림(SPEC-TOPIC-09, 일주일 치를 날짜마다), 할 일 알림(SPEC-TOPIC-09), 기록 알림(SPEC-LOG-05).
  *
  * 서버 푸시가 아니다 — 기기 토큰을 서버에 두지 않는다. 아침 알림과 할 일 알림을 누르면 할 일 탭으로 연다.
  * 알림 본문에는 아기 이름과 기록 내용을 넣지 않는다 — 잠금 화면에 보이므로. 할 일 알림은 사용자가 적은 할 일 제목만 보인다.
@@ -9,7 +9,10 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+/** 2026-10-15 까지 매일 같은 글로 걸던 아침 알림 — 지우기만 한다 */
 const BRIEFING_ID = 'morning-briefing';
+/** 날짜마다 따로 거는 아침 알림의 앞머리(task topic/002) */
+const MORNING_PREFIX = 'morning-day-';
 const CHANNEL_ID = 'briefing';
 const NUDGE_ID = 'record-nudge';
 const NUDGE_CHANNEL_ID = 'record-nudge';
@@ -54,9 +57,25 @@ export async function askNotifications(): Promise<boolean> {
   return status === 'granted';
 }
 
-/** `HH:MM` 이면 그 시각에 매일, null 이면 끈다. 허락이 없으면 걸지 않는다 */
-export async function scheduleBriefing(time: string | null): Promise<void> {
+/** 아침 알림 하루 치 — 그날 0시와 그날 할 일 제목들 */
+export type MorningDay = { day: Date; titles: string[] };
+
+/** 아침 알림 글에 이름을 넣는 할 일 수 — 나머지는 「외 N개」 */
+const MORNING_TITLES = 3;
+
+/**
+ * 아침 알림 (SPEC-TOPIC-09) — 날짜마다 따로, 그날 할 일 제목을 넣어 건다. `time` 이 null 이면 모두 끈다.
+ * 할 일이 없는 날과 이미 지난 시각은 걸지 않는다. 허락이 없으면 걸지 않는다.
+ * 예전에 매일 같은 글로 걸던 알림(BRIEFING_ID)도 함께 지운다.
+ */
+export async function scheduleMorningAlerts(time: string | null, days: MorningDay[]): Promise<void> {
   await Notifications.cancelScheduledNotificationAsync(BRIEFING_ID).catch(() => undefined);
+  const scheduled = await Notifications.getAllScheduledNotificationsAsync().catch(() => []);
+  for (const n of scheduled) {
+    if (n.identifier.startsWith(MORNING_PREFIX)) {
+      await Notifications.cancelScheduledNotificationAsync(n.identifier).catch(() => undefined);
+    }
+  }
   if (!time || !(await notificationsAllowed())) return;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
@@ -65,21 +84,22 @@ export async function scheduleBriefing(time: string | null): Promise<void> {
     });
   }
   const [hour, minute] = time.split(':').map(Number);
-  await Notifications.scheduleNotificationAsync({
-    identifier: BRIEFING_ID,
-    content: {
-      title: '오늘 할 일',
-      body: '오늘 할 일과 챙길 것을 확인해 보세요',
-      // 누르면 할 일 탭으로 연다 — 첫 화면이 기록 탭이라서(decisions/024)
-      data: { type: BRIEFING_TYPE },
-    },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.DAILY,
-      hour,
-      minute,
-      channelId: CHANNEL_ID,
-    },
-  });
+  const now = Date.now();
+  for (const { day, titles } of days) {
+    const at = new Date(day.getFullYear(), day.getMonth(), day.getDate(), hour, minute);
+    if (titles.length === 0 || at.getTime() <= now) continue;
+    const rest = titles.length - MORNING_TITLES;
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${MORNING_PREFIX}${at.getFullYear()}-${at.getMonth() + 1}-${at.getDate()}`,
+      content: {
+        title: `오늘 할 일 ${titles.length}개`,
+        body: titles.slice(0, MORNING_TITLES).join(', ') + (rest > 0 ? ` 외 ${rest}개` : ''),
+        // 누르면 할 일 탭으로 연다
+        data: { type: BRIEFING_TYPE },
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: CHANNEL_ID },
+    });
+  }
 }
 
 /** 기록 요청 알림 — 정한 때 한 번. null 이면 끈다. 허락이 없으면 걸지 않는다 */

@@ -61,3 +61,39 @@ test('기한 글', () => {
   assert.equal(dueLabel(new Date(at(2026, 10, 16, 10)), true, NOW), '내일 10:00');
   assert.equal(dueLabel(new Date(at(2026, 10, 20)), false, NOW), '10월 20일 (화)');
 });
+
+test('반복 말', () => {
+  const r = (input: string) => parseDue(input, NOW);
+  // 매달 1일 — 오늘(15일) 지났으니 다음 달 1일부터
+  let p = r('매달 1일 분유 주문');
+  assert.equal(p.title, '분유 주문');
+  assert.equal(p.dueAt?.getTime(), at(2026, 11, 1));
+  assert.deepEqual(p.repeat, { kind: 'monthly', day: 1 });
+  // 매일 — 오늘부터
+  p = r('매일 젖병 소독');
+  assert.equal(p.title, '젖병 소독');
+  assert.equal(p.dueAt?.getTime(), at(2026, 10, 15));
+  assert.deepEqual(p.repeat, { kind: 'daily' });
+  // 매주 화, 금요일 — 다음 맞는 날은 금요일(16일)
+  p = r('매주 화, 금요일 분리수거');
+  assert.equal(p.title, '분리수거');
+  assert.equal(p.dueAt?.getTime(), at(2026, 10, 16));
+  assert.deepEqual(p.repeat, { kind: 'weekly', days: [2, 5] });
+  // 시각이 이미 지났으면 다음 맞는 날
+  p = r('매일 오전 9시 산책');
+  assert.equal(p.dueAt?.getTime(), at(2026, 10, 16, 9));
+  assert.equal(p.hasTime, true);
+  p = r('매달 1일 오전 10시 분유 주문');
+  assert.equal(p.title, '분유 주문');
+  assert.equal(p.dueAt?.getTime(), at(2026, 11, 1, 10));
+  // 며칠마다 — 오늘부터
+  p = r('30일마다 젖병 솔 바꾸기');
+  assert.equal(p.title, '젖병 솔 바꾸기');
+  assert.deepEqual(p.repeat, { kind: 'every', days: 30 });
+  assert.equal(p.dueAt?.getTime(), at(2026, 10, 15));
+  // 이름 속 「매일」은 반복이 아니다
+  p = r('매일유업 분유 주문');
+  assert.equal(p.title, '매일유업 분유 주문');
+  assert.equal(p.repeat, null);
+  assert.equal(p.dueAt, null);
+});

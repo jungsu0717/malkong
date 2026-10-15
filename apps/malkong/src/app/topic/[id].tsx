@@ -1,7 +1,7 @@
 /**
- * 주제 하나 (SPEC-TOPIC-01 · 02 · 03 · 07, task topic/001).
+ * 주제 하나 (SPEC-TOPIC-01 · 02 · 03 · 06 · 07, task topic/001 · 002).
  *
- * 안 끝낸 할 일 → 시작 목록(기본 주제, 아직 넣지 않은 것만) → 끝낸 것(접어 둠). 접종 · 검진 주제는 맨 위에 공공 일정,
+ * 안 끝낸 할 일 → 반복 추천 → 추천 목록(기본 주제, 아직 추가하지 않은 것만) → 완료(접어 둠). 접종 · 검진 주제는 맨 위에 공공 일정,
  * 장보기 주제는 다른 주제의 살 것까지 모아 보인다. 바닥 칸에 적으면 이 주제에 들어간다.
  */
 
@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { RepeatSuggest } from '@/components/todo/repeat-suggest';
 import { TodoInput } from '@/components/todo/todo-input';
 import { TodoItem } from '@/components/todo/todo-item';
 import { TodoSheet } from '@/components/todo/todo-sheet';
@@ -24,20 +25,17 @@ import { useBaby } from '@/data/baby-context';
 import { todoOf } from '@/data/briefing';
 import { checkupGroups } from '@/data/checkup-todos';
 import { useRecords } from '@/data/records-context';
-import { STARTERS, sortDone, sortOpen, todosOfTopic, type Todo } from '@/data/todos';
+import { STARTERS, repeatSuggestion, sortDone, sortOpen, titleKey, todosOfTopic, type Todo } from '@/data/todos';
 import { useTodos } from '@/data/todos-context';
 import { useMarkDone } from '@/hooks/use-mark-done';
 import { useTheme } from '@/hooks/use-theme';
-
-/** 띄어쓰기를 뺀 제목 — 같은 할 일인지 볼 때 */
-const norm = (s: string) => s.replace(/\s+/g, '');
 
 export default function TopicScreen() {
   const c = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { topics, todos, loading, add, update, toggleDone, remove, updateTopic } = useTodos();
+  const { topics, todos, loading, add, update, toggleDone, remove, updateTopic, dismissed } = useTodos();
   const markDone = useMarkDone();
   const [editing, setEditing] = useState<Todo | null>(null);
   const [editTopic, setEditTopic] = useState(false);
@@ -60,8 +58,9 @@ export default function TopicScreen() {
   const done = sortDone(list.filter((t) => t.doneAt));
   const nameOf = (topicId: string) => (topicId === topic.id ? null : (topics.find((t) => t.id === topicId)?.title ?? null));
   // 추천 — 지금 안 끝낸 할 일과 이름이 같은 것은 빼고 보인다
-  const openNames = new Set(open.map((t) => norm(t.title)));
-  const starters = (STARTERS[topic.kind] ?? []).filter((s) => !openNames.has(norm(s.title)));
+  const openNames = new Set(open.map((t) => titleKey(t.title)));
+  const starters = (STARTERS[topic.kind] ?? []).filter((s) => !openNames.has(titleKey(s.title)));
+  const suggestion = repeatSuggestion(todos, dismissed, topic.id);
   const addStarter = (s: { title: string; buy?: boolean }) =>
     add({ title: s.title, buy: s.buy ?? false, source: 'starter', topicId: topic.id });
 
@@ -159,6 +158,9 @@ export default function TopicScreen() {
               </Card>
             </View>
 
+            {/* 반복 추천 (SPEC-TOPIC-06) */}
+            {suggestion && <RepeatSuggest suggestion={suggestion} />}
+
             {/* 추천 — 한 번 만들어 둔 목록(SPEC-TOPIC-01, 헌장 8) */}
             {starters.length > 0 && (
               <View style={styles.section}>
@@ -229,7 +231,13 @@ export default function TopicScreen() {
           <TodoInput
             placeholder={`할 일 추가 (예: 금요일 ${starters[0]?.title ?? '장보기'})`}
             onAdd={(p) =>
-              void add({ title: p.title, dueAt: p.dueAt ? p.dueAt.toISOString() : null, hasTime: p.hasTime, topicId: topic.id })
+              void add({
+                title: p.title,
+                dueAt: p.dueAt ? p.dueAt.toISOString() : null,
+                hasTime: p.hasTime,
+                repeat: p.repeat,
+                topicId: topic.id,
+              })
             }
           />
         </KeyboardAvoidingView>

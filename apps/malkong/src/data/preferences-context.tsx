@@ -7,9 +7,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import { readSetting, writeSetting } from './db';
 import { TEMP_HOURS } from './care-reminders';
-import { scheduleBriefing, scheduleTempReminders } from './notifications';
+import { scheduleTempReminders } from './notifications';
 
-/** 아침 브리핑 알림 시각 `HH:MM`, 끄면 'off'. 정한 적이 없으면 오전 8시(SPEC-HOME-06) */
+/**
+ * 아침 알림 시각 `HH:MM`, 끄면 'off'. 정한 적이 없으면 오전 8시(SPEC-TOPIC-09).
+ * 알림을 거는 것은 그날 할 일을 아는 todos-context 가 이 값을 보고 한다(task topic/002)
+ */
 const BRIEFING_TIME_KEY = 'briefing_time';
 export const DEFAULT_BRIEFING_TIME = '08:00';
 
@@ -28,7 +31,7 @@ type PreferencesValue = {
   loading: boolean;
   /** 아침 브리핑 알림 시각. null 이면 끔 */
   briefingTime: string | null;
-  /** 바꾸면 알림을 다시 건다 — 허락은 부르는 쪽이 먼저 받는다 */
+  /** 바꾸면 todos-context 가 알림을 다시 건다 — 허락은 부르는 쪽이 먼저 받는다 */
   setBriefingTime: (time: string | null) => Promise<void>;
   /** 기록 요청 알림 — 거는 것은 record-nudge.tsx 가 이 값을 보고 한다. 허락은 부르는 쪽이 먼저 받는다 */
   nudgePush: boolean;
@@ -64,10 +67,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
         setCard(card !== 'off');
         setCare(care !== 'off');
         void scheduleTempReminders(care !== 'off' ? TEMP_HOURS : null).catch(() => undefined);
-        const t = time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME);
-        setTime(t);
-        // 시작할 때마다 다시 건다 — 허락을 설정 앱에서 나중에 켰어도 따라오게. 허락이 없으면 아무 일도 없다
-        void scheduleBriefing(t).catch(() => undefined);
+        setTime(time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -80,7 +80,6 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const setBriefingTime = useCallback(async (time: string | null) => {
     setTime(time);
     await writeSetting(BRIEFING_TIME_KEY, time ?? 'off');
-    await scheduleBriefing(time).catch(() => undefined);
   }, []);
 
   const setNudgePush = useCallback(async (on: boolean) => {
