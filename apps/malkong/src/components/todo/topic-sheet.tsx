@@ -36,7 +36,7 @@ export function TopicSheet({
         <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: c.scrim }]} onPress={onClose} accessibilityLabel="닫기" />
         <View style={[styles.sheet, { backgroundColor: c.background, paddingBottom: Spacing.four + insets.bottom }]}>
           <View style={[styles.grabber, { backgroundColor: c.surfaceStrong }]} />
-          <ThemedText type="title">{topic ? '주제 고치기' : '새 주제'}</ThemedText>
+          <ThemedText type="title">{topic ? '주제 편집' : '새 주제'}</ThemedText>
           <TextInput
             style={[styles.field, { color: c.text, backgroundColor: c.surface }]}
             value={title}
@@ -46,7 +46,7 @@ export function TopicSheet({
             maxLength={30}
             autoFocus
           />
-          <Button size="lg" label={topic ? '저장' : '만들기'} disabled={!title.trim()} onPress={() => onSave(title.trim())} />
+          <Button size="lg" label={topic ? '저장' : '추가'} disabled={!title.trim()} onPress={() => onSave(title.trim())} />
           {topic && onHide && <Button variant="ghost" size="sm" label="이 주제 숨기기" onPress={onHide} />}
         </View>
       </KeyboardAvoidingView>

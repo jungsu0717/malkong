@@ -99,7 +99,7 @@ export function LogSheet({
           <View style={[styles.grabber, { backgroundColor: c.surfaceStrong }]} />
           <ThemedText type="title">
             {KIND_UI[kind].label}
-            {editing ? ' 고치기' : ''}
+            {editing ? ' 수정' : ''}
           </ThemedText>
 
           <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent} keyboardShouldPersistTaps="handled">

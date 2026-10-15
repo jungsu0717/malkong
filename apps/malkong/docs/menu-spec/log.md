@@ -1,6 +1,6 @@
 # 기록 탭 — 빠른 기록
 
-> 첫 화면이다(decisions/023 · 024). 헌장 3 · 4 의 메뉴 — 기록은 사실로 쌓이고, 할 일 탭의 주제에 숫자를 채운다.
+> 두 번째 탭이다(2026-10-15 할 일 탭이 첫 화면이 됐다, decisions/024). 헌장 3 · 4 의 메뉴 — 기록은 사실로 쌓이고, 할 일 탭의 주제에 숫자를 채운다.
 > 위에 있는 것: [constitution](../constitution.md) · [main-design](../architecture/main-design.md)
 
 ## SPEC
@@ -61,7 +61,7 @@
 
 - 저장: 기기 DB `care_event`(backend 「기기 DB 스키마」) — 종류 · 시작 · 끝 · 양 · 쪽 · 기저귀 · 메모 · 만든 때 · 고친 때.
   재는 중은 끝이 비어 있는 행이다(모유 · 잠 각각 하나까지). 코드는 `src/data/events.ts` · `events-context.tsx`
-- 화면: `src/app/(tabs)/index.tsx`(기록 탭) · 입력 시트 `src/components/log/log-sheet.tsx` · 그래프 `src/app/log-stats.tsx`
+- 화면: `src/app/(tabs)/log.tsx`(기록 탭) · 입력 시트 `src/components/log/log-sheet.tsx` · 그래프 `src/app/log-stats.tsx`
 - 요약과 평소 비교: `src/data/event-summary.ts` — 모델을 부르지 않는다
 - 알림: 기기가 거는 로컬 알림(`src/data/notifications.ts`). 때는 `src/data/care-reminders.ts` `reminderPlan(월령, 기록)` —
   수유는 월령 띠(0~1개월 3시간 · 2~5개월 4시간 · 6개월부터 4시간, 기준 간격의 위쪽 끝)이고 승인 L1(k-feed-0001 · 0201 · 0604)이 있으면

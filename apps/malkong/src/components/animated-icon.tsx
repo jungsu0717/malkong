@@ -64,7 +64,7 @@ export function AnimatedSplashOverlay() {
         <ThemedText type="display">육아버디</ThemedText>
         <View style={styles.slogan}>
           <ThemedText type="body" style={[styles.center, { color: c.textSecondary }]}>
-            육아의 챙길 것,{'\n'}버디가 기억해요
+            육아 할 일,{'\n'}버디가 챙겨요
           </ThemedText>
         </View>
       </Animated.View>

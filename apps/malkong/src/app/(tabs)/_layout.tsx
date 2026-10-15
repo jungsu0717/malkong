@@ -6,7 +6,7 @@ import { BottleIcon, TeddyIcon } from '@/components/baby-icons';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 탭 셋 — 기록(첫 화면) · 할 일(주제별) · 마이 (decisions/023 · 024) */
+/** 탭 셋 — 할 일(첫 화면) · 기록 · 마이 (decisions/024, Julian 2026-10-15) */
 export default function TabLayout() {
   const c = useTheme();
 
@@ -26,15 +26,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: '기록',
-          tabBarIcon: ({ color, size }) => <BottleIcon size={size} color={color} />,
+          title: '할 일',
+          tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="todo"
+        name="log"
         options={{
-          title: '할 일',
-          tabBarIcon: ({ color, size }) => <Ionicons name="checkbox-outline" size={size} color={color} />,
+          title: '기록',
+          tabBarIcon: ({ color, size }) => <BottleIcon size={size} color={color} />,
         }}
       />
       <Tabs.Screen

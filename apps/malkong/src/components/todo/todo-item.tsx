@@ -60,7 +60,7 @@ export function TodoItem({
           ) : null}
         </View>
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${todo.title} 고치기`} hitSlop={8} onPress={onEdit} style={styles.edit}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${todo.title} 편집`} hitSlop={8} onPress={onEdit} style={styles.edit}>
         <Ionicons name="ellipsis-horizontal" size={18} color={c.textTertiary} />
       </Pressable>
     </View>

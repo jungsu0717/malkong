@@ -41,24 +41,27 @@ export type Todo = {
   updatedAt: string;
 };
 
-/** 기본 주제 — 처음 실행할 때 만든다(SPEC-TOPIC-01). 「그 밖의 할 일」은 주제를 못 고른 한 줄이 들어가는 곳 */
+/** 기본 주제 — 처음 실행할 때 만든다(SPEC-TOPIC-01). 「기타」는 주제를 못 고른 한 줄이 들어가는 곳 */
+
+/** 예전 기본 주제 이름 → 지금 이름(2026-10-15 Julian: 「분유 · 수유」가 아니라 「분유」). 고치지 않은 기본 주제만 바꾼다 */
+export const RENAMED_TITLES: Record<string, string> = { '분유 · 수유': '분유', '그 밖의 할 일': '기타' };
 export const DEFAULT_TOPICS: { kind: TopicKind; title: string }[] = [
-  { kind: 'feeding', title: '분유 · 수유' },
+  { kind: 'feeding', title: '분유' },
   { kind: 'diaper', title: '기저귀' },
   { kind: 'checkup', title: '접종 · 검진' },
   { kind: 'outing', title: '외출' },
   { kind: 'sick', title: '아플 때' },
   { kind: 'solids', title: '이유식' },
   { kind: 'shopping', title: '장보기' },
-  { kind: 'general', title: '그 밖의 할 일' },
+  { kind: 'general', title: '기타' },
 ];
 
 /** 이유식은 이 월령부터 보인다(SPEC-TOPIC-01) */
 export const SOLIDS_FROM_MONTH = 5;
 
 /**
- * 기본 주제의 시작 목록 — 한 번 만들어 두고 자주 고치지 않는다(헌장 8). 약 · 처치 · 증상 판단은 넣지 않는다(헌장 5).
- * 정본 표는 menu-spec/topic.md 「기본 주제와 시작 목록」.
+ * 기본 주제의 추천 목록 — 한 번 만들어 두고 자주 고치지 않는다(헌장 8). 약 · 처치 · 증상 판단은 넣지 않는다(헌장 5).
+ * 정본 표는 menu-spec/topic.md 「기본 주제와 추천 목록」.
  */
 export const STARTERS: Partial<Record<TopicKind, { title: string; buy?: boolean }[]>> = {
   feeding: [{ title: '분유 주문', buy: true }, { title: '젖병 소독' }, { title: '젖병 솔 바꾸기' }, { title: '젖꼭지 바꾸기' }],
@@ -84,7 +87,7 @@ export const STARTERS: Partial<Record<TopicKind, { title: string; buy?: boolean 
   sick: [
     { title: '아기수첩 챙기기' },
     { title: '모바일 건강보험증 챙기기' },
-    { title: '기록 탭의 체온 · 수유 기록 보여 주기' },
+    { title: '체온 · 수유 기록 보여 주기' },
     { title: '기저귀와 물티슈 챙기기' },
     { title: '여벌 옷 챙기기' },
     { title: '분유와 젖병 챙기기' },

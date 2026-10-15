@@ -41,8 +41,8 @@ function OnboardingGate() {
     if (!baby && segments[0] !== 'onboarding') router.replace('/onboarding');
   }, [baby, loading, segments, router]);
 
-  // 아침 알림 · 할 일 알림을 누르고 들어오면 할 일 탭으로 — 첫 화면이 기록 탭이라서(decisions/024)
-  useEffect(() => onTodoAlertOpened(() => router.navigate('/todo')), [router]);
+  // 아침 알림 · 할 일 알림을 누르고 들어오면 할 일 탭(첫 화면)으로
+  useEffect(() => onTodoAlertOpened(() => router.navigate('/')), [router]);
 
   return null;
 }

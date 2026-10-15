@@ -49,7 +49,7 @@ export function TodoInput({
     <View style={styles.wrap}>
       {topics && onTopic && focused && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.chips}>
-          <Chip label="알아서" selected={!topicId} onPress={() => onTopic(null)} />
+          <Chip label="자동 분류" selected={!topicId} onPress={() => onTopic(null)} />
           {topics.map((t) => (
             <Chip key={t.id} label={t.title} selected={topicId === t.id} onPress={() => onTopic(t.id)} />
           ))}
@@ -78,7 +78,7 @@ export function TodoInput({
         />
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="할 일 넣기"
+          accessibilityLabel="할 일 추가"
           accessibilityState={{ disabled: !canAdd }}
           disabled={!canAdd}
           onPress={submit}

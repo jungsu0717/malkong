@@ -20,7 +20,7 @@ export function checkupGroups(records: BabyRecord[], month: number): GapGroup[] 
 /** 주제 목록의 한 줄 — 「다음: 4개월 접종 · 10월 20일 무렵」 */
 export function nextCheckupLine(groups: GapGroup[], birthDate: string, month: number): string {
   const open = groups.filter((g) => g.status === 'open');
-  if (open.length > 0) return `지금 챙길 것 ${open.length}개`;
+  if (open.length > 0) return `이번 달 ${open.length}개`;
   const next = groups.find((g) => g.status === 'soon' && g.month > month);
   if (!next) return '다가오는 일정이 없어요';
   const d = monthStart(birthDate, next.month);

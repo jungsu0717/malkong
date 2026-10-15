@@ -59,7 +59,7 @@ export default function TopicScreen() {
   const open = sortOpen(list.filter((t) => !t.doneAt));
   const done = sortDone(list.filter((t) => t.doneAt));
   const nameOf = (topicId: string) => (topicId === topic.id ? null : (topics.find((t) => t.id === topicId)?.title ?? null));
-  // 시작 목록 — 지금 안 끝낸 할 일과 이름이 같은 것은 빼고 보인다
+  // 추천 — 지금 안 끝낸 할 일과 이름이 같은 것은 빼고 보인다
   const openNames = new Set(open.map((t) => norm(t.title)));
   const starters = (STARTERS[topic.kind] ?? []).filter((s) => !openNames.has(norm(s.title)));
   const addStarter = (s: { title: string; buy?: boolean }) =>
@@ -76,7 +76,7 @@ export default function TopicScreen() {
       <Stack.Screen
         options={{
           title: topic.title,
-          headerRight: () => <IconButton icon="create-outline" label="주제 고치기" onPress={() => setEditTopic(true)} />,
+          headerRight: () => <IconButton icon="create-outline" label="주제 편집" onPress={() => setEditTopic(true)} />,
         }}
       />
       <SafeAreaView style={styles.flex} edges={['bottom']}>
@@ -97,7 +97,7 @@ export default function TopicScreen() {
                 <Card style={styles.rows}>
                   {[...nowGroups, ...soon].length === 0 ? (
                     <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-                      지금 챙길 접종 · 검진이 없어요
+                      이번 달 접종 · 검진이 없어요
                     </ThemedText>
                   ) : (
                     [...nowGroups, ...soon].map((g, i) => (
@@ -115,7 +115,7 @@ export default function TopicScreen() {
                 {missed.length > 0 && (
                   <>
                     <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                      기간이 지난 일정이에요. 했다면 「했어요」로 알려 주세요
+                      지난 일정이에요. 이미 했다면 「했어요」를 눌러 주세요
                     </ThemedText>
                     <Card style={styles.rows}>
                       <Folded limit={2}>
@@ -138,11 +138,11 @@ export default function TopicScreen() {
 
             {/* 할 일 (SPEC-TOPIC-02) */}
             <View style={styles.section}>
-              <SectionHeader title={isCheckup ? '챙길 것' : '할 일'} aside={open.length > 0 ? `${open.length}개` : undefined} />
+              <SectionHeader title={isCheckup ? '준비물' : '할 일'} aside={open.length > 0 ? `${open.length}개` : undefined} />
               <Card style={styles.rows}>
                 {open.length === 0 ? (
                   <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-                    {starters.length > 0 ? '아래 시작 목록에서 넣거나, 바닥 칸에 적어 보세요' : '바닥 칸에 적어 보세요'}
+                    {starters.length > 0 ? '추천에서 고르거나 아래에 입력해 주세요' : '아래에 입력해 주세요'}
                   </ThemedText>
                 ) : (
                   open.map((t, i) => (
@@ -159,10 +159,10 @@ export default function TopicScreen() {
               </Card>
             </View>
 
-            {/* 시작 목록 — 한 번 만들어 둔 추천(SPEC-TOPIC-01, 헌장 8) */}
+            {/* 추천 — 한 번 만들어 둔 목록(SPEC-TOPIC-01, 헌장 8) */}
             {starters.length > 0 && (
               <View style={styles.section}>
-                <SectionHeader title="시작 목록" />
+                <SectionHeader title="추천" />
                 <Card style={styles.rows}>
                   {starters.map((s, i) => (
                     <ListRow
@@ -174,14 +174,14 @@ export default function TopicScreen() {
                       right={
                         <Pressable
                           accessibilityRole="button"
-                          accessibilityLabel={`${s.title} 넣기`}
+                          accessibilityLabel={`${s.title} 추가`}
                           hitSlop={8}
                           onPress={() => {
                             tap();
                             void addStarter(s);
                           }}>
                           <ThemedText type="label" style={{ color: c.accentText, fontWeight: 600 }}>
-                            넣기
+                            추가
                           </ThemedText>
                         </Pressable>
                       }
@@ -190,7 +190,7 @@ export default function TopicScreen() {
                 </Card>
                 {starters.length > 1 && (
                   <Button
-                    label="모두 넣기"
+                    label="모두 추가"
                     size="sm"
                     variant="secondary"
                     onPress={() => {
@@ -204,10 +204,10 @@ export default function TopicScreen() {
               </View>
             )}
 
-            {/* 끝낸 것 — 지우지 않는다(헌장 2) */}
+            {/* 완료 — 지우지 않는다(헌장 2) */}
             {done.length > 0 && (
               <View style={styles.section}>
-                <SectionHeader title="끝낸 것" aside={`${done.length}개`} />
+                <SectionHeader title="완료" aside={`${done.length}개`} />
                 <Card style={styles.rows}>
                   <Folded limit={3}>
                     {done.map((t, i) => (
@@ -227,7 +227,7 @@ export default function TopicScreen() {
           </ScrollView>
 
           <TodoInput
-            placeholder={`${topic.title}에 적기 — 예: 금요일 ${starters[0]?.title ?? '장보기'}`}
+            placeholder={`할 일 추가 (예: 금요일 ${starters[0]?.title ?? '장보기'})`}
             onAdd={(p) =>
               void add({ title: p.title, dueAt: p.dueAt ? p.dueAt.toISOString() : null, hasTime: p.hasTime, topicId: topic.id })
             }

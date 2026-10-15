@@ -1,5 +1,5 @@
 /**
- * 할 일 고치기 (SPEC-TOPIC-02 · 03) — 제목, 기한(「내일 오전 10시」처럼 말로), 살 것, 주제 옮기기, 지우기.
+ * 할 일 편집 (SPEC-TOPIC-02 · 03) — 제목, 기한(「내일 오전 10시」처럼 말로), 살 것, 주제 바꾸기, 삭제.
  */
 
 import { useState } from 'react';
@@ -69,7 +69,7 @@ export function TodoSheet({
               </ThemedText>
               {due && (
                 <Button
-                  label="지우기"
+                  label="기한 삭제"
                   size="sm"
                   variant="ghost"
                   onPress={() => {
@@ -127,7 +127,7 @@ export function TodoSheet({
               })
             }
           />
-          <Button variant="danger" size="sm" label="지우기" onPress={onDelete} />
+          <Button variant="danger" size="sm" label="삭제" onPress={onDelete} />
         </View>
       </KeyboardAvoidingView>
     </Modal>

@@ -11,6 +11,7 @@ import { readSetting, writeSetting } from './db';
 import { askNotifications, scheduleTodoReminders } from './notifications';
 import {
   DEFAULT_TOPICS,
+  RENAMED_TITLES,
   guessTopicKind,
   loadTodos,
   loadTopics,
@@ -33,7 +34,7 @@ type TodosContextValue = {
   /** 적은 순서 */
   todos: Todo[];
   loading: boolean;
-  /** 주제를 주지 않으면 제목으로 짐작한다(없으면 「그 밖의 할 일」) */
+  /** 주제를 주지 않으면 제목으로 짐작한다(없으면 「기타」) */
   add: (input: Omit<TodoInput, 'topicId'> & { topicId?: string }) => Promise<Todo | null>;
   update: (id: string, patch: Partial<Omit<Todo, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
   /** 끝냄 ↔ 되돌림 */
@@ -69,6 +70,16 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
         stored = DEFAULT_TOPICS.map((d, i) => makeTopic(d.kind, d.title, i));
         for (const t of stored) await saveTopic(t);
       }
+      // 예전 기본 주제 이름을 지금 이름으로(사용자가 바꾼 이름은 그대로)
+      stored = await Promise.all(
+        stored.map(async (t) => {
+          const renamed = t.kind !== 'custom' ? RENAMED_TITLES[t.title] : undefined;
+          if (!renamed) return t;
+          const next = { ...t, title: renamed, updatedAt: new Date().toISOString() };
+          await saveTopic(next);
+          return next;
+        }),
+      );
       const storedTodos = await loadTodos();
       if (cancelled) return;
       setTopics(stored);

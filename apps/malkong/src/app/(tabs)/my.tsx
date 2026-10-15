@@ -62,7 +62,7 @@ export default function MyScreen() {
           {baby && age && (
             <Pressable
               accessibilityRole="button"
-              accessibilityHint="아기 정보를 고쳐요"
+              accessibilityHint="아기 정보를 수정해요"
               onPress={() => router.push('/onboarding?edit=1')}>
               <Card style={styles.profile}>
                 <View style={[styles.avatar, { backgroundColor: c.surface }]}>
@@ -75,7 +75,7 @@ export default function MyScreen() {
                   </ThemedText>
                 </View>
                 <ThemedText type="label" style={{ color: c.textSecondary }}>
-                  고치기
+                  수정
                 </ThemedText>
               </Card>
             </Pressable>
