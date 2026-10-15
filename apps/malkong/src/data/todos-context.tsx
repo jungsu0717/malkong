@@ -1,7 +1,7 @@
 /**
  * 주제와 할 일을 화면들이 함께 보는 자리 (SPEC-TOPIC-01~03 · 06 · 09 · 11, decisions/024 · 025).
  *
- * 할 일 탭 · 주제 화면 · 기록 탭 요약 줄이 같은 목록을 본다. 처음 실행하면 기본 주제를 만들고, 예전 기본 주제는 숨기고
+ * 홈 · 할 일 탭 · 장보기 탭 · 주제 화면 · 기록 탭 요약 줄이 같은 목록을 본다. 처음 실행하면 기본 주제를 만들고, 예전 기본 주제는 숨기고
  * 거기 적힌 할 일을 「내 할 일」로 옮긴다(SPEC-TOPIC-01). 아기 생일로 앱이 채워 주는 할 일을 기한 전에 만든다(SPEC-TOPIC-11).
  * 반복 할 일을 완료하면 다음 차례 줄을 만들고, 되돌리면 지운다(SPEC-TOPIC-06).
  * 할 일이 바뀔 때마다 시각이 있는 할 일의 알림과 일주일 치 아침 알림을 다시 건다(SPEC-TOPIC-09).
@@ -45,6 +45,8 @@ import {
 const ASKED_KEY = 'todo_reminder_asked';
 /** 반복 추천에서 「다시 보지 않기」를 누른 것 — JSON 배열(주제 id:띄어쓰기를 뺀 제목) */
 const DISMISSED_KEY = 'repeat_suggest_dismissed';
+/** 장보기 주제의 숨김을 한 번 풀었는지(task topic/004) */
+const SHOP_READY_KEY = 'shop_tab_ready';
 /** 앱이 만든 할 일 중 사용자가 지운 것의 규칙 열쇠 — 다시 만들지 않는다. JSON 배열 */
 const AUTO_REMOVED_KEY = 'auto_todo_removed';
 
@@ -126,6 +128,11 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
         else if (have.sort !== i) stored = stored.map((t) => (t === have ? { ...t, sort: i, updatedAt: now() } : t));
       }
       stored = stored.map((t) => (isLegacyKind(t.kind) && !t.hidden ? { ...t, hidden: true, updatedAt: now() } : t));
+      // 장보기는 topic/003 에서 예전 기본 주제로 숨겼다가 topic/004 에서 탭으로 돌아왔다 — 한 번만 숨김을 푼다
+      if (!(await readSetting(SHOP_READY_KEY))) {
+        stored = stored.map((t) => (t.kind === 'shopping' && t.hidden ? { ...t, hidden: false, updatedAt: now() } : t));
+        await writeSetting(SHOP_READY_KEY, 'yes');
+      }
       for (const t of stored) await saveTopic(t);
 
       // 예전 기본 주제에 적힌 할 일은 「내 할 일」로 옮긴다 — 지우지 않는다(헌장 2)

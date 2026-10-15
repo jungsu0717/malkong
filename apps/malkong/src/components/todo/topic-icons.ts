@@ -4,7 +4,6 @@ import type { TopicKind } from '@/data/todos';
 /** 주제 아이콘 — 먹색 한 가지로, 색은 늘리지 않는다. 예전 기본 주제(decisions/025)는 숨긴 주제 목록에만 보인다 */
 export const TOPIC_ICONS: Record<TopicKind, IconName> = {
   checkup: 'medkit-outline',
-  paperwork: 'document-text-outline',
   milestone: 'gift-outline',
   size: 'shirt-outline',
   routine: 'repeat-outline',
@@ -16,6 +15,7 @@ export const TOPIC_ICONS: Record<TopicKind, IconName> = {
   sick: 'thermometer-outline',
   solids: 'restaurant-outline',
   shopping: 'cart-outline',
+  paperwork: 'document-text-outline',
 };
 
 /**
@@ -24,11 +24,11 @@ export const TOPIC_ICONS: Record<TopicKind, IconName> = {
  */
 const COLORS: Partial<Record<TopicKind, string>> = {
   checkup: '#4FB39A',
-  paperwork: '#7D8FE0',
   milestone: '#E0607A',
   size: '#E9B03C',
   routine: '#B08BDB',
   general: '#E8825F',
+  shopping: '#7D8FE0',
 };
 const CUSTOM_COLORS = ['#E8825F', '#7D8FE0', '#4FB39A', '#E9B03C', '#B08BDB', '#E0607A'];
 

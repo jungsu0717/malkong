@@ -14,24 +14,18 @@ const refs = (birth: string, now: Date, have: string[] = []) =>
     .map((r) => r.ref)
     .sort();
 
-test('갓 태어난 아기 — 출생신고와 신청이 생긴다', () => {
-  assert.deepEqual(refs('2026-10-10', new Date(2026, 9, 15)), [
-    'paper:birth-report',
-    'paper:child-allowance',
-    'paper:first-voucher',
-    'paper:parent-allowance',
-  ]);
+test('갓 태어난 아기 — 50일 촬영 예약은 50일 3주 전의 14일 전부터', () => {
+  // 9/20 생: 50일은 11/8, 촬영 예약 기한 10/18, 10/4 부터 보인다
+  assert.deepEqual(refs('2026-09-20', new Date(2026, 9, 15)), ['day:50-photo']);
+  assert.deepEqual(refs('2026-10-10', new Date(2026, 9, 15)), []);
 });
 
 test('이미 있거나 지운 것은 다시 만들지 않는다', () => {
-  assert.deepEqual(refs('2026-10-10', new Date(2026, 9, 15), ['paper:birth-report', 'paper:first-voucher']), [
-    'paper:child-allowance',
-    'paper:parent-allowance',
-  ]);
+  assert.deepEqual(refs('2026-09-20', new Date(2026, 9, 15), ['day:50-photo']), []);
 });
 
 test('기한이 한참 지난 것은 만들지 않는다 — 4개월에 설치', () => {
-  // 6/10 생: 출생신고 · 신청 · 50일 · 100일 준비는 모두 지났고, 다음은 5개월(11/10)부터
+  // 6/10 생: 50일 · 100일 준비는 모두 지났고, 다음은 5개월(11/10)부터
   assert.deepEqual(refs('2026-06-10', new Date(2026, 9, 15)), []);
   assert.deepEqual(refs('2026-06-10', new Date(2026, 10, 4)), ['size:clothes-5', 'size:diaper-5']);
 });

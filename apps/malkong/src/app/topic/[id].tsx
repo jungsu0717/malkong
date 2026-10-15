@@ -3,14 +3,13 @@
  *
  * 할 일(안 끝낸 것) → 주제마다 더 보이는 것 → 완료(접어 둠).
  * - 접종 · 검진: 맨 위에 공공 일정, 할 일 이름은 「준비물」, 준비물 추천
- * - 신청 · 서류 · 사이즈 바꾸기: 앱이 생일로 만들 다가오는 할 일(아직 목록에 없는 것)과 날짜, 할 일마다 안내 한 줄과 링크
+ * - 사이즈 바꾸기: 앱이 생일로 만들 다가오는 할 일(아직 목록에 없는 것)과 날짜, 할 일마다 안내 한 줄
  * - 기념일: 맨 위에 50일 · 100일 · 돌 · 두 돌 날짜, 다가오는 할 일
  * - 생활 루틴: 반복 할 일 추천(한 번 눌러 추가)
- * 바닥 칸에 적으면 이 주제에 들어간다.
+ * 바닥 칸에 적으면 이 주제에 들어간다. 장보기 주제는 장보기 탭으로 보낸다.
  */
 
-import { Ionicons } from '@expo/vector-icons';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,7 +37,7 @@ import { useTodos } from '@/data/todos-context';
 import { useMarkDone } from '@/hooks/use-mark-done';
 import { useTheme } from '@/hooks/use-theme';
 
-const AUTO_KINDS: AutoKind[] = ['paperwork', 'milestone', 'size'];
+const AUTO_KINDS: AutoKind[] = ['milestone', 'size'];
 /** 다가오는 할 일을 몇 개까지 보일지 */
 const UPCOMING_LIMIT = 4;
 
@@ -71,6 +70,9 @@ export default function TopicScreen() {
       </ThemedView>
     );
   }
+
+  // 장보기는 탭이 따로 있다(SPEC-SHOP-01)
+  if (topic.kind === 'shopping') return <Redirect href="/shop" />;
 
   const list = todosOfTopic(topic, todos);
   const open = sortOpen(list.filter((t) => !t.doneAt));
@@ -105,7 +107,6 @@ export default function TopicScreen() {
         key={t.id}
         todo={t}
         note={rule?.note}
-        link={rule?.link}
         divider={i > 0}
         onToggle={() => void toggleDone(t.id)}
         onEdit={() => setEditing(t)}
@@ -301,14 +302,6 @@ export default function TopicScreen() {
               </View>
             )}
 
-            {autoKind === 'paperwork' && (
-              <View style={styles.footnote}>
-                <Ionicons name="information-circle-outline" size={14} color={c.textTertiary} />
-                <ThemedText type="caption" style={[styles.flex, { color: c.textTertiary }]}>
-                  기한은 2026년 10월 정부 안내 기준이에요. 금액과 대상은 정부24나 복지로에서 확인해 주세요
-                </ThemedText>
-              </View>
-            )}
           </ScrollView>
 
           <TodoInput
@@ -383,5 +376,4 @@ const styles = StyleSheet.create({
   missing: { padding: Spacing.four, textAlign: 'center' },
   days: { flexDirection: 'row', paddingVertical: Spacing.three },
   day: { alignItems: 'center', gap: 2, flex: 1 },
-  footnote: { flexDirection: 'row', gap: 6, alignItems: 'flex-start' },
 });

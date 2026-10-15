@@ -1,20 +1,15 @@
 /**
- * 앱이 채워 주는 할 일 (SPEC-TOPIC-11, decisions/025) — 신청 · 서류, 기념일, 사이즈 바꾸기.
+ * 앱이 채워 주는 할 일 (SPEC-TOPIC-11, decisions/025 · 026) — 기념일, 사이즈 바꾸기.
  *
  * 아기 생일로 기한을 계산하고, 기한 며칠 전(lead)이 되면 그 주제의 할 일로 만든다. 만든 할 일은 보통 할 일과 같다(체크 · 편집 · 삭제).
  * 같은 할 일을 두 번 만들지 않게 `ref` 로 알아본다. 사용자가 지운 것은 다시 만들지 않는다(설정값에 ref 를 남긴다).
- * 처음 볼 때 기한이 grace 일보다 더 지났으면 만들지 않는다 — 이미 했을 가능성이 크다(예: 4개월에 설치하면 출생신고는 안 보인다).
- *
- * 신청 · 서류는 법이나 제도로 기한이 정해진 것만 두고 금액은 적지 않는다(헌장 8). 확인한 곳(2026-10-15):
- * 출생신고 1개월 — 가족관계등록법 제44조, 부모급여 · 아동수당 60일 소급 — 정부24 · 복지부 안내,
- * 첫만남이용권 사용 기한 2년(2024년 이후 출생) — 복지부 안내. 해마다 한 번 다시 확인한다.
+ * 처음 볼 때 기한이 grace 일보다 더 지났으면 만들지 않는다 — 이미 했을 가능성이 크다(예: 4개월에 설치하면 50일 촬영 예약은 안 보인다).
+ * 신청 · 서류(출생신고 · 지원금)는 정부와 다른 앱이 이미 챙겨서 뺐다(decisions/026).
  *
  * 화면 코드를 가져오지 않는 순수 함수만 둔다(`node --test src/data/auto-todos.test.ts`).
  */
 
-export type AutoKind = 'paperwork' | 'milestone' | 'size';
-
-export type AutoLink = { label: string; url: string };
+export type AutoKind = 'milestone' | 'size';
 
 export type AutoRule = {
   /** 같은 할 일인지 알아보는 열쇠 — 바꾸지 않는다 */
@@ -29,7 +24,6 @@ export type AutoRule = {
   grace: number;
   /** 할 일 아래 작은 글씨 한 줄 */
   note?: string;
-  link?: AutoLink;
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -48,66 +42,10 @@ export function birthOf(birthDate: string): Date {
   return new Date(y, m - 1, d);
 }
 
-const GOV24: AutoLink = { label: '정부24', url: 'https://www.gov.kr' };
-const BOKJIRO: AutoLink = { label: '복지로', url: 'https://www.bokjiro.go.kr' };
-
 /** 기념일 — 50일 · 100일은 태어난 날을 1일로 센다 */
 const day50 = (b: Date) => addDays(b, 49);
 const day100 = (b: Date) => addDays(b, 99);
 const firstBirthday = (b: Date) => addMonths(b, 12);
-
-const PAPERWORK: AutoRule[] = [
-  {
-    ref: 'paper:birth-report',
-    kind: 'paperwork',
-    title: '출생신고',
-    due: (b) => addDays(addMonths(b, 1), -1),
-    lead: 31,
-    grace: 3,
-    note: '출생 후 1개월 안에 해요. 신고할 때 부모급여 · 아동수당 · 첫만남이용권을 함께 신청할 수 있어요',
-    link: GOV24,
-  },
-  {
-    ref: 'paper:parent-allowance',
-    kind: 'paperwork',
-    title: '부모급여 신청',
-    due: (b) => addDays(b, 59),
-    lead: 60,
-    grace: 14,
-    note: '태어난 날을 포함해 60일 안에 신청하면 태어난 달부터 받아요',
-    link: BOKJIRO,
-  },
-  {
-    ref: 'paper:child-allowance',
-    kind: 'paperwork',
-    title: '아동수당 신청',
-    due: (b) => addDays(b, 59),
-    lead: 60,
-    grace: 14,
-    note: '태어난 날을 포함해 60일 안에 신청하면 태어난 달부터 받아요',
-    link: BOKJIRO,
-  },
-  {
-    ref: 'paper:first-voucher',
-    kind: 'paperwork',
-    title: '첫만남이용권 신청',
-    due: (b) => addDays(addMonths(b, 1), -1),
-    lead: 31,
-    grace: 30,
-    note: '출생신고 때 함께 신청할 수 있어요',
-    link: BOKJIRO,
-  },
-  {
-    ref: 'paper:first-voucher-use',
-    kind: 'paperwork',
-    title: '첫만남이용권 남은 금액 쓰기',
-    due: (b) => addDays(addMonths(b, 24), -31),
-    lead: 30,
-    grace: 25,
-    note: '태어난 날부터 2년이 지나면 남은 금액이 사라져요',
-    link: BOKJIRO,
-  },
-];
 
 const MILESTONES: AutoRule[] = [
   { ref: 'day:50-photo', kind: 'milestone', title: '50일 촬영 예약', due: (b) => addDays(day50(b), -21), lead: 14, grace: 7 },
@@ -130,7 +68,7 @@ const SIZES: AutoRule[] = [
   ...monthly('size:carseat', '카시트 키 · 몸무게 기준 확인', [9]),
 ];
 
-export const AUTO_RULES: AutoRule[] = [...PAPERWORK, ...MILESTONES, ...SIZES];
+export const AUTO_RULES: AutoRule[] = [...MILESTONES, ...SIZES];
 
 export function ruleOf(ref: string | null | undefined): AutoRule | undefined {
   return ref ? AUTO_RULES.find((r) => r.ref === ref) : undefined;

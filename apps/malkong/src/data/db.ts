@@ -100,6 +100,9 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           done_at     TEXT,
           repeat      TEXT,
           ref         TEXT,
+          ordered_at  TEXT,
+          arrive_at   TEXT,
+          store       TEXT,
           created_at  TEXT NOT NULL,
           updated_at  TEXT NOT NULL
         );
@@ -123,6 +126,10 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
       // 앱이 만든 할 일의 규칙 열쇠(task topic/003)
       if (!todoColumns.some((col) => col.name === 'ref')) {
         await db.execAsync('ALTER TABLE todo ADD COLUMN ref TEXT');
+      }
+      // 장보기 — 주문한 때 · 도착 예정일 · 어디서(task topic/004)
+      for (const col of ['ordered_at', 'arrive_at', 'store']) {
+        if (!todoColumns.some((c) => c.name === col)) await db.execAsync(`ALTER TABLE todo ADD COLUMN ${col} TEXT`);
       }
       return db;
     })();
@@ -409,7 +416,7 @@ export async function readTodoRows(): Promise<Todo[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<TodoRow>(
     `SELECT id, topic_id AS topicId, title, note, due_at AS dueAt, has_time AS hasTime, buy, source, done_at AS doneAt,
-            repeat, ref, created_at AS createdAt, updated_at AS updatedAt
+            repeat, ref, ordered_at AS orderedAt, arrive_at AS arriveAt, store, created_at AS createdAt, updated_at AS updatedAt
        FROM todo ORDER BY created_at`,
   );
   return rows.map((r) => ({ ...r, hasTime: r.hasTime === 1, buy: r.buy === 1, repeat: repeatFromText(r.repeat) }));
@@ -418,11 +425,13 @@ export async function readTodoRows(): Promise<Todo[]> {
 export async function upsertTodoRow(t: Todo): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO todo (id, topic_id, title, note, due_at, has_time, buy, source, done_at, repeat, ref, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO todo (id, topic_id, title, note, due_at, has_time, buy, source, done_at, repeat, ref, ordered_at, arrive_at, store,
+       created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET topic_id = excluded.topic_id, title = excluded.title, note = excluded.note,
        due_at = excluded.due_at, has_time = excluded.has_time, buy = excluded.buy, source = excluded.source,
-       done_at = excluded.done_at, repeat = excluded.repeat, ref = excluded.ref, updated_at = excluded.updated_at`,
+       done_at = excluded.done_at, repeat = excluded.repeat, ref = excluded.ref, ordered_at = excluded.ordered_at,
+       arrive_at = excluded.arrive_at, store = excluded.store, updated_at = excluded.updated_at`,
     t.id,
     t.topicId,
     t.title,
@@ -434,6 +443,9 @@ export async function upsertTodoRow(t: Todo): Promise<void> {
     t.doneAt,
     repeatToText(t.repeat),
     t.ref,
+    t.orderedAt,
+    t.arriveAt,
+    t.store,
     t.createdAt,
     t.updatedAt,
   );

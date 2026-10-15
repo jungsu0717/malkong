@@ -223,7 +223,7 @@ export default function LogScreen() {
             {/* 오늘 할 일 한 줄 — 누르면 할 일 탭 (SPEC-LOG-06) */}
             <Pressable
               accessibilityRole="button"
-              onPress={() => router.navigate('/')}
+              onPress={() => router.navigate('/todo')}
               style={({ pressed }) => [styles.todoLine, { borderTopColor: c.divider }, pressed && { opacity: 0.6 }]}>
               <Ionicons name="checkbox-outline" size={16} color={c.textSecondary} />
               <ThemedText type="small" style={{ flex: 1, color: c.textSecondary }}>

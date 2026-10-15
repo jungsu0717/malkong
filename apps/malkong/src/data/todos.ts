@@ -1,19 +1,19 @@
 /**
- * 육아 할 일 (SPEC-TOPIC-01~03 · 06 · 11, decisions/024 · 025).
+ * 육아 할 일 (SPEC-TOPIC-01~03 · 06 · 11, SPEC-SHOP-01~03, decisions/024~026).
  *
- * 기본 주제는 앱이 할 일을 채워 주는 다섯(접종 · 검진, 신청 · 서류, 기념일, 사이즈 바꾸기, 생활 루틴)이고, 사용자가 적는 할 일은
- * 「내 할 일」(kind general) 하나에 모인다(헌장 1). 끝낸 할 일은 지우지 않고 `doneAt` 으로 남는다(헌장 2). 반복 추천 같은 해석은
+ * 기본 주제는 앱이 할 일을 채워 주는 넷(접종 · 검진, 기념일, 사이즈 바꾸기, 생활 루틴)과 사용자가 적는 「내 할 일」(kind general),
+ * 장보기 탭이 보는 「장보기」(kind shopping)다(헌장 1). 끝낸 할 일은 지우지 않고 `doneAt` 으로 남는다(헌장 2). 반복 추천 같은 해석은
  * 저장하지 않고 볼 때마다 센다(헌장 3). 기기 DB `topic` · `todo`(backend 「기기 DB 스키마」).
  */
 
 import { deleteTodoRow, readTodoRows, readTopicRows, upsertTodoRow, upsertTopicRow } from './db';
 import { SUGGEST_AFTER, firstDate, nextDate, startOfDay, suggestRepeat, withTimeOf, type Repeat } from './repeat';
 
-/** 2026-10-15 까지 쓰던 기본 주제(decisions/025 로 뺐다) — 숨기고, 거기 적힌 할 일은 「내 할 일」로 옮긴다 */
-export const LEGACY_KINDS = ['feeding', 'diaper', 'outing', 'sick', 'solids', 'shopping'] as const;
+/** 예전에 쓰던 기본 주제(decisions/025 · 026 으로 뺐다) — 숨기고, 거기 적힌 할 일은 「내 할 일」로 옮긴다 */
+export const LEGACY_KINDS = ['feeding', 'diaper', 'outing', 'sick', 'solids', 'paperwork'] as const;
 type LegacyKind = (typeof LEGACY_KINDS)[number];
 
-export type TopicKind = 'checkup' | 'paperwork' | 'milestone' | 'size' | 'routine' | 'general' | 'custom' | LegacyKind;
+export type TopicKind = 'checkup' | 'milestone' | 'size' | 'routine' | 'general' | 'shopping' | 'custom' | LegacyKind;
 
 export const isLegacyKind = (kind: TopicKind) => (LEGACY_KINDS as readonly string[]).includes(kind);
 
@@ -41,7 +41,7 @@ export type Todo = {
   dueAt: string | null;
   /** 시각까지 정했나 — 정했으면 그 시각에 알린다(SPEC-TOPIC-09) */
   hasTime: boolean;
-  /** 살 것 — 2026-10-15 까지 장보기에 모으던 표시. 지금은 화면에서 쓰지 않고 값만 남는다 */
+  /** 살 것 — 2026-10-15 까지 장보기에 모으던 표시. 지금은 화면에서 쓰지 않고 값만 남는다(장보기는 주제로) */
   buy: boolean;
   source: TodoSource;
   /** 끝낸 때. 되돌리면 null */
@@ -50,6 +50,12 @@ export type Todo = {
   repeat: Repeat | null;
   /** 앱이 만든 할 일이면 그 규칙의 열쇠(auto-todos.ts) — 같은 것을 두 번 만들지 않게 */
   ref: string | null;
+  /** 장보기(SPEC-SHOP-02) — 「주문했어요」를 누른 때. 있으면 배송 중 */
+  orderedAt: string | null;
+  /** 장보기 — 도착 예정일(그날 0시) */
+  arriveAt: string | null;
+  /** 장보기 — 어디서 샀나(사용자가 적은 이름) */
+  store: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -57,14 +63,17 @@ export type Todo = {
 /** 예전 기본 주제 이름 → 지금 이름. 사용자가 바꾸지 않은 기본 주제만 바꾼다 */
 export const RENAMED_TITLES: Record<string, string> = { '분유 · 수유': '분유', '그 밖의 할 일': '내 할 일', 기타: '내 할 일' };
 
-/** 기본 주제(SPEC-TOPIC-01) — 처음 실행할 때, 그리고 예전 기기에 없으면 만든다. 「내 할 일」은 사용자가 적는 목록 */
+/**
+ * 기본 주제(SPEC-TOPIC-01) — 처음 실행할 때, 그리고 예전 기기에 없으면 만든다. 「내 할 일」은 사용자가 적는 목록,
+ * 「장보기」는 장보기 탭이 보는 목록(SPEC-SHOP-01)
+ */
 export const DEFAULT_TOPICS: { kind: TopicKind; title: string }[] = [
   { kind: 'checkup', title: '접종 · 검진' },
-  { kind: 'paperwork', title: '신청 · 서류' },
   { kind: 'milestone', title: '기념일' },
   { kind: 'size', title: '사이즈 바꾸기' },
   { kind: 'routine', title: '생활 루틴' },
   { kind: 'general', title: '내 할 일' },
+  { kind: 'shopping', title: '장보기' },
 ];
 
 export type Starter = { title: string; repeat?: Repeat };
@@ -108,7 +117,7 @@ export function makeTopic(kind: TopicKind, title: string, sort: number, now = ne
 }
 
 export type TodoInput = { topicId: string; title: string } & Partial<
-  Pick<Todo, 'note' | 'dueAt' | 'hasTime' | 'buy' | 'source' | 'repeat' | 'ref'>
+  Pick<Todo, 'note' | 'dueAt' | 'hasTime' | 'buy' | 'source' | 'repeat' | 'ref' | 'store'>
 >;
 
 export function makeTodo(input: TodoInput, now = new Date()): Todo {
@@ -125,6 +134,9 @@ export function makeTodo(input: TodoInput, now = new Date()): Todo {
     doneAt: null,
     repeat: input.repeat ?? null,
     ref: input.ref ?? null,
+    orderedAt: null,
+    arriveAt: null,
+    store: input.store ?? null,
     createdAt: at,
     updatedAt: at,
   };
@@ -171,6 +183,45 @@ export function todosOfTopic(topic: Topic, todos: Todo[]): Todo[] {
 /** 보이는 주제 — 숨긴 것과 예전 기본 주제를 빼고 순서대로 */
 export function visibleTopics(topics: Topic[]): Topic[] {
   return [...topics].filter((t) => !t.hidden && !isLegacyKind(t.kind)).sort((a, b) => a.sort - b.sort);
+}
+
+/** 장보기 탭의 세 묶음(SPEC-SHOP-01~03) — 살 것(주문 전) · 배송 중(주문했고 아직 안 받음) · 완료(최근 순) */
+export function shopLists(shop: Topic | undefined, todos: Todo[]): { toBuy: Todo[]; shipping: Todo[]; done: Todo[] } {
+  const list = shop ? todos.filter((t) => t.topicId === shop.id) : [];
+  return {
+    toBuy: list.filter((t) => !t.doneAt && !t.orderedAt).sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    shipping: list
+      .filter((t) => !t.doneAt && t.orderedAt)
+      .sort((a, b) => (a.arriveAt ?? '9').localeCompare(b.arriveAt ?? '9') || (a.orderedAt ?? '').localeCompare(b.orderedAt ?? '')),
+    done: sortDone(list.filter((t) => t.doneAt)),
+  };
+}
+
+/** 다시 담기 — 지난번 산 것 중 지금 살 것 · 배송 중에 없는 것, 최근 순으로 `limit` 개 */
+export function buyAgain(shop: Topic | undefined, todos: Todo[], limit = 10): string[] {
+  const { toBuy, shipping, done } = shopLists(shop, todos);
+  const now = new Set([...toBuy, ...shipping].map((t) => titleKey(t.title)));
+  const seen = new Set<string>();
+  const titles: string[] = [];
+  for (const t of done) {
+    const key = titleKey(t.title);
+    if (now.has(key) || seen.has(key)) continue;
+    seen.add(key);
+    titles.push(t.title);
+    if (titles.length >= limit) break;
+  }
+  return titles;
+}
+
+/** 주문할 때 「어디서」 칩 — 사용자가 전에 적은 이름, 최근 순. 앱이 쇼핑몰 이름을 미리 넣지 않는다 */
+export function recentStores(todos: Todo[], limit = 6): string[] {
+  const seen = new Set<string>();
+  return [...todos]
+    .filter((t) => t.store && t.orderedAt)
+    .sort((a, b) => (b.orderedAt ?? '').localeCompare(a.orderedAt ?? ''))
+    .map((t) => (t.store as string).trim())
+    .filter((s) => s && !seen.has(s) && seen.add(s))
+    .slice(0, limit);
 }
 
 /** 같은 할 일인지 볼 때 — 띄어쓰기를 뺀 제목 */

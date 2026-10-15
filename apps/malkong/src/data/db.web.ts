@@ -243,9 +243,16 @@ export async function upsertTopicRow(t: Topic): Promise<void> {
 }
 
 export async function readTodoRows(): Promise<Todo[]> {
-  // 반복 칸(task topic/002) · 규칙 열쇠 칸(topic/003) 전에 저장한 줄에는 그 값이 없다
+  // 반복(task topic/002) · 규칙 열쇠(003) · 장보기(004) 칸 전에 저장한 줄에는 그 값이 없다
   return readList<Todo>(TODOS_KEY)
-    .map((r) => ({ ...r, repeat: r.repeat ?? null, ref: r.ref ?? null }))
+    .map((r) => ({
+      ...r,
+      repeat: r.repeat ?? null,
+      ref: r.ref ?? null,
+      orderedAt: r.orderedAt ?? null,
+      arriveAt: r.arriveAt ?? null,
+      store: r.store ?? null,
+    }))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
 
