@@ -1,10 +1,13 @@
 # 육아버디 (코드명 malkong)
 
-우리 아기 기준으로 답하는 AI 육아 비서. 궁금할 때 물어보면 월령과 우리 아기 기록에 맞춰
-공공 의료·육아 지식의 출처와 함께 답하고, 아침마다 오늘 챙길 것을 먼저 알려준다.
+육아의 주제(분유 · 수유, 기저귀, 접종 · 검진, 외출, 아플 때, 이유식, 장보기)마다 할 일을 적고, 기록과 끝낸 할 일이 쌓여
+다음에 먼저 꺼내 주는 앱. 빠른 기록(수유 · 기저귀 · 잠 · 체온 · 키와 몸무게)이 주제에 숫자를 채운다.
 
-## 지금 상태 (2026-10-12)
+## 지금 상태 (2026-10-15)
 
+- **방향 전환(2026-10-15)**: AI 육아 상담을 빼고 **주제별 육아 할 일과 기록**으로 바꿨다([decisions/024](docs/decisions/024-topic-todo-no-ai-answers.md)).
+  헌장 · 제품 브리프 · 메인 설계를 새로 쓰고, 할 일 탭 SPEC([topic](docs/menu-spec/topic.md))을 새로 썼다. 버디 · 우리 아기 · 일정 탭의 SPEC 은 보관.
+  아래 「앱」 줄의 버디 · 우리 아기 · 일정 탭은 코드에 아직 남아 있고, 할 일 탭을 만드는 task 에서 걷어 낸다. 다음 일은 「다음 시작점」 1번
 - **저장소**: 2026-10-14 에 저장소가 여러 앱을 담는 `julian-studio` 가 되면서 육아버디는 `apps/malkong/` 으로 옮겼다. 모든 앱에 통하는 규칙은 루트 [AGENTS.md](../../AGENTS.md)
 - **앱**: 시안 B 「단정한 비서」([decisions/012](docs/decisions/012-chat-first-three-tabs.md)), 탭 다섯 —
   **기록**(첫 화면, 2026-10-12 · 모유 · 분유 · 기저귀 · 잠 · 체온 · 몸무게 · 키를 한두 번 눌러 · 재는 중 타이머 · 날짜별 기록 · 일주일 그래프 ·
@@ -49,42 +52,14 @@
   버디의 짐작은 확인 뒤 기록([ask/008](docs/task/ask/008-confirm-guess.md)) · 대화는 최근 50줄부터, 날짜에서 그날 대화로([ask/009](docs/task/ask/009-recent-window-and-day-jump.md))
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점 (2026-10-08)
+## 다음 시작점 (2026-10-15)
 
-1. **폰이 가족 기기로 보이는지 확인**(Julian) — 등록 · 배포는 끝났다([common/005](docs/task/common/005-device-key-and-limit.md)).
-   앱을 다시 열고 마이 탭 맨 아래 「육아버디 v1.0.0」을 1초 꾹 → 「일반 사용자로 보기」 스위치가 보여야 한다. 그 스위치로
-   일반 사용자 화면(남은 횟수 · 광고 자리 · 한도 말풍선)을 오가며 본다. 안 보이면 비밀값에 빈 값이 들어간 것 — 005 「출시 전에 Julian 이 할 것」 마지막 칸
-2. **Julian 이 아이폰(Expo Go)으로 며칠 써 본다** — 답 · 안부 브리핑 · 일정 탭 · 알림함 · 지식 지도 · 디자인에서 걸리는 것을 모은다.
-   맥에서 `REACT_NATIVE_PACKAGER_HOSTNAME=<맥 IP> npx expo start --go` 로 켠다(아래 「실행」 — `--go` 를 빼면 Expo Go 가 못 연다).
-   웹으로는 못 본 것: 만화(마이 「육아버디 스토리」)를 손가락으로 넘기기 · 기록이 사흘 비었을 때 저녁 8시 알림과
-   그 알림을 누르면 뜨는 카드 · 일정 탭 여정 그래픽의 움직임과 가로 넘기기 · 시트를 열었을 때 키보드.
-   안부 문구(`src/data/care-signals.ts`) 검토는 나중에(Julian). 하루 천장에 닿으면 메일로 알리는 설정은 Julian 이 받을 메일 주소를 정하면 건다
-3. **가족 공유는 초대 코드 · 기기 키로 됐다**([my/007](docs/task/my/007-family-sharing.md), [decisions/021](docs/decisions/021-family-by-invite-code.md), 2026-10-12).
-   로그인은 기기 이전(폰 바꿔도 되찾기)이 필요할 때 — 소셜 로그인을 쓰면 애플 규정 4.8 로 Apple 로그인이 필수라 조합은 Apple + 카카오, 네이버는 나중.
-   그때 가족을 계정에 묶는다. Julian · 아내 폰으로 먼저 써 본다(서버 배포 뒤)
-4. **한도 우회(앱 데이터 지우기 · 다시 깔기 → 새 키)는 알고 둔다**(2026-10-06) — 기록을 다 잃고 얻는 건 10회(약 10원)라 지금은 막지 않는다.
-   돈은 IP 당 하루 키 20개 · 서버 하루 천장이 막는다. 사용자가 늘면 키를 다시 깔아도 남는 자리(iOS 키체인 · Android 기기 식별값, Google 정책 확인)에 두고,
-   로그인이 들어오면 계정 기준으로 센다
-5. **Julian 이 고를 다음 후보** — 서버가 진행 단계를 실시간으로 보내기(SSE, 배포 필요 · 모델 비용 그대로,
-   [ask/007](docs/task/ask/007-question-aware-trace.md) 「정한 것」 4) · 수면 · 수유 · 울음 · 변 같은 일상 주제 L1 늘리기(항목마다 Julian 승인) ·
-   「모두에게 더 똑똑해지는」 고리 — 근거 없이 답한 질문을 주제 × 월령 띠로 세는 로그는 들어갔다([common/017](docs/task/common/017-ungrounded-count.md),
-   배포 뒤 쌓인다, 보는 명령은 server/AGENTS.md). 많이 나온 주제부터 L1 초안 → Julian 승인. 자주 묻는 질문 캐시(backend ②′)는 그 뒤에. 지금 「쓸수록 똑똑해지는」 것은 우리 아기 기록(L2)뿐이다
-6. Claude 몫: 써 본 피드백 반영 → 답변 완성도 다듬기(위험 신호 — Julian 승인) → 스토어 등록 준비 — 스크린샷 여섯 장(iOS · Play)과
-   구글 플레이 그래픽 이미지는 됐다(`marketing/store/out/`, [common/021](docs/task/common/021-store-screenshots.md), 2026-10-12 — 만화 캐릭터 없이,
-   Julian 이 보고 고칠 것을 말한다). 소개 문구 초안도 [product-brief](docs/product/product-brief.md) 「스토어 문안 초안」에 있다(Julian 확인 전).
-   남은 것은 개인정보 처리방침 웹 주소(어디에 올릴지는 Julian — 저장소의 GitHub Pages 가 가장 싸다)
-7. **Julian 결정 대기(2026-10-08)**: ① 이어 묻기(「그럼 몇 시에 재워요?」)는 **됐다** — 바로 앞 대화를 질문과 함께 보낸다
-   ([ask/012](docs/task/ask/012-conversation-context.md), revision 00013, 2026-10-11) ·
-   ② 답변 피드백(좋아요 · 별로예요)이 실제로 눌리는지 보고 「셋 중 하나 고르기」로 바꿀지(온톨로지 세미나 5교시 사례).
-   ③ 답에 우리 아기 바탕 더 비추기([ask/011](docs/task/ask/011-our-baby-framing.md)) — **끝냄**(Julian, 2026-10-12: 비용 적고 답이 명확하면 된다).
-   운영 프롬프트는 ask/010 그대로. 아기 이름은 서버로 보내지 않는다(결정, api-contract).
-   「별로예요」를 누르면 이유를 적는 글상자(선택)는 이미 있다(ask/003) — Julian 이 폰에서 확인.
-   ④ 홈 화면 위젯(일정 · 브리핑) — **출시 뒤에 한다**(Julian 결정, 2026-10-08). 둘 다 개발 빌드가 있어야 한다(Expo Go 불가). iOS 는 Expo 공식
-   `expo-widgets`(SDK 57 문서, 2026-03 알파), Android 는 커뮤니티 `react-native-android-widget`(갱신 최소 30분). 위젯은 앱이 미리 써 둔 요약을 읽는 구조.
-   비용 · 수익 방향은 바뀔 수 있어 결정 기록으로 남기지 않는다(Julian, 2026-10-08)
-8. **출시 전 Julian 몫 — 순서대로 정리했다**([common/008](docs/task/common/008-first-release-check.md) 「Julian 이 할 일」, 2026-10-12, 광고만).
-   구글 개발자 계정과 테스터 12명 · 14일이 가장 오래 걸려서 맨 앞이다. 목록은
-   [common/008](docs/task/common/008-first-release-check.md) · [common/011](docs/task/common/011-rename-yugabuddy.md)
+1. **Julian 확인**: 새로 쓴 [헌장](docs/constitution.md) · [제품 브리프](docs/product/product-brief.md) · [할 일 탭 SPEC](docs/menu-spec/topic.md) 을 읽고 고칠 곳을 말한다.
+   SPEC 의 `미결:` 둘(장보기를 주제로 둘지, 기본 주제의 시작 목록)도 정한다
+2. **task [topic/001](docs/task/topic/001-topic-todo-tab.md)** — 할 일 탭 만들기, 버디 · 우리 아기 · 일정 탭 걷어 내기
+3. 그 뒤: 붙여 넣기 나누기 → 떨어지기 전 알림 → 반복 할 일 → 가족 맞추기에 할 일 싣기 → 스토어 문안과 그림 다시 만들기
+4. **출시 전 Julian 몫**은 그대로다([common/008](docs/task/common/008-first-release-check.md) 「Julian 이 할 일」, 루트 [출시 체크리스트](../../docs/governance/release-checklist.md))
+5. 2026-10-12 까지의 AI 상담 쪽 후보(SSE 진행 단계, L1 늘리기, 답변 피드백, 위젯 등)는 방향 전환으로 접었다. 기록은 git 과 보관한 SPEC 에 있다
 
 ## 다른 PC 에서 시작하기
 

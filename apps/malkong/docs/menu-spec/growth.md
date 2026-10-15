@@ -1,5 +1,7 @@
 # 일정 — 달력 · 브리핑 모아 보기 · 챙길 것 여정
 
+> **보관(2026-10-15)** — [decisions/024](../decisions/024-topic-todo-no-ai-answers.md)로 이 메뉴는 앱에서 빠졌다. 기록으로 남겨 둘 뿐 지금의 SPEC 이 아니다.
+
 > 근거: [main-design](../architecture/main-design.md) · [knowledge-layers](../architecture/knowledge-layers.md) ·
 > [decisions/017](../decisions/017-schedule-tab-and-inbox.md)
 

@@ -1,5 +1,7 @@
 # 물어보기 — 말콩이와의 대화
 
+> **보관(2026-10-15)** — [decisions/024](../decisions/024-topic-todo-no-ai-answers.md)로 이 메뉴는 앱에서 빠졌다. 기록으로 남겨 둘 뿐 지금의 SPEC 이 아니다.
+
 > 근거: [main-design](../architecture/main-design.md) · [knowledge-layers](../architecture/knowledge-layers.md)
 
 agent 의 이름은 **말콩이**다. 답변과 기록 수집이 이 한 화면에서 일어난다.

@@ -1,5 +1,7 @@
 # 홈 — 지금의 단면
 
+> **보관(2026-10-15)** — [decisions/024](../decisions/024-topic-todo-no-ai-answers.md)로 이 메뉴는 앱에서 빠졌다. 기록으로 남겨 둘 뿐 지금의 SPEC 이 아니다.
+
 > 근거: [main-design](../architecture/main-design.md) · [knowledge-layers](../architecture/knowledge-layers.md)
 
 홈은 "지금"만 다룬다. 시간축 전체는 일정 탭 챙길 것 여정(SPEC-GROW-02)의 몫이다.
