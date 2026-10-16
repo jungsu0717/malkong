@@ -43,7 +43,7 @@ export function useMarkDone() {
 
   const sheet = (
     <MarkDoneSheet
-      key={picking?.key ?? 'closed'}
+      key={`mark-done-${picking?.key ?? 'closed'}`}
       group={picking}
       onClose={() => setPicking(null)}
       onConfirm={confirm}
