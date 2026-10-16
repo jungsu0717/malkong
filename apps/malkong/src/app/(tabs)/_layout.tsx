@@ -6,7 +6,7 @@ import { TeddyIcon } from '@/components/baby-icons';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 탭 넷 — 오늘(첫 화면, 루틴과 오늘 할 일) · 할 일 · 장보기 · 마이. 기록은 마이 → 기록 (decisions/026~028) */
+/** 탭 넷 — 오늘(첫 화면, 루틴과 오늘 할 일) · 할 일 · 리스트(살 것 · 준비할 것) · 마이. 기록은 마이 → 기록 (decisions/026~028) */
 export default function TabLayout() {
   const c = useTheme();
 
@@ -38,10 +38,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="shop"
+        name="list"
         options={{
-          title: '장보기',
-          tabBarIcon: ({ color, size }) => <Ionicons name="cart-outline" size={size} color={color} />,
+          title: '리스트',
+          tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

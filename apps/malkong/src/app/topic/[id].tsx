@@ -73,7 +73,7 @@ export default function TopicScreen() {
   }
 
   // 장보기는 탭이 따로 있다(SPEC-SHOP-01)
-  if (topic.kind === 'shopping') return <Redirect href="/shop" />;
+  if (topic.kind === 'shopping') return <Redirect href="/list" />;
 
   const list = todosOfTopic(topic, todos);
   const open = sortOpen(list.filter((t) => !t.doneAt));

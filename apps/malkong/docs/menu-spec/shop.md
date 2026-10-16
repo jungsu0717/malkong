@@ -1,7 +1,8 @@
-# 장보기 탭 — 살 곳별 살 것 · 배송 중 · 다시 담기
+# 리스트 탭 — 살 것(살 곳별 · 배송 · 다시 담기)과 준비할 것
 
 > 위에 있는 것: [constitution](../constitution.md) 1 · 2 · 3 · 8 · [main-design](../architecture/main-design.md) ·
-> [decisions/026](../decisions/026-everyday-shopping-home-tab.md) · [027](../decisions/027-log-under-my-shop-by-place.md)
+> [decisions/026](../decisions/026-everyday-shopping-home-tab.md) · [027](../decisions/027-log-under-my-shop-by-place.md) · [028](../decisions/028-assistant-today-routines.md).
+> 메뉴 코드는 그대로 `SHOP` 이다(2026-10-16 탭 이름이 장보기 → 리스트로 바뀌었다)
 
 ## SPEC
 
@@ -37,12 +38,21 @@
        받음 체크를 하거나 주문을 취소하면 그 알림은 지운다.
 ```
 
+### SPEC-SHOP-05 살 것 · 준비할 것
+```
+평시 ▸ 리스트 탭 위의 전환 단추로 「살 것 N」과 「준비할 것 N」(N 은 남은 수)을 오가야 한다. 마지막으로 본 쪽을 기억해 다음에도 그쪽으로 연다.
+평시 ▸ 날짜가 아니라 살 것 · 준비할 것 기준이다. 못 산 것 · 못 챙긴 것은 체크하지 않으면 그대로 남아, 다음 날 다시 만들 필요가 없다.
+평시 ▸ 준비할 것은 외출 가방 · 여행 짐 · 어린이집 준비 같은 목록 카드로 보이고(아이콘 · 이름 · 「남은 3개 · 완료 5개」), 누르면 그 목록으로 간다.
+       「새 목록」으로 추천(SPEC-TOPIC-12)을 한 번 눌러 만들거나 직접 만든다. 목록에서는 「모두 체크 해제」로 다시 쓴다.
+```
+
 ## HOW
 
 - 장보기 줄은 할 일과 같은 `todo` 줄이고 장보기 주제(kind `shopping`)에 있다. 칸 `ordered_at`(주문한 때, 있으면 배송 중) · `arrive_at`(도착 예정일) ·
   `store`(살 곳 — 주문한 뒤에는 주문한 곳)(backend 「기기 DB 스키마」). 주문한 것의 살 곳은 늘 「온라인」으로 본다(`placeOf`)
 - 계산: `shopLists` · `shopPlaces` · `toBuyGroups` · `buyAgain` · `lastTrips` · `recentStores`(`src/data/todos.ts`).
-  화면 `src/app/(tabs)/shop.tsx`, 시트 `order-sheet.tsx` · `shop-item-sheet.tsx`
+  화면 `src/app/(tabs)/list.tsx`, 시트 `order-sheet.tsx` · `shop-item-sheet.tsx` · `topic-sheet.tsx`(새 목록)
+- 준비할 것 = 직접 만든 주제(kind `custom`). 목록 화면은 주제 화면(`src/app/topic/[id].tsx`)을 그대로 쓴다. 고른 쪽은 설정값 `list_mode`
 - 알림: `alert-plan.ts` `morningPlan` · `deliveryChecks`, `notifications.ts` `scheduleDeliveryChecks`(task topic/006)
 
 ## changelog
@@ -50,3 +60,4 @@
 - 2026-10-15 최초 작성 (Julian, decisions/026, task topic/004)
 - 2026-10-15 SPEC-SHOP-04 배송 알림 (task topic/006)
 - 2026-10-15 살 곳별 묶음 · 「다이소에서」 읽기 · 매장 지난번 목록 다시 담기, 「주문했어요」는 온라인 묶음에만 (Julian, decisions/027, task topic/007)
+- 2026-10-16 탭 이름 리스트, 살 것 · 준비할 것 전환(SPEC-SHOP-05), 직접 만든 목록을 할 일 탭에서 옮김 (Julian, decisions/028, task list/001)
