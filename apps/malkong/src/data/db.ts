@@ -15,6 +15,7 @@ import type { CareEvent } from './events';
 import type { InboxCard } from './inbox';
 import type { BabyRecord } from './records';
 import { repeatFromText, repeatToText } from './repeat';
+import type { Routine, RoutineLog } from './routine';
 import type { Todo, Topic } from './todos';
 
 const DB_NAME = 'malkong.db';
@@ -108,6 +109,27 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           updated_at  TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ix_todo_topic ON todo(topic_id);
+        CREATE TABLE IF NOT EXISTS routine (
+          id             TEXT PRIMARY KEY,
+          title          TEXT NOT NULL,
+          kind           TEXT NOT NULL,
+          every_days     INTEGER NOT NULL DEFAULT 1,
+          time           TEXT,
+          goal_minutes   INTEGER,
+          hidden         INTEGER NOT NULL DEFAULT 0,
+          sort           INTEGER NOT NULL DEFAULT 0,
+          running_since  TEXT,
+          created_at     TEXT NOT NULL,
+          updated_at     TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS routine_log (
+          id          TEXT PRIMARY KEY,
+          routine_id  TEXT NOT NULL,
+          at          TEXT NOT NULL,
+          minutes     INTEGER,
+          created_at  TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_routine_log ON routine_log(routine_id, at);
       `);
       // 나중에 더한 칸 — 아기의 고친 때(가족 공유의 「늦게 고친 쪽이 이긴다」 기준, task my/007)
       const babyColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(baby)');
@@ -461,4 +483,67 @@ export async function upsertTodoRow(t: Todo): Promise<void> {
 export async function deleteTodoRow(id: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM todo WHERE id = ?', id);
+}
+
+// --- 루틴 (SPEC-MAIN-01~04, task today/001) ---
+
+type RoutineRow = Omit<Routine, 'hidden'> & { hidden: number };
+
+export async function readRoutineRows(): Promise<Routine[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<RoutineRow>(
+    `SELECT id, title, kind, every_days AS everyDays, time, goal_minutes AS goalMinutes, hidden, sort, running_since AS runningSince,
+            created_at AS createdAt, updated_at AS updatedAt
+       FROM routine ORDER BY sort`,
+  );
+  return rows.map((r) => ({ ...r, hidden: r.hidden === 1 }));
+}
+
+export async function upsertRoutineRow(r: Routine): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT INTO routine (id, title, kind, every_days, time, goal_minutes, hidden, sort, running_since, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET title = excluded.title, kind = excluded.kind, every_days = excluded.every_days, time = excluded.time,
+       goal_minutes = excluded.goal_minutes, hidden = excluded.hidden, sort = excluded.sort, running_since = excluded.running_since,
+       updated_at = excluded.updated_at`,
+    r.id,
+    r.title,
+    r.kind,
+    r.everyDays,
+    r.time,
+    r.goalMinutes,
+    r.hidden ? 1 : 0,
+    r.sort,
+    r.runningSince,
+    r.createdAt,
+    r.updatedAt,
+  );
+}
+
+/** 최근 `days` 일 기록 — N일마다 루틴의 지난번을 보려고 넉넉히 */
+export async function readRoutineLogRows(days = 400): Promise<RoutineLog[]> {
+  const db = await getDb();
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  return db.getAllAsync<RoutineLog>(
+    `SELECT id, routine_id AS routineId, at, minutes, created_at AS createdAt FROM routine_log WHERE at >= ? ORDER BY at`,
+    since,
+  );
+}
+
+export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, minutes, created_at) VALUES (?, ?, ?, ?, ?)',
+    l.id,
+    l.routineId,
+    l.at,
+    l.minutes,
+    l.createdAt,
+  );
+}
+
+export async function deleteRoutineLogRow(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM routine_log WHERE id = ?', id);
 }

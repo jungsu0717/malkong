@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { AppState, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
@@ -39,27 +39,12 @@ import { usePreferences } from '@/data/preferences-context';
 import { useRecords } from '@/data/records-context';
 import { todayTodos, visibleTopics } from '@/data/todos';
 import { useTodos } from '@/data/todos-context';
+import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 
 const DAY = 24 * 60 * 60 * 1000;
 /** 날짜를 몇 날 전까지 넘겨 볼 수 있나 */
 const MAX_DAYS_BACK = 60;
-
-/** 재는 중이면 1초마다, 아니면 30초마다 — 「몇 분 전」과 타이머가 따라오게. 앱이 앞으로 오면 바로 */
-function useNow(fast: boolean): Date {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), fast ? 1000 : 30_000);
-    const sub = AppState.addEventListener('change', (s) => {
-      if (s === 'active') setNow(new Date());
-    });
-    return () => {
-      clearInterval(timer);
-      sub.remove();
-    };
-  }, [fast]);
-  return now;
-}
 
 /** 재는 중 시계 — 「12:05」 · 「1:02:05」 */
 function stopwatch(from: string, now: Date): string {

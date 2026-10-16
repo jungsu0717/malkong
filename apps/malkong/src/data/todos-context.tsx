@@ -13,7 +13,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { autoRulesToAdd, birthOf } from './auto-todos';
 import { useBaby } from './baby-context';
 import { checkupGroups } from './checkup-todos';
-import { readSetting, writeSetting } from './db';
+import { insertRoutineLogRow, readSetting, upsertRoutineRow, writeSetting } from './db';
 import { EVENING_HOUR, deliveryChecks, eveningPlan, morningPlan, reminderBody } from './alert-plan';
 import { runningOf } from './events';
 import { useEvents } from './events-context';
@@ -30,6 +30,7 @@ import {
 import { usePreferences } from './preferences-context';
 import { useRecords } from './records-context';
 import type { Repeat } from './repeat';
+import { makeRoutine, makeRoutineLog } from './routine';
 import {
   DEFAULT_TOPICS,
   RENAMED_TITLES,
@@ -56,6 +57,8 @@ import {
 const ASKED_KEY = 'todo_reminder_asked';
 /** 반복 추천에서 「다시 보지 않기」를 누른 것 — JSON 배열(주제 id:띄어쓰기를 뺀 제목) */
 const DISMISSED_KEY = 'repeat_suggest_dismissed';
+/** 생활 루틴 주제의 반복 할 일을 루틴으로 옮겼는지(task today/001) */
+const ROUTINES_MOVED_KEY = 'routines_moved_from_topic';
 /** 장보기 주제의 숨김을 한 번 풀었는지(task topic/004) */
 const SHOP_READY_KEY = 'shop_tab_ready';
 /** 앱이 만든 할 일 중 사용자가 지운 것의 규칙 열쇠 — 다시 만들지 않는다. JSON 배열 */
@@ -149,6 +152,32 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       }
       for (const t of stored) await saveTopic(t);
 
+      // 「생활 루틴」 주제의 반복 할 일은 루틴으로 옮긴다 — 한 번만(task today/001, decisions/028).
+      // 마지막으로 완료한 때를 루틴 기록 한 줄로 남겨 「6일 만」이 이어지게 한다
+      if (!(await readSetting(ROUTINES_MOVED_KEY))) {
+        const routineTopic = stored.find((t) => t.kind === 'routine');
+        if (routineTopic) {
+          const all = await loadTodos();
+          const repeating = all.filter((t) => t.topicId === routineTopic.id && !t.doneAt && t.repeat);
+          for (const [i, t] of repeating.entries()) {
+            const rule = t.repeat as NonNullable<Todo['repeat']>;
+            const everyDays = rule.kind === 'daily' ? 1 : rule.kind === 'every' ? rule.days : rule.kind === 'weekly' ? 7 : 30;
+            const due = t.hasTime && t.dueAt ? new Date(t.dueAt) : null;
+            const time = due ? `${String(due.getHours()).padStart(2, '0')}:${String(due.getMinutes()).padStart(2, '0')}` : null;
+            const routine = makeRoutine({ title: t.title, kind: 'check', everyDays, time, goalMinutes: null }, i);
+            await upsertRoutineRow(routine);
+            const lastDone = all
+              .filter((d) => d.doneAt && d.topicId === routineTopic.id && titleKey(d.title) === titleKey(t.title))
+              .map((d) => d.doneAt as string)
+              .sort()
+              .pop();
+            if (lastDone) await insertRoutineLogRow(makeRoutineLog(routine.id, new Date(lastDone)));
+            await removeTodo(t.id);
+          }
+        }
+        await writeSetting(ROUTINES_MOVED_KEY, 'yes');
+      }
+
       // 예전 기본 주제에 적힌 할 일은 「내 할 일」로 옮긴다 — 지우지 않는다(헌장 2)
       const general = stored.find((t) => t.kind === 'general');
       const legacyIds = new Set(stored.filter((t) => isLegacyKind(t.kind)).map((t) => t.id));
@@ -203,7 +232,8 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     const checkups = month === null ? [] : checkupGroups(records, month).filter((g) => g.status === 'open').map((g) => g.label);
     const shopIds = new Set(topics.filter((t) => t.kind === 'shopping').map((t) => t.id));
     const morning = morningPlan(todos, checkups);
-    const evening = eveningPlan(todos, shopIds);
+    // 전날 저녁은 사흘 치만 — iOS 알림 한도 안에 루틴 알림을 넣으려고(task today/001)
+    const evening = eveningPlan(todos, shopIds, new Date(), 3);
     const checks = deliveryChecks(todos);
     enqueue(async () => {
       await scheduleMorningAlerts(briefingTime, morning);
@@ -317,7 +347,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
   }, [toggleDone]);
   useEffect(() => {
     if (loading) return;
-    return onAlertAction((action, todoId, title, body) => {
+    return onAlertAction('todo', (action, todoId, title, body) => {
       if (action === 'snooze') {
         void snoozeTodo(todoId, title, body).catch(() => undefined);
         return;

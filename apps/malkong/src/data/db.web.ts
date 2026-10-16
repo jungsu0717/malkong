@@ -11,6 +11,7 @@ import type { ChatMessage } from './chat';
 import type { CareEvent } from './events';
 import type { InboxCard } from './inbox';
 import type { BabyRecord } from './records';
+import type { Routine, RoutineLog } from './routine';
 import type { Todo, Topic } from './todos';
 
 const KEY = 'malkong.baby';
@@ -265,4 +266,29 @@ export async function upsertTodoRow(t: Todo): Promise<void> {
 
 export async function deleteTodoRow(id: string): Promise<void> {
   writeList(TODOS_KEY, readList<Todo>(TODOS_KEY).filter((r) => r.id !== id));
+}
+
+// --- 루틴 (SPEC-MAIN-01~04) ---
+
+const ROUTINES_KEY = 'malkong.routines';
+const ROUTINE_LOGS_KEY = 'malkong.routineLogs';
+
+export async function readRoutineRows(): Promise<Routine[]> {
+  return readList<Routine>(ROUTINES_KEY).sort((a, b) => a.sort - b.sort);
+}
+
+export async function upsertRoutineRow(r: Routine): Promise<void> {
+  upsertIn(ROUTINES_KEY, r);
+}
+
+export async function readRoutineLogRows(): Promise<RoutineLog[]> {
+  return readList<RoutineLog>(ROUTINE_LOGS_KEY).sort((a, b) => a.at.localeCompare(b.at));
+}
+
+export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {
+  upsertIn(ROUTINE_LOGS_KEY, l);
+}
+
+export async function deleteRoutineLogRow(id: string): Promise<void> {
+  writeList(ROUTINE_LOGS_KEY, readList<RoutineLog>(ROUTINE_LOGS_KEY).filter((r) => r.id !== id));
 }

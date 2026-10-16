@@ -21,6 +21,7 @@ import { loadStoredKnowledge, refreshKnowledge } from '@/data/knowledge-update';
 import { onTodoAlertOpened } from '@/data/notifications';
 import { PreferencesProvider } from '@/data/preferences-context';
 import { RecordsProvider } from '@/data/records-context';
+import { RoutinesProvider } from '@/data/routines-context';
 import { TodosProvider } from '@/data/todos-context';
 
 SplashScreen.preventAutoHideAsync();
@@ -107,6 +108,7 @@ export default function RootLayout() {
                 <EventsProvider>
                 <FamilyProvider>
                 <TodosProvider>
+                <RoutinesProvider>
                   <OnboardingGate />
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(tabs)" />
@@ -119,6 +121,7 @@ export default function RootLayout() {
                     <Stack.Screen name="log-stats" options={{ ...header, title: '일주일 그래프' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
+                </RoutinesProvider>
                 </TodosProvider>
                 </FamilyProvider>
                 </EventsProvider>

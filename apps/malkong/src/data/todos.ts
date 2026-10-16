@@ -1,7 +1,7 @@
 /**
  * 육아 할 일 (SPEC-TOPIC-01~03 · 06 · 11, SPEC-SHOP-01~03, decisions/024~026).
  *
- * 기본 주제는 앱이 할 일을 채워 주는 넷(접종 · 검진, 기념일, 사이즈 바꾸기, 생활 루틴)과 사용자가 적는 「내 할 일」(kind general),
+ * 기본 주제는 앱이 할 일을 채워 주는 셋(접종 · 검진, 기념일, 사이즈 바꾸기)과 사용자가 적는 「내 할 일」(kind general),
  * 장보기 탭이 보는 「장보기」(kind shopping)다(헌장 1). 끝낸 할 일은 지우지 않고 `doneAt` 으로 남는다(헌장 2). 반복 추천 같은 해석은
  * 저장하지 않고 볼 때마다 센다(헌장 3). 기기 DB `topic` · `todo`(backend 「기기 DB 스키마」).
  */
@@ -10,10 +10,10 @@ import { deleteTodoRow, readTodoRows, readTopicRows, upsertTodoRow, upsertTopicR
 import { SUGGEST_AFTER, firstDate, nextDate, startOfDay, suggestRepeat, withTimeOf, type Repeat } from './repeat';
 
 /** 예전에 쓰던 기본 주제(decisions/025 · 026 으로 뺐다) — 숨기고, 거기 적힌 할 일은 「내 할 일」로 옮긴다 */
-export const LEGACY_KINDS = ['feeding', 'diaper', 'outing', 'sick', 'solids', 'paperwork'] as const;
+export const LEGACY_KINDS = ['feeding', 'diaper', 'outing', 'sick', 'solids', 'paperwork', 'routine'] as const;
 type LegacyKind = (typeof LEGACY_KINDS)[number];
 
-export type TopicKind = 'checkup' | 'milestone' | 'size' | 'routine' | 'general' | 'shopping' | 'custom' | LegacyKind;
+export type TopicKind = 'checkup' | 'milestone' | 'size' | 'general' | 'shopping' | 'custom' | LegacyKind;
 
 export const isLegacyKind = (kind: TopicKind) => (LEGACY_KINDS as readonly string[]).includes(kind);
 
@@ -73,7 +73,6 @@ export const DEFAULT_TOPICS: { kind: TopicKind; title: string }[] = [
   { kind: 'checkup', title: '접종 · 검진' },
   { kind: 'milestone', title: '기념일' },
   { kind: 'size', title: '사이즈 바꾸기' },
-  { kind: 'routine', title: '생활 루틴' },
   { kind: 'general', title: '내 할 일' },
   { kind: 'shopping', title: '장보기' },
 ];
@@ -82,7 +81,7 @@ export type Starter = { title: string; repeat?: Repeat };
 
 /**
  * 추천 목록 — 한 번 만들어 두고 자주 고치지 않는다(헌장 8). 약 · 처치 · 증상 판단은 넣지 않는다(헌장 5).
- * 생활 루틴은 반복 할 일로 추가된다. 간격은 제품 안내에서 흔히 보는 값이고 사용자가 편집할 수 있다.
+ * 생활 루틴은 2026-10-16 부터 할 일이 아니라 루틴(routine.ts `ROUTINE_TEMPLATES`, 오늘 탭)이다.
  * 정본 표는 menu-spec/topic.md 「기본 주제」.
  */
 export const STARTERS: Partial<Record<TopicKind, Starter[]>> = {
@@ -93,15 +92,6 @@ export const STARTERS: Partial<Record<TopicKind, Starter[]>> = {
     { title: '여벌 옷 챙기기' },
     { title: '분유와 젖병 챙기기' },
     { title: '겉싸개나 담요 챙기기' },
-  ],
-  routine: [
-    { title: '손톱 깎기', repeat: { kind: 'every', days: 7 } },
-    { title: '쪽쪽이 바꾸기', repeat: { kind: 'every', days: 60 } },
-    { title: '젖꼭지 바꾸기', repeat: { kind: 'every', days: 60 } },
-    { title: '젖병 솔 바꾸기', repeat: { kind: 'every', days: 30 } },
-    { title: '가습기 청소', repeat: { kind: 'every', days: 7 } },
-    { title: '장난감 소독', repeat: { kind: 'every', days: 7 } },
-    { title: '아기 침구 빨래', repeat: { kind: 'every', days: 7 } },
   ],
 };
 

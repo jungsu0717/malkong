@@ -24,9 +24,13 @@ const TODO_PREFIX = 'todo-';
 const TODO_CHANNEL_ID = 'todo-reminder';
 /**
  * 한 번에 걸어 두는 할 일 알림 수 — iOS 는 앱 하나에 걸어 둘 수 있는 알림이 64개라 가까운 것부터.
- * 아침 7 · 전날 저녁 7 · 받으셨나요 · 미룬 것 · 기록 알림을 더해도 넘지 않게(task topic/006)
+ * 아침 7 · 전날 저녁 3 · 루틴(사흘 치) · 받으셨나요 · 미룬 것 · 기록 알림을 더해도 넘지 않게(task topic/006 · today/001)
  */
-const TODO_LIMIT = 30;
+const TODO_LIMIT = 20;
+/** 루틴 알림(task today/001) */
+const ROUTINE_PREFIX = 'routine-';
+const ROUTINE_TYPE = 'routine';
+const ROUTINE_CATEGORY = 'routineActions';
 /** 전날 저녁 미리(task topic/006) */
 const EVENING_PREFIX = 'evening-day-';
 /** 받으셨나요(SPEC-SHOP-04) */
@@ -186,7 +190,7 @@ export function onTodoAlertOpened(listener: () => void): () => void {
     const type = response?.notification.request.content.data?.type;
     if (
       response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER ||
-      (type !== BRIEFING_TYPE && type !== TODO_TYPE && type !== DELIVERY_TYPE)
+      (type !== BRIEFING_TYPE && type !== TODO_TYPE && type !== DELIVERY_TYPE && type !== ROUTINE_TYPE)
     ) {
       return;
     }
@@ -256,6 +260,10 @@ async function ensureCategories(): Promise<void> {
   await Notifications.setNotificationCategoryAsync(DELIVERY_CATEGORY, [
     { identifier: 'done', buttonTitle: '받았어요', options: { opensAppToForeground: false } },
   ]);
+  await Notifications.setNotificationCategoryAsync(ROUTINE_CATEGORY, [
+    { identifier: 'done', buttonTitle: '했어요', options: { opensAppToForeground: false } },
+    { identifier: 'snooze', buttonTitle: '1시간 뒤', options: { opensAppToForeground: false } },
+  ]);
   categoriesReady = true;
 }
 
@@ -307,18 +315,18 @@ export async function scheduleTodoReminders(items: TodoReminder[]): Promise<void
   }
 }
 
-/** 「1시간 뒤」 — 같은 알림을 한 시간 뒤에 한 번 더 */
-export async function snoozeTodo(todoId: string, title: string, body: string | null): Promise<void> {
+/** 「1시간 뒤」 — 같은 알림을 한 시간 뒤에 한 번 더. 루틴이면 `routine` 을 true 로 */
+export async function snoozeTodo(id: string, title: string, body: string | null, routine = false): Promise<void> {
   if (!(await notificationsAllowed())) return;
   await todoChannel();
   await ensureCategories().catch(() => undefined);
   await Notifications.scheduleNotificationAsync({
-    identifier: `${SNOOZE_PREFIX}${todoId}`,
+    identifier: `${SNOOZE_PREFIX}${id}`,
     content: {
       title,
       body: body ?? '할 일 시간이에요',
-      data: { type: TODO_TYPE, todoId },
-      categoryIdentifier: TODO_CATEGORY,
+      data: routine ? { type: ROUTINE_TYPE, routineId: id } : { type: TODO_TYPE, todoId: id },
+      categoryIdentifier: routine ? ROUTINE_CATEGORY : TODO_CATEGORY,
       sound: 'default',
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(Date.now() + 60 * 60 * 1000), channelId: TODO_CHANNEL_ID },
@@ -379,17 +387,42 @@ export async function scheduleDeliveryChecks(items: { id: string; title: string;
   }
 }
 
+/** 루틴 알림(SPEC-MAIN-04) — 통째로 다시 건다. 「했어요」 · 「1시간 뒤」 단추. 허락이 없으면 걸지 않는다 */
+export async function scheduleRoutineReminders(items: { id: string; routineId: string; at: Date; title: string; body: string }[]): Promise<void> {
+  await cancelPrefix(ROUTINE_PREFIX);
+  if (items.length === 0 || !(await notificationsAllowed())) return;
+  await todoChannel();
+  await ensureCategories().catch(() => undefined);
+  for (const item of items) {
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${ROUTINE_PREFIX}${item.id}`,
+      content: {
+        title: item.title,
+        body: item.body,
+        data: { type: ROUTINE_TYPE, routineId: item.routineId },
+        categoryIdentifier: ROUTINE_CATEGORY,
+        sound: 'default',
+      },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: item.at, channelId: TODO_CHANNEL_ID },
+    });
+  }
+}
+
 /**
- * 알림 단추(완료 · 1시간 뒤 · 받았어요)를 누르면 `listener` 를 부른다. 앱이 꺼져 있다가 그 단추로 깨어난 경우도 마지막 응답으로 한 번 본다.
- * 돌려주는 함수로 그만 듣는다
+ * 알림 단추(완료 · 1시간 뒤 · 받았어요 · 했어요)를 누르면 `listener` 를 부른다. `target` 이 할 일이면 todoId, 루틴이면 routineId 를 본다.
+ * 앱이 꺼져 있다가 그 단추로 깨어난 경우도 마지막 응답으로 한 번 본다. 돌려주는 함수로 그만 듣는다
  */
-export function onAlertAction(listener: (action: AlertAction, todoId: string, title: string, body: string | null) => void): () => void {
+export function onAlertAction(
+  target: 'todo' | 'routine',
+  listener: (action: AlertAction, id: string, title: string, body: string | null) => void,
+): () => void {
+  const key = target === 'todo' ? 'todoId' : 'routineId';
   const handle = (response: Notifications.NotificationResponse | null) => {
     if (!response) return;
     const action = response.actionIdentifier;
     if (action !== 'done' && action !== 'snooze') return;
     const content = response.notification.request.content;
-    const todoId = content.data?.todoId;
+    const todoId = content.data?.[key];
     if (typeof todoId !== 'string') return;
     Notifications.clearLastNotificationResponse();
     void Notifications.dismissNotificationAsync(response.notification.request.identifier).catch(() => undefined);

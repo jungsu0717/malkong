@@ -361,6 +361,27 @@ CREATE TABLE todo (                        -- 할 일 (SPEC-TOPIC-02 · 03) — 
   updated_at  TEXT NOT NULL
 );
 CREATE INDEX ix_todo_topic ON todo(topic_id);
+CREATE TABLE routine (                     -- 루틴(SPEC-MAIN-02 · 03, decisions/028) — 목욕 · 터미타임처럼 날마다(또는 N일마다) 챙기는 일
+  id             TEXT PRIMARY KEY,         -- rt-…
+  title          TEXT NOT NULL,
+  kind           TEXT NOT NULL,            -- check(한 번 하면 끝) · minutes(분을 쌓는다)
+  every_days     INTEGER NOT NULL DEFAULT 1, -- 1 매일, N 이면 지난번에 한 날부터 N일마다
+  time           TEXT,                     -- 알림 시각 HH:MM — 없으면 알리지 않는다
+  goal_minutes   INTEGER,                  -- 시간 재기의 하루 목표(없어도 된다)
+  hidden         INTEGER NOT NULL DEFAULT 0, -- 지운 루틴 — 지난 기록은 남긴다
+  sort           INTEGER NOT NULL DEFAULT 0,
+  running_since  TEXT,                     -- 타이머를 켠 때
+  created_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL
+);
+CREATE TABLE routine_log (                 -- 루틴을 한 번 할 때마다 한 줄 — 오늘 했는지 · 오늘 몇 분 · 지난번은 여기서 센다(헌장 3)
+  id          TEXT PRIMARY KEY,            -- rl-…
+  routine_id  TEXT NOT NULL,
+  at          TEXT NOT NULL,               -- 한 때
+  minutes     INTEGER,                     -- 시간 재기의 분. 체크는 비움
+  created_at  TEXT NOT NULL
+);
+CREATE INDEX ix_routine_log ON routine_log(routine_id, at);
 CREATE TABLE chat_message (                -- 대화 — 2026-10-15 부터 쓰지 않는다(decisions/024). 옛 기기의 표는 남는다
   id          TEXT PRIMARY KEY,
   role        TEXT NOT NULL CHECK (role IN ('user','malkong')),
