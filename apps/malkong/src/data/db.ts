@@ -120,6 +120,7 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           hidden         INTEGER NOT NULL DEFAULT 0,
           sort           INTEGER NOT NULL DEFAULT 0,
           running_since  TEXT,
+          items          TEXT,
           created_at     TEXT NOT NULL,
           updated_at     TEXT NOT NULL
         );
@@ -129,6 +130,7 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           at          TEXT NOT NULL,
           minutes     INTEGER,
           by          TEXT,
+          step        INTEGER,
           created_at  TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ix_routine_log ON routine_log(routine_id, at);
@@ -165,6 +167,14 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
       const logColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(routine_log)');
       if (!logColumns.some((col) => col.name === 'by')) {
         await db.execAsync('ALTER TABLE routine_log ADD COLUMN by TEXT');
+      }
+      // 단계 · 확인할 물건과 단계 기록(task today/003)
+      if (!logColumns.some((col) => col.name === 'step')) {
+        await db.execAsync('ALTER TABLE routine_log ADD COLUMN step INTEGER');
+      }
+      const routineColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(routine)');
+      if (!routineColumns.some((col) => col.name === 'items')) {
+        await db.execAsync('ALTER TABLE routine ADD COLUMN items TEXT');
       }
       return db;
     })();
@@ -494,28 +504,39 @@ export async function deleteTodoRow(id: string): Promise<void> {
   await db.runAsync('DELETE FROM todo WHERE id = ?', id);
 }
 
-// --- 루틴 (SPEC-MAIN-01~04, task today/001) ---
+// --- 루틴 (SPEC-MAIN-01~07, task today/001 · 003) ---
 
-type RoutineRow = Omit<Routine, 'hidden'> & { hidden: number };
+type RoutineRow = Omit<Routine, 'hidden' | 'items'> & { hidden: number; items: string | null };
+
+/** 단계 · 확인할 물건은 JSON 글 — 깨졌으면 없는 것으로 */
+function parseItems(text: string | null): string[] | null {
+  if (!text) return null;
+  try {
+    const v: unknown = JSON.parse(text);
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : null;
+  } catch {
+    return null;
+  }
+}
 
 export async function readRoutineRows(): Promise<Routine[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<RoutineRow>(
     `SELECT id, title, kind, every_days AS everyDays, time, goal_minutes AS goalMinutes, hidden, sort, running_since AS runningSince,
-            created_at AS createdAt, updated_at AS updatedAt
+            items, created_at AS createdAt, updated_at AS updatedAt
        FROM routine ORDER BY sort`,
   );
-  return rows.map((r) => ({ ...r, hidden: r.hidden === 1 }));
+  return rows.map((r) => ({ ...r, hidden: r.hidden === 1, items: parseItems(r.items) }));
 }
 
 export async function upsertRoutineRow(r: Routine): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO routine (id, title, kind, every_days, time, goal_minutes, hidden, sort, running_since, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO routine (id, title, kind, every_days, time, goal_minutes, hidden, sort, running_since, items, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET title = excluded.title, kind = excluded.kind, every_days = excluded.every_days, time = excluded.time,
        goal_minutes = excluded.goal_minutes, hidden = excluded.hidden, sort = excluded.sort, running_since = excluded.running_since,
-       updated_at = excluded.updated_at`,
+       items = excluded.items, updated_at = excluded.updated_at`,
     r.id,
     r.title,
     r.kind,
@@ -525,6 +546,7 @@ export async function upsertRoutineRow(r: Routine): Promise<void> {
     r.hidden ? 1 : 0,
     r.sort,
     r.runningSince,
+    r.items && r.items.length > 0 ? JSON.stringify(r.items) : null,
     r.createdAt,
     r.updatedAt,
   );
@@ -535,7 +557,7 @@ export async function readRoutineLogRows(days = 400): Promise<RoutineLog[]> {
   const db = await getDb();
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   return db.getAllAsync<RoutineLog>(
-    `SELECT id, routine_id AS routineId, at, minutes, by, created_at AS createdAt FROM routine_log WHERE at >= ? ORDER BY at`,
+    `SELECT id, routine_id AS routineId, at, minutes, by, step, created_at AS createdAt FROM routine_log WHERE at >= ? ORDER BY at`,
     since,
   );
 }
@@ -543,12 +565,13 @@ export async function readRoutineLogRows(days = 400): Promise<RoutineLog[]> {
 export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, minutes, by, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, minutes, by, step, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
     l.id,
     l.routineId,
     l.at,
     l.minutes,
     l.by,
+    l.step,
     l.createdAt,
   );
 }

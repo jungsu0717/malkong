@@ -43,7 +43,7 @@
 | 답변 피드백 | 서버가 받기로 한 것(SPEC-ASK-06). 기기 키와 떼어 두고, 질문·답 원문은 사용자가 그 피드백에서 함께 보내기를 골랐을 때만. 1년 보관 |
 | 캐시된 답변 (라우팅 ②) | 모두가 나눠 쓰는 자산이다 |
 | 운영자(가족) allowlist | 앱 안에서 풀 수 없어야 한다. 가족 기기 몇 대라 DB 대신 서버 비밀값(`MALKONG_OPERATOR_DEVICE_KEYS`)에 둔다 |
-| 가족 공유 사본 — 가족(초대 코드) · 구성원(기기 키 해시 · 동의한 때) · 아기(이름 · 생일) · 기록(L2) · 빠른 기록 · 할 일 · 리스트 · 루틴과 그 기록(누가 했는지 이름 포함) | 가족이 같은 아기를 보려면 폰 사이에 서버가 있어야 한다. 동의하고 켠 기기의 것만, 대화는 없다. 마지막 구성원이 나가면 지운다([task my/007](../task/my/007-family-sharing.md) · [my/009](../task/my/009-family-todos-routines.md)) |
+| 가족 공유 사본 — 가족(초대 코드) · 구성원(기기 키 해시 · 동의한 때) · 아기(이름 · 생일) · 기록(L2) · 빠른 기록 · 할 일 · 장보기 · 루틴과 그 기록(누가 했는지 이름 · 단계 포함) | 가족이 같은 아기를 보려면 폰 사이에 서버가 있어야 한다. 동의하고 켠 기기의 것만, 대화는 없다. 마지막 구성원이 나가면 지운다([task my/007](../task/my/007-family-sharing.md) · [my/009](../task/my/009-family-todos-routines.md)) |
 | 근거 없음 로그 (분류 × 월령 띠 × 검색 건수) | 근거 없이 일반론으로 답한 질문이 어느 주제에 몰리는지는 여러 사용자를 합쳐야 보인다. DB 가 아니라 Cloud Run 로그 한 줄(기본 30일 보관), 질문 원문 · 기기 키는 없다 — [knowledge-layers](knowledge-layers.md) 「비어 있는 곳 찾기」 |
 
 ```
@@ -350,7 +350,7 @@ CREATE TABLE todo (                        -- 할 일 (SPEC-TOPIC-02 · 03) — 
   due_at      TEXT,                        -- 기한 ISO — 시각이 없으면 그날 0시
   has_time    INTEGER NOT NULL DEFAULT 0,  -- 시각까지 정했으면 1 — 그 시각에 알림(SPEC-TOPIC-09)
   buy         INTEGER NOT NULL DEFAULT 0,  -- 살 것 — 장보기 주제에도 모인다
-  source      TEXT NOT NULL,               -- manual · starter · repeat(반복 할 일을 완료해 생긴 다음 차례) · auto(앱이 생일로 만듦) (나중: paste)
+  source      TEXT NOT NULL,               -- manual · starter · repeat(반복 할 일을 완료해 생긴 다음 차례) · auto(앱이 생일로 만듦) · stock(재고 확인에서 부족, task today/003) (나중: paste)
   done_at     TEXT,                        -- 끝낸 때. 되돌리면 비운다. 반복 할 일은 완료할 때 다음 날짜로 새 줄을 쌓는다
   done_by     TEXT,                        -- 누가 완료했나 — 가족 공유를 켠 폰의 「가족 안에서 부를 이름」(task my/009)
   repeat      TEXT,                        -- 반복 규칙(SPEC-TOPIC-06) — daily · weekly:2,5 · monthly:1 · every:3. 없으면 비움
@@ -362,16 +362,17 @@ CREATE TABLE todo (                        -- 할 일 (SPEC-TOPIC-02 · 03) — 
   updated_at  TEXT NOT NULL
 );
 CREATE INDEX ix_todo_topic ON todo(topic_id);
-CREATE TABLE routine (                     -- 루틴(SPEC-MAIN-02 · 03, decisions/028) — 목욕 · 터미타임처럼 날마다(또는 N일마다) 챙기는 일
+CREATE TABLE routine (                     -- 루틴(SPEC-MAIN-02 · 03 · 05 · 06, decisions/028 · 029) — 목욕 · 터미타임처럼 날마다(또는 N일마다) 챙기는 일
   id             TEXT PRIMARY KEY,         -- rt-…
   title          TEXT NOT NULL,
-  kind           TEXT NOT NULL,            -- check(한 번 하면 끝) · minutes(분을 쌓는다)
+  kind           TEXT NOT NULL,            -- check(누르면 완료, 단계를 둘 수 있다) · minutes(분을 쌓는다) · stock(재고 확인)
   every_days     INTEGER NOT NULL DEFAULT 1, -- 1 매일, N 이면 지난번에 한 날부터 N일마다
   time           TEXT,                     -- 알림 시각 HH:MM — 없으면 알리지 않는다
-  goal_minutes   INTEGER,                  -- 시간 재기의 하루 목표(없어도 된다)
+  goal_minutes   INTEGER,                  -- 타이머 루틴의 하루 목표(없어도 된다)
   hidden         INTEGER NOT NULL DEFAULT 0, -- 지운 루틴 — 지난 기록은 남긴다
   sort           INTEGER NOT NULL DEFAULT 0,
   running_since  TEXT,                     -- 타이머를 켠 때
+  items          TEXT,                     -- JSON 글 배열 — check 는 단계(없으면 비움), stock 은 확인할 물건(task today/003)
   created_at     TEXT NOT NULL,
   updated_at     TEXT NOT NULL
 );
@@ -379,8 +380,9 @@ CREATE TABLE routine_log (                 -- 루틴을 한 번 할 때마다 �
   id          TEXT PRIMARY KEY,            -- rl-…
   routine_id  TEXT NOT NULL,
   at          TEXT NOT NULL,               -- 한 때
-  minutes     INTEGER,                     -- 시간 재기의 분. 체크는 비움
+  minutes     INTEGER,                     -- 타이머 루틴의 분. 체크는 비움
   by          TEXT,                        -- 누가 했나 — 가족 공유 이름(task my/009)
+  step        INTEGER,                     -- 단계 번호(0부터). 루틴 전체를 끝낸 줄은 비움 — 오늘 했는지 · 지난번은 비운 줄로만 센다(task today/003)
   created_at  TEXT NOT NULL
 );
 CREATE INDEX ix_routine_log ON routine_log(routine_id, at);

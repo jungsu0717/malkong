@@ -6,7 +6,22 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { countsDone, dateLabel, everyLabel, isDueOn, nextDayLabel, routineReminders, slotOf, statusLine, timeLabel, todayPlan, todayState, type Routine, type RoutineLog } from './routine.ts';
+import {
+  countsDone,
+  dateLabel,
+  everyLabel,
+  isDueOn,
+  nextDayLabel,
+  routineReminders,
+  slotOf,
+  statusLine,
+  stockToBuy,
+  timeLabel,
+  todayPlan,
+  todayState,
+  type Routine,
+  type RoutineLog,
+} from './routine.ts';
 
 const NOW = new Date(2026, 9, 16, 14, 0);
 const iso = (mo: number, d: number, h = 9, mi = 0) => new Date(2026, mo - 1, d, h, mi).toISOString();
@@ -17,6 +32,7 @@ const routine = (o: Partial<Routine> = {}): Routine => ({
   everyDays: 1,
   time: '19:00',
   goalMinutes: null,
+  items: null,
   hidden: false,
   sort: 0,
   runningSince: null,
@@ -31,6 +47,7 @@ const log = (at: string, minutes: number | null = null, routineId = 'r1', by: st
   at,
   minutes,
   by,
+  step: null,
   createdAt: at,
 });
 
@@ -146,4 +163,39 @@ test('다른 날 이름과 날짜', () => {
   assert.equal(nextDayLabel(2, NOW), '일요일');
   assert.equal(nextDayLabel(9, NOW), '9일 뒤');
   assert.equal(dateLabel(NOW), '10월 16일 금요일');
+});
+
+test('단계가 있는 루틴 — 단계 줄은 완료로 세지 않고, 전체 한 줄이 있어야 완료', () => {
+  const sleep = routine({ title: '밤잠 준비', time: '20:30', items: ['스와들 입히기', '수유', '트림', '자장가 부르며 재우기'] });
+  const step = (at: string, i: number): RoutineLog => ({ ...log(at), step: i });
+  const half = [step(iso(10, 16, 13, 1), 0), step(iso(10, 16, 13, 4), 1)];
+  const s1 = todayState(sleep, half, NOW);
+  assert.equal(s1.done, false);
+  assert.deepEqual(s1.stepsDone, [0, 1]);
+  assert.equal(statusLine(sleep, s1).text, '2 / 4단계');
+  assert.equal(statusLine(sleep, todayState(sleep, [], NOW)).text, '오후 8:30 · 4단계');
+  const all = [...half, step(iso(10, 16, 13, 6), 2), step(iso(10, 16, 13, 9), 3), log(iso(10, 16, 13, 9))];
+  assert.equal(todayState(sleep, all, NOW).done, true);
+  assert.equal(statusLine(sleep, todayState(sleep, all, NOW)).text, '13:09 완료');
+  // 지난번부터 며칠은 전체 줄로만 — 어제 단계만 한 날은 한 날로 치지 않는다
+  const bath = routine({ title: '목욕', everyDays: 2, items: ['목욕', '보습'] });
+  assert.equal(isDueOn(bath, [step(iso(10, 15, 20), 0)], NOW), true);
+  assert.equal(isDueOn(bath, [log(iso(10, 15, 20))], NOW), false);
+});
+
+test('재고 확인 — 부족한 것 중 살 것에 없는 것만, 살 곳은 지난번 산 곳', () => {
+  const out = stockToBuy(
+    ['기저귀', '보습 로션', '물티슈'],
+    ['물 티슈'],
+    [
+      { title: '기저귀', store: '마트', doneAt: iso(10, 1) },
+      { title: '기저귀', store: '온라인', doneAt: iso(10, 9) },
+    ],
+  );
+  assert.deepEqual(out, [
+    { title: '기저귀', store: '온라인' },
+    { title: '보습 로션', store: null },
+  ]);
+  const stock = routine({ title: '재고 확인', kind: 'stock', everyDays: 7, time: null, items: ['분유'] });
+  assert.equal(todayState(stock, [log(iso(10, 16, 9))], NOW).done, true);
 });

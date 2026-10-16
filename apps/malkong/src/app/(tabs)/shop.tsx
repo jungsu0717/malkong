@@ -2,6 +2,7 @@
  * 장보기 탭 — 살 것 (SPEC-SHOP-01~05, task topic/004 · 007 · list/001 · today/003, decisions/026~029).
  *
  * 날짜가 아니라 살 것 기준이라, 못 산 것은 체크하지 않으면 그대로 남는다. 준비할 것(직접 만든 목록)은 할 일 탭 「준비 목록」에 있다.
+ * 재고 확인 루틴이 있으면 맨 위에 한 줄 — 누르면 재고 확인 시트(SPEC-MAIN-06). 거기서 들어온 살 것에는 「재고 확인에서 추가」.
  *
  * 살 것을 살 곳별로 묶는다 — 마트 · 다이소 같은 매장(사용자가 적은 곳) → 온라인 → 살 곳을 안 정한 것. 매장에 가면 그 묶음만 보고 체크한다.
  * 온라인 묶음에만 「주문 완료」(언제 도착) → 배송 중 → 받으면 체크. 지난번 산 것과 매장마다 지난번 목록은 「다시 담기」에서 한 번에.
@@ -14,6 +15,8 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
+import { RoutineIcon } from '@/components/routine/routine-icon';
+import { StockSheet } from '@/components/routine/stock-sheet';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -23,8 +26,10 @@ import { TodoInput } from '@/components/todo/todo-input';
 import { TodoItem } from '@/components/todo/todo-item';
 import { TodoSheet } from '@/components/todo/todo-sheet';
 import { Card, Chip, Folded, SectionHeader, tap } from '@/components/ui';
-import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { dueLabel } from '@/data/due-parse';
+import { nextDayLabel, todayState, type Routine, type RoutineLog } from '@/data/routine';
+import { useRoutines } from '@/data/routines-context';
 import { ONLINE, buyAgain, lastTrips, recentStores, shopLists, shopPlaces, toBuyGroups, type Todo } from '@/data/todos';
 import { useTodos } from '@/data/todos-context';
 import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
@@ -36,6 +41,23 @@ function splitPlace(text: string): { place: string; title: string } | null {
   return m ? { place: m[1], title: m[2].trim() } : null;
 }
 
+/**
+ * 재고 확인 한 줄의 작은 글씨 — 확인할 날이면 「오늘 확인해 보세요」, 아니면 다음 확인 날과 지난번 결과
+ * (지난번 확인한 날 재고 확인에서 들어온 살 것 수)
+ */
+function stockDetail(r: Routine, logs: RoutineLog[], stockTodos: Todo[], now: Date): string {
+  const s = todayState(r, logs, now);
+  if (s.due && !s.firstAt) return '오늘 확인해 보세요';
+  const last = logs
+    .filter((l) => l.routineId === r.id && l.step == null)
+    .map((l) => new Date(l.at))
+    .sort((a, b) => a.getTime() - b.getTime())
+    .pop();
+  const added = last ? stockTodos.filter((t) => new Date(t.createdAt).toDateString() === last.toDateString()).length : 0;
+  if (s.firstAt) return added > 0 ? `오늘 부족한 ${added}개를 추가했어요` : '오늘 확인했어요 · 모두 충분해요';
+  return `다음 확인 ${nextDayLabel(s.nextInDays, now)} · ${added > 0 ? `지난번에 부족한 ${added}개를 추가했어요` : '지난번엔 모두 충분했어요'}`;
+}
+
 /** 배송 중 줄의 작은 글씨 — 「쿠팡 · 내일 도착 예정」(주문한 곳을 안 적었으면 「온라인」) */
 function shippingDetail(t: Todo): string {
   const when = t.arriveAt ? `${dueLabel(new Date(t.arriveAt), false)} 도착 예정` : '배송 중';
@@ -45,6 +67,8 @@ function shippingDetail(t: Todo): string {
 export default function ShopScreen() {
   const c = useTheme();
   const { topics, todos, loading, add, update, toggleDone, remove } = useTodos();
+  const { routines, logs, updateRoutine, completeStock } = useRoutines();
+  const [stockOpen, setStockOpen] = useState(false);
   const typing = useKeyboardVisible();
   const [ordering, setOrdering] = useState<Todo | null>(null);
   const [editing, setEditing] = useState<Todo | null>(null);
@@ -61,6 +85,8 @@ export default function ShopScreen() {
   const trips = lastTrips(shop, todos);
   const stores = recentStores(todos);
   const addItem = (title: string, store: string | null) => add({ title, topicId: shop.id, store });
+  const stock = routines.find((r) => r.kind === 'stock');
+  const now = new Date();
 
   return (
     <ThemedView style={styles.container}>
@@ -73,6 +99,35 @@ export default function ShopScreen() {
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive">
             <ThemedText type="display">장보기</ThemedText>
+
+            {/* 재고 확인 (SPEC-SHOP-01 · SPEC-MAIN-06) */}
+            {stock && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  tap();
+                  setStockOpen(true);
+                }}
+                style={({ pressed }) => [styles.stock, { backgroundColor: pressed ? c.surfaceStrong : c.surface }]}>
+                <View style={[styles.stockIcon, { backgroundColor: c.background }]}>
+                  <RoutineIcon title={stock.title} kind={stock.kind} size={20} color={c.text} />
+                </View>
+                <View style={styles.text}>
+                  <ThemedText type="body" style={{ fontWeight: 600 }}>
+                    {stock.title}
+                  </ThemedText>
+                  <ThemedText type="caption" style={{ color: c.textSecondary }}>
+                    {stockDetail(
+                      stock,
+                      logs,
+                      todos.filter((t) => t.topicId === shop.id && t.source === 'stock'),
+                      now,
+                    )}
+                  </ThemedText>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
+              </Pressable>
+            )}
 
             {/* 살 것 — 살 곳별로 (SPEC-SHOP-01) */}
             {groups.length === 0 ? (
@@ -90,6 +145,7 @@ export default function ShopScreen() {
                       <ShopRow
                         key={t.id}
                         todo={t}
+                        detail={t.source === 'stock' ? '재고 확인에서 추가' : undefined}
                         divider={i > 0}
                         onCheck={() => void toggleDone(t.id)}
                         onLong={() => setEditing(t)}
@@ -192,6 +248,16 @@ export default function ShopScreen() {
         </KeyboardAvoidingView>
       </SafeAreaView>
 
+      <StockSheet
+        key={stockOpen ? 'stock-open' : 'stock-closed'}
+        routine={stockOpen && stock ? stock : null}
+        onDone={(short) => {
+          setStockOpen(false);
+          if (stock) void completeStock(stock.id, short);
+        }}
+        onAddItem={(name) => stock && void updateRoutine(stock.id, { items: [...(stock.items ?? []), name] })}
+        onClose={() => setStockOpen(false)}
+      />
       <OrderSheet
         key={ordering?.id ?? 'none'}
         todo={ordering}
@@ -322,6 +388,8 @@ const styles = StyleSheet.create({
   },
   section: { gap: 10 },
   rows: { paddingVertical: 2 },
+  stock: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: Radius.lg },
+  stockIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   empty: { paddingVertical: Spacing.three },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   row: { flexDirection: 'row', alignItems: 'center', minHeight: 52, gap: 8 },

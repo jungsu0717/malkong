@@ -75,7 +75,7 @@ function Row({
   const { r, s } = item;
   const line = statusLine(r, s);
   const done = countsDone(r, s);
-  const running = !!r.runningSince;
+  const running = r.kind === 'minutes' && !!r.runningSince;
   const elapsed = running ? Math.max(0, Math.floor((now.getTime() - new Date(r.runningSince!).getTime()) / 1000)) : 0;
   const clock = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
   const doneText = s.firstAt ? (s.firstBy ? `${s.firstBy} · ${clockLabel(s.firstAt)} 완료` : `${clockLabel(s.firstAt)} 완료`) : '';

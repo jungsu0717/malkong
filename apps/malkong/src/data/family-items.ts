@@ -173,13 +173,16 @@ export function planIncoming(args: {
     const mine = routines.get(item.id);
     if (mine && mine.updatedAt >= item.updatedAt) continue;
     const d = item.data;
+    const kind = str(d.kind) as RoutineKind;
     const routine: Routine = {
       id: item.id,
       title: str(d.title) ?? '',
-      kind: (str(d.kind) as RoutineKind) === 'minutes' ? 'minutes' : 'check',
+      kind: kind === 'minutes' || kind === 'stock' ? kind : 'check',
       everyDays: Math.max(1, num(d.everyDays, 1)),
       time: str(d.time),
       goalMinutes: typeof d.goalMinutes === 'number' ? d.goalMinutes : null,
+      // 단계 · 확인할 물건(task today/003) — 글자만, 스무 개까지
+      items: Array.isArray(d.items) ? d.items.filter((x): x is string => typeof x === 'string').slice(0, 20) : null,
       hidden: bool(d.hidden),
       sort: num(d.sort, 0),
       // 타이머는 그 폰의 것 — 다른 폰의 타이머를 이어 받지 않는다
@@ -211,6 +214,7 @@ export function planIncoming(args: {
       at,
       minutes: typeof d.minutes === 'number' ? d.minutes : null,
       by: str(d.by),
+      step: typeof d.step === 'number' && Number.isInteger(d.step) && d.step >= 0 ? d.step : null,
       createdAt: str(d.createdAt) ?? item.updatedAt,
     });
     logIds.add(item.id);

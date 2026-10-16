@@ -1,5 +1,6 @@
 /**
- * 루틴 추가 · 편집 (SPEC-MAIN-03, task today/002) — 이름, 종류(체크 / 타이머), 반복(매일 / N일마다), 알림 시각, 목표 분, 삭제.
+ * 루틴 추가 · 편집 (SPEC-MAIN-03 · 05 · 06, task today/002 · 003) — 이름, 종류(체크 / 타이머 / 재고 확인), 반복(매일 / N일마다), 알림 시각,
+ * 목표 분(타이머), 단계(체크, 선택) · 확인할 물건(재고 확인), 삭제.
  * 추가할 때는 위에 추천(목욕 · 터미타임 …)이 버튼으로 다 보이고, 누르면 바로 추가된다(이미 있는 것은 체크 표시).
  * 아래 「직접 추가」 칸에 이름을 적지 않았으면 아래 단추는 「완료」(닫기)다.
  */
@@ -13,7 +14,16 @@ import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Button, Chip, tap } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
-import { ROUTINE_TEMPLATES, isTime, timeLabel, type Routine, type RoutineInput, type RoutineKind, type RoutineTemplate } from '@/data/routine';
+import {
+  ROUTINE_TEMPLATES,
+  STOCK_ITEMS,
+  isTime,
+  timeLabel,
+  type Routine,
+  type RoutineInput,
+  type RoutineKind,
+  type RoutineTemplate,
+} from '@/data/routine';
 import { useTheme } from '@/hooks/use-theme';
 
 const EVERY: { days: number; label: string }[] = [
@@ -23,6 +33,13 @@ const EVERY: { days: number; label: string }[] = [
   { days: 7, label: '매주' },
 ];
 const TEMPLATE_COLUMNS = 4;
+/** 단계는 여덟 개, 확인할 물건은 스무 개까지 */
+const MAX_ITEMS: Record<RoutineKind, number> = { check: 8, stock: 20, minutes: 0 };
+const KIND_HINT: Record<RoutineKind, string> = {
+  check: '누르면 완료로 바뀌고, 완료한 시각이 기록돼요',
+  minutes: '타이머나 +1분 단추로 오늘 한 시간이 기록돼요',
+  stock: '물건마다 충분 · 부족을 고르면 부족한 것이 장보기에 추가돼요',
+};
 const TEMPLATE_GAP = 8;
 const TIMES = ['08:00', '13:00', '19:00'];
 
@@ -52,6 +69,14 @@ export function RoutineSheet({
   const [everyText, setEveryText] = useState(String(routine?.everyDays ?? 1));
   const [timeText, setTimeText] = useState(routine?.time ?? '');
   const [goalText, setGoalText] = useState(routine?.goalMinutes ? String(routine.goalMinutes) : '');
+  const [items, setItems] = useState<string[]>(routine?.items ?? []);
+  // 종류를 바꾸면 단계 · 물건 목록도 그 종류의 처음 것으로 — 원래 종류로 돌아오면 원래 목록
+  const changeKind = (k: RoutineKind) => {
+    setKind(k);
+    if (routine && routine.kind === k) setItems(routine.items ?? []);
+    else setItems(k === 'stock' ? STOCK_ITEMS : []);
+  };
+  const cleaned = items.map((x) => x.trim()).filter(Boolean).slice(0, MAX_ITEMS[kind]);
 
   const everyDays = Number(everyText);
   const everyOk = Number.isInteger(everyDays) && everyDays >= 1 && everyDays <= 365;
@@ -60,7 +85,7 @@ export function RoutineSheet({
   const goalOk = !goalText.trim() || (Number.isInteger(goal) && goal >= 1 && goal <= 600);
   const have = new Set(existingTitles.map((t) => t.replace(/\s+/g, '')));
   const added = (t: RoutineTemplate) => have.has(t.title.replace(/\s+/g, ''));
-  const canSave = !!title.trim() && everyOk && timeOk && goalOk;
+  const canSave = !!title.trim() && everyOk && timeOk && goalOk && (kind !== 'stock' || cleaned.length > 0);
   // 추가 화면에서 이름을 비워 두면 아래 단추는 닫기
   const closeOnly = !routine && !title.trim();
   const [gridWidth, setGridWidth] = useState(0);
@@ -135,11 +160,12 @@ export function RoutineSheet({
               종류
             </ThemedText>
             <View style={styles.chips}>
-              <Chip label="체크" selected={kind === 'check'} onPress={() => setKind('check')} />
-              <Chip label="타이머" selected={kind === 'minutes'} onPress={() => setKind('minutes')} />
+              <Chip label="체크" selected={kind === 'check'} onPress={() => changeKind('check')} />
+              <Chip label="타이머" selected={kind === 'minutes'} onPress={() => changeKind('minutes')} />
+              <Chip label="재고 확인" selected={kind === 'stock'} onPress={() => changeKind('stock')} />
             </View>
             <ThemedText type="caption" style={{ color: c.textSecondary }}>
-              {kind === 'check' ? '누르면 완료로 바뀌고, 완료한 시각이 기록돼요' : '타이머나 +5분 단추로 오늘 한 시간이 기록돼요'}
+              {KIND_HINT[kind]}
             </ThemedText>
 
             <ThemedText type="label" style={{ color: c.textSecondary }}>
@@ -203,6 +229,47 @@ export function RoutineSheet({
                 </View>
               </>
             )}
+
+            {kind !== 'minutes' && (
+              <>
+                <ThemedText type="label" style={{ color: c.textSecondary }}>
+                  {kind === 'check' ? '단계 (선택)' : '확인할 물건'}
+                </ThemedText>
+                {kind === 'check' && items.length === 0 && (
+                  <ThemedText type="caption" style={{ color: c.textSecondary }}>
+                    밤잠 준비처럼 순서대로 하는 일이면 단계를 나눠 체크할 수 있어요
+                  </ThemedText>
+                )}
+                {items.map((item, i) => (
+                  <View key={i} style={styles.row}>
+                    <TextInput
+                      style={[styles.field, styles.flex, { color: c.text, backgroundColor: c.surface }]}
+                      value={item}
+                      onChangeText={(v) => setItems((prev) => prev.map((x, j) => (j === i ? v : x)))}
+                      placeholder={kind === 'check' ? `${i + 1}단계` : '물건 이름'}
+                      placeholderTextColor={c.textTertiary}
+                      maxLength={30}
+                      accessibilityLabel={kind === 'check' ? `${i + 1}단계` : `물건 ${i + 1}`}
+                    />
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`${item || (kind === 'check' ? `${i + 1}단계` : '물건')} 빼기`}
+                      hitSlop={8}
+                      onPress={() => setItems((prev) => prev.filter((_, j) => j !== i))}>
+                      <Ionicons name="close-circle" size={22} color={c.textTertiary} />
+                    </Pressable>
+                  </View>
+                ))}
+                {items.length < MAX_ITEMS[kind] && (
+                  <Pressable accessibilityRole="button" onPress={() => setItems((prev) => [...prev, ''])} style={styles.addItem}>
+                    <Ionicons name="add" size={16} color={c.textSecondary} />
+                    <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
+                      {kind === 'check' ? '단계 추가' : '물건 추가'}
+                    </ThemedText>
+                  </Pressable>
+                )}
+              </>
+            )}
           </ScrollView>
           <Button
             size="lg"
@@ -217,6 +284,7 @@ export function RoutineSheet({
                 everyDays,
                 time: timeText.trim() || null,
                 goalMinutes: kind === 'minutes' && goalText.trim() ? goal : null,
+                items: kind === 'minutes' || cleaned.length === 0 ? null : cleaned,
               })
             }
           />
@@ -248,6 +316,8 @@ const styles = StyleSheet.create({
   },
   number: { width: 72, textAlign: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  flex: { flex: 1 },
+  addItem: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 6 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   templates: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, columnGap: TEMPLATE_GAP },
   template: { alignItems: 'center', gap: 6 },

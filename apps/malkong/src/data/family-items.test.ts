@@ -48,6 +48,7 @@ const routine = (id: string, o: Partial<Routine> = {}): Routine => ({
   everyDays: 1,
   time: '19:00',
   goalMinutes: null,
+  items: null,
   hidden: false,
   sort: 0,
   runningSince: null,
@@ -61,6 +62,7 @@ const log = (id: string, routineId: string, at: string, by: string | null = null
   at,
   minutes: null,
   by,
+  step: null,
   createdAt: at,
 });
 
@@ -167,4 +169,21 @@ test('루틴과 루틴 기록 — 누가 했는지 함께, 지운 기록은 지�
     ['rl-1:엄마'],
   );
   assert.deepEqual(plan.deleteLogs, ['rl-old']);
+});
+
+test('단계 · 확인할 물건과 단계 기록도 맞춘다', () => {
+  const plan = planIncoming({
+    items: [
+      { kind: 'routine', id: 'rt-2', updatedAt: T(9), deleted: false, data: { ...routine('rt-2', { kind: 'stock', items: ['분유', '기저귀'] }) } },
+      { kind: 'routineLog', id: 'rl-2', updatedAt: T(9), deleted: false, data: { ...log('rl-2', 'rt-2', T(9)), step: 1 } },
+    ],
+    topics: [],
+    todos: [],
+    routines: [],
+    logs: [],
+    tombstones: [],
+  });
+  assert.equal(plan.upsertRoutines[0].kind, 'stock');
+  assert.deepEqual(plan.upsertRoutines[0].items, ['분유', '기저귀']);
+  assert.equal(plan.insertLogs[0].step, 1);
 });

@@ -26,6 +26,7 @@ const RULES: [RegExp, IconChoice][] = [
   [/낮잠|수면|재우|잠/, { ion: 'moon-outline' }],
   [/책|독서/, { ion: 'book-outline' }],
   [/청소|소독/, { ion: 'sparkles-outline' }],
+  [/재고|남은 양/, { ion: 'cube-outline' }],
 ];
 
 function pick(title: string, kind: RoutineKind): IconChoice {

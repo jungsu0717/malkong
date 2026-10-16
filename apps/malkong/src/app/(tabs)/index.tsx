@@ -4,6 +4,7 @@
  * 「했나?」에 바로 답하는 곳이다. 위에 진행 카드(오늘 루틴 몇 개 중 몇 개 완료 · 다음 루틴), 그 아래 오늘 할 루틴을
  * 버튼 보기(routine-grid)나 시간순 보기(routine-timeline)로 보인다. 보기는 제목 오른쪽에서 바꾸고 마지막 것을 기억한다.
  * 오늘 할 날이 아닌 루틴은 맨 아래 한 줄로 접는다. 할 일과 다가오는 날은 할 일 탭에 있다.
+ * 단계가 있는 루틴은 누르면 단계 시트(SPEC-MAIN-05), 재고 확인은 재고 확인 시트(SPEC-MAIN-06)가 열린다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -14,7 +15,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AdBanner } from '@/components/ad-banner';
 import { RoutineGrid } from '@/components/routine/routine-grid';
 import { RoutineSheet } from '@/components/routine/routine-sheet';
+import { RoutineStepsSheet } from '@/components/routine/routine-steps-sheet';
 import { RoutineTimeline } from '@/components/routine/routine-timeline';
+import { StockSheet } from '@/components/routine/stock-sheet';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -22,7 +25,7 @@ import { tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { readSetting, writeSetting } from '@/data/db';
-import { dateLabel, everyLabel, nextDayLabel, timeLabel, todayPlan, type Routine, type RoutineTemplate } from '@/data/routine';
+import { dateLabel, everyLabel, hasSteps, nextDayLabel, timeLabel, todayPlan, type Routine, type RoutineTemplate } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
@@ -34,8 +37,25 @@ const VIEW_KEY = 'routine_view';
 export default function RoutineScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
-  const { routines, logs, loading, addRoutine, updateRoutine, removeRoutine, check, addMinutes, startTimer, stopTimer } = useRoutines();
+  const {
+    routines,
+    logs,
+    loading,
+    addRoutine,
+    updateRoutine,
+    removeRoutine,
+    check,
+    toggleStep,
+    completeAll,
+    completeStock,
+    addMinutes,
+    startTimer,
+    stopTimer,
+  } = useRoutines();
   const [sheet, setSheet] = useState<{ routine: Routine | null } | null>(null);
+  /** 단계 시트 · 재고 확인 시트로 연 루틴 id */
+  const [stepsId, setStepsId] = useState<string | null>(null);
+  const [stockId, setStockId] = useState<string | null>(null);
   const [arranging, setArranging] = useState(false);
   const [showLater, setShowLater] = useState(false);
   const [view, setViewState] = useState<ViewMode>('grid');
@@ -54,13 +74,22 @@ export default function RoutineScreen() {
   };
 
   // 타이머가 켜져 있으면 1초마다, 아니면 30초마다 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다
-  const now = useNow(routines.some((r) => r.runningSince));
+  const now = useNow(routines.some((r) => r.kind === 'minutes' && r.runningSince));
 
   if (!baby || !age || loading) return <ScreenLoading />;
   const plan = todayPlan(routines, logs, now);
   const quickAdd = (t: RoutineTemplate) =>
-    void addRoutine({ title: t.title, kind: t.kind, everyDays: t.everyDays, time: t.time, goalMinutes: null });
+    void addRoutine({ title: t.title, kind: t.kind, everyDays: t.everyDays, time: t.time, goalMinutes: null, items: t.items ?? null });
   const onTimer = (r: Routine) => void (r.runningSince ? stopTimer(r.id) : startTimer(r.id));
+  // 단계가 있으면 단계 시트, 재고 확인은 재고 확인 시트, 그 밖의 체크는 바로 완료 ↔ 되돌림
+  const onCheck = (id: string) => {
+    const r = routines.find((x) => x.id === id);
+    if (r && hasSteps(r)) setStepsId(id);
+    else if (r?.kind === 'stock') setStockId(id);
+    else void check(id);
+  };
+  const stepsRoutine = routines.find((r) => r.id === stepsId) ?? null;
+  const stockRoutine = routines.find((r) => r.id === stockId) ?? null;
   const nextText = plan.next ? [plan.next.r.title, plan.next.r.time ? timeLabel(plan.next.r.time) : null].filter(Boolean).join(' · ') : null;
   const first = plan.later[0];
 
@@ -163,7 +192,7 @@ export default function RoutineScreen() {
                   items={plan.today}
                   nextId={plan.next?.r.id ?? null}
                   now={now}
-                  onCheck={(id) => void check(id)}
+                  onCheck={onCheck}
                   onAddMinutes={(id, m) => void addMinutes(id, m)}
                   onTimer={onTimer}
                   onEdit={(r) => setSheet({ routine: r })}
@@ -175,7 +204,7 @@ export default function RoutineScreen() {
                 showTemplates={routines.length === 0}
                 now={now}
                 editing={arranging}
-                onCheck={(id) => void check(id)}
+                onCheck={onCheck}
                 onAddMinutes={(id) => void addMinutes(id, 1)}
                 onTimer={onTimer}
                 onEdit={(r) => setSheet({ routine: r })}
@@ -243,6 +272,29 @@ export default function RoutineScreen() {
           setSheet(null);
           if (target) void removeRoutine(target.id);
         }}
+      />
+      <RoutineStepsSheet
+        routine={stepsRoutine}
+        logs={logs}
+        now={now}
+        onToggleStep={(i) => stepsRoutine && void toggleStep(stepsRoutine.id, i)}
+        onCompleteAll={() => stepsRoutine && void completeAll(stepsRoutine.id)}
+        onEdit={() => {
+          setStepsId(null);
+          setSheet({ routine: stepsRoutine });
+        }}
+        onClose={() => setStepsId(null)}
+      />
+      <StockSheet
+        key={stockId ?? 'stock-closed'}
+        routine={stockRoutine}
+        onDone={(short) => {
+          const id = stockId;
+          setStockId(null);
+          if (id) void completeStock(id, short);
+        }}
+        onAddItem={(name) => stockRoutine && void updateRoutine(stockRoutine.id, { items: [...(stockRoutine.items ?? []), name] })}
+        onClose={() => setStockId(null)}
       />
     </ThemedView>
   );

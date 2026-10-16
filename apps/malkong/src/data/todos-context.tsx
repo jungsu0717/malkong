@@ -166,7 +166,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
             const everyDays = rule.kind === 'daily' ? 1 : rule.kind === 'every' ? rule.days : rule.kind === 'weekly' ? 7 : 30;
             const due = t.hasTime && t.dueAt ? new Date(t.dueAt) : null;
             const time = due ? `${String(due.getHours()).padStart(2, '0')}:${String(due.getMinutes()).padStart(2, '0')}` : null;
-            const routine = makeRoutine({ title: t.title, kind: 'check', everyDays, time, goalMinutes: null }, i);
+            const routine = makeRoutine({ title: t.title, kind: 'check', everyDays, time, goalMinutes: null, items: null }, i);
             await upsertRoutineRow(routine);
             const lastDone = all
               .filter((d) => d.doneAt && d.topicId === routineTopic.id && titleKey(d.title) === titleKey(t.title))

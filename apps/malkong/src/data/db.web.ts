@@ -275,7 +275,9 @@ const ROUTINES_KEY = 'malkong.routines';
 const ROUTINE_LOGS_KEY = 'malkong.routineLogs';
 
 export async function readRoutineRows(): Promise<Routine[]> {
-  return readList<Routine>(ROUTINES_KEY).sort((a, b) => a.sort - b.sort);
+  return readList<Routine>(ROUTINES_KEY)
+    .map((r) => ({ ...r, items: r.items ?? null }))
+    .sort((a, b) => a.sort - b.sort);
 }
 
 export async function upsertRoutineRow(r: Routine): Promise<void> {
@@ -284,7 +286,7 @@ export async function upsertRoutineRow(r: Routine): Promise<void> {
 
 export async function readRoutineLogRows(): Promise<RoutineLog[]> {
   return readList<RoutineLog>(ROUTINE_LOGS_KEY)
-    .map((l) => ({ ...l, by: l.by ?? null }))
+    .map((l) => ({ ...l, by: l.by ?? null, step: l.step ?? null }))
     .sort((a, b) => a.at.localeCompare(b.at));
 }
 

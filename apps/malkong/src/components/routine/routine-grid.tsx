@@ -65,7 +65,7 @@ export function RoutineGrid({
               editing={editing}
               onPress={() => {
                 if (editing) return onEdit(r);
-                if (r.kind === 'check') {
+                if (r.kind !== 'minutes') {
                   tap(s.firstAt ? 'light' : 'success');
                   return onCheck(r.id);
                 }
@@ -104,20 +104,20 @@ function RoutineTile({
   onAddMinutes: () => void;
 }) {
   const c = useTheme();
-  const running = !!routine.runningSince;
+  const running = routine.kind === 'minutes' && !!routine.runningSince;
   const line = statusLine(routine, state);
   const elapsed = running ? Math.max(0, Math.floor((now.getTime() - new Date(routine.runningSince!).getTime()) / 1000)) : 0;
   const clock = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
   const filled = line.done || running;
   const label =
-    routine.kind === 'check'
+    routine.kind !== 'minutes'
       ? `${routine.title}, ${line.text}`
       : `${routine.title}, ${running ? `타이머 ${clock}` : line.text}, 누르면 타이머 ${running ? '멈춤' : '시작'}`;
 
   return (
     <Pressable
-      accessibilityRole={routine.kind === 'check' && !editing ? 'checkbox' : 'button'}
-      accessibilityState={routine.kind === 'check' && !editing ? { checked: line.done } : undefined}
+      accessibilityRole={routine.kind !== 'minutes' && !editing ? 'checkbox' : 'button'}
+      accessibilityState={routine.kind !== 'minutes' && !editing ? { checked: line.done } : undefined}
       accessibilityLabel={editing ? `${routine.title} 편집` : label}
       onPress={onPress}
       onLongPress={onLongPress}

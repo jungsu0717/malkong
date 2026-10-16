@@ -32,7 +32,8 @@ export type Topic = {
 };
 
 /** 어디서 생겼나 — 직접 적음 · 추천에서 추가 · 반복 할 일을 완료해서 다음 차례로 생김 · 앱이 생일로 만듦(SPEC-TOPIC-11) */
-export type TodoSource = 'manual' | 'starter' | 'repeat' | 'auto';
+/** 어디서 생겼나 — 재고 확인에서 부족해 들어온 살 것은 'stock'(SPEC-MAIN-06) */
+export type TodoSource = 'manual' | 'starter' | 'repeat' | 'auto' | 'stock';
 
 export type Todo = {
   id: string;

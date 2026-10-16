@@ -1,14 +1,16 @@
 /**
- * 루틴 (SPEC-MAIN-01~04, task today/001, decisions/028) — 목욕 · 터미타임 · 젖병 소독처럼 날마다(또는 N일마다) 챙기는 일.
+ * 루틴 (SPEC-MAIN-01~07, task today/001 · 003, decisions/028 · 029) — 목욕 · 터미타임 · 젖병 소독처럼 날마다(또는 N일마다) 챙기는 일.
  *
  * 루틴은 정의(`Routine`)와 한 번 할 때마다 한 줄(`RoutineLog`)로 나눠 저장한다. 오늘 했는지, 오늘 몇 분, 지난번부터 며칠은
  * 저장하지 않고 볼 때마다 센다(헌장 3). 알림은 알림 시각이 있는 루틴만, 그날 할 차례이고 아직 안 했을 때.
+ * 단계가 있는 루틴(밤잠 준비)은 단계마다 한 줄(`step` 번호)을 남기고, 루틴 전체를 끝내면 `step` 이 빈 줄을 하나 더 남긴다.
+ * 오늘 했는지 · 지난번부터 며칠은 `step` 이 빈 줄로만 센다.
  *
  * 화면 코드를 가져오지 않는 순수 함수만 둔다(`node --test src/data/routine.test.ts`).
  */
 
-/** 체크(누르면 완료) · 타이머(분을 쌓는다) */
-export type RoutineKind = 'check' | 'minutes';
+/** 체크(누르면 완료, 단계를 둘 수 있다) · 타이머(분을 쌓는다) · 재고 확인(물건마다 충분 · 부족, SPEC-MAIN-06) */
+export type RoutineKind = 'check' | 'minutes' | 'stock';
 
 export type Routine = {
   id: string;
@@ -20,6 +22,8 @@ export type Routine = {
   time: string | null;
   /** 타이머 루틴의 하루 목표(분) — 없어도 된다 */
   goalMinutes: number | null;
+  /** 체크는 단계(없으면 null), 재고 확인은 확인할 물건 */
+  items: string[] | null;
   /** 지운 루틴 — 지난 기록은 남긴다 */
   hidden: boolean;
   sort: number;
@@ -38,6 +42,8 @@ export type RoutineLog = {
   minutes: number | null;
   /** 누가 했나 — 가족 공유를 켠 폰에서 「가족에게 보일 이름」(task my/009) */
   by: string | null;
+  /** 단계 번호(0부터) — 루틴 전체를 한 줄이면 null */
+  step: number | null;
   createdAt: string;
 };
 
@@ -53,11 +59,11 @@ export function logsOn(routineId: string, logs: RoutineLog[], day: Date): Routin
   return logs.filter((l) => l.routineId === routineId && l.at >= from && l.at < to).sort((a, b) => a.at.localeCompare(b.at));
 }
 
-/** 그날 전(그날은 빼고)에 마지막으로 한 기록 */
+/** 그날 전(그날은 빼고)에 마지막으로 루틴을 끝낸 기록 — 단계 줄은 세지 않는다 */
 function lastBefore(routineId: string, logs: RoutineLog[], day: Date): RoutineLog | undefined {
   const from = startOfDay(day).toISOString();
   return logs
-    .filter((l) => l.routineId === routineId && l.at < from)
+    .filter((l) => l.routineId === routineId && l.step == null && l.at < from)
     .sort((a, b) => a.at.localeCompare(b.at))
     .pop();
 }
@@ -84,17 +90,26 @@ export type TodayState = {
   sinceDays: number | null;
   /** 다음 차례까지 며칠(오늘이 차례면 0) */
   nextInDays: number;
+  /** 오늘 끝낸 단계 번호(단계가 있는 루틴) */
+  stepsDone: number[];
 };
 
 export function todayState(routine: Routine, logs: RoutineLog[], now = new Date()): TodayState {
-  const today = logsOn(routine.id, logs, now);
+  const all = logsOn(routine.id, logs, now);
+  const today = all.filter((l) => l.step == null);
+  const stepsDone = [...new Set(all.filter((l) => l.step != null).map((l) => l.step as number))].sort((a, b) => a - b);
   const last = lastBefore(routine.id, logs, now);
   const sinceDays = last ? daysBetween(new Date(last.at), now) : null;
   const minutes = today.reduce((sum, l) => sum + (l.minutes ?? 0), 0);
-  const done = routine.kind === 'check' ? today.length > 0 : routine.goalMinutes ? minutes >= routine.goalMinutes : false;
+  const done = routine.kind === 'minutes' ? (routine.goalMinutes ? minutes >= routine.goalMinutes : false) : today.length > 0;
   const due = today.length > 0 || isDueOn(routine, logs, now);
   const nextInDays = due || sinceDays === null ? 0 : Math.max(0, routine.everyDays - sinceDays);
-  return { due, done, firstAt: today[0]?.at ?? null, firstBy: today[0]?.by ?? null, minutes, sinceDays, nextInDays };
+  return { due, done, firstAt: today[0]?.at ?? null, firstBy: today[0]?.by ?? null, minutes, sinceDays, nextInDays, stepsDone };
+}
+
+/** 단계가 있는 체크 루틴인가 */
+export function hasSteps(routine: Routine): boolean {
+  return routine.kind === 'check' && !!routine.items && routine.items.length > 0;
 }
 
 export type Slot = 'morning' | 'day' | 'evening' | 'any';
@@ -147,6 +162,12 @@ export function statusLine(routine: Routine, state: TodayState): { text: string;
   } else if (state.firstAt) {
     const at = clockLabel(state.firstAt);
     return { text: state.firstBy ? `${state.firstBy} · ${at}` : `${at} 완료`, done: true };
+  }
+  // 단계가 있으면 하는 중엔 「1 / 4단계」, 시작 전엔 「오후 8:30 · 4단계」
+  if (hasSteps(routine)) {
+    const total = routine.items!.length;
+    if (state.stepsDone.length > 0) return { text: `${state.stepsDone.length} / ${total}단계`, done: false };
+    return { text: `${routine.time ? timeLabel(routine.time) : everyLabel(routine.everyDays)} · ${total}단계`, done: false };
   }
   if (routine.everyDays > 1 && state.sinceDays) return { text: `마지막 ${state.sinceDays}일 전`, done: false };
   if (routine.time) return { text: timeLabel(routine.time), done: false };
@@ -225,14 +246,19 @@ export function routineReminders(routines: Routine[], logs: RoutineLog[], now = 
 }
 
 /** 루틴 추천(SPEC-MAIN-03) — 한 번 만들어 두고 자주 고치지 않는다(헌장 8). 영양제 · 약은 넣지 않는다(헌장 5). 터미타임에 목표 분을 미리 넣지 않는다 */
-export type RoutineTemplate = { title: string; kind: RoutineKind; everyDays: number; time: string | null };
+export type RoutineTemplate = { title: string; kind: RoutineKind; everyDays: number; time: string | null; items?: string[] };
+
+/** 재고 확인의 처음 물건(SPEC-MAIN-06) */
+export const STOCK_ITEMS = ['분유', '기저귀', '물티슈', '아기 바디워시', '보습 로션'];
 
 export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
-  { title: '목욕', kind: 'check', everyDays: 1, time: '19:00' },
+  { title: '목욕', kind: 'check', everyDays: 2, time: '20:00', items: ['목욕', '보습'] },
+  { title: '밤잠 준비', kind: 'check', everyDays: 1, time: '20:30', items: ['스와들 입히기', '수유', '트림', '자장가 부르며 재우기'] },
   { title: '터미타임', kind: 'minutes', everyDays: 1, time: null },
+  { title: '손발톱 확인', kind: 'check', everyDays: 3, time: null },
   { title: '젖병 소독', kind: 'check', everyDays: 1, time: null },
+  { title: '재고 확인', kind: 'stock', everyDays: 7, time: null, items: STOCK_ITEMS },
   { title: '산책', kind: 'check', everyDays: 1, time: null },
-  { title: '손톱 깎기', kind: 'check', everyDays: 7, time: null },
   { title: '장난감 소독', kind: 'check', everyDays: 7, time: null },
   { title: '아기 침구 빨래', kind: 'check', everyDays: 7, time: null },
   { title: '가습기 청소', kind: 'check', everyDays: 7, time: null },
@@ -247,13 +273,39 @@ export function newRoutineLogId(): string {
   return `rl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export type RoutineInput = Pick<Routine, 'title' | 'kind' | 'everyDays' | 'time' | 'goalMinutes'>;
+export type RoutineInput = Pick<Routine, 'title' | 'kind' | 'everyDays' | 'time' | 'goalMinutes' | 'items'>;
 
 export function makeRoutine(input: RoutineInput, sort: number, now = new Date()): Routine {
   const at = now.toISOString();
   return { ...input, id: newRoutineId(), hidden: false, sort, runningSince: null, createdAt: at, updatedAt: at };
 }
 
-export function makeRoutineLog(routineId: string, at: Date, minutes: number | null = null, by: string | null = null): RoutineLog {
-  return { id: newRoutineLogId(), routineId, at: at.toISOString(), minutes, by, createdAt: new Date().toISOString() };
+export function makeRoutineLog(
+  routineId: string,
+  at: Date,
+  minutes: number | null = null,
+  by: string | null = null,
+  step: number | null = null,
+): RoutineLog {
+  return { id: newRoutineLogId(), routineId, at: at.toISOString(), minutes, by, step, createdAt: new Date().toISOString() };
+}
+
+/** 같은 물건인가 — 띄어쓰기를 빼고 본다 */
+const sameName = (a: string, b: string) => a.replace(/\s+/g, '') === b.replace(/\s+/g, '');
+
+/**
+ * 재고 확인에서 「부족」을 고른 것 중 장보기에 새로 넣을 것(SPEC-MAIN-06) — 살 것 · 배송 중(`open`)에 같은 이름이 있으면 뺀다.
+ * 살 곳은 그 물건을 지난번에 산 곳(`bought` 의 마지막), 없으면 null.
+ */
+export function stockToBuy(
+  short: string[],
+  open: string[],
+  bought: { title: string; store: string | null; doneAt: string }[],
+): { title: string; store: string | null }[] {
+  return short
+    .filter((name) => !open.some((o) => sameName(o, name)))
+    .map((name) => {
+      const last = bought.filter((b) => sameName(b.title, name)).sort((a, b) => a.doneAt.localeCompare(b.doneAt)).pop();
+      return { title: name, store: last?.store ?? null };
+    });
 }
