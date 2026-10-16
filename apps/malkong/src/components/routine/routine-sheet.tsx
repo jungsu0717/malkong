@@ -15,7 +15,6 @@ import { ThemedText } from '@/components/themed-text';
 import { Button, Chip, tap } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
 import {
-  ROUTINE_TEMPLATES,
   STOCK_ITEMS,
   isTime,
   timeLabel,
@@ -49,7 +48,9 @@ export function RoutineSheet({
   existingTitles,
   onClose,
   onSave,
+  templates,
   onQuickAdd,
+  onMore,
   onDelete,
 }: {
   open: boolean;
@@ -58,8 +59,12 @@ export function RoutineSheet({
   existingTitles: string[];
   onClose: () => void;
   onSave: (input: RoutineInput) => void;
+  /** 지금 시기의 추천(SPEC-MAIN-03 · 07) */
+  templates: RoutineTemplate[];
   /** 추천 버튼 — 누르면 바로 추가(시트는 열린 채로) */
   onQuickAdd: (t: RoutineTemplate) => void;
+  /** 「시기별 추천 전체 보기」 */
+  onMore: () => void;
   onDelete?: () => void;
 }) {
   const c = useTheme();
@@ -107,7 +112,7 @@ export function RoutineSheet({
                 </ThemedText>
                 <View style={styles.templates} onLayout={(e) => setGridWidth(e.nativeEvent.layout.width)}>
                   {templateWidth > 0 &&
-                    ROUTINE_TEMPLATES.map((t) => {
+                    templates.map((t) => {
                       const on = added(t);
                       return (
                         <Pressable
@@ -136,6 +141,12 @@ export function RoutineSheet({
                       );
                     })}
                 </View>
+                <Pressable accessibilityRole="button" onPress={onMore} style={styles.more}>
+                  <ThemedText type="label" style={{ color: c.accentText, fontWeight: 600 }}>
+                    시기별 추천 전체 보기
+                  </ThemedText>
+                  <Ionicons name="chevron-forward" size={14} color={c.accentText} />
+                </Pressable>
                 <ThemedText type="label" style={[styles.directHead, { color: c.textSecondary }]}>
                   직접 추가
                 </ThemedText>
@@ -334,5 +345,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  directHead: { marginTop: Spacing.three },
+  directHead: { marginTop: Spacing.two },
+  more: { flexDirection: 'row', alignItems: 'center', gap: 2, alignSelf: 'flex-start', paddingVertical: 6 },
 });

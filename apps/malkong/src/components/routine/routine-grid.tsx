@@ -16,7 +16,7 @@ import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import { tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius } from '@/constants/theme';
-import { ROUTINE_TEMPLATES, everyLabel, statusLine, timeLabel, type Routine, type RoutineTemplate, type TodayState } from '@/data/routine';
+import { everyLabel, statusLine, timeLabel, type Routine, type RoutineTemplate, type TodayState } from '@/data/routine';
 import { useTheme } from '@/hooks/use-theme';
 
 const COLUMNS = 3;
@@ -25,6 +25,7 @@ const GAP = 8;
 export function RoutineGrid({
   items,
   showTemplates,
+  templates,
   now,
   editing,
   onCheck,
@@ -36,8 +37,9 @@ export function RoutineGrid({
 }: {
   /** 보일 순서대로 */
   items: { r: Routine; s: TodayState }[];
-  /** 루틴이 하나도 없을 때 — 추천을 버튼으로 보인다 */
+  /** 루틴이 하나도 없을 때 — 지금 시기의 추천(`templates`)을 버튼으로 보인다 */
   showTemplates: boolean;
+  templates: RoutineTemplate[];
   now: Date;
   editing: boolean;
   onCheck: (id: string) => void;
@@ -54,7 +56,7 @@ export function RoutineGrid({
   return (
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       {showTemplates
-        ? ROUTINE_TEMPLATES.map((t) => <TemplateTile key={t.title} template={t} width={tileWidth} onPress={() => onQuickAdd(t)} />)
+        ? templates.map((t) => <TemplateTile key={t.title} template={t} width={tileWidth} onPress={() => onQuickAdd(t)} />)
         : items.map(({ r, s }) => (
             <RoutineTile
               key={r.id}

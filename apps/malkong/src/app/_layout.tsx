@@ -119,6 +119,8 @@ export default function RootLayout() {
                     <Stack.Screen name="family" options={{ ...header, title: '가족과 함께 보기' }} />
                     <Stack.Screen name="log" options={{ ...header, title: '기록' }} />
                     <Stack.Screen name="log-stats" options={{ ...header, title: '일주일 그래프' }} />
+                    <Stack.Screen name="routine-recommend" options={{ ...header, title: '루틴 추천' }} />
+                    <Stack.Screen name="todo-recommend" options={{ ...header, title: '할 일 추천' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
                 </RoutinesProvider>

@@ -16,6 +16,7 @@ import {
   slotOf,
   statusLine,
   stockToBuy,
+  templateDetail,
   timeLabel,
   todayPlan,
   todayState,
@@ -198,4 +199,11 @@ test('재고 확인 — 부족한 것 중 살 것에 없는 것만, 살 곳은 �
   ]);
   const stock = routine({ title: '재고 확인', kind: 'stock', everyDays: 7, time: null, items: ['분유'] });
   assert.equal(todayState(stock, [log(iso(10, 16, 9))], NOW).done, true);
+});
+
+test('추천 줄의 설명', () => {
+  assert.equal(templateDetail({ title: '목욕', kind: 'check', everyDays: 2, time: '20:00', items: ['목욕', '보습'] }), '2일마다 · 목욕 → 보습');
+  assert.equal(templateDetail({ title: '터미타임', kind: 'minutes', everyDays: 1, time: null }), '매일 · 타이머');
+  assert.equal(templateDetail({ title: '재고 확인', kind: 'stock', everyDays: 7, time: null, items: ['분유', '기저귀', '물티슈', '로션'] }), '매주 · 분유 · 기저귀 · 물티슈');
+  assert.equal(templateDetail({ title: '책', kind: 'check', everyDays: 1, time: '20:00' }), '매일 · 오후 8:00');
 });

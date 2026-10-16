@@ -8,6 +8,7 @@
  */
 
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +26,7 @@ import { tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { readSetting, writeSetting } from '@/data/db';
+import { homeTemplates } from '@/data/recommend';
 import { dateLabel, everyLabel, hasSteps, nextDayLabel, timeLabel, todayPlan, type Routine, type RoutineTemplate } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { useNow } from '@/hooks/use-now';
@@ -78,6 +80,7 @@ export default function RoutineScreen() {
 
   if (!baby || !age || loading) return <ScreenLoading />;
   const plan = todayPlan(routines, logs, now);
+  const templates = homeTemplates(age.month);
   const quickAdd = (t: RoutineTemplate) =>
     void addRoutine({ title: t.title, kind: t.kind, everyDays: t.everyDays, time: t.time, goalMinutes: null, items: t.items ?? null });
   const onTimer = (r: Routine) => void (r.runningSince ? stopTimer(r.id) : startTimer(r.id));
@@ -202,6 +205,7 @@ export default function RoutineScreen() {
               <RoutineGrid
                 items={plan.today}
                 showTemplates={routines.length === 0}
+                templates={templates}
                 now={now}
                 editing={arranging}
                 onCheck={onCheck}
@@ -266,7 +270,12 @@ export default function RoutineScreen() {
           setSheet(null);
           void (target ? updateRoutine(target.id, input) : addRoutine(input));
         }}
+        templates={templates}
         onQuickAdd={quickAdd}
+        onMore={() => {
+          setSheet(null);
+          router.push('/routine-recommend');
+        }}
         onDelete={() => {
           const target = sheet?.routine;
           setSheet(null);

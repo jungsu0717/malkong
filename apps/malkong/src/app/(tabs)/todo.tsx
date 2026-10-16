@@ -178,6 +178,16 @@ export default function TodoScreen() {
               <PrepLists lists={lists} onOpen={openTopic} onAdd={() => setNewList(true)} />
             </View>
 
+            {/* 추천 할 일 (SPEC-TOPIC-13) */}
+            <Card style={styles.rows}>
+              <ListRow
+                icon="star-outline"
+                title="추천 할 일"
+                detail="지금 시기에 맞는 할 일"
+                onPress={() => router.push('/todo-recommend')}
+              />
+            </Card>
+
             {/* 주제 그리드 (SPEC-TOPIC-01) — 숫자는 지금 할 것(기한이 오늘까지거나 없는 것, 지금 기간인 접종 · 검진) */}
             <View style={styles.section}>
               <SectionHeader title="주제" />

@@ -248,6 +248,15 @@ export function routineReminders(routines: Routine[], logs: RoutineLog[], now = 
 /** 루틴 추천(SPEC-MAIN-03) — 한 번 만들어 두고 자주 고치지 않는다(헌장 8). 영양제 · 약은 넣지 않는다(헌장 5). 터미타임에 목표 분을 미리 넣지 않는다 */
 export type RoutineTemplate = { title: string; kind: RoutineKind; everyDays: number; time: string | null; items?: string[] };
 
+/** 추천 줄의 설명 — 「2일마다 · 목욕 → 보습」 「매일 · 타이머」 「매주 · 분유 · 기저귀 · 물티슈」 「매일 · 오후 8:00」 */
+export function templateDetail(t: RoutineTemplate): string {
+  const every = everyLabel(t.everyDays);
+  if (t.kind === 'minutes') return `${every} · 타이머`;
+  if (t.kind === 'stock') return [every, ...(t.items ?? []).slice(0, 3)].join(' · ');
+  if (t.items?.length) return `${every} · ${t.items.join(' → ')}`;
+  return t.time ? `${every} · ${timeLabel(t.time)}` : every;
+}
+
 /** 재고 확인의 처음 물건(SPEC-MAIN-06) */
 export const STOCK_ITEMS = ['분유', '기저귀', '물티슈', '아기 바디워시', '보습 로션'];
 
@@ -259,6 +268,10 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
   { title: '젖병 소독', kind: 'check', everyDays: 1, time: null },
   { title: '재고 확인', kind: 'stock', everyDays: 7, time: null, items: STOCK_ITEMS },
   { title: '산책', kind: 'check', everyDays: 1, time: null },
+  { title: '아기체육관 놀이', kind: 'minutes', everyDays: 1, time: null },
+  { title: '책 읽어 주기', kind: 'check', everyDays: 1, time: null },
+  { title: '뒤집기 연습', kind: 'minutes', everyDays: 1, time: null },
+  { title: '모자동실', kind: 'check', everyDays: 1, time: null },
   { title: '장난감 소독', kind: 'check', everyDays: 7, time: null },
   { title: '아기 침구 빨래', kind: 'check', everyDays: 7, time: null },
   { title: '가습기 청소', kind: 'check', everyDays: 7, time: null },
