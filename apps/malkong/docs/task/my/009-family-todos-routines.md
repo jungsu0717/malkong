@@ -1,6 +1,6 @@
 # 009 가족과 함께 — 할 일 · 리스트 · 루틴 맞추기와 「누가 했는지」
 
-> 상태: 구현 완료 — 운영 배포 전 (2026-10-16). 배포는 Julian 승인 뒤
+> 상태: 구현 완료 · 운영 배포됨(2026-10-16, revision 00023). 두 폰 확인은 Julian
 > 근거: [topic](../../menu-spec/topic.md) SPEC-TOPIC-08 · [main](../../menu-spec/main.md) SPEC-MAIN-04 · [my](../../menu-spec/my.md) SPEC-MY-05 ·
 > [constitution](../../constitution.md) 7 · [decisions/021](../../decisions/021-family-by-invite-code.md) · [028](../../decisions/028-assistant-today-routines.md)
 
@@ -33,7 +33,8 @@ Julian(2026-10-16): 아내와 캘린더 앱에서 그날 할 일을 만들어 �
 - [x] 앱: 할 일 · 주제 · 루틴 · 루틴 기록을 싣고 받아 적용한다(기본 주제 kind 로 옮기기, ref 로 합치기) — 단위 시험
 - [x] 가족 화면에서 「가족 안에서 부를 이름」을 정하고, 루틴 · 할 일 완료에 남고 보인다
 - [x] `npx tsc --noEmit` · `npx expo lint` 통과
-- [ ] 운영 배포(Julian 승인 뒤) 후 두 폰에서 확인 — Julian
+- [x] 운영 배포(Julian 승인, 2026-10-16) — 트래픽 없는 시험판(태그 t009)으로 올려 `/health` · `openapi.json` 의 items 칸 · 키 없는 맞추기 401 을 읽어서만 확인한 뒤 트래픽을 넘김
+- [ ] 두 폰에서 확인 — Julian
 
 ## 손댄 파일
 
@@ -57,6 +58,7 @@ docs/architecture/api-contract.md · backend.md · menu-spec/topic.md(SPEC-TOPIC
 
 ## 남은 것
 
-- **운영 배포(Julian 승인 필요)** — 서버를 바꿨다. 배포 전에는 앱이 items 를 보내도 옛 서버가 버리고, 앱은 올린 때를 넘기지 않아 배포 뒤 첫 맞추기에 한꺼번에 올라간다
+- 배포함(2026-10-16, revision 00023). 이 PC 의 `.claude/settings.local.json` 에 `gcloud run deploy` · `update-traffic` 허용 규칙을 Julian 이 넣었다(커밋 안 함) —
+  배포는 그래도 매번 Julian 에게 묻고 한다
 - 두 폰에서 확인 — Julian(아이폰) · 아내분 폰
 - 배우자가 먼저 하면 내 알림이 지워지는 것은 내 폰이 알림 시각 전에 맞춰졌을 때만이다(서버가 폰을 깨우지 않는다 — 기기 토큰을 서버에 두지 않기로 했다)
