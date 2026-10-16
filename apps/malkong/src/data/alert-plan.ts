@@ -1,7 +1,7 @@
 /**
  * 앱이 거는 알림의 내용과 때 (SPEC-TOPIC-09 · SPEC-SHOP-04, task topic/006) — 무엇을 언제 알릴지만 계산한다. 거는 것은 notifications.ts.
  *
- * - 아침 알림: 날짜마다 그날 할 일 제목 + 그날 도착 예정인 살 것 + 지금 기간인 접종 · 검진. 반복 할 일은 「손톱 깎기(7일 만)」
+ * - 아침 알림: 날짜마다 그날 할 일 제목 + 그날 도착 예정인 살 것 + 지금 기간인 접종 · 검진. 반복 할 일은 「손톱 깎기(마지막 7일 전)」
  * - 전날 저녁: 기한이 내일인 할 일(매일 · 매주 반복과 장보기는 빼고) — 저녁 8시
  * - 받으셨나요: 도착 예정일 저녁 7시에 아직 배송 중인 살 것
  * 앱이 스스로 거는 알림은 낮 시간에만 둔다(사용자가 시각을 정한 할 일 알림은 정한 시각 그대로, 헌장 6).
@@ -39,16 +39,16 @@ export function daysSinceDone(todo: Todo, todos: Todo[], now = new Date()): numb
   return Math.round((startOfDay(now).getTime() - startOfDay(new Date(last)).getTime()) / DAY_MS);
 }
 
-/** 알림 목록의 한 줄 — 반복 할 일은 「손톱 깎기(7일 만)」 */
+/** 알림 목록의 한 줄 — 반복 할 일은 「손톱 깎기(마지막 7일 전)」 */
 export function listTitle(todo: Todo, todos: Todo[], now = new Date()): string {
   const days = todo.repeat ? daysSinceDone(todo, todos, now) : null;
-  return days && days > 0 ? `${todo.title}(${days}일 만)` : todo.title;
+  return days && days > 0 ? `${todo.title}(마지막 ${days}일 전)` : todo.title;
 }
 
-/** 시각을 정한 할 일 알림의 본문 — 반복 할 일은 「7일 만이에요」, 그 밖에는 null */
+/** 시각을 정한 할 일 알림의 본문 — 반복 할 일은 「마지막으로 한 지 7일 지났어요」, 그 밖에는 null */
 export function reminderBody(todo: Todo, todos: Todo[], now = new Date()): string | null {
   const days = todo.repeat ? daysSinceDone(todo, todos, now) : null;
-  return days && days > 0 ? `${days}일 만이에요` : null;
+  return days && days > 0 ? `마지막으로 한 지 ${days}일 지났어요` : null;
 }
 
 export type DayPlan = { day: Date; titles: string[] };

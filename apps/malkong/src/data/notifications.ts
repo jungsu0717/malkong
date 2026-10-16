@@ -133,8 +133,8 @@ export async function scheduleRecordNudge(at: Date | null): Promise<void> {
   await Notifications.scheduleNotificationAsync({
     identifier: NUDGE_ID,
     content: {
-      title: '요 며칠 기록이 비었어요',
-      body: '생각나는 것만 적어 주면 버디 답이 더 정확해져요',
+      title: '최근 며칠 기록이 없어요',
+      body: '생각나는 것만 기록해 두세요',
       data: { type: NUDGE_TYPE },
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: NUDGE_CHANNEL_ID },
@@ -178,7 +178,7 @@ export async function scheduleFeedReminder(at: Date | null, afterLabel: string):
     identifier: FEED_ID,
     content: {
       title: `마지막 수유 뒤 ${afterLabel}이 지났어요`,
-      body: '배고플 때가 됐을 수 있어요',
+      body: '수유할 시간인지 확인해 보세요',
     },
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: FEED_CHANNEL_ID },
   });
@@ -224,12 +224,12 @@ async function scheduleOnce(id: string, at: Date | null, title: string, body: st
 
 /** 기저귀 알림 (SPEC-LOG-05) — 마지막 기저귀 뒤 정한 시간 */
 export async function scheduleDiaperReminder(at: Date | null, afterLabel: string): Promise<void> {
-  await scheduleOnce(DIAPER_ID, at, `기저귀를 간 지 ${afterLabel}이 지났어요`, '한번 살펴볼 때가 됐을 수 있어요');
+  await scheduleOnce(DIAPER_ID, at, `기저귀를 간 지 ${afterLabel}이 지났어요`, '기저귀를 확인해 보세요');
 }
 
 /** 잠 알림 (SPEC-LOG-05) — 깬 뒤 평소 깨어 있던 시간 */
 export async function scheduleSleepReminder(at: Date | null, afterLabel: string): Promise<void> {
-  await scheduleOnce(SLEEP_ID, at, `잠에서 깬 지 ${afterLabel}이 지났어요`, '졸려할 때가 됐을 수 있어요');
+  await scheduleOnce(SLEEP_ID, at, `잠에서 깬 지 ${afterLabel}이 지났어요`, '졸려하는지 살펴보세요');
 }
 
 /** 체온 알림 (SPEC-LOG-05) — 매일 아침 · 저녁 정한 시(care-reminders). null 이면 둘 다 지운다 */
@@ -242,14 +242,14 @@ export async function scheduleTempReminders(hours: number[] | null): Promise<voi
       identifier: TEMP_IDS[i],
       content: {
         title: i === 0 ? '아침 체온을 재 볼 시간이에요' : '저녁 체온을 재 볼 시간이에요',
-        body: '기록 탭에서 바로 남길 수 있어요',
+        body: '마이 → 기록에서 바로 입력할 수 있어요',
       },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DAILY, hour, minute: 0, channelId: CARE_CHANNEL_ID },
     });
   }
 }
 
-/** 알림 단추 — 할 일: 완료 · 1시간 뒤, 배송: 받았어요. 앱을 열지 않고 처리한다 */
+/** 알림 단추 — 할 일 · 루틴: 완료 · 1시간 뒤, 배송: 수령 완료. 앱을 열지 않고 처리한다 */
 let categoriesReady = false;
 async function ensureCategories(): Promise<void> {
   if (categoriesReady) return;
@@ -258,10 +258,10 @@ async function ensureCategories(): Promise<void> {
     { identifier: 'snooze', buttonTitle: '1시간 뒤', options: { opensAppToForeground: false } },
   ]);
   await Notifications.setNotificationCategoryAsync(DELIVERY_CATEGORY, [
-    { identifier: 'done', buttonTitle: '받았어요', options: { opensAppToForeground: false } },
+    { identifier: 'done', buttonTitle: '수령 완료', options: { opensAppToForeground: false } },
   ]);
   await Notifications.setNotificationCategoryAsync(ROUTINE_CATEGORY, [
-    { identifier: 'done', buttonTitle: '했어요', options: { opensAppToForeground: false } },
+    { identifier: 'done', buttonTitle: '완료', options: { opensAppToForeground: false } },
     { identifier: 'snooze', buttonTitle: '1시간 뒤', options: { opensAppToForeground: false } },
   ]);
   categoriesReady = true;
@@ -279,7 +279,7 @@ export type TodoReminder = {
   id: string;
   at: Date;
   title: string;
-  /** 반복 할 일이면 「7일 만이에요」 */
+  /** 반복 할 일이면 「마지막으로 한 지 7일 지났어요」 */
   body?: string | null;
   /** 아기가 자는 중이면 소리 없이(task topic/006) */
   silent?: boolean;
@@ -367,7 +367,7 @@ export async function scheduleEveningAlerts(on: boolean, days: MorningDay[], hou
   }
 }
 
-/** 받으셨나요(SPEC-SHOP-04) — 도착 예정일 저녁에 아직 배송 중인 살 것마다 한 번, 「받았어요」 단추와 함께 */
+/** 받으셨나요(SPEC-SHOP-04) — 도착 예정일 저녁에 아직 배송 중인 살 것마다 한 번, 「수령 완료」 단추와 함께 */
 export async function scheduleDeliveryChecks(items: { id: string; title: string; at: Date }[]): Promise<void> {
   await cancelPrefix(DELIVERY_PREFIX);
   if (items.length === 0 || !(await notificationsAllowed())) return;
@@ -378,7 +378,7 @@ export async function scheduleDeliveryChecks(items: { id: string; title: string;
       identifier: `${DELIVERY_PREFIX}${item.id}`,
       content: {
         title: `${item.title} 받으셨나요?`,
-        body: '오늘 도착 예정이었어요. 받았으면 체크해 주세요',
+        body: '오늘 도착 예정이었어요. 받았다면 수령 완료를 눌러 주세요',
         data: { type: DELIVERY_TYPE, todoId: item.id },
         categoryIdentifier: DELIVERY_CATEGORY,
       },
@@ -387,7 +387,7 @@ export async function scheduleDeliveryChecks(items: { id: string; title: string;
   }
 }
 
-/** 루틴 알림(SPEC-MAIN-04) — 통째로 다시 건다. 「했어요」 · 「1시간 뒤」 단추. 허락이 없으면 걸지 않는다 */
+/** 루틴 알림(SPEC-MAIN-04) — 통째로 다시 건다. 「완료」 · 「1시간 뒤」 단추. 허락이 없으면 걸지 않는다 */
 export async function scheduleRoutineReminders(items: { id: string; routineId: string; at: Date; title: string; body: string }[]): Promise<void> {
   await cancelPrefix(ROUTINE_PREFIX);
   if (items.length === 0 || !(await notificationsAllowed())) return;
@@ -409,7 +409,7 @@ export async function scheduleRoutineReminders(items: { id: string; routineId: s
 }
 
 /**
- * 알림 단추(완료 · 1시간 뒤 · 받았어요 · 했어요)를 누르면 `listener` 를 부른다. `target` 이 할 일이면 todoId, 루틴이면 routineId 를 본다.
+ * 알림 단추(완료 · 1시간 뒤 · 수령 완료)를 누르면 `listener` 를 부른다. `target` 이 할 일이면 todoId, 루틴이면 routineId 를 본다.
  * 앱이 꺼져 있다가 그 단추로 깨어난 경우도 마지막 응답으로 한 번 본다. 돌려주는 함수로 그만 듣는다
  */
 export function onAlertAction(

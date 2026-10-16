@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { everyLabel, isDueOn, routineReminders, slotOf, timeLabel, todayState, type Routine, type RoutineLog } from './routine.ts';
+import { everyLabel, isDueOn, routineReminders, slotOf, statusLine, timeLabel, todayState, type Routine, type RoutineLog } from './routine.ts';
 
 const NOW = new Date(2026, 9, 16, 14, 0);
 const iso = (mo: number, d: number, h = 9, mi = 0) => new Date(2026, mo - 1, d, h, mi).toISOString();
@@ -25,12 +25,12 @@ const routine = (o: Partial<Routine> = {}): Routine => ({
   ...o,
 });
 let n = 0;
-const log = (at: string, minutes: number | null = null, routineId = 'r1'): RoutineLog => ({
+const log = (at: string, minutes: number | null = null, routineId = 'r1', by: string | null = null): RoutineLog => ({
   id: `l${(n += 1)}`,
   routineId,
   at,
   minutes,
-  by: null,
+  by,
   createdAt: at,
 });
 
@@ -69,8 +69,9 @@ test('시간대와 이름', () => {
   assert.equal(timeLabel('19:05'), '오후 7:05');
   assert.equal(timeLabel('00:30'), '오전 12:30');
   assert.equal(everyLabel(1), '매일');
-  assert.equal(everyLabel(2), '이틀마다');
-  assert.equal(everyLabel(7), '7일마다');
+  assert.equal(everyLabel(2), '2일마다');
+  assert.equal(everyLabel(7), '매주');
+  assert.equal(everyLabel(14), '14일마다');
 });
 
 test('루틴 알림 — 오늘 안 했으면 오늘부터, 했으면 내일부터', () => {
@@ -79,7 +80,7 @@ test('루틴 알림 — 오늘 안 했으면 오늘부터, 했으면 내일부�
   assert.equal(notDone.length, 3);
   assert.equal(notDone[0].at.getDate(), 16);
   assert.equal(notDone[0].title, '목욕 시간이에요');
-  assert.equal(notDone[0].body, '저녁 루틴이에요');
+  assert.equal(notDone[0].body, '저녁에 챙길 루틴이에요');
   const done = routineReminders([r], [log(iso(10, 16, 8))], NOW, 3);
   assert.deepEqual(
     done.map((x) => x.at.getDate()),
@@ -98,5 +99,21 @@ test('루틴 알림 — N일마다는 차례인 날만, 지난번 날짜를 글�
     reminders.map((x) => x.at.getDate()),
     [17, 18],
   );
-  assert.equal(reminders[0].body, '지난번에 한 지 7일 됐어요');
+  assert.equal(reminders[0].body, '마지막으로 한 지 7일 지났어요');
+});
+
+test('버튼 상태 한 줄 — 완료 시각, 누가, 다음 날, 타이머 누적, 마지막', () => {
+  const line = (r: Routine, logs: RoutineLog[]) => statusLine(r, todayState(r, logs, NOW)).text;
+  assert.equal(line(routine(), []), '오후 7:00');
+  assert.equal(line(routine(), [log(iso(10, 16, 8, 10))]), '08:10 완료');
+  assert.equal(line(routine(), [log(iso(10, 16, 8, 10), null, 'r1', '엄마')]), '엄마 · 08:10');
+  assert.equal(line(routine({ time: null }), []), '매일');
+  const nails = routine({ title: '손톱 깎기', everyDays: 7, time: null });
+  assert.equal(line(nails, [log(iso(10, 10))]), '내일');
+  assert.equal(line(nails, [log(iso(10, 8))]), '마지막 8일 전');
+  const tummy = routine({ kind: 'minutes', title: '터미타임', time: null });
+  assert.equal(line(tummy, []), '오늘 0분');
+  assert.equal(line(tummy, [log(iso(10, 16, 9), 15)]), '오늘 15분');
+  assert.equal(line({ ...tummy, goalMinutes: 30 }, [log(iso(10, 16, 9), 15)]), '15분 / 30분');
+  assert.equal(statusLine(nails, todayState(nails, [log(iso(10, 16, 9))], NOW)).done, true);
 });

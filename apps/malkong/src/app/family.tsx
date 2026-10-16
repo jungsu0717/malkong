@@ -1,6 +1,6 @@
 /**
  * 가족과 함께 보기 (SPEC-MY-05, task my/007 · 009) — 마이의 한 줄에서 들어온다.
- * 가족이 없으면 설명 · 동의 · 「가족 만들기」 · 「초대 코드로 들어가기」, 있으면 초대 코드 · 가족 안에서 부를 이름 · 함께 보는 폰 수 · 나가기.
+ * 가족이 없으면 설명 · 동의 · 「가족 만들기」 · 「초대 코드로 참여」, 있으면 초대 코드 · 가족에게 보일 이름 · 함께 보는 폰 수 · 나가기.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -19,7 +19,7 @@ import { useFamily } from '@/data/family-context';
 import { useTheme } from '@/hooks/use-theme';
 
 const CONSENT_TEXT = '아기 이름 · 생일 · 건강 기록과 할 일 · 리스트 · 루틴을 육아버디 서버에 저장하고 가족과 공유하는 데 동의해요';
-/** 가족 안에서 부를 이름 — 누가 했는지 보일 때 쓴다(task my/009) */
+/** 가족에게 보일 이름 — 누가 했는지 보일 때 쓴다(task my/009) */
 const MEMBER_NAMES = ['엄마', '아빠', '할머니', '할아버지'];
 
 function errorText(error: unknown): string {
@@ -28,7 +28,7 @@ function errorText(error: unknown): string {
     if (error.code === 'FAMILY_FULL') return '가족이 가득 찼어요(6명까지)';
     if (error.code === 'TOO_MANY_ATTEMPTS') return '오늘은 더 시도할 수 없어요';
     if (error.code === 'ALREADY_IN_FAMILY') return '이미 가족이 있어요';
-    if (error.code === 'NETWORK') return '서버에 닿지 못했어요. 연결을 확인해 주세요';
+    if (error.code === 'NETWORK') return '서버에 연결하지 못했어요. 인터넷 연결을 확인해 주세요';
   }
   return '잠깐 문제가 생겼어요. 다시 시도해 주세요';
 }
@@ -74,7 +74,7 @@ export default function FamilyScreen() {
 
   const share = async (inviteCode: string) => {
     try {
-      await Share.share({ message: `육아버디 초대 코드: ${inviteCode}\n마이 → 가족과 함께 보기 → 초대 코드로 들어가기에 넣어 주세요` });
+      await Share.share({ message: `육아버디 초대 코드: ${inviteCode}\n마이 → 가족과 함께 보기 → 초대 코드로 참여에 입력해 주세요` });
     } catch {
       // 웹처럼 공유가 없는 곳에서는 코드를 보고 적는다
     }
@@ -93,7 +93,7 @@ export default function FamilyScreen() {
                 {state.info.inviteCode}
               </ThemedText>
               <ThemedText type="small" style={{ color: c.textSecondary }}>
-                가족 폰의 마이 → 가족과 함께 보기 → 초대 코드로 들어가기에 넣으면 돼요
+                가족 폰에서 마이 → 가족과 함께 보기 → 초대 코드로 참여에 입력하면 돼요
               </ThemedText>
               <Button label="코드 보내기" icon="share-outline" onPress={() => void share(state.info.inviteCode)} />
             </Card>
@@ -101,10 +101,10 @@ export default function FamilyScreen() {
             {/* 누가 했는지 (task my/009) */}
             <Card style={styles.card}>
               <ThemedText type="heading" style={{ fontSize: 15 }}>
-                가족 안에서 부를 이름
+                가족에게 보일 이름
               </ThemedText>
               <ThemedText type="small" style={{ color: c.textSecondary }}>
-                루틴을 하거나 할 일을 완료하면 가족 폰에 「08:10 {me.trim() || '아빠'} 했어요」처럼 보여요
+                루틴이나 할 일을 완료하면 누가 언제 했는지 가족 폰에 보여요
               </ThemedText>
               <View style={styles.chips}>
                 {MEMBER_NAMES.map((n) => (
@@ -129,16 +129,16 @@ export default function FamilyScreen() {
                 {name}의 이름 · 생일, 기록, 할 일 · 리스트 · 루틴이 서로 맞춰져요.
               </ThemedText>
               <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                {syncing ? '맞추는 중…' : state.syncedAt ? `마지막으로 맞춘 때 ${timeOf(state.syncedAt)}` : '아직 맞추지 못했어요'}
+                {syncing ? '동기화 중…' : state.syncedAt ? `마지막 동기화 ${timeOf(state.syncedAt)}` : '아직 동기화하지 않았어요'}
               </ThemedText>
-              <Button label="지금 맞추기" variant="secondary" size="sm" busy={syncing} onPress={() => void syncNow()} />
+              <Button label="지금 동기화" variant="secondary" size="sm" busy={syncing} onPress={() => void syncNow()} />
             </Card>
 
             <Card style={styles.card}>
               {confirmLeave ? (
                 <>
                   <ThemedText type="small">
-                    나가면 이 폰은 더 맞추지 않아요. 지금까지의 기록은 이 폰에 그대로 남아요.
+                    나가면 이 폰은 더 이상 동기화하지 않아요. 지금까지의 기록은 이 폰에 그대로 남아요.
                   </ThemedText>
                   <View style={styles.row}>
                     <Button label="나가기" variant="secondary" busy={busy} onPress={() => void act(leave)} />
@@ -162,7 +162,7 @@ export default function FamilyScreen() {
                 같은 아기를 보는 가족이 한 앱을 함께 써요
               </ThemedText>
               <ThemedText type="small" style={{ color: c.textSecondary }}>
-                {name}의 이름 · 생일, 기록, 할 일 · 리스트 · 루틴이 육아버디 서버에 저장되어 폰끼리 맞춰져요. 누가 했는지도
+                {name}의 이름 · 생일, 기록, 할 일 · 리스트 · 루틴이 육아버디 서버에 저장되고 가족 폰과 동기화돼요. 누가 했는지도
                 보여서 「줬어?」 하고 묻지 않아도 돼요.
               </ThemedText>
               <Pressable
@@ -195,11 +195,11 @@ export default function FamilyScreen() {
                   editable={!busy}
                 />
                 <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                  들어가면 이 폰의 아기는 가족의 아기로 바뀌고, 기록은 합쳐져요
+                  참여하면 이 폰의 아기 정보는 가족의 아기로 바뀌고, 기록은 합쳐져요
                 </ThemedText>
                 <View style={styles.row}>
                   <Button
-                    label="들어가기"
+                    label="참여하기"
                     busy={busy}
                     disabled={!consent || code.trim().length < 6}
                     onPress={() => void act(() => join(code))}
@@ -210,10 +210,10 @@ export default function FamilyScreen() {
             ) : (
               <View style={styles.actions}>
                 <Button label="가족 만들기" size="lg" busy={busy} disabled={!consent} onPress={() => void act(create)} />
-                <Button label="초대 코드로 들어가기" size="lg" variant="secondary" disabled={!consent || busy} onPress={() => setJoining(true)} />
+                <Button label="초대 코드로 참여" size="lg" variant="secondary" disabled={!consent || busy} onPress={() => setJoining(true)} />
                 {!consent && (
                   <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
-                    위 동의에 표시하면 누를 수 있어요
+                    위 내용에 동의하면 누를 수 있어요
                   </ThemedText>
                 )}
               </View>

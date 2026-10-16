@@ -52,13 +52,13 @@ export type Todo = {
   repeat: Repeat | null;
   /** 앱이 만든 할 일이면 그 규칙의 열쇠(auto-todos.ts) — 같은 것을 두 번 만들지 않게 */
   ref: string | null;
-  /** 장보기(SPEC-SHOP-02) — 「주문했어요」를 누른 때. 있으면 배송 중 */
+  /** 장보기(SPEC-SHOP-02) — 「주문 완료」를 누른 때. 있으면 배송 중 */
   orderedAt: string | null;
   /** 장보기 — 도착 예정일(그날 0시) */
   arriveAt: string | null;
   /** 장보기 — 어디서 샀나(사용자가 적은 이름) */
   store: string | null;
-  /** 누가 완료했나 — 가족 공유를 켠 폰에서 그 폰의 「가족 안에서 부를 이름」(task my/009) */
+  /** 누가 완료했나 — 가족 공유를 켠 폰에서 그 폰의 「가족에게 보일 이름」(task my/009) */
   doneBy: string | null;
   createdAt: string;
   updatedAt: string;
@@ -238,7 +238,7 @@ export function shopLists(shop: Topic | undefined, todos: Todo[]): { toBuy: Todo
   };
 }
 
-/** 살 곳 — 「온라인」 묶음에만 「주문했어요」가 있다(SPEC-SHOP-01 · 02) */
+/** 살 곳 — 「온라인」 묶음에만 「주문 완료」가 있다(SPEC-SHOP-01 · 02) */
 export const ONLINE = '온라인';
 /** 처음부터 있는 살 곳 — 상호는 넣지 않는다. 다이소 같은 곳은 사용자가 한 번 적으면 칩으로 남는다 */
 const DEFAULT_PLACES = ['마트', ONLINE];

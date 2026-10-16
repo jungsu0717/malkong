@@ -47,7 +47,7 @@ const TOMBSTONES_KEY = 'family.tombstones';
 const CONSENT_KEY = 'family.consentedAt';
 /** 할 일 · 루틴을 마지막으로 올린 때(task my/009) — 옛 서버는 items 를 버리므로, 받아 준 서버에서만 넘긴다 */
 const ITEMS_PUSHED_KEY = 'family.itemsPushedAt';
-/** 이 폰을 가족 안에서 부를 이름(엄마 · 아빠 …) — 누가 했는지 남긴다(task my/009) */
+/** 가족에게 보일 이 폰의 이름(엄마 · 아빠 …) — 누가 했는지 남긴다(task my/009) */
 const ME_KEY = 'family.me';
 /** 지운 표시는 올린 뒤 지우지만, 혹시 남아도 이만큼만 */
 const MAX_TOMBSTONES = 300;
@@ -121,7 +121,7 @@ export async function noteDeleted(id: string): Promise<void> {
   await saveTombstones([...list.filter((t) => t.id !== id), { id, deletedAt: new Date().toISOString() }]);
 }
 
-/** 가족 안에서 부를 이름 — 가족 공유를 켠 폰에서만. 없으면 null */
+/** 가족에게 보일 이름 — 가족 공유를 켠 폰에서만. 없으면 null */
 export async function memberName(): Promise<string | null> {
   if (!(await readSetting(INFO_KEY))) return null;
   return (await readSetting(ME_KEY))?.trim() || null;
@@ -149,7 +149,7 @@ export async function startFamily(): Promise<FamilyState> {
   return state;
 }
 
-/** 초대 코드로 들어가기 */
+/** 초대 코드로 참여 */
 export async function enterFamily(code: string): Promise<FamilyState> {
   const at = new Date().toISOString();
   const info = await joinFamily(code.trim().toUpperCase(), at);

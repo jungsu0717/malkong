@@ -181,7 +181,7 @@ export default function TopicScreen() {
                 {missed.length > 0 && (
                   <>
                     <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                      지난 일정이에요. 이미 했다면 「했어요」를 눌러 주세요
+                      지난 일정이에요. 이미 했다면 「완료」를 눌러 주세요
                     </ThemedText>
                     <Card style={styles.rows}>
                       <Folded limit={2}>

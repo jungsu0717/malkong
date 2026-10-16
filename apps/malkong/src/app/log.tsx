@@ -165,7 +165,7 @@ export default function LogScreen() {
                 </ThemedText>
               </View>
               <View style={styles.runningActions}>
-                <Button label="끝" size="md" onPress={() => void stop(breast)} />
+                <Button label="종료" size="md" onPress={() => void stop(breast)} />
                 <Button
                   label="반대쪽"
                   size="sm"
@@ -185,14 +185,14 @@ export default function LogScreen() {
                   {stopwatch(sleep.startAt, now)}
                 </ThemedText>
               </View>
-              <Button label="깼어요" size="md" onPress={() => void stop(sleep)} />
+              <Button label="수면 종료" size="md" onPress={() => void stop(sleep)} />
             </Card>
           )}
 
           {/* 마지막 수유와 오늘 합계 (SPEC-LOG-03) */}
           <Card tone="filled" style={styles.summary}>
             <ThemedText type="heading">
-              {last && lastStart ? `마지막 수유 ${agoLabel(lastStart, now)}` : '수유를 남기면 다음 수유 때를 알려 드려요'}
+              {last && lastStart ? `마지막 수유 ${agoLabel(lastStart, now)}` : '수유를 기록하면 다음 수유 시간을 알려 드려요'}
             </ThemedText>
             {last && (
               <ThemedText type="small" style={{ color: c.textSecondary }}>
@@ -238,7 +238,7 @@ export default function LogScreen() {
                   ]}>
                   <Ionicons name={KIND_UI[kind].icon} size={24} color={on ? c.accent : c.text} />
                   <ThemedText type="label" style={{ color: on ? c.accentText : c.text, fontWeight: 600 }}>
-                    {kind === 'sleep' && sleep ? '깼어요' : KIND_UI[kind].label}
+                    {kind === 'sleep' && sleep ? '수면 종료' : KIND_UI[kind].label}
                   </ThemedText>
                 </Pressable>
               );
@@ -275,7 +275,7 @@ export default function LogScreen() {
               {dayEvents.length === 0 ? (
                 <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
                   {daysBack === 0
-                    ? '위 단추를 누르면 바로 기록돼요. 쌓이면 평소와 비교해 보여 드려요'
+                    ? '위 버튼을 누르면 바로 기록돼요. 기록이 쌓이면 평소와 비교해 보여 드려요'
                     : '이날은 남긴 기록이 없어요'}
                 </ThemedText>
               ) : (
@@ -287,7 +287,7 @@ export default function LogScreen() {
                     iconTone={e.endAt === null && (e.kind === 'breast' || e.kind === 'sleep') ? 'accent' : 'neutral'}
                     title={eventTitle(e, now)}
                     detail={eventTime(e)}
-                    right={e.endAt === null && (e.kind === 'breast' || e.kind === 'sleep') ? <Tag label="재는 중" tone="accent" /> : undefined}
+                    right={e.endAt === null && (e.kind === 'breast' || e.kind === 'sleep') ? <Tag label="기록 중" tone="accent" /> : undefined}
                     onPress={() => open(e.kind, e)}
                   />
                 ))
@@ -295,7 +295,7 @@ export default function LogScreen() {
             </Card>
             <Pressable accessibilityRole="button" onPress={() => router.push('/notifications')} hitSlop={8}>
               <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                기록 알림 {careReminders ? `켜짐 · 수유는 마지막 수유 ${durationLabel(plan.feed.minutes)} 뒤` : '꺼짐'} · 바꾸기
+                기록 알림 {careReminders ? `켜짐 · 수유는 마지막 수유 ${durationLabel(plan.feed.minutes)} 뒤` : '꺼짐'} · 변경
               </ThemedText>
             </Pressable>
           </View>

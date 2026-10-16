@@ -25,9 +25,10 @@
   [topic/007](docs/task/topic/007-log-to-my-shop-places.md)([decisions/027](docs/decisions/027-log-under-my-shop-by-place.md))로 **탭 넷(홈 · 할 일 · 장보기 · 마이)** —
   기록은 마이 → 기록으로 옮기고 기록 알림은 기본 꺼짐. 장보기는 살 곳별(마트 · 다이소 · 온라인 · 기타), 「다이소에서 수납함」처럼 적으면 살 곳을 읽고, 매장 지난번 목록 다시 담기.
   2026-10-16 [decisions/028](docs/decisions/028-assistant-today-routines.md)로 **육아비서** 방향 — 첫 화면 「오늘」에서 루틴(목욕 · 터미타임 · 비타민D 처럼 날마다 챙기는 일)을
-  한 번 눌러 했어요(몇 시에), 터미타임은 +5분 · 타이머로 오늘 누적, 정한 시각까지 안 했으면 푸시([today/001](docs/task/today/001-routines.md)). 행성 그림은 첫 화면에서 뺐다.
+  한 번 눌러 완료(몇 시에), 터미타임은 +5분 · 타이머로 오늘 누적, 정한 시각까지 안 했으면 푸시([today/001](docs/task/today/001-routines.md)). 행성 그림은 첫 화면에서 뺐다.
+  루틴은 베이비타임처럼 3열 버튼 모음으로 다 보이고, 추천도 버튼으로 바로 추가된다. 「했어요」 같은 어색한 문구를 정리했다([today/002](docs/task/today/002-routine-buttons.md)).
   장보기 탭은 **리스트**(살 것 + 준비할 것)로 — 날짜가 아니라 살 것 · 준비할 것 기준, 외출 가방 · 여행 짐 같은 목록은 준비할 것으로 옮겼다([list/001](docs/task/list/001-list-tab.md)).
-  [my/009](docs/task/my/009-family-todos-routines.md)로 **가족 공유에 할 일 · 리스트 · 루틴**을 싣고 「08:10 아빠 했어요」처럼 누가 했는지 보인다(서버 고침, 2026-10-16 운영 배포 — revision 00023).
+  [my/009](docs/task/my/009-family-todos-routines.md)로 **가족 공유에 할 일 · 리스트 · 루틴**을 싣고 「아빠 · 08:10」처럼 누가 했는지 보인다(서버 고침, 2026-10-16 운영 배포 — revision 00023).
   아래 「앱」 줄은 방향 전환 전의 기록이다
 - **저장소**: 2026-10-14 에 저장소가 여러 앱을 담는 `julian-studio` 가 되면서 육아버디는 `apps/malkong/` 으로 옮겼다. 모든 앱에 통하는 규칙은 루트 [AGENTS.md](../../AGENTS.md)
 - **앱**: 시안 B 「단정한 비서」([decisions/012](docs/decisions/012-chat-first-three-tabs.md)), 탭 다섯 —
@@ -73,10 +74,11 @@
   버디의 짐작은 확인 뒤 기록([ask/008](docs/task/ask/008-confirm-guess.md)) · 대화는 최근 50줄부터, 날짜에서 그날 대화로([ask/009](docs/task/ask/009-recent-window-and-day-jump.md))
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점 (2026-10-15)
+## 다음 시작점 (2026-10-16)
 
-1. **Julian 이 아이폰(Expo Go)으로 써 보기** — 홈 · 할 일 · 장보기(살 곳별), 앱이 채운 할 일(기념일 · 사이즈), 알림 단추(완료 · 1시간 뒤 · 받았어요, 앱을 닫아 둔 상태에서도),
-   저녁 8시 내일 할 일, 행성 그림이 부드럽게 도는지([topic/006](docs/task/topic/006-thoughtful-alerts.md) 「확인」의 폰 확인 넷). 기념일 예약 시기 · 사이즈 월령 · 생활 루틴 간격은 초안이라 고칠 곳을 말해 주면 된다.
+1. **Julian 이 아이폰(Expo Go)으로 써 보기** — 오늘(루틴 버튼 모음 · 추천 바로 추가 · 타이머 · +5분 · 편집), 할 일, 리스트, 앱이 채운 할 일(기념일 · 사이즈),
+   알림 단추(완료 · 1시간 뒤 · 수령 완료, 앱을 닫아 둔 상태에서도), 저녁 8시 내일 할 일([today/002](docs/task/today/002-routine-buttons.md) · [topic/006](docs/task/topic/006-thoughtful-alerts.md) 「확인」의 폰 확인).
+   기념일 예약 시기 · 사이즈 월령 · 루틴 추천 간격은 초안이라 고칠 곳을 말해 주면 된다.
    켜는 법은 아래 「실행」(이 폴더에서)
 2. **두 폰에서 가족 공유 확인**(마이 → 가족과 함께 보기에서 이름 고르기 → 한쪽에서 루틴 체크 · 살 것 적기 → 다른 폰에서 앱 열기). 그다음: 약관 · 개인정보 · 자주 묻는 질문 다시 쓰기 → 스토어 문안과 그림 다시 만들기
    (남은 것 목록은 [topic/001](docs/task/topic/001-topic-todo-tab.md) 「남은 것」)

@@ -3,7 +3,7 @@
  *
  * 오늘 탭이 루틴과 기록을 본다. 루틴이나 기록이 바뀔 때마다 사흘 치 루틴 알림을 다시 건다(SPEC-MAIN-04).
  * 할 일 쪽이 먼저 「생활 루틴」 주제의 반복 할 일을 루틴으로 옮기므로, 할 일을 다 읽은 뒤에 읽는다.
- * 알림의 「했어요」 · 「1시간 뒤」 단추도 여기서 처리한다.
+ * 알림의 「완료」 · 「1시간 뒤」 단추도 여기서 처리한다.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -27,11 +27,11 @@ type RoutinesValue = {
   updateRoutine: (id: string, patch: Partial<RoutineInput>) => Promise<void>;
   /** 지우기 — 숨김이라 지난 기록은 남는다 */
   removeRoutine: (id: string) => Promise<void>;
-  /** 체크 루틴: 오늘 안 했으면 했어요, 했으면 오늘 것을 되돌린다 */
+  /** 체크 루틴: 오늘 안 했으면 완료로, 했으면 오늘 것을 되돌린다 */
   check: (id: string) => Promise<void>;
-  /** 시간 재기: 분을 더한다 */
+  /** 타이머 루틴: 분을 더한다 */
   addMinutes: (id: string, minutes: number) => Promise<void>;
-  /** 시간 재기: 오늘 마지막 기록을 지운다 */
+  /** 타이머 루틴: 오늘 마지막 기록을 지운다 */
   undoLast: (id: string) => Promise<void>;
   startTimer: (id: string) => Promise<void>;
   /** 타이머를 멈추고 걸린 분(1분 이상)을 기록으로 남긴다 */
@@ -191,7 +191,7 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
     [save, addLog],
   );
 
-  // 알림 단추 — 「했어요」는 오늘 아직 안 했으면 했어요로, 「1시간 뒤」는 같은 알림을 한 번 더
+  // 알림 단추 — 「완료」는 오늘 아직 안 했으면 완료로, 「1시간 뒤」는 같은 알림을 한 번 더
   useEffect(() => {
     if (loading) return;
     return onAlertAction('routine', (action, id, title, body) => {

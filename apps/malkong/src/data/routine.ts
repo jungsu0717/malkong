@@ -7,7 +7,7 @@
  * 화면 코드를 가져오지 않는 순수 함수만 둔다(`node --test src/data/routine.test.ts`).
  */
 
-/** 체크(한 번 하면 끝) · 시간 재기(분을 쌓는다) */
+/** 체크(누르면 완료) · 타이머(분을 쌓는다) */
 export type RoutineKind = 'check' | 'minutes';
 
 export type Routine = {
@@ -18,7 +18,7 @@ export type Routine = {
   everyDays: number;
   /** 알림 시각 `HH:MM` — 없으면 알리지 않고 「하루 중」에 묶인다 */
   time: string | null;
-  /** 시간 재기의 하루 목표(분) — 없어도 된다 */
+  /** 타이머 루틴의 하루 목표(분) — 없어도 된다 */
   goalMinutes: number | null;
   /** 지운 루틴 — 지난 기록은 남긴다 */
   hidden: boolean;
@@ -34,9 +34,9 @@ export type RoutineLog = {
   routineId: string;
   /** 한 때 */
   at: string;
-  /** 시간 재기의 분. 체크는 null */
+  /** 타이머 루틴의 분. 체크는 null */
   minutes: number | null;
-  /** 누가 했나 — 가족 공유를 켠 폰에서 「가족 안에서 부를 이름」(task my/009) */
+  /** 누가 했나 — 가족 공유를 켠 폰에서 「가족에게 보일 이름」(task my/009) */
   by: string | null;
   createdAt: string;
 };
@@ -72,7 +72,7 @@ export function isDueOn(routine: Routine, logs: RoutineLog[], day: Date): boolea
 export type TodayState = {
   /** 오늘 할 차례인가(오늘 이미 했으면 차례였던 것으로 본다) */
   due: boolean;
-  /** 체크: 오늘 했나. 시간 재기: 목표가 있으면 채웠나 */
+  /** 체크: 오늘 완료했나. 타이머: 목표가 있으면 채웠나 */
   done: boolean;
   /** 오늘 처음 한 때 */
   firstAt: string | null;
@@ -121,12 +121,36 @@ export function timeLabel(time: string): string {
   return `${ampm} ${h12}:${String(m).padStart(2, '0')}`;
 }
 
-/** 「매일」 「이틀마다」 「7일마다」 */
+/** 「매일」 「2일마다」 「매주」 */
 export function everyLabel(days: number): string {
   if (days <= 1) return '매일';
-  if (days === 2) return '이틀마다';
-  if (days === 3) return '사흘마다';
+  if (days === 7) return '매주';
   return `${days}일마다`;
+}
+
+/** 「08:10」 */
+export function clockLabel(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+/**
+ * 오늘 탭 루틴 버튼의 상태 한 줄(SPEC-MAIN-02, task today/002) — 완료했으면 「08:10 완료」(가족 이름이 있으면 「엄마 · 08:10」),
+ * 오늘 할 날이 아니면 「내일」 「3일 뒤」, 타이머는 「15분 / 30분」 「오늘 15분」, N일마다는 「마지막 7일 전」, 그 밖에는 알림 시각이나 「매일」.
+ * 타이머가 켜져 있을 때의 시계는 화면이 따로 그린다.
+ */
+export function statusLine(routine: Routine, state: TodayState): { text: string; done: boolean } {
+  if (!state.due) return { text: state.nextInDays === 1 ? '내일' : `${state.nextInDays}일 뒤`, done: false };
+  if (routine.kind === 'minutes') {
+    if (routine.goalMinutes) return { text: `${state.minutes}분 / ${routine.goalMinutes}분`, done: state.done };
+    if (state.minutes > 0) return { text: `오늘 ${state.minutes}분`, done: false };
+  } else if (state.firstAt) {
+    const at = clockLabel(state.firstAt);
+    return { text: state.firstBy ? `${state.firstBy} · ${at}` : `${at} 완료`, done: true };
+  }
+  if (routine.everyDays > 1 && state.sinceDays) return { text: `마지막 ${state.sinceDays}일 전`, done: false };
+  if (routine.time) return { text: timeLabel(routine.time), done: false };
+  return { text: routine.kind === 'minutes' ? '오늘 0분' : everyLabel(routine.everyDays), done: false };
 }
 
 export type RoutineReminder = { id: string; routineId: string; at: Date; title: string; body: string };
@@ -149,13 +173,13 @@ export function routineReminders(routines: Routine[], logs: RoutineLog[], now = 
         const state = todayState(r, logs, now);
         if (state.done || (r.kind === 'check' && state.firstAt)) continue;
       }
-      let body = `${SLOT_LABELS[slotOf(r.time)]} 루틴이에요`;
+      let body = `${SLOT_LABELS[slotOf(r.time)]}에 챙길 루틴이에요`;
       if (i === 0 && r.kind === 'minutes') {
         const minutes = todayState(r, logs, now).minutes;
-        if (minutes > 0) body = `오늘 ${minutes}분 했어요`;
+        if (minutes > 0) body = `오늘 지금까지 ${minutes}분`;
       } else if (r.everyDays > 1) {
         const last = lastBefore(r.id, logs, day);
-        if (last) body = `지난번에 한 지 ${daysBetween(new Date(last.at), day)}일 됐어요`;
+        if (last) body = `마지막으로 한 지 ${daysBetween(new Date(last.at), day)}일 지났어요`;
       }
       out.push({ id: `${r.id}-${i}`, routineId: r.id, at, title: `${r.title} 시간이에요`, body });
     }
@@ -164,7 +188,9 @@ export function routineReminders(routines: Routine[], logs: RoutineLog[], now = 
 }
 
 /** 루틴 추천(SPEC-MAIN-03) — 한 번 만들어 두고 자주 고치지 않는다(헌장 8). 영양제 · 약은 넣지 않는다(헌장 5). 터미타임에 목표 분을 미리 넣지 않는다 */
-export const ROUTINE_TEMPLATES: { title: string; kind: RoutineKind; everyDays: number; time: string | null }[] = [
+export type RoutineTemplate = { title: string; kind: RoutineKind; everyDays: number; time: string | null };
+
+export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
   { title: '목욕', kind: 'check', everyDays: 1, time: '19:00' },
   { title: '터미타임', kind: 'minutes', everyDays: 1, time: null },
   { title: '젖병 소독', kind: 'check', everyDays: 1, time: null },

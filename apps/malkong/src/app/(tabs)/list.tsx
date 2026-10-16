@@ -6,7 +6,7 @@
  *
  * 살 것:
  * 살 것을 살 곳별로 묶는다 — 마트 · 다이소 같은 매장(사용자가 적은 곳) → 온라인 → 살 곳을 안 정한 것. 매장에 가면 그 묶음만 보고 체크한다.
- * 온라인 묶음에만 「주문했어요」(언제 도착) → 배송 중 → 받으면 체크. 지난번 산 것과 매장마다 지난번 목록은 「다시 담기」에서 한 번에.
+ * 온라인 묶음에만 「주문 완료」(언제 도착) → 배송 중 → 받으면 체크. 지난번 산 것과 매장마다 지난번 목록은 「다시 담기」에서 한 번에.
  * 바닥 칸에서 살 곳 칩을 고르고 적는다(고른 칩은 다음에도 남는다). 장보기 줄은 할 일과 같은 `todo` 줄이고 장보기 주제(kind shopping)에 있다.
  */
 
@@ -132,7 +132,7 @@ export default function ListScreen() {
                 {lists.length === 0 ? (
                   <Card>
                     <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-                      외출 가방 · 여행 짐 · 어린이집 준비처럼 챙길 것을 목록으로 만들어 두고 다시 써요
+                      외출 가방, 여행 짐처럼 자주 챙기는 것을 목록으로 만들어 두고 다시 쓸 수 있어요
                     </ThemedText>
                   </Card>
                 ) : (
@@ -163,7 +163,7 @@ export default function ListScreen() {
             {groups.length === 0 ? (
               <Card>
                 <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-                  살 것을 아래에 적어 두세요. 살 곳을 고르면 그곳끼리 묶여요
+                  살 것을 아래에 입력하세요. 살 곳을 고르면 장소별로 묶여요
                 </ThemedText>
               </Card>
             ) : (
@@ -178,8 +178,8 @@ export default function ListScreen() {
                         divider={i > 0}
                         onCheck={() => void toggleDone(t.id)}
                         onLong={() => setEditing(t)}
-                        // 「주문했어요」는 온라인 묶음에만 — 매장에서 산 것은 동그라미로 바로 완료
-                        action={g.place === ONLINE ? { label: '주문했어요', onPress: () => setOrdering(t) } : undefined}
+                        // 「주문 완료」는 온라인 묶음에만 — 매장에서 산 것은 동그라미로 바로 완료
+                        action={g.place === ONLINE ? { label: '주문 완료', onPress: () => setOrdering(t) } : undefined}
                         more={g.place === ONLINE ? undefined : () => setEditing(t)}
                       />
                     ))}
@@ -343,7 +343,7 @@ export default function ListScreen() {
   );
 }
 
-/** 장보기 한 줄 — 동그라미를 누르면 완료, 오른쪽에 「주문했어요」나 「…」 */
+/** 장보기 한 줄 — 동그라미를 누르면 완료, 오른쪽에 「주문 완료」나 「…」 */
 function ShopRow({
   todo,
   detail,

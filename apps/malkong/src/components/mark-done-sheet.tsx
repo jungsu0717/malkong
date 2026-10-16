@@ -42,7 +42,7 @@ export function MarkDoneSheet({
   const items = group?.items ?? [];
   // 생활 항목은 해낸 일이 아니라 알아 둔 것이라 「확인」이라 부른다
   const life = group ? isLifeGroup(group) : false;
-  const verb = life ? '확인했어요' : '했어요';
+  const verb = life ? '확인 완료' : '완료';
   const chosen = items.filter((i) => !excluded.has(i.id));
 
   return (
@@ -59,11 +59,11 @@ export function MarkDoneSheet({
             { backgroundColor: colors.background, paddingBottom: Spacing.four + insets.bottom },
           ]}>
           <View style={[styles.grabber, { backgroundColor: colors.surfaceStrong }]} />
-          <ThemedText type="title">{life ? '확인했나요?' : '했나요?'}</ThemedText>
+          <ThemedText type="title">{life ? '확인한 항목 선택' : '완료한 항목 선택'}</ThemedText>
           <ThemedText type="small" style={{ color: colors.textSecondary }}>
             {life
-              ? '챙기기로 한 것만 골라 주세요'
-              : `${items.length > 1 ? '한 것만 골라 주세요. ' : ''}날짜는 안 적어도 돼요`}
+              ? '확인한 항목만 골라 주세요'
+              : `${items.length > 1 ? '완료한 항목만 골라 주세요. ' : ''}날짜는 입력하지 않아도 돼요`}
           </ThemedText>
 
           <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>

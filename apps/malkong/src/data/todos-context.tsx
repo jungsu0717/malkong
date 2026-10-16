@@ -155,7 +155,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       for (const t of stored) await saveTopic(t);
 
       // 「생활 루틴」 주제의 반복 할 일은 루틴으로 옮긴다 — 한 번만(task today/001, decisions/028).
-      // 마지막으로 완료한 때를 루틴 기록 한 줄로 남겨 「6일 만」이 이어지게 한다
+      // 마지막으로 완료한 때를 루틴 기록 한 줄로 남겨 「마지막 6일 전」이 이어지게 한다
       if (!(await readSetting(ROUTINES_MOVED_KEY))) {
         const routineTopic = stored.find((t) => t.kind === 'routine');
         if (routineTopic) {
@@ -222,7 +222,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  // 할 일 알림 — 시각이 있고, 안 끝냈고, 아직 오지 않은 것만(SPEC-TOPIC-09). 반복 할 일은 「7일 만이에요」,
+  // 할 일 알림 — 시각이 있고, 안 끝냈고, 아직 오지 않은 것만(SPEC-TOPIC-09). 반복 할 일은 「마지막으로 한 지 7일 지났어요」,
   // 기록 탭에 잠이 재는 중이면 앞으로 3시간 안의 것은 소리 없이(task topic/006)
   const { events } = useEvents();
   const sleeping = !!runningOf(events, 'sleep');
@@ -362,7 +362,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     [update, remove],
   );
 
-  // 알림 단추(SPEC-TOPIC-09) — 완료 · 받았어요는 완료로, 1시간 뒤는 같은 알림을 한 번 더
+  // 알림 단추(SPEC-TOPIC-09) — 완료 · 수령 완료는 완료로, 1시간 뒤는 같은 알림을 한 번 더
   const toggleRef = useRef(toggleDone);
   useEffect(() => {
     toggleRef.current = toggleDone;

@@ -1,5 +1,5 @@
 /**
- * 주문 정보 (SPEC-SHOP-02) — 온라인 묶음의 「주문했어요」를 누르면 주문한 곳(안 적어도 된다) · 언제 도착하는지 적는다.
+ * 주문 정보 (SPEC-SHOP-02) — 온라인 묶음의 「주문 완료」를 누르면 주문한 곳(안 적어도 된다) · 언제 도착하는지 적는다.
  * 배송 중인 것은 고치거나 주문 취소 · 삭제. 주문한 곳은 사용자가 전에 적은 이름만 칩으로 보인다(앱이 쇼핑몰 이름을 미리 넣지 않는다).
  */
 
@@ -70,7 +70,7 @@ export function OrderSheet({
               style={[styles.field, { color: c.text, backgroundColor: c.surface }]}
               value={store}
               onChangeText={setStore}
-              placeholder="예: 자주 쓰는 쇼핑몰 이름 (안 적어도 돼요)"
+              placeholder="예: 쇼핑몰 이름 (선택)"
               placeholderTextColor={c.textTertiary}
               maxLength={40}
             />
@@ -113,7 +113,7 @@ export function OrderSheet({
               style={[styles.field, { color: c.text, backgroundColor: c.surface }]}
               value={arriveText}
               onChangeText={setArriveText}
-              placeholder="다른 날: 10/20 · 금요일"
+              placeholder="직접 입력 (예: 10/20, 금요일)"
               placeholderTextColor={c.textTertiary}
               maxLength={20}
             />
@@ -124,7 +124,7 @@ export function OrderSheet({
 
           <Button
             size="lg"
-            label={ordered ? '저장' : '주문했어요'}
+            label={ordered ? '저장' : '주문 완료'}
             disabled={unread}
             onPress={() =>
               onSave({

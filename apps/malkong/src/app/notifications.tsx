@@ -62,7 +62,7 @@ export default function NotificationsScreen() {
           <ListRow
             icon="create-outline"
             title="기록 알림"
-            detail={!supported || (allowed === false && careReminders) ? blockedText : careOn ? '켜짐' : '안 받아요'}
+            detail={!supported || (allowed === false && careReminders) ? blockedText : careOn ? '켜짐' : '꺼짐'}
             right={
               supported ? (
                 <Toggle
@@ -94,7 +94,7 @@ export default function NotificationsScreen() {
                 ? blockedText
                 : briefingOn
                   ? `${timeLabel(briefingTime!)} 오늘 할 일 · 저녁 8시 내일 할 일`
-                  : '안 받아요'
+                  : '꺼짐'
             }
             right={
               supported ? (

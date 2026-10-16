@@ -83,7 +83,7 @@ export default function OnboardingScreen() {
             <View style={styles.heading}>
               <ThemedText type="display">매일 아침,{'\n'}버디가 먼저 챙길게요</ThemedText>
               <ThemedText type="body" style={{ color: c.textSecondary }}>
-                오늘 챙길 접종·검진과 기록할 것을 정리해서, 정한 시간에 알려 드려요. 알림에는 아기 정보를 쓰지 않아요.
+                오늘 할 일과 루틴을 정한 시간에 알려 드려요. 알림에는 아기 정보를 넣지 않아요.
               </ThemedText>
             </View>
             <View style={styles.field}>
@@ -116,8 +116,8 @@ export default function OnboardingScreen() {
               <ThemedText type="display">{isEdit ? '아기 프로필' : '육아버디를\n시작할게요'}</ThemedText>
               <ThemedText type="body" style={{ color: c.textSecondary }}>
                 {isEdit
-                  ? '생일을 고치면 모든 화면이 따라 바뀌어요'
-                  : '아기 생일만 알려 주시면 돼요. 나머지는 대화하면서 채울게요'}
+                  ? '생일을 바꾸면 모든 화면에 반영돼요'
+                  : '아기 생일만 입력하면 시작할 수 있어요'}
               </ThemedText>
             </View>
 

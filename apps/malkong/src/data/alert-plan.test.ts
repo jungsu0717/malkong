@@ -36,12 +36,12 @@ function todo(title: string, o: Partial<Todo> = {}): Todo {
   };
 }
 
-test('반복 할 일은 지난번부터 며칠 만인지', () => {
+test('반복 할 일은 마지막으로 한 지 며칠인지', () => {
   const nails = todo('손톱 깎기', { dueAt: iso(10, 15), repeat: { kind: 'every', days: 7 } });
   const todos = [todo('손톱 깎기', { doneAt: iso(10, 8, 21) }), nails];
   assert.equal(daysSinceDone(nails, todos, NOW), 7);
-  assert.equal(listTitle(nails, todos, NOW), '손톱 깎기(7일 만)');
-  assert.equal(reminderBody(nails, todos, NOW), '7일 만이에요');
+  assert.equal(listTitle(nails, todos, NOW), '손톱 깎기(마지막 7일 전)');
+  assert.equal(reminderBody(nails, todos, NOW), '마지막으로 한 지 7일 지났어요');
   // 반복이 아니거나 한 적이 없으면 그대로
   const once = todo('택배 반품', { dueAt: iso(10, 15) });
   assert.equal(listTitle(once, [once], NOW), '택배 반품');
