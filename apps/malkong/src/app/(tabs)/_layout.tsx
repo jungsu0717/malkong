@@ -2,11 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 
-import { TeddyIcon } from '@/components/baby-icons';
+import { RepeatCheckIcon, TeddyIcon } from '@/components/baby-icons';
 import { FontFamily } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 탭 넷 — 오늘(첫 화면, 루틴과 오늘 할 일) · 할 일 · 리스트(살 것 · 준비할 것) · 마이. 기록은 마이 → 기록 (decisions/026~028) */
+/** 탭 넷 — 루틴(첫 화면) · 할 일(준비 목록 포함) · 장보기(살 것) · 마이. 기록은 마이 → 기록 (decisions/027 · 029) */
 export default function TabLayout() {
   const c = useTheme();
 
@@ -26,8 +26,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: '오늘',
-          tabBarIcon: ({ color, size }) => <Ionicons name="today-outline" size={size} color={color} />,
+          title: '루틴',
+          tabBarIcon: ({ color, size }) => <RepeatCheckIcon size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -38,10 +38,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="list"
+        name="shop"
         options={{
-          title: '리스트',
-          tabBarIcon: ({ color, size }) => <Ionicons name="list-outline" size={size} color={color} />,
+          title: '장보기',
+          tabBarIcon: ({ color, size }) => <Ionicons name="bag-handle-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

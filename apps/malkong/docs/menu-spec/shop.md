@@ -1,13 +1,15 @@
-# 리스트 탭 — 살 것(살 곳별 · 배송 · 다시 담기)과 준비할 것
+# 장보기 탭 — 살 것(살 곳별 · 배송 · 다시 담기 · 재고 확인)
 
 > 위에 있는 것: [constitution](../constitution.md) 1 · 2 · 3 · 8 · [main-design](../architecture/main-design.md) ·
-> [decisions/026](../decisions/026-everyday-shopping-home-tab.md) · [027](../decisions/027-log-under-my-shop-by-place.md) · [028](../decisions/028-assistant-today-routines.md).
-> 메뉴 코드는 그대로 `SHOP` 이다(2026-10-16 탭 이름이 장보기 → 리스트로 바뀌었다)
+> [decisions/026](../decisions/026-everyday-shopping-home-tab.md) · [027](../decisions/027-log-under-my-shop-by-place.md) · [028](../decisions/028-assistant-today-routines.md) ·
+> [029](../decisions/029-routine-tab-structure.md). 메뉴 코드 `SHOP`(2026-10-16 리스트 → 장보기로 돌아왔다. 준비할 것은 할 일 탭 「준비 목록」)
 
 ## SPEC
 
 ### SPEC-SHOP-01 살 것
 ```
+평시 ▸ 장보기 탭에는 살 것만 있다. 재고 확인 루틴(SPEC-MAIN-06)이 있으면 맨 위에 「재고 확인」 한 줄(「매주 일요일 · 지난번에 부족한 2개를 추가했어요」)이
+       보이고, 누르면 재고 확인 시트가 열린다. 재고 확인에서 들어간 살 것에는 「재고 확인에서 추가」가 보인다.
 평시 ▸ 살 것은 살 곳별로 묶여 보여야 한다 — 매장(사용자가 적은 곳, 최근 쓴 순) → 온라인 → 기타(살 곳을 안 정한 것). 묶음 머리에 개수.
 평시 ▸ 바닥 칸 위의 칩(선택 안 함 · 마트 · 온라인 · 사용자가 전에 쓴 곳)으로 살 곳을 고르고 적는다. 고른 칩은 다음에 적을 때도 남는다.
        「다이소에서 수납함」처럼 적으면 살 곳 「다이소」를 읽는다. 한 번 적은 곳은 다음부터 칩으로 보인다.
@@ -38,12 +40,10 @@
        받음 체크를 하거나 주문을 취소하면 그 알림은 지운다.
 ```
 
-### SPEC-SHOP-05 살 것 · 준비할 것
+### SPEC-SHOP-05 날짜가 아니라 살 것 기준
 ```
-평시 ▸ 리스트 탭 위의 전환 단추로 「살 것 N」과 「준비할 것 N」(N 은 남은 수)을 오가야 한다. 마지막으로 본 쪽을 기억해 다음에도 그쪽으로 연다.
-평시 ▸ 날짜가 아니라 살 것 · 준비할 것 기준이다. 못 산 것 · 못 챙긴 것은 체크하지 않으면 그대로 남아, 다음 날 다시 만들 필요가 없다.
-평시 ▸ 준비할 것은 외출 가방 · 여행 짐 · 어린이집 준비 같은 목록 카드로 보이고(아이콘 · 이름 · 「남은 3개 · 완료 5개」), 누르면 그 목록으로 간다.
-       「새 목록」으로 추천(SPEC-TOPIC-12)을 한 번 눌러 만들거나 직접 만든다. 목록에서는 「모두 체크 해제」로 다시 쓴다.
+평시 ▸ 날짜가 아니라 살 것 기준이다. 못 산 것은 체크하지 않으면 그대로 남아, 다음 날 다시 만들 필요가 없다.
+       (준비할 것 — 외출 가방 · 여행 짐 같은 목록 — 은 할 일 탭 「준비 목록」으로 옮겼다, SPEC-TOPIC-02 · 12)
 ```
 
 ## HOW
@@ -51,8 +51,8 @@
 - 장보기 줄은 할 일과 같은 `todo` 줄이고 장보기 주제(kind `shopping`)에 있다. 칸 `ordered_at`(주문한 때, 있으면 배송 중) · `arrive_at`(도착 예정일) ·
   `store`(살 곳 — 주문한 뒤에는 주문한 곳)(backend 「기기 DB 스키마」). 주문한 것의 살 곳은 늘 「온라인」으로 본다(`placeOf`)
 - 계산: `shopLists` · `shopPlaces` · `toBuyGroups` · `buyAgain` · `lastTrips` · `recentStores`(`src/data/todos.ts`).
-  화면 `src/app/(tabs)/list.tsx`, 시트 `order-sheet.tsx` · `shop-item-sheet.tsx` · `topic-sheet.tsx`(새 목록)
-- 준비할 것 = 직접 만든 주제(kind `custom`). 목록 화면은 주제 화면(`src/app/topic/[id].tsx`)을 그대로 쓴다. 고른 쪽은 설정값 `list_mode`
+  화면 `src/app/(tabs)/shop.tsx`, 시트 `order-sheet.tsx` · `shop-item-sheet.tsx`
+- 재고 확인에서 들어간 살 것은 `todo.source = 'stock'`
 - 알림: `alert-plan.ts` `morningPlan` · `deliveryChecks`, `notifications.ts` `scheduleDeliveryChecks`(task topic/006)
 
 ## changelog
@@ -62,3 +62,4 @@
 - 2026-10-15 살 곳별 묶음 · 「다이소에서」 읽기 · 매장 지난번 목록 다시 담기, 「주문했어요」는 온라인 묶음에만 (Julian, decisions/027, task topic/007)
 - 2026-10-16 탭 이름 리스트, 살 것 · 준비할 것 전환(SPEC-SHOP-05), 직접 만든 목록을 할 일 탭에서 옮김 (Julian, decisions/028, task list/001)
 - 2026-10-16 「주문했어요」 → 「주문 완료」, 「받았어요」 → 「수령 완료」 (Julian, task today/002)
+- 2026-10-16 탭 이름 장보기로, 살 것만(준비할 것은 할 일 탭으로), 재고 확인 한 줄(SPEC-SHOP-01 · 05) (Julian, decisions/029, task today/003)

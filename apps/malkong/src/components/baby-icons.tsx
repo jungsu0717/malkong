@@ -112,3 +112,16 @@ export function TeddyIcon({ size = 24, color }: IconProps) {
     </Svg>
   );
 }
+
+/** 루틴 탭 — 돌아가는 화살표 안의 체크 (반복해서 챙기는 일, decisions/029) */
+export function RepeatCheckIcon({ size = 24, color }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4.5 11 A7.5 7.5 0 0 1 17.5 6.4 L19.5 8.5" stroke={color} {...stroke} />
+      <Path d="M19.5 4 V8.5 H15" stroke={color} {...stroke} />
+      <Path d="M19.5 13 A7.5 7.5 0 0 1 6.5 17.6 L4.5 15.5" stroke={color} {...stroke} />
+      <Path d="M4.5 20 V15.5 H9" stroke={color} {...stroke} />
+      <Path d="M9.3 12.1 L11.2 14 L14.7 10.3" stroke={color} {...stroke} />
+    </Svg>
+  );
+}

@@ -18,7 +18,7 @@ import { loadMemberName, saveMemberName } from '@/data/family';
 import { useFamily } from '@/data/family-context';
 import { useTheme } from '@/hooks/use-theme';
 
-const CONSENT_TEXT = '아기 이름 · 생일 · 건강 기록과 할 일 · 리스트 · 루틴을 육아버디 서버에 저장하고 가족과 공유하는 데 동의해요';
+const CONSENT_TEXT = '아기 이름 · 생일 · 건강 기록과 할 일 · 장보기 · 루틴을 육아버디 서버에 저장하고 가족과 공유하는 데 동의해요';
 /** 가족에게 보일 이름 — 누가 했는지 보일 때 쓴다(task my/009) */
 const MEMBER_NAMES = ['엄마', '아빠', '할머니', '할아버지'];
 
@@ -126,7 +126,7 @@ export default function FamilyScreen() {
                 함께 보는 폰 {state.info.members}대
               </ThemedText>
               <ThemedText type="small" style={{ color: c.textSecondary }}>
-                {name}의 이름 · 생일, 기록, 할 일 · 리스트 · 루틴이 서로 맞춰져요.
+                {name}의 이름 · 생일, 기록, 할 일 · 장보기 · 루틴이 가족 폰과 동기화돼요.
               </ThemedText>
               <ThemedText type="caption" style={{ color: c.textSecondary }}>
                 {syncing ? '동기화 중…' : state.syncedAt ? `마지막 동기화 ${timeOf(state.syncedAt)}` : '아직 동기화하지 않았어요'}
@@ -162,7 +162,7 @@ export default function FamilyScreen() {
                 같은 아기를 보는 가족이 한 앱을 함께 써요
               </ThemedText>
               <ThemedText type="small" style={{ color: c.textSecondary }}>
-                {name}의 이름 · 생일, 기록, 할 일 · 리스트 · 루틴이 육아버디 서버에 저장되고 가족 폰과 동기화돼요. 누가 했는지도
+                {name}의 이름 · 생일, 기록, 할 일 · 장보기 · 루틴이 육아버디 서버에 저장되고 가족 폰과 동기화돼요. 누가 했는지도
                 보여서 「줬어?」 하고 묻지 않아도 돼요.
               </ThemedText>
               <Pressable

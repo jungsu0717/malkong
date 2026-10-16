@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { everyLabel, isDueOn, routineReminders, slotOf, statusLine, timeLabel, todayState, type Routine, type RoutineLog } from './routine.ts';
+import { countsDone, dateLabel, everyLabel, isDueOn, nextDayLabel, routineReminders, slotOf, statusLine, timeLabel, todayPlan, todayState, type Routine, type RoutineLog } from './routine.ts';
 
 const NOW = new Date(2026, 9, 16, 14, 0);
 const iso = (mo: number, d: number, h = 9, mi = 0) => new Date(2026, mo - 1, d, h, mi).toISOString();
@@ -116,4 +116,34 @@ test('버튼 상태 한 줄 — 완료 시각, 누가, 다음 날, 타이머 누
   assert.equal(line(tummy, [log(iso(10, 16, 9), 15)]), '오늘 15분');
   assert.equal(line({ ...tummy, goalMinutes: 30 }, [log(iso(10, 16, 9), 15)]), '15분 / 30분');
   assert.equal(statusLine(nails, todayState(nails, [log(iso(10, 16, 9))], NOW)).done, true);
+});
+
+test('루틴 탭 — 오늘 할 것과 다른 날, 완료 수, 다음 루틴', () => {
+  const vitamin = routine({ id: 'v', title: '비타민D', time: '08:00', sort: 0 });
+  const bath = routine({ id: 'b', title: '목욕', everyDays: 2, time: '20:00', sort: 1 });
+  const tummy = routine({ id: 't', title: '터미타임', kind: 'minutes', time: null, sort: 2 });
+  const stock = routine({ id: 's', title: '재고 확인', everyDays: 7, time: null, sort: 3 });
+  const logs = [log(iso(10, 16, 8, 10), null, 'v'), log(iso(10, 14, 20), null, 'b'), log(iso(10, 13, 10), null, 's')];
+  const plan = todayPlan([tummy, stock, bath, vitamin], logs, NOW);
+  assert.deepEqual(
+    plan.today.map((x) => x.r.id),
+    ['v', 'b', 't'],
+  );
+  assert.deepEqual(
+    plan.later.map((x) => x.r.id),
+    ['s'],
+  );
+  assert.equal(plan.done, 1);
+  assert.equal(plan.total, 3);
+  assert.equal(plan.next?.r.id, 'b');
+  // 타이머는 목표가 없으면 조금이라도 하면 완료로 센다
+  assert.equal(countsDone(tummy, todayState(tummy, [log(iso(10, 16, 9), 2, 't')], NOW)), true);
+  assert.equal(countsDone({ ...tummy, goalMinutes: 15 }, todayState({ ...tummy, goalMinutes: 15 }, [log(iso(10, 16, 9), 2, 't')], NOW)), false);
+});
+
+test('다른 날 이름과 날짜', () => {
+  assert.equal(nextDayLabel(1, NOW), '내일');
+  assert.equal(nextDayLabel(2, NOW), '일요일');
+  assert.equal(nextDayLabel(9, NOW), '9일 뒤');
+  assert.equal(dateLabel(NOW), '10월 16일 금요일');
 });

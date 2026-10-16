@@ -1,18 +1,15 @@
 /**
- * 리스트 탭 — 살 것과 준비할 것 (SPEC-SHOP-01~05, task topic/004 · 007 · list/001, decisions/026~028).
+ * 장보기 탭 — 살 것 (SPEC-SHOP-01~05, task topic/004 · 007 · list/001 · today/003, decisions/026~029).
  *
- * 위의 전환 단추로 「살 것」과 「준비할 것」을 오간다. 날짜가 아니라 살 것 · 준비할 것 기준이라, 못 산 것은 체크하지 않으면 그대로 남는다.
- * 준비할 것은 외출 가방 · 여행 짐 · 어린이집 준비처럼 직접 만든 목록(주제 kind custom)이고, 누르면 그 목록 화면으로 간다.
+ * 날짜가 아니라 살 것 기준이라, 못 산 것은 체크하지 않으면 그대로 남는다. 준비할 것(직접 만든 목록)은 할 일 탭 「준비 목록」에 있다.
  *
- * 살 것:
  * 살 것을 살 곳별로 묶는다 — 마트 · 다이소 같은 매장(사용자가 적은 곳) → 온라인 → 살 곳을 안 정한 것. 매장에 가면 그 묶음만 보고 체크한다.
  * 온라인 묶음에만 「주문 완료」(언제 도착) → 배송 중 → 받으면 체크. 지난번 산 것과 매장마다 지난번 목록은 「다시 담기」에서 한 번에.
  * 바닥 칸에서 살 곳 칩을 고르고 적는다(고른 칩은 다음에도 남는다). 장보기 줄은 할 일과 같은 `todo` 줄이고 장보기 주제(kind shopping)에 있다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -25,11 +22,8 @@ import { ShopItemSheet } from '@/components/todo/shop-item-sheet';
 import { TodoInput } from '@/components/todo/todo-input';
 import { TodoItem } from '@/components/todo/todo-item';
 import { TodoSheet } from '@/components/todo/todo-sheet';
-import { iconOf } from '@/components/todo/topic-icons';
-import { TopicSheet } from '@/components/todo/topic-sheet';
-import { Card, Chip, Folded, ListRow, SectionHeader, tap } from '@/components/ui';
+import { Card, Chip, Folded, SectionHeader, tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
-import { readSetting, writeSetting } from '@/data/db';
 import { dueLabel } from '@/data/due-parse';
 import { ONLINE, buyAgain, lastTrips, recentStores, shopLists, shopPlaces, toBuyGroups, type Todo } from '@/data/todos';
 import { useTodos } from '@/data/todos-context';
@@ -48,27 +42,9 @@ function shippingDetail(t: Todo): string {
   return [t.store, when].filter(Boolean).join(' · ');
 }
 
-type Mode = 'buy' | 'prep';
-/** 마지막으로 본 쪽(살 것 · 준비할 것)을 기억해 다음에도 그쪽으로 연다 */
-const MODE_KEY = 'list_mode';
-
-export default function ListScreen() {
+export default function ShopScreen() {
   const c = useTheme();
-  const { topics, todos, loading, add, update, toggleDone, remove, addTopic } = useTodos();
-  const [mode, setModeState] = useState<Mode>('buy');
-  const [newList, setNewList] = useState(false);
-  useEffect(() => {
-    void readSetting(MODE_KEY)
-      .then((v) => {
-        if (v === 'prep') setModeState('prep');
-      })
-      .catch(() => undefined);
-  }, []);
-  const setMode = (m: Mode) => {
-    tap();
-    setModeState(m);
-    void writeSetting(MODE_KEY, m).catch(() => undefined);
-  };
+  const { topics, todos, loading, add, update, toggleDone, remove } = useTodos();
   const typing = useKeyboardVisible();
   const [ordering, setOrdering] = useState<Todo | null>(null);
   const [editing, setEditing] = useState<Todo | null>(null);
@@ -85,15 +61,6 @@ export default function ListScreen() {
   const trips = lastTrips(shop, todos);
   const stores = recentStores(todos);
   const addItem = (title: string, store: string | null) => add({ title, topicId: shop.id, store });
-  // 준비할 것 — 직접 만든 목록마다 남은 수 · 완료 수
-  const lists = topics
-    .filter((t) => t.kind === 'custom' && !t.hidden)
-    .sort((a, b) => a.sort - b.sort)
-    .map((t) => {
-      const items = todos.filter((d) => d.topicId === t.id);
-      return { topic: t, left: items.filter((d) => !d.doneAt).length, done: items.filter((d) => d.doneAt).length };
-    });
-  const prepLeft = lists.reduce((sum, l) => sum + l.left, 0);
 
   return (
     <ThemedView style={styles.container}>
@@ -105,59 +72,7 @@ export default function ListScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="interactive">
-            <ThemedText type="display">리스트</ThemedText>
-
-            {/* 살 것 · 준비할 것 (SPEC-SHOP-05) */}
-            <View style={[styles.segment, { backgroundColor: c.surface }]}>
-              {(['buy', 'prep'] as Mode[]).map((m) => {
-                const selected = mode === m;
-                const label = m === 'buy' ? `살 것 ${toBuy.length + shipping.length}` : `준비할 것 ${prepLeft}`;
-                return (
-                  <Pressable
-                    key={m}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected }}
-                    onPress={() => setMode(m)}
-                    style={[styles.segmentItem, selected && { backgroundColor: c.background }]}>
-                    <ThemedText type="label" style={{ fontWeight: selected ? 700 : 500, color: selected ? c.text : c.textSecondary }}>
-                      {label}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </View>
-
-            {mode === 'prep' ? (
-              <View style={styles.section}>
-                {lists.length === 0 ? (
-                  <Card>
-                    <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-                      외출 가방, 여행 짐처럼 자주 챙기는 것을 목록으로 만들어 두고 다시 쓸 수 있어요
-                    </ThemedText>
-                  </Card>
-                ) : (
-                  <Card style={styles.rows}>
-                    {lists.map((l, i) => (
-                      <ListRow
-                        key={l.topic.id}
-                        divider={i > 0}
-                        icon={iconOf(l.topic)}
-                        title={l.topic.title}
-                        detail={l.left === 0 && l.done > 0 ? `모두 완료 · ${l.done}개` : `남은 ${l.left}개${l.done > 0 ? ` · 완료 ${l.done}개` : ''}`}
-                        onPress={() => router.push({ pathname: '/topic/[id]', params: { id: l.topic.id } })}
-                      />
-                    ))}
-                  </Card>
-                )}
-                <Pressable accessibilityRole="button" onPress={() => setNewList(true)} style={[styles.newList, { borderColor: c.border }]}>
-                  <Ionicons name="add" size={18} color={c.text} />
-                  <ThemedText type="body" style={{ fontWeight: 600 }}>
-                    새 목록
-                  </ThemedText>
-                </Pressable>
-              </View>
-            ) : (
-              <>
+            <ThemedText type="display">장보기</ThemedText>
 
             {/* 살 것 — 살 곳별로 (SPEC-SHOP-01) */}
             {groups.length === 0 ? (
@@ -253,13 +168,9 @@ export default function ListScreen() {
               </View>
             )}
 
-              </>
-            )}
-
             {!typing && <AdBanner />}
           </ScrollView>
 
-          {mode === 'buy' && (
           <TodoInput
             placeholder={place ? `${place}에서 살 것 추가` : '살 것 추가 (예: 다이소에서 수납함)'}
             options={places.map((p) => ({ id: p, label: p }))}
@@ -278,21 +189,9 @@ export default function ListScreen() {
               });
             }}
           />
-          )}
         </KeyboardAvoidingView>
       </SafeAreaView>
 
-      <TopicSheet
-        key={newList ? 'open' : 'closed'}
-        open={newList}
-        topic={null}
-        existingTitles={topics.map((t) => t.title)}
-        onClose={() => setNewList(false)}
-        onSave={(title, icon, items) => {
-          setNewList(false);
-          void addTopic(title, icon, items).then((t) => router.push({ pathname: '/topic/[id]', params: { id: t.id } }));
-        }}
-      />
       <OrderSheet
         key={ordering?.id ?? 'none'}
         todo={ordering}
@@ -422,18 +321,6 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   section: { gap: 10 },
-  segment: { flexDirection: 'row', borderRadius: 20, padding: 4, gap: 4 },
-  segmentItem: { flex: 1, height: 36, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  newList: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    height: 48,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-  },
   rows: { paddingVertical: 2 },
   empty: { paddingVertical: Spacing.three },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

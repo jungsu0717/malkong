@@ -153,6 +153,43 @@ export function statusLine(routine: Routine, state: TodayState): { text: string;
   return { text: routine.kind === 'minutes' ? '오늘 0분' : everyLabel(routine.everyDays), done: false };
 }
 
+/** 진행 카드에서 「완료」로 셀까(SPEC-MAIN-01) — 체크는 오늘 했으면, 타이머는 목표가 있으면 채웠을 때 · 없으면 조금이라도 했으면 */
+export function countsDone(routine: Routine, state: TodayState): boolean {
+  if (routine.kind === 'minutes') return routine.goalMinutes ? state.done : state.minutes > 0;
+  return !!state.firstAt;
+}
+
+const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+
+/** 다른 날 루틴의 「언제」 — 「내일」, 이번 주 안이면 「일요일」, 그 뒤는 「9일 뒤」 */
+export function nextDayLabel(nextInDays: number, now = new Date()): string {
+  if (nextInDays <= 1) return '내일';
+  if (nextInDays <= 6) return WEEKDAYS[addDays(now, nextInDays).getDay()];
+  return `${nextInDays}일 뒤`;
+}
+
+/** 「10월 16일 금요일」 */
+export function dateLabel(now: Date): string {
+  return `${now.getMonth() + 1}월 ${now.getDate()}일 ${WEEKDAYS[now.getDay()]}`;
+}
+
+export type TodayItem = { r: Routine; s: TodayState };
+
+/**
+ * 루틴 탭에 보일 것(SPEC-MAIN-01) — 오늘 할 루틴(알림 시각 순, 시각 없는 것은 뒤에), 다른 날 루틴(가까운 순), 진행(완료 수 · 다음 루틴).
+ * 누를 때마다 자리가 바뀌지 않게 완료 여부로는 순서를 바꾸지 않는다. 다음 루틴은 아직 안 한 것 중 맨 앞.
+ */
+export function todayPlan(routines: Routine[], logs: RoutineLog[], now = new Date()) {
+  const states = routines.map((r) => ({ r, s: todayState(r, logs, now) }));
+  const today = states
+    .filter((x) => x.s.due)
+    .sort((a, b) => (a.r.time ?? '99').localeCompare(b.r.time ?? '99') || a.r.sort - b.r.sort);
+  const later = states.filter((x) => !x.s.due).sort((a, b) => a.s.nextInDays - b.s.nextInDays || a.r.sort - b.r.sort);
+  const done = today.filter((x) => countsDone(x.r, x.s)).length;
+  const next = today.find((x) => !countsDone(x.r, x.s)) ?? null;
+  return { today, later, done, total: today.length, next };
+}
+
 export type RoutineReminder = { id: string; routineId: string; at: Date; title: string; body: string };
 
 /**

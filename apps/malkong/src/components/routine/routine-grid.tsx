@@ -2,8 +2,8 @@
  * 오늘 탭 루틴 버튼 모음 (SPEC-MAIN-01 · 02 · 03, task today/002) — 루틴을 3열 버튼으로 한눈에 다 보인다.
  *
  * - 체크: 누르면 완료(아이콘에 코랄 체크, 「08:10 완료」), 다시 누르면 되돌린다
- * - 타이머: 누르면 타이머 시작 · 멈춤, 오른쪽 위 「+5분」
- * - 오늘 할 날이 아닌 N일마다 루틴도 흐리게 보인다(「내일」 「3일 뒤」). 눌러서 미리 완료할 수 있다
+ * - 타이머: 누르면 타이머 시작 · 멈춤, 오른쪽 위 「+1분」, 목표가 있으면 아래 진행 막대
+ * - 루틴 탭은 오늘 할 루틴만 넘긴다(다른 날 루틴은 탭 아래 한 줄, task today/003)
  * - 편집 중이면 누르면 편집, 아니면 길게 눌러 편집. 마지막 칸은 「추가」
  * - 루틴이 하나도 없으면 추천이 버튼으로 다 보이고, 누르면 바로 추가된다
  */
@@ -24,6 +24,7 @@ const GAP = 8;
 
 export function RoutineGrid({
   items,
+  showTemplates,
   now,
   editing,
   onCheck,
@@ -33,8 +34,10 @@ export function RoutineGrid({
   onAdd,
   onQuickAdd,
 }: {
-  /** 보일 순서대로 — 오늘 할 것 먼저 */
+  /** 보일 순서대로 */
   items: { r: Routine; s: TodayState }[];
+  /** 루틴이 하나도 없을 때 — 추천을 버튼으로 보인다 */
+  showTemplates: boolean;
   now: Date;
   editing: boolean;
   onCheck: (id: string) => void;
@@ -50,7 +53,7 @@ export function RoutineGrid({
 
   return (
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      {items.length === 0
+      {showTemplates
         ? ROUTINE_TEMPLATES.map((t) => <TemplateTile key={t.title} template={t} width={tileWidth} onPress={() => onQuickAdd(t)} />)
         : items.map(({ r, s }) => (
             <RoutineTile
@@ -76,7 +79,7 @@ export function RoutineGrid({
               }}
             />
           ))}
-      <AddTile width={tileWidth} label={items.length === 0 ? '직접 추가' : '추가'} onPress={onAdd} />
+      <AddTile width={tileWidth} label={showTemplates ? '직접 추가' : '추가'} onPress={onAdd} />
     </View>
   );
 }
@@ -145,12 +148,12 @@ function RoutineTile({
       ) : routine.kind === 'minutes' && state.due ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${routine.title} 5분 더하기`}
+          accessibilityLabel={`${routine.title} 1분 더하기`}
           hitSlop={6}
           onPress={onAddMinutes}
           style={({ pressed }) => [styles.corner, styles.plus, { backgroundColor: pressed ? c.surfaceStrong : c.background }]}>
           <ThemedText type="caption" style={{ fontWeight: 700 }}>
-            +5분
+            +1분
           </ThemedText>
         </Pressable>
       ) : null}
@@ -164,6 +167,11 @@ function RoutineTile({
         style={{ color: running || line.done ? c.text : c.textSecondary, fontWeight: running || line.done ? 600 : 400 }}>
         {running ? clock : line.text}
       </ThemedText>
+      {routine.kind === 'minutes' && routine.goalMinutes ? (
+        <View style={[styles.bar, { backgroundColor: c.surfaceStrong }]}>
+          <View style={[styles.barFill, { backgroundColor: c.ink, width: `${Math.min(100, (state.minutes / routine.goalMinutes) * 100)}%` }]} />
+        </View>
+      ) : null}
     </Pressable>
   );
 }
@@ -243,4 +251,6 @@ const styles = StyleSheet.create({
   editMark: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   plus: { height: 26, paddingHorizontal: 8, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   name: { fontWeight: 600, marginTop: 6 },
+  bar: { height: 4, borderRadius: 2, overflow: 'hidden', marginTop: 2 },
+  barFill: { height: 4, borderRadius: 2 },
 });
