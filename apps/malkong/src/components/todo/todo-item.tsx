@@ -40,6 +40,8 @@ export function TodoItem({
     due ? dueLabel(due, todo.hasTime, now) : null,
     todo.repeat && !done ? `${repeatLabel(todo.repeat)} 반복` : null,
     topicName ?? null,
+    // 누가 완료했나 — 가족 공유를 켠 폰에서만 이름이 있다(task my/009)
+    done && todo.doneBy ? `${todo.doneBy} 완료` : null,
   ]
     .filter(Boolean)
     .join(' · ');

@@ -105,6 +105,7 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           ordered_at  TEXT,
           arrive_at   TEXT,
           store       TEXT,
+          done_by     TEXT,
           created_at  TEXT NOT NULL,
           updated_at  TEXT NOT NULL
         );
@@ -127,6 +128,7 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           routine_id  TEXT NOT NULL,
           at          TEXT NOT NULL,
           minutes     INTEGER,
+          by          TEXT,
           created_at  TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ix_routine_log ON routine_log(routine_id, at);
@@ -156,8 +158,13 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
         await db.execAsync('ALTER TABLE topic ADD COLUMN icon TEXT');
       }
       // 장보기 — 주문한 때 · 도착 예정일 · 어디서(task topic/004)
-      for (const col of ['ordered_at', 'arrive_at', 'store']) {
+      for (const col of ['ordered_at', 'arrive_at', 'store', 'done_by']) {
         if (!todoColumns.some((c) => c.name === col)) await db.execAsync(`ALTER TABLE todo ADD COLUMN ${col} TEXT`);
+      }
+      // 누가 했는지(task my/009) — 루틴 기록
+      const logColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(routine_log)');
+      if (!logColumns.some((col) => col.name === 'by')) {
+        await db.execAsync('ALTER TABLE routine_log ADD COLUMN by TEXT');
       }
       return db;
     })();
@@ -445,7 +452,8 @@ export async function readTodoRows(): Promise<Todo[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<TodoRow>(
     `SELECT id, topic_id AS topicId, title, note, due_at AS dueAt, has_time AS hasTime, buy, source, done_at AS doneAt,
-            repeat, ref, ordered_at AS orderedAt, arrive_at AS arriveAt, store, created_at AS createdAt, updated_at AS updatedAt
+            repeat, ref, ordered_at AS orderedAt, arrive_at AS arriveAt, store, done_by AS doneBy,
+            created_at AS createdAt, updated_at AS updatedAt
        FROM todo ORDER BY created_at`,
   );
   return rows.map((r) => ({ ...r, hasTime: r.hasTime === 1, buy: r.buy === 1, repeat: repeatFromText(r.repeat) }));
@@ -455,12 +463,12 @@ export async function upsertTodoRow(t: Todo): Promise<void> {
   const db = await getDb();
   await db.runAsync(
     `INSERT INTO todo (id, topic_id, title, note, due_at, has_time, buy, source, done_at, repeat, ref, ordered_at, arrive_at, store,
-       created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       done_by, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET topic_id = excluded.topic_id, title = excluded.title, note = excluded.note,
        due_at = excluded.due_at, has_time = excluded.has_time, buy = excluded.buy, source = excluded.source,
        done_at = excluded.done_at, repeat = excluded.repeat, ref = excluded.ref, ordered_at = excluded.ordered_at,
-       arrive_at = excluded.arrive_at, store = excluded.store, updated_at = excluded.updated_at`,
+       arrive_at = excluded.arrive_at, store = excluded.store, done_by = excluded.done_by, updated_at = excluded.updated_at`,
     t.id,
     t.topicId,
     t.title,
@@ -475,6 +483,7 @@ export async function upsertTodoRow(t: Todo): Promise<void> {
     t.orderedAt,
     t.arriveAt,
     t.store,
+    t.doneBy,
     t.createdAt,
     t.updatedAt,
   );
@@ -526,7 +535,7 @@ export async function readRoutineLogRows(days = 400): Promise<RoutineLog[]> {
   const db = await getDb();
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   return db.getAllAsync<RoutineLog>(
-    `SELECT id, routine_id AS routineId, at, minutes, created_at AS createdAt FROM routine_log WHERE at >= ? ORDER BY at`,
+    `SELECT id, routine_id AS routineId, at, minutes, by, created_at AS createdAt FROM routine_log WHERE at >= ? ORDER BY at`,
     since,
   );
 }
@@ -534,11 +543,12 @@ export async function readRoutineLogRows(days = 400): Promise<RoutineLog[]> {
 export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, minutes, created_at) VALUES (?, ?, ?, ?, ?)',
+    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, minutes, by, created_at) VALUES (?, ?, ?, ?, ?, ?)',
     l.id,
     l.routineId,
     l.at,
     l.minutes,
+    l.by,
     l.createdAt,
   );
 }

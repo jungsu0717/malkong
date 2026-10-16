@@ -58,6 +58,8 @@ export type Todo = {
   arriveAt: string | null;
   /** 장보기 — 어디서 샀나(사용자가 적은 이름) */
   store: string | null;
+  /** 누가 완료했나 — 가족 공유를 켠 폰에서 그 폰의 「가족 안에서 부를 이름」(task my/009) */
+  doneBy: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -175,6 +177,7 @@ export function makeTodo(input: TodoInput, now = new Date()): Todo {
     orderedAt: null,
     arriveAt: null,
     store: input.store ?? null,
+    doneBy: null,
     createdAt: at,
     updatedAt: at,
   };

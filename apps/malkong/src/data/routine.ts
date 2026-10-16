@@ -36,6 +36,8 @@ export type RoutineLog = {
   at: string;
   /** 시간 재기의 분. 체크는 null */
   minutes: number | null;
+  /** 누가 했나 — 가족 공유를 켠 폰에서 「가족 안에서 부를 이름」(task my/009) */
+  by: string | null;
   createdAt: string;
 };
 
@@ -74,6 +76,8 @@ export type TodayState = {
   done: boolean;
   /** 오늘 처음 한 때 */
   firstAt: string | null;
+  /** 오늘 처음 한 사람(가족 공유 이름) */
+  firstBy: string | null;
   /** 오늘 쌓은 분 */
   minutes: number;
   /** 지난번(오늘 전)에 한 지 며칠 — 한 적이 없으면 null */
@@ -90,7 +94,7 @@ export function todayState(routine: Routine, logs: RoutineLog[], now = new Date(
   const done = routine.kind === 'check' ? today.length > 0 : routine.goalMinutes ? minutes >= routine.goalMinutes : false;
   const due = today.length > 0 || isDueOn(routine, logs, now);
   const nextInDays = due || sinceDays === null ? 0 : Math.max(0, routine.everyDays - sinceDays);
-  return { due, done, firstAt: today[0]?.at ?? null, minutes, sinceDays, nextInDays };
+  return { due, done, firstAt: today[0]?.at ?? null, firstBy: today[0]?.by ?? null, minutes, sinceDays, nextInDays };
 }
 
 export type Slot = 'morning' | 'day' | 'evening' | 'any';
@@ -187,6 +191,6 @@ export function makeRoutine(input: RoutineInput, sort: number, now = new Date())
   return { ...input, id: newRoutineId(), hidden: false, sort, runningSince: null, createdAt: at, updatedAt: at };
 }
 
-export function makeRoutineLog(routineId: string, at: Date, minutes: number | null = null): RoutineLog {
-  return { id: newRoutineLogId(), routineId, at: at.toISOString(), minutes, createdAt: new Date().toISOString() };
+export function makeRoutineLog(routineId: string, at: Date, minutes: number | null = null, by: string | null = null): RoutineLog {
+  return { id: newRoutineLogId(), routineId, at: at.toISOString(), minutes, by, createdAt: new Date().toISOString() };
 }

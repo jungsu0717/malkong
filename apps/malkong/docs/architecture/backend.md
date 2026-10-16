@@ -43,7 +43,7 @@
 | 답변 피드백 | 서버가 받기로 한 것(SPEC-ASK-06). 기기 키와 떼어 두고, 질문·답 원문은 사용자가 그 피드백에서 함께 보내기를 골랐을 때만. 1년 보관 |
 | 캐시된 답변 (라우팅 ②) | 모두가 나눠 쓰는 자산이다 |
 | 운영자(가족) allowlist | 앱 안에서 풀 수 없어야 한다. 가족 기기 몇 대라 DB 대신 서버 비밀값(`MALKONG_OPERATOR_DEVICE_KEYS`)에 둔다 |
-| 가족 공유 사본 — 가족(초대 코드) · 구성원(기기 키 해시 · 동의한 때) · 아기(이름 · 생일) · 기록(L2) | 가족이 같은 아기를 보려면 폰 사이에 서버가 있어야 한다. 동의하고 켠 기기의 것만, 대화는 없다. 마지막 구성원이 나가면 지운다([task my/007](../task/my/007-family-sharing.md)) |
+| 가족 공유 사본 — 가족(초대 코드) · 구성원(기기 키 해시 · 동의한 때) · 아기(이름 · 생일) · 기록(L2) · 빠른 기록 · 할 일 · 리스트 · 루틴과 그 기록(누가 했는지 이름 포함) | 가족이 같은 아기를 보려면 폰 사이에 서버가 있어야 한다. 동의하고 켠 기기의 것만, 대화는 없다. 마지막 구성원이 나가면 지운다([task my/007](../task/my/007-family-sharing.md) · [my/009](../task/my/009-family-todos-routines.md)) |
 | 근거 없음 로그 (분류 × 월령 띠 × 검색 건수) | 근거 없이 일반론으로 답한 질문이 어느 주제에 몰리는지는 여러 사용자를 합쳐야 보인다. DB 가 아니라 Cloud Run 로그 한 줄(기본 30일 보관), 질문 원문 · 기기 키는 없다 — [knowledge-layers](knowledge-layers.md) 「비어 있는 곳 찾기」 |
 
 ```
@@ -85,10 +85,10 @@
 
 | 단계 | 어디에 | 무엇을 |
 |---|---|---|
-| 지금 | **기기 sqlite** (expo-sqlite) | 챗 이력 · L2 기록 · 아기 프로필. 가족 공유를 켜면 기록 · 아기만 서버 사본과 맞춘다 |
+| 지금 | **기기 sqlite** (expo-sqlite) | L2 기록 · 빠른 기록 · 아기 프로필 · 할 일 · 루틴. 가족 공유를 켜면 이것들을 서버 사본과 맞춘다(옛 대화 이력은 맞추지 않는다) |
 | 지금 | **앱 내장 + 원격 갱신** | L1 지식(월령별 표준). 크기가 작아 앱에 실어 나가고 서버에서 판만 갱신 |
 | 지금 | **Neon** (서버리스 Postgres) | 운영 데이터 — 사용량·집계·피드백·캐시·allowlist. 아기 데이터는 넣지 않는다 |
-| 지금 — 가족 공유를 켠 기기만 | 같은 **Neon** 에 `family` · `family_member` · `family_baby` · `family_record` | 아기 프로필 + L2 기록의 동기화 사본. 기기 키로 묶이고 명시 동의와 함께만. 로그인은 나중에 가족을 계정에 묶을 때(task my/007) |
+| 지금 — 가족 공유를 켠 기기만 | 같은 **Neon** 에 `family` · `family_member` · `family_baby` · `family_record` | 아기 프로필 + 기록 · 빠른 기록 · 할 일 · 루틴의 동기화 사본(`family_record` 한 표에 표시를 달아 함께). 기기 키로 묶이고 명시 동의와 함께만. 로그인은 나중에 가족을 계정에 묶을 때(task my/007) |
 
 ```
 평시 ▸ 챗 이력은 기기 안에만 저장해야 한다. 가족 공유를 켜도 동기화 대상은 아기 프로필과
@@ -352,6 +352,7 @@ CREATE TABLE todo (                        -- 할 일 (SPEC-TOPIC-02 · 03) — 
   buy         INTEGER NOT NULL DEFAULT 0,  -- 살 것 — 장보기 주제에도 모인다
   source      TEXT NOT NULL,               -- manual · starter · repeat(반복 할 일을 완료해 생긴 다음 차례) · auto(앱이 생일로 만듦) (나중: paste)
   done_at     TEXT,                        -- 끝낸 때. 되돌리면 비운다. 반복 할 일은 완료할 때 다음 날짜로 새 줄을 쌓는다
+  done_by     TEXT,                        -- 누가 완료했나 — 가족 공유를 켠 폰의 「가족 안에서 부를 이름」(task my/009)
   repeat      TEXT,                        -- 반복 규칙(SPEC-TOPIC-06) — daily · weekly:2,5 · monthly:1 · every:3. 없으면 비움
   ref         TEXT,                        -- 앱이 만든 할 일의 규칙 열쇠(SPEC-TOPIC-11, auto-todos.ts) — day:100-photo 등. 직접 적은 할 일은 비움
   ordered_at  TEXT,                        -- 장보기(SPEC-SHOP-02) — 「주문했어요」를 누른 때. 있으면 배송 중
@@ -379,6 +380,7 @@ CREATE TABLE routine_log (                 -- 루틴을 한 번 할 때마다 �
   routine_id  TEXT NOT NULL,
   at          TEXT NOT NULL,               -- 한 때
   minutes     INTEGER,                     -- 시간 재기의 분. 체크는 비움
+  by          TEXT,                        -- 누가 했나 — 가족 공유 이름(task my/009)
   created_at  TEXT NOT NULL
 );
 CREATE INDEX ix_routine_log ON routine_log(routine_id, at);

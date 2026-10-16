@@ -330,3 +330,128 @@ def test_sync_rejects_unknown_event_kind(app) -> None:
         json={"since": 0, "events": [event("ev-x", "photo", "2026-10-12T10:00:00.000Z")]},
     )
     assert res.status_code == 422
+
+
+def item(item_kind: str, id_: str, updated: str, **data) -> dict:
+    return {
+        "kind": item_kind,
+        "id": id_,
+        "updatedAt": updated,
+        "deleted": False,
+        "data": {"id": id_, **data},
+    }
+
+
+def test_sync_items_todos_and_routines(app) -> None:
+    """할 일 · 루틴 · 루틴 기록(task my/009).
+
+    내용은 그대로 가고, 늦게 고친 쪽이 이기고, 지운 표시가 간다.
+    """
+    a, b = phone(app), phone(app)
+    code = a.post("/v1/family", json=CONSENT).json()["inviteCode"]
+    b.post("/v1/family/join", json={"code": code, **CONSENT})
+    a.post(
+        "/v1/family/sync",
+        json={
+            "since": 0,
+            "records": [record("r1", "몸무게 6.4kg", "2026-10-16T09:00:00.000Z")],
+            "items": [
+                item(
+                    "todo",
+                    "td-1",
+                    "2026-10-16T09:00:00.000Z",
+                    title="기저귀 4단계",
+                    topicKind="shopping",
+                    store="다이소",
+                ),
+                item(
+                    "routine",
+                    "rt-1",
+                    "2026-10-16T09:00:00.000Z",
+                    title="목욕",
+                    kind="check",
+                    everyDays=1,
+                ),
+                item(
+                    "routineLog",
+                    "rl-1",
+                    "2026-10-16T08:10:00.000Z",
+                    routineId="rt-1",
+                    at="2026-10-16T08:10:00.000Z",
+                    by="아빠",
+                ),
+            ],
+        },
+    )
+    got = b.post("/v1/family/sync", json={"since": 0}).json()
+    # 기록 · 빠른 기록과 갈라서 오고, 표시는 밖으로 새지 않는다
+    assert [r["id"] for r in got["records"]] == ["r1"]
+    assert got["events"] == []
+    assert {(i["kind"], i["id"]) for i in got["items"]} == {
+        ("todo", "td-1"),
+        ("routine", "rt-1"),
+        ("routineLog", "rl-1"),
+    }
+    todo = next(i for i in got["items"] if i["id"] == "td-1")
+    assert todo["data"]["store"] == "다이소"
+    assert todo["data"]["topicKind"] == "shopping"
+    assert all("_item" not in i["data"] for i in got["items"])
+
+    # b 가 완료(더 늦게 고침) → a 에게 간다. 더 먼저 고친 것은 지지 않는다
+    seq = got["seq"]
+    b.post(
+        "/v1/family/sync",
+        json={
+            "since": seq,
+            "items": [
+                item(
+                    "todo", "td-1", "2026-10-16T10:00:00.000Z", title="기저귀 4단계", doneBy="엄마"
+                )
+            ],
+        },
+    )
+    a.post(
+        "/v1/family/sync",
+        json={
+            "since": seq,
+            "items": [item("todo", "td-1", "2026-10-16T09:30:00.000Z", title="옛 값")],
+        },
+    )
+    mine = a.post("/v1/family/sync", json={"since": seq}).json()
+    assert [(i["id"], i["data"].get("doneBy")) for i in mine["items"]] == [("td-1", "엄마")]
+
+    # 지운 루틴 기록은 「지웠다」로 간다
+    a.post(
+        "/v1/family/sync",
+        json={
+            "since": mine["seq"],
+            "items": [
+                {
+                    "kind": "routineLog",
+                    "id": "rl-1",
+                    "updatedAt": "2026-10-16T11:00:00.000Z",
+                    "deleted": True,
+                }
+            ],
+        },
+    )
+    after = b.post("/v1/family/sync", json={"since": mine["seq"]}).json()
+    assert [(i["id"], i["deleted"]) for i in after["items"]] == [("rl-1", True)]
+
+
+def test_sync_rejects_unknown_item_kind_and_big_data(app) -> None:
+    a = phone(app)
+    a.post("/v1/family", json=CONSENT)
+    bad_kind = a.post(
+        "/v1/family/sync",
+        json={"since": 0, "items": [item("photo", "x-1", "2026-10-16T09:00:00.000Z")]},
+    )
+    assert bad_kind.status_code == 422
+    big = a.post(
+        "/v1/family/sync",
+        json={
+            "since": 0,
+            "items": [item("todo", "td-big", "2026-10-16T09:00:00.000Z", note="가" * 5000)],
+        },
+    )
+    assert big.status_code == 422

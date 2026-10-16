@@ -1,23 +1,26 @@
 /**
- * 가족과 함께 보기 (SPEC-MY-05, task my/007) — 마이의 한 줄에서 들어온다.
- * 가족이 없으면 설명 · 동의 · 「가족 만들기」 · 「초대 코드로 들어가기」, 있으면 초대 코드 · 함께 보는 폰 수 · 나가기.
+ * 가족과 함께 보기 (SPEC-MY-05, task my/007 · 009) — 마이의 한 줄에서 들어온다.
+ * 가족이 없으면 설명 · 동의 · 「가족 만들기」 · 「초대 코드로 들어가기」, 있으면 초대 코드 · 가족 안에서 부를 이름 · 함께 보는 폰 수 · 나가기.
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Button, Card, tap } from '@/components/ui';
+import { Button, Card, Chip, tap } from '@/components/ui';
 import { FontFamily, Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { ApiError } from '@/data/api';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
+import { loadMemberName, saveMemberName } from '@/data/family';
 import { useFamily } from '@/data/family-context';
 import { useTheme } from '@/hooks/use-theme';
 
-const CONSENT_TEXT = '아기 이름 · 생일 · 건강 기록을 육아버디 서버에 저장하고 가족과 공유하는 데 동의해요';
+const CONSENT_TEXT = '아기 이름 · 생일 · 건강 기록과 할 일 · 리스트 · 루틴을 육아버디 서버에 저장하고 가족과 공유하는 데 동의해요';
+/** 가족 안에서 부를 이름 — 누가 했는지 보일 때 쓴다(task my/009) */
+const MEMBER_NAMES = ['엄마', '아빠', '할머니', '할아버지'];
 
 function errorText(error: unknown): string {
   if (error instanceof ApiError) {
@@ -47,6 +50,14 @@ export default function FamilyScreen() {
   const [error, setError] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const name = baby?.name ?? DEFAULT_BABY_NAME;
+  const [me, setMe] = useState('');
+  useEffect(() => {
+    void loadMemberName().then((n) => setMe(n ?? ''));
+  }, []);
+  const pickMe = (value: string) => {
+    setMe(value);
+    void saveMemberName(value);
+  };
 
   const act = async (work: () => Promise<void>) => {
     setBusy(true);
@@ -87,12 +98,35 @@ export default function FamilyScreen() {
               <Button label="코드 보내기" icon="share-outline" onPress={() => void share(state.info.inviteCode)} />
             </Card>
 
+            {/* 누가 했는지 (task my/009) */}
+            <Card style={styles.card}>
+              <ThemedText type="heading" style={{ fontSize: 15 }}>
+                가족 안에서 부를 이름
+              </ThemedText>
+              <ThemedText type="small" style={{ color: c.textSecondary }}>
+                루틴을 하거나 할 일을 완료하면 가족 폰에 「08:10 {me.trim() || '아빠'} 했어요」처럼 보여요
+              </ThemedText>
+              <View style={styles.chips}>
+                {MEMBER_NAMES.map((n) => (
+                  <Chip key={n} label={n} selected={me.trim() === n} onPress={() => pickMe(n)} />
+                ))}
+              </View>
+              <TextInput
+                style={[styles.input, { color: c.text, backgroundColor: c.surface }]}
+                value={MEMBER_NAMES.includes(me.trim()) ? '' : me}
+                onChangeText={pickMe}
+                placeholder="직접 적기 (예: 이모)"
+                placeholderTextColor={c.textTertiary}
+                maxLength={10}
+              />
+            </Card>
+
             <Card style={styles.card}>
               <ThemedText type="heading" style={{ fontSize: 15 }}>
                 함께 보는 폰 {state.info.members}대
               </ThemedText>
               <ThemedText type="small" style={{ color: c.textSecondary }}>
-                {name}의 이름 · 생일과 기록이 서로 맞춰져요. 대화는 각자 폰에만 남아요.
+                {name}의 이름 · 생일, 기록, 할 일 · 리스트 · 루틴이 서로 맞춰져요.
               </ThemedText>
               <ThemedText type="caption" style={{ color: c.textSecondary }}>
                 {syncing ? '맞추는 중…' : state.syncedAt ? `마지막으로 맞춘 때 ${timeOf(state.syncedAt)}` : '아직 맞추지 못했어요'}
@@ -128,8 +162,8 @@ export default function FamilyScreen() {
                 같은 아기를 보는 가족이 한 앱을 함께 써요
               </ThemedText>
               <ThemedText type="small" style={{ color: c.textSecondary }}>
-                {name}의 이름 · 생일과 기록이 육아버디 서버에 저장되어 폰끼리 맞춰져요. 누가 적든 다음 답과 브리핑에 바로
-                들어가요. 대화는 각자 폰에만 남아요.
+                {name}의 이름 · 생일, 기록, 할 일 · 리스트 · 루틴이 육아버디 서버에 저장되어 폰끼리 맞춰져요. 누가 했는지도
+                보여서 「줬어?」 하고 묻지 않아도 돼요.
               </ThemedText>
               <Pressable
                 style={styles.consent}
@@ -211,6 +245,7 @@ const styles = StyleSheet.create({
   card: { gap: 10 },
   code: { fontFamily: FontFamily.bold, fontSize: 34, lineHeight: 44, letterSpacing: 6 },
   consent: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 4 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   row: { flexDirection: 'row', gap: 10, alignItems: 'center' },
   actions: { gap: 10 },
   center: { textAlign: 'center' },

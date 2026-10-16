@@ -29,6 +29,7 @@ function todo(title: string, o: Partial<Todo> = {}): Todo {
     orderedAt: null,
     arriveAt: null,
     store: null,
+    doneBy: null,
     createdAt: iso(10, 1),
     updatedAt: iso(10, 1),
     ...o,

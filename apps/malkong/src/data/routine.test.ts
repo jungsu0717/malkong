@@ -25,7 +25,14 @@ const routine = (o: Partial<Routine> = {}): Routine => ({
   ...o,
 });
 let n = 0;
-const log = (at: string, minutes: number | null = null, routineId = 'r1'): RoutineLog => ({ id: `l${(n += 1)}`, routineId, at, minutes, createdAt: at });
+const log = (at: string, minutes: number | null = null, routineId = 'r1'): RoutineLog => ({
+  id: `l${(n += 1)}`,
+  routineId,
+  at,
+  minutes,
+  by: null,
+  createdAt: at,
+});
 
 test('체크 루틴 — 오늘 했나, 몇 시에', () => {
   const r = routine();

@@ -256,6 +256,7 @@ export async function readTodoRows(): Promise<Todo[]> {
       orderedAt: r.orderedAt ?? null,
       arriveAt: r.arriveAt ?? null,
       store: r.store ?? null,
+      doneBy: r.doneBy ?? null,
     }))
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 }
@@ -282,7 +283,9 @@ export async function upsertRoutineRow(r: Routine): Promise<void> {
 }
 
 export async function readRoutineLogRows(): Promise<RoutineLog[]> {
-  return readList<RoutineLog>(ROUTINE_LOGS_KEY).sort((a, b) => a.at.localeCompare(b.at));
+  return readList<RoutineLog>(ROUTINE_LOGS_KEY)
+    .map((l) => ({ ...l, by: l.by ?? null }))
+    .sort((a, b) => a.at.localeCompare(b.at));
 }
 
 export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {

@@ -244,12 +244,21 @@ export type SyncBaby = { id: string; name: string | null; birthDate: string; cre
 export type SyncRecord = BabyRecord & { deleted: boolean };
 /** 빠른 기록 한 줄(SPEC-LOG-07) — 옛 서버는 events 를 모른다(없으면 빈 것으로) */
 export type SyncEvent = CareEvent & { deleted: boolean };
-export type SyncRequest = { since: number; baby?: SyncBaby; records: SyncRecord[]; events?: SyncEvent[] };
+/** 할 일 · 주제 · 루틴 · 루틴 기록(task my/009) — 옛 서버는 items 를 모른다(응답에 없으면 받아 주지 않은 것) */
+export type { SyncItem } from './family-items';
+export type SyncRequest = {
+  since: number;
+  baby?: SyncBaby;
+  records: SyncRecord[];
+  events?: SyncEvent[];
+  items?: import('./family-items').SyncItem[];
+};
 export type SyncResponse = {
   seq: number;
   baby: SyncBaby | null;
   records: SyncRecord[];
   events?: SyncEvent[];
+  items?: import('./family-items').SyncItem[];
   members: number;
 };
 

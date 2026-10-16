@@ -9,8 +9,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { deleteRoutineLogRow, insertRoutineLogRow, readRoutineLogRows, readRoutineRows, readSetting, upsertRoutineRow, writeSetting } from './db';
+import { memberName, noteDeleted } from './family';
 import { askNotifications, onAlertAction, scheduleRoutineReminders, snoozeTodo } from './notifications';
 import { logsOn, makeRoutine, makeRoutineLog, routineReminders, todayState, type Routine, type RoutineInput, type RoutineLog } from './routine';
+import { onRemoteChange, requestSync } from './sync-events';
 import { useTodos } from './todos-context';
 
 /** 알림 허락을 처음 알림 시각을 넣을 때 한 번만 묻는다 — 할 일과 같은 설정값 */
@@ -74,9 +76,23 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
     queue.current = queue.current.then(() => scheduleRoutineReminders(items)).catch(() => undefined);
   }, [routines, logs, loading]);
 
+  // 가족 폰에서 온 루틴 · 기록을 다시 읽는다(task my/009) — 배우자가 먼저 했으면 그날 알림도 지워진다
+  useEffect(
+    () =>
+      onRemoteChange((kinds) => {
+        if (!kinds.includes('routines')) return;
+        void Promise.all([readRoutineRows(), readRoutineLogRows()]).then(([rows, logRows]) => {
+          setAll(rows);
+          setLogs(logRows);
+        });
+      }),
+    [],
+  );
+
   const save = useCallback(async (next: Routine) => {
     await upsertRoutineRow(next);
     setAll((prev) => (prev.some((r) => r.id === next.id) ? prev.map((r) => (r.id === next.id ? next : r)) : [...prev, next]));
+    requestSync();
   }, []);
 
   const askOnce = useCallback(async () => {
@@ -114,14 +130,19 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
     [save],
   );
 
+  // 누가 했는지 — 가족 공유를 켠 폰에서만 이름이 있다(task my/009)
   const addLog = useCallback(async (log: RoutineLog) => {
-    await insertRoutineLogRow(log);
-    setLogs((prev) => [...prev, log]);
+    const withBy = { ...log, by: log.by ?? (await memberName()) };
+    await insertRoutineLogRow(withBy);
+    setLogs((prev) => [...prev, withBy]);
+    requestSync();
   }, []);
 
   const dropLog = useCallback(async (id: string) => {
     await deleteRoutineLogRow(id);
     setLogs((prev) => prev.filter((l) => l.id !== id));
+    await noteDeleted(id);
+    requestSync();
   }, []);
 
   const check = useCallback(

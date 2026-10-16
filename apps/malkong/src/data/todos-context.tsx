@@ -14,6 +14,8 @@ import { autoRulesToAdd, birthOf } from './auto-todos';
 import { useBaby } from './baby-context';
 import { checkupGroups } from './checkup-todos';
 import { insertRoutineLogRow, readSetting, upsertRoutineRow, writeSetting } from './db';
+import { memberName, noteDeleted } from './family';
+import { onRemoteChange, requestSync } from './sync-events';
 import { EVENING_HOUR, deliveryChecks, eveningPlan, morningPlan, reminderBody } from './alert-plan';
 import { runningOf } from './events';
 import { useEvents } from './events-context';
@@ -207,6 +209,19 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // 가족 폰에서 온 할 일 · 주제를 다시 읽는다(task my/009)
+  useEffect(
+    () =>
+      onRemoteChange((kinds) => {
+        if (!kinds.includes('todos')) return;
+        void Promise.all([loadTopics(), loadTodos()]).then(([t, d]) => {
+          setTopics(t);
+          setTodos(d);
+        });
+      }),
+    [],
+  );
+
   // 할 일 알림 — 시각이 있고, 안 끝냈고, 아직 오지 않은 것만(SPEC-TOPIC-09). 반복 할 일은 「7일 만이에요」,
   // 기록 탭에 잠이 재는 중이면 앞으로 3시간 안의 것은 소리 없이(task topic/006)
   const { events } = useEvents();
@@ -285,6 +300,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       const todo = makeTodo({ ...input, title, topicId, dueAt });
       await saveTodo(todo);
       setTodos((prev) => [...prev, todo]);
+      requestSync();
       if (todo.hasTime) await askOnce();
       return todo;
     },
@@ -299,6 +315,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       if (next.repeat && !next.dueAt) next.dueAt = repeatStart(next.repeat, null).toISOString();
       await saveTodo(next);
       setTodos((prev) => prev.map((t) => (t.id === id ? next : t)));
+      requestSync();
       if (next.hasTime && !before.hasTime) await askOnce();
     },
     [askOnce],
@@ -309,6 +326,9 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     const ref = currentTodos.current.find((t) => t.id === id)?.ref;
     await removeTodo(id);
     setTodos((prev) => prev.filter((t) => t.id !== id));
+    // 가족 폰에서도 지워지게 지운 표시를 남긴다(task my/009)
+    await noteDeleted(id);
+    requestSync();
     if (ref) {
       setAutoRemoved((prev) => {
         const next = [...prev.filter((r) => r !== ref), ref];
@@ -326,15 +346,17 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       if (before.doneAt) {
         const spawned = spawnedBy(before, currentTodos.current);
         if (spawned) await remove(spawned.id);
-        await update(id, { doneAt: null });
+        await update(id, { doneAt: null, doneBy: null });
         return;
       }
       const now = new Date();
-      await update(id, { doneAt: now.toISOString() });
+      // 누가 했는지 — 가족 공유를 켠 폰에서만 이름이 있다(task my/009)
+      await update(id, { doneAt: now.toISOString(), doneBy: await memberName() });
       const next = nextRepeatTodo(before, now);
       if (next) {
         await saveTodo(next);
         setTodos((prev) => [...prev, next]);
+        requestSync();
       }
     },
     [update, remove],
@@ -378,6 +400,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       });
       await saveTodo(todo);
       setTodos((prev) => [...prev, todo]);
+      requestSync();
     },
     [update],
   );
@@ -396,6 +419,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     const made = items.map((item) => makeTodo({ topicId: topic.id, title: item, source: 'starter' }));
     for (const t of made) await saveTodo(t);
     if (made.length > 0) setTodos((prev) => [...prev, ...made]);
+    requestSync();
     return topic;
   }, []);
 
@@ -403,10 +427,11 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     const at = new Date().toISOString();
     const undone = currentTodos.current
       .filter((t) => t.topicId === id && t.doneAt && !t.repeat)
-      .map((t) => ({ ...t, doneAt: null, updatedAt: at }));
+      .map((t) => ({ ...t, doneAt: null, doneBy: null, updatedAt: at }));
     for (const t of undone) await saveTodo(t);
     const ids = new Map(undone.map((t) => [t.id, t]));
     setTodos((prev) => prev.map((t) => ids.get(t.id) ?? t));
+    requestSync();
   }, []);
 
   const updateTopic = useCallback<TodosContextValue['updateTopic']>(async (id, patch) => {
@@ -415,6 +440,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     const next: Topic = { ...before, ...patch, updatedAt: new Date().toISOString() };
     await saveTopic(next);
     setTopics((prev) => prev.map((t) => (t.id === id ? next : t)));
+    requestSync();
   }, []);
 
   const value = useMemo(

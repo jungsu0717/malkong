@@ -342,7 +342,11 @@ function CheckRow({ routine, state, onPress, onEdit }: { routine: Routine; state
         ) : null}
       </View>
       <ThemedText type="small" style={{ color: done ? c.text : c.textSecondary, fontWeight: done ? 600 : 400 }}>
-        {done && state.firstAt ? `${hhmm(state.firstAt)} 했어요` : routine.time ? timeLabel(routine.time) : ''}
+        {done && state.firstAt
+          ? `${hhmm(state.firstAt)}${state.firstBy ? ` ${state.firstBy}` : ''} 했어요`
+          : routine.time
+            ? timeLabel(routine.time)
+            : ''}
       </ThemedText>
     </Pressable>
   );

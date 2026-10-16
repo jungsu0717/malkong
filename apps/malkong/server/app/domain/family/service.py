@@ -13,6 +13,7 @@ from app.domain.family.schema import (
     BabyIn,
     EventIn,
     FamilyInfo,
+    ItemIn,
     RecordIn,
     SyncRequest,
     SyncResponse,
@@ -28,6 +29,8 @@ MAX_MEMBERS = 6
 MAX_JOIN_ATTEMPTS_PER_DAY = 20
 # 빠른 기록(SPEC-LOG-07)을 기록 표에 함께 둘 때 JSON 에 다는 표시 — 돌려줄 때 기록과 가른다
 EVENT_MARK = "_event"
+# 할 일 · 루틴 줄(task my/009) — record_json 에 이 표시와 kind · data 를 담는다
+ITEM_MARK = "_item"
 
 
 def new_code() -> str:
@@ -124,25 +127,39 @@ class FamilyService:
                     family.id, req.baby.model_dump(by_alias=True), req.baby.updated_at
                 )
             # 빠른 기록도 같은 표 · 같은 번호로 맞춘다 — JSON 에 EVENT_MARK 를 달아 돌려줄 때 가른다
-            rows_in = [
-                RecordRow(r.id, r.model_dump(by_alias=True), r.updated_at, r.deleted, 0)
-                for r in req.records
-            ] + [
-                RecordRow(
-                    e.id,
-                    {**e.model_dump(by_alias=True), EVENT_MARK: True},
-                    e.updated_at,
-                    e.deleted,
-                    0,
-                )
-                for e in req.events
-            ]
+            rows_in = (
+                [
+                    RecordRow(r.id, r.model_dump(by_alias=True), r.updated_at, r.deleted, 0)
+                    for r in req.records
+                ]
+                + [
+                    RecordRow(
+                        e.id,
+                        {**e.model_dump(by_alias=True), EVENT_MARK: True},
+                        e.updated_at,
+                        e.deleted,
+                        0,
+                    )
+                    for e in req.events
+                ]
+                + [
+                    RecordRow(
+                        i.id,
+                        {ITEM_MARK: i.kind, "data": i.data},
+                        i.updated_at,
+                        i.deleted,
+                        0,
+                    )
+                    for i in req.items
+                ]
+            )
             if rows_in:
                 self._store.upsert_records(family.id, rows_in)
             rows = self._store.records_since(family.id, req.since)
             baby = self._store.baby(family.id)
-            records = [r for r in rows if not r.data.get(EVENT_MARK)]
+            records = [r for r in rows if not r.data.get(EVENT_MARK) and not r.data.get(ITEM_MARK)]
             events = [r for r in rows if r.data.get(EVENT_MARK)]
+            items = [r for r in rows if r.data.get(ITEM_MARK)]
             return SyncResponse(
                 seq=rows[-1].seq if rows else req.since,
                 baby=BabyIn.model_validate(baby[0]) if baby else None,
@@ -158,6 +175,16 @@ class FamilyService:
                         }
                     )
                     for r in events
+                ],
+                items=[
+                    ItemIn(
+                        kind=r.data[ITEM_MARK],
+                        id=r.id,
+                        updated_at=r.updated_at,
+                        deleted=r.deleted,
+                        data=r.data.get("data") or {},
+                    )
+                    for r in items
                 ],
                 members=self._store.member_count(family.id),
             )

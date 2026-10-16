@@ -3,9 +3,10 @@
 아기와 기록은 폰의 모양(backend 「기기 DB 스키마」의 baby · record)을 그대로 실어 나른다.
 """
 
-from typing import Literal
+import json
+from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app.common.core.schema import ApiModel, NonEmptyStr
 
@@ -67,6 +68,30 @@ class EventIn(ApiModel):
     deleted: bool = False
 
 
+# 한 줄의 내용(data)이 이보다 길면 받지 않는다 — 할 일 · 루틴 한 줄은 수백 자면 충분하다
+MAX_ITEM_DATA_CHARS = 4000
+
+
+class ItemIn(ApiModel):
+    """할 일 · 주제 · 루틴 · 루틴 기록 한 줄(task my/009).
+
+    폰의 줄을 data 에 그대로 싣는다. 서버는 내용을 읽지 않는다.
+    """
+
+    kind: Literal["topic", "todo", "routine", "routineLog"]
+    id: NonEmptyStr = Field(max_length=100)
+    updated_at: NonEmptyStr = Field(max_length=40)
+    deleted: bool = False
+    data: dict[str, Any] = {}
+
+    @field_validator("data")
+    @classmethod
+    def _small(cls, value: dict[str, Any]) -> dict[str, Any]:
+        if len(json.dumps(value, ensure_ascii=False)) > MAX_ITEM_DATA_CHARS:
+            raise ValueError("data is too large")
+        return value
+
+
 class SyncRequest(ApiModel):
     # 마지막으로 받은 번호 — 그 뒤에 바뀐 것만 받는다. 처음이면 0
     since: int = Field(default=0, ge=0)
@@ -74,6 +99,8 @@ class SyncRequest(ApiModel):
     records: list[RecordIn] = Field(default=[], max_length=500)
     # 빠른 기록 — 하루 수십 줄이라 기록보다 넉넉히(SPEC-LOG-07)
     events: list[EventIn] = Field(default=[], max_length=2000)
+    # 할 일 · 주제 · 루틴 · 루틴 기록(task my/009) — 옛 앱은 보내지 않는다
+    items: list[ItemIn] = Field(default=[], max_length=2000)
 
 
 class SyncResponse(ApiModel):
@@ -81,4 +108,6 @@ class SyncResponse(ApiModel):
     baby: BabyIn | None
     records: list[RecordIn]
     events: list[EventIn] = []
+    # 이 칸이 오면 서버가 items 를 받아 준 것이다 — 앱은 그때만 올린 때를 넘긴다
+    items: list[ItemIn] = []
     members: int
