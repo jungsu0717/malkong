@@ -49,6 +49,7 @@ const routine = (id: string, o: Partial<Routine> = {}): Routine => ({
   time: '19:00',
   goalMinutes: null,
   items: null,
+  weekdays: null,
   hidden: false,
   sort: 0,
   runningSince: null,
@@ -63,6 +64,7 @@ const log = (id: string, routineId: string, at: string, by: string | null = null
   minutes: null,
   by,
   step: null,
+  skip: false,
   createdAt: at,
 });
 
@@ -186,4 +188,20 @@ test('단계 · 확인할 물건과 단계 기록도 맞춘다', () => {
   assert.equal(plan.upsertRoutines[0].kind, 'stock');
   assert.deepEqual(plan.upsertRoutines[0].items, ['분유', '기저귀']);
   assert.equal(plan.insertLogs[0].step, 1);
+});
+
+test('요일 반복과 건너뛴 기록도 맞춘다', () => {
+  const plan = planIncoming({
+    items: [
+      { kind: 'routine', id: 'rt-3', updatedAt: T(9), deleted: false, data: { ...routine('rt-3', { weekdays: [0, 9, 3] }) } },
+      { kind: 'routineLog', id: 'rl-3', updatedAt: T(9), deleted: false, data: { ...log('rl-3', 'rt-3', T(9)), skip: true } },
+    ],
+    topics: [],
+    todos: [],
+    routines: [],
+    logs: [],
+    tombstones: [],
+  });
+  assert.deepEqual(plan.upsertRoutines[0].weekdays, [0, 3]);
+  assert.equal(plan.insertLogs[0].skip, true);
 });

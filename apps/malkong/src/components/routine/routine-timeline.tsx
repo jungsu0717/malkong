@@ -12,7 +12,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { tap } from '@/components/ui';
-import { clockLabel, countsDone, everyLabel, statusLine, timeLabel, type Routine, type TodayItem } from '@/data/routine';
+import { clockLabel, countsDone, scheduleLabel, statusLine, timeLabel, type Routine, type TodayItem } from '@/data/routine';
 import { useTheme } from '@/hooks/use-theme';
 
 export function RoutineTimeline({
@@ -80,15 +80,18 @@ function Row({
   const clock = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
   const doneText = s.firstAt ? (s.firstBy ? `${s.firstBy} · ${clockLabel(s.firstAt)} 완료` : `${clockLabel(s.firstAt)} 완료`) : '';
   // 시각은 왼쪽에 이미 있으니 상태 줄이 시각뿐이면 반복(「매일」 「2일마다」)을 보인다
-  const sub = r.time && line.text === timeLabel(r.time) ? everyLabel(r.everyDays) : line.text;
+  const sub = r.time && line.text === timeLabel(r.time) ? scheduleLabel(r) : line.text;
 
   const toggle = () => {
     tap(done ? 'light' : 'success');
     onCheck();
   };
 
+  // 건너뛴 것은 흐리게 — 눌러서 하면 다시 진하게
+  const skipped = s.skipped && !done;
+
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, skipped && { opacity: 0.5 }]}>
       <ThemedText
         type="caption"
         style={[styles.time, { color: next ? c.accentText : c.textSecondary, fontWeight: next ? 700 : 400 }]}>

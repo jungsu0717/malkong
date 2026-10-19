@@ -12,7 +12,7 @@ import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Button, tap } from '@/components/ui';
 import { Radius, Spacing } from '@/constants/theme';
-import { clockLabel, everyLabel, logsOn, timeLabel, type Routine, type RoutineLog } from '@/data/routine';
+import { clockLabel, logsOn, scheduleLabel, timeLabel, type Routine, type RoutineLog } from '@/data/routine';
 import { useTheme } from '@/hooks/use-theme';
 
 export function RoutineStepsSheet({
@@ -22,6 +22,7 @@ export function RoutineStepsSheet({
   onToggleStep,
   onCompleteAll,
   onEdit,
+  onSkip,
   onClose,
 }: {
   /** 열 루틴 — 없으면 닫힘 */
@@ -31,6 +32,8 @@ export function RoutineStepsSheet({
   onToggleStep: (step: number) => void;
   onCompleteAll: () => void;
   onEdit: () => void;
+  /** 「오늘은 건너뛰기」 */
+  onSkip: () => void;
   onClose: () => void;
 }) {
   const c = useTheme();
@@ -38,7 +41,7 @@ export function RoutineStepsSheet({
   const steps = routine?.items ?? [];
   const today = routine ? logsOn(routine.id, logs, now) : [];
   const doneAt = new Map(today.filter((l) => l.step != null).map((l) => [l.step as number, l.at]));
-  const allDone = today.some((l) => l.step == null);
+  const allDone = today.some((l) => l.step == null && !l.skip);
   const doneCount = steps.filter((_, i) => doneAt.has(i)).length;
   const nextStep = allDone ? -1 : steps.findIndex((_, i) => !doneAt.has(i));
 
@@ -56,7 +59,7 @@ export function RoutineStepsSheet({
               <View style={styles.flex}>
                 <ThemedText type="title">{routine.title}</ThemedText>
                 <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                  {[everyLabel(routine.everyDays), routine.time ? timeLabel(routine.time) : null].filter(Boolean).join(' · ')}
+                  {[scheduleLabel(routine), routine.time ? timeLabel(routine.time) : null].filter(Boolean).join(' · ')}
                 </ThemedText>
               </View>
               <ThemedText type="label" style={{ color: c.textSecondary }}>
@@ -113,7 +116,10 @@ export function RoutineStepsSheet({
                 onClose();
               }}
             />
-            <Button variant="ghost" size="sm" label="단계 편집" onPress={onEdit} />
+            <View style={styles.links}>
+              {!allDone && doneCount === 0 && <Button variant="ghost" size="sm" label="오늘은 건너뛰기" onPress={onSkip} />}
+              <Button variant="ghost" size="sm" label="단계 편집" onPress={onEdit} />
+            </View>
           </View>
         )}
       </View>
@@ -139,4 +145,5 @@ const styles = StyleSheet.create({
   listContent: { gap: Spacing.two },
   step: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, borderRadius: Radius.md, paddingHorizontal: 16 },
   dot: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  links: { flexDirection: 'row', justifyContent: 'center', gap: Spacing.three },
 });

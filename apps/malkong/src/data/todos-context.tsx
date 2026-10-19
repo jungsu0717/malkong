@@ -59,6 +59,8 @@ const ASKED_KEY = 'todo_reminder_asked';
 const DISMISSED_KEY = 'repeat_suggest_dismissed';
 /** 생활 루틴 주제의 반복 할 일을 루틴으로 옮겼는지(task today/001) */
 const ROUTINES_MOVED_KEY = 'routines_moved_from_topic';
+/** 2026-10-15 에 앱이 만든 신청 · 서류 할 일(ref `paper:`)을 한 번 지웠는지 — 신청 · 서류는 넣지 않는다(decisions/026 · 029 · 030) */
+const PAPER_REMOVED_KEY = 'paper_todos_removed';
 /** 장보기 주제의 숨김을 한 번 풀었는지(task topic/004) */
 const SHOP_READY_KEY = 'shop_tab_ready';
 /** 앱이 만든 할 일 중 사용자가 지운 것의 규칙 열쇠 — 다시 만들지 않는다. JSON 배열 */
@@ -164,7 +166,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
             const everyDays = rule.kind === 'daily' ? 1 : rule.kind === 'every' ? rule.days : rule.kind === 'weekly' ? 7 : 30;
             const due = t.hasTime && t.dueAt ? new Date(t.dueAt) : null;
             const time = due ? `${String(due.getHours()).padStart(2, '0')}:${String(due.getMinutes()).padStart(2, '0')}` : null;
-            const routine = makeRoutine({ title: t.title, kind: 'check', everyDays, time, goalMinutes: null, items: null }, i);
+            const routine = makeRoutine({ title: t.title, kind: 'check', everyDays, weekdays: null, time, goalMinutes: null, items: null }, i);
             await upsertRoutineRow(routine);
             const lastDone = all
               .filter((d) => d.doneAt && d.topicId === routineTopic.id && titleKey(d.title) === titleKey(t.title))
@@ -191,6 +193,16 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
             return moved;
           }),
         );
+      }
+      // 앱이 만든 신청 · 서류 할 일 중 안 끝낸 것은 한 번 지운다 — 사용자가 적은 것이 아니다. 끝낸 것은 기록으로 남긴다
+      if (!(await readSetting(PAPER_REMOVED_KEY))) {
+        const paper = storedTodos.filter((t) => t.ref?.startsWith('paper:') && !t.doneAt);
+        for (const t of paper) {
+          await removeTodo(t.id);
+          await noteDeleted(t.id);
+        }
+        storedTodos = storedTodos.filter((t) => !paper.includes(t));
+        await writeSetting(PAPER_REMOVED_KEY, 'yes');
       }
       const storedDismissed = await readSetting(DISMISSED_KEY);
       const storedRemoved = await readSetting(AUTO_REMOVED_KEY);

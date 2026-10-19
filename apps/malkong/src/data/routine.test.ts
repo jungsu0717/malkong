@@ -15,6 +15,7 @@ import {
   routineReminders,
   slotOf,
   statusLine,
+  scheduleLabel,
   stockToBuy,
   templateDetail,
   timeLabel,
@@ -34,6 +35,7 @@ const routine = (o: Partial<Routine> = {}): Routine => ({
   time: '19:00',
   goalMinutes: null,
   items: null,
+  weekdays: null,
   hidden: false,
   sort: 0,
   runningSince: null,
@@ -49,6 +51,7 @@ const log = (at: string, minutes: number | null = null, routineId = 'r1', by: st
   minutes,
   by,
   step: null,
+  skip: false,
   createdAt: at,
 });
 
@@ -206,4 +209,37 @@ test('추천 줄의 설명', () => {
   assert.equal(templateDetail({ title: '터미타임', kind: 'minutes', everyDays: 1, time: null }), '매일 · 타이머');
   assert.equal(templateDetail({ title: '재고 확인', kind: 'stock', everyDays: 7, time: null, items: ['분유', '기저귀', '물티슈', '로션'] }), '매주 · 분유 · 기저귀 · 물티슈');
   assert.equal(templateDetail({ title: '책', kind: 'check', everyDays: 1, time: '20:00' }), '매일 · 오후 8:00');
+});
+
+test('요일 반복 — 그 요일만 할 날, 다음 할 날, 이름', () => {
+  const stock = routine({ title: '재고 확인', kind: 'stock', time: null, everyDays: 7, weekdays: [0] });
+  // NOW 는 10월 16일 금요일
+  assert.equal(isDueOn(stock, [], NOW), false);
+  assert.equal(isDueOn(stock, [], new Date(2026, 9, 18)), true);
+  assert.equal(todayState(stock, [], NOW).nextInDays, 2);
+  assert.equal(nextDayLabel(todayState(stock, [], NOW).nextInDays, NOW), '일요일');
+  assert.equal(scheduleLabel(stock), '매주 일요일');
+  assert.equal(scheduleLabel({ everyDays: 7, weekdays: [5, 1, 3] }), '매주 월 · 수 · 금');
+  assert.equal(scheduleLabel({ everyDays: 2, weekdays: null }), '2일마다');
+  // 알림도 그 요일에만
+  const r = routine({ time: '20:00', weekdays: [6] });
+  assert.deepEqual(
+    routineReminders([r], [], NOW, 3).map((x) => x.at.getDate()),
+    [17],
+  );
+});
+
+test('오늘은 건너뛰기 — 진행 · 알림에서 빠지고, 지난번으로 세지 않는다', () => {
+  const bath = routine({ id: 'b', title: '목욕', everyDays: 2, time: '20:00' });
+  const skip: RoutineLog = { ...log(iso(10, 16, 9), null, 'b'), skip: true };
+  const s = todayState(bath, [skip], NOW);
+  assert.equal(s.skipped, true);
+  assert.equal(s.done, false);
+  assert.equal(statusLine(bath, s).text, '오늘은 건너뜀');
+  const plan = todayPlan([bath], [skip], NOW);
+  assert.equal(plan.total, 0);
+  assert.equal(plan.next, null);
+  assert.equal(routineReminders([bath], [skip], NOW, 1).length, 0);
+  // 건너뛴 다음 날은 다시 할 날(건너뛴 것은 한 것이 아니다)
+  assert.equal(isDueOn(bath, [skip], new Date(2026, 9, 17)), true);
 });

@@ -34,6 +34,8 @@ type RoutinesValue = {
   toggleStep: (id: string, step: number) => Promise<void>;
   /** 루틴 전체를 끝냄(단계 시트 「모두 완료」) — 이미 끝났으면 그대로 */
   completeAll: (id: string) => Promise<void>;
+  /** 「오늘은 건너뛰기」 ↔ 취소 — 그날 알림과 진행에서 빠진다(task common/022) */
+  skipToday: (id: string) => Promise<void>;
   /** 재고 확인 — 부족한 것을 장보기에 넣고 루틴을 끝낸다. 새로 넣은 수를 돌려준다(SPEC-MAIN-06) */
   completeStock: (id: string, short: string[]) => Promise<number>;
   /** 타이머 루틴: 분을 더한다 */
@@ -155,11 +157,23 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
   const check = useCallback(
     async (id: string) => {
       const all = logsOn(id, current.current.logs, new Date());
-      if (all.some((l) => l.step == null)) {
-        for (const l of all) await dropLog(l.id);
+      if (all.some((l) => l.step == null && !l.skip)) {
+        for (const l of all.filter((x) => !x.skip)) await dropLog(l.id);
         return;
       }
       await addLog(makeRoutineLog(id, new Date()));
+    },
+    [addLog, dropLog],
+  );
+
+  const skipToday = useCallback(
+    async (id: string) => {
+      const skips = logsOn(id, current.current.logs, new Date()).filter((l) => l.skip);
+      if (skips.length > 0) {
+        for (const l of skips) await dropLog(l.id);
+        return;
+      }
+      await addLog(makeRoutineLog(id, new Date(), null, null, null, true));
     },
     [addLog, dropLog],
   );
@@ -170,7 +184,7 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
       if (!routine?.items) return;
       const all = logsOn(id, current.current.logs, new Date());
       const mine = all.filter((l) => l.step === step);
-      const whole = all.filter((l) => l.step == null);
+      const whole = all.filter((l) => l.step == null && !l.skip);
       // 끝낸 단계를 누르거나, 「모두 완료」한 뒤 아무 단계나 누르면 되돌림 — 루틴 전체 줄도 지운다
       if (mine.length > 0 || whole.length > 0) {
         for (const l of [...mine, ...whole]) await dropLog(l.id);
@@ -178,7 +192,7 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
       }
       await addLog(makeRoutineLog(id, new Date(), null, null, step));
       const doneSteps = new Set([...all.filter((l) => l.step != null).map((l) => l.step), step]);
-      if (doneSteps.size >= routine.items.length && !all.some((l) => l.step == null)) await addLog(makeRoutineLog(id, new Date()));
+      if (doneSteps.size >= routine.items.length && whole.length === 0) await addLog(makeRoutineLog(id, new Date()));
     },
     [addLog, dropLog],
   );
@@ -186,7 +200,7 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
   const completeAll = useCallback(
     async (id: string) => {
       const all = logsOn(id, current.current.logs, new Date());
-      if (!all.some((l) => l.step == null)) await addLog(makeRoutineLog(id, new Date()));
+      if (!all.some((l) => l.step == null && !l.skip)) await addLog(makeRoutineLog(id, new Date()));
     },
     [addLog],
   );
@@ -219,7 +233,9 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
 
   const undoLast = useCallback(
     async (id: string) => {
-      const last = logsOn(id, current.current.logs, new Date()).pop();
+      const last = logsOn(id, current.current.logs, new Date())
+        .filter((l) => l.minutes != null)
+        .pop();
       if (last) await dropLog(last.id);
     },
     [dropLog],
@@ -272,13 +288,14 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
       check,
       toggleStep,
       completeAll,
+      skipToday,
       completeStock,
       addMinutes,
       undoLast,
       startTimer,
       stopTimer,
     }),
-    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, check, toggleStep, completeAll, completeStock, addMinutes, undoLast, startTimer, stopTimer],
+    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, check, toggleStep, completeAll, skipToday, completeStock, addMinutes, undoLast, startTimer, stopTimer],
   );
 
   return <RoutinesContext.Provider value={value}>{children}</RoutinesContext.Provider>;

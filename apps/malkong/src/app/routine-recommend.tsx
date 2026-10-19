@@ -34,7 +34,15 @@ export default function RoutineRecommendScreen() {
   const have = new Set(routines.map((r) => key(r.title)));
   const add = (t: RoutineTemplate) => {
     tap('success');
-    void addRoutine({ title: t.title, kind: t.kind, everyDays: t.everyDays, time: t.time, goalMinutes: null, items: t.items ?? null });
+    void addRoutine({
+      title: t.title,
+      kind: t.kind,
+      everyDays: t.everyDays,
+      weekdays: t.weekdays ?? null,
+      time: t.time,
+      goalMinutes: null,
+      items: t.items ?? null,
+    });
   };
   const nextDate = rec.next ? monthStart(baby.birthDate, rec.next.fromMonth) : null;
 

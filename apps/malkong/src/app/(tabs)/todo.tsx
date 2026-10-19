@@ -2,29 +2,24 @@
  * 할 일 탭 (SPEC-TOPIC-01 · 02 · 03 · 06 · 07 · 11, task topic/001~004, decisions/024~026).
  *
  * 보통 할 일 앱처럼 오늘 · 예정 · 날짜 없음으로 본다. 오늘에는 내가 적은 할 일과 앱이 채워 준 할 일(기념일, 사이즈 바꾸기),
- * 지금 기간인 접종 · 검진이 함께 보이고, 예정에는 곧 시작하는 접종 · 검진도 D-day 로 섞인다. 그 아래 준비 목록(직접 만든 목록)과
- * 주제 그리드(task today/003, decisions/029). 살 것은 장보기 탭에 있다.
+ * 지금 기간인 접종 · 검진이 함께 보이고, 예정에는 곧 시작하는 접종 · 검진도 D-day 로 섞인다. 그 아래 「준비 목록 · 주제별 보기 · 추천 할 일」
+ * 세 줄 — 긴 목록은 상세 화면에서 본다(task today/003 · common/022, decisions/029 · 030). 살 것은 장보기 탭에 있다.
  * 바닥 칸에 적으면 「내 할 일」에 들어가고, 날짜를 안 적으면 오늘 할 일이 된다 — 이 화면은 「오늘」을 보는 곳이라서.
  */
 
-import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { PrepLists } from '@/components/todo/prep-lists';
 import { RepeatSuggest } from '@/components/todo/repeat-suggest';
 import { TodoInput } from '@/components/todo/todo-input';
 import { TodoItem } from '@/components/todo/todo-item';
 import { TodoSheet } from '@/components/todo/todo-sheet';
-import { TopicGrid } from '@/components/todo/topic-grid';
-import { iconOf } from '@/components/todo/topic-icons';
-import { TopicSheet } from '@/components/todo/topic-sheet';
 import { TodoRow } from '@/components/todo-row';
 import { Card, Folded, ListRow, SectionHeader } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -32,7 +27,7 @@ import { useBaby } from '@/data/baby-context';
 import { monthStart, todoOf } from '@/data/briefing';
 import { checkupGroups } from '@/data/checkup-todos';
 import { useRecords } from '@/data/records-context';
-import { isLegacyKind, laterTodos, nowCount, repeatSuggestion, sortOpen, todayTodos, visibleTopics, type Todo } from '@/data/todos';
+import { laterTodos, repeatSuggestion, sortOpen, todayTodos, visibleTopics, type Todo } from '@/data/todos';
 import { useTodos } from '@/data/todos-context';
 import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
 import { useMarkDone } from '@/hooks/use-mark-done';
@@ -42,12 +37,10 @@ export default function TodoScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { topics, todos, loading, add, update, toggleDone, remove, updateTopic, addTopic, dismissed } = useTodos();
+  const { topics, todos, loading, add, update, toggleDone, remove, dismissed } = useTodos();
   const markDone = useMarkDone();
   const typing = useKeyboardVisible();
   const [editing, setEditing] = useState<Todo | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
-  const [newList, setNewList] = useState(false);
 
   const month = age?.month ?? 0;
   // 장보기는 장보기 탭, 직접 만든 목록은 아래 「준비 목록」에 있어 날짜 목록과 주제 그리드에서 뺀다(task today/003)
@@ -65,8 +58,6 @@ export default function TodoScreen() {
 
   if (!baby || !age || loading) return <ScreenLoading />;
   const general = shown.find((t) => t.kind === 'general');
-  // 사용자가 숨긴 주제만 — 예전 기본 주제(decisions/025)는 다시 보이지 않는다
-  const hidden = topics.filter((t) => t.hidden && !isLegacyKind(t.kind));
   const { open, doneToday } = todayTodos(visibleTodos);
   const later = laterTodos(visibleTodos);
   const undated = sortOpen(visibleTodos.filter((t) => !t.doneAt && !t.dueAt && t.topicId === general?.id));
@@ -74,15 +65,8 @@ export default function TodoScreen() {
   const nameOf = (topicId: string) => (topicId === general?.id ? null : (topics.find((t) => t.id === topicId)?.title ?? null));
   const empty = open.length === 0 && dueGroups.length === 0 && doneToday.length === 0;
   const suggestion = repeatSuggestion(visibleTodos, dismissed);
-  const openTopic = (id: string) => router.push({ pathname: '/topic/[id]', params: { id } });
-  // 준비 목록 — 직접 만든 목록마다 남은 수 · 완료 수
-  const lists = topics
-    .filter((t) => t.kind === 'custom' && !t.hidden)
-    .sort((a, b) => a.sort - b.sort)
-    .map((t) => {
-      const items = todos.filter((d) => d.topicId === t.id);
-      return { id: t.id, title: t.title, icon: iconOf(t), left: items.filter((d) => !d.doneAt).length, done: items.filter((d) => d.doneAt).length };
-    });
+  // 준비 목록 이름 — 더 보기 줄에 한 줄로
+  const lists = topics.filter((t) => t.kind === 'custom' && !t.hidden).sort((a, b) => a.sort - b.sort);
   // 예정 — 기한이 내일부터인 할 일과 곧 시작하는 접종 · 검진을 날짜 순으로
   const upcoming = [
     ...later.map((t) => ({ at: t.dueAt ?? '', kind: 'todo' as const, todo: t })),
@@ -172,63 +156,29 @@ export default function TodoScreen() {
             {/* 반복 추천 (SPEC-TOPIC-06) */}
             {suggestion && <RepeatSuggest suggestion={suggestion} />}
 
-            {/* 준비 목록 (SPEC-TOPIC-02 · 12) — 외출 가방 · 여행 짐처럼 다시 쓰는 목록 */}
-            <View style={styles.section}>
-              <SectionHeader title="준비 목록" />
-              <PrepLists lists={lists} onOpen={openTopic} onAdd={() => setNewList(true)} />
-            </View>
-
-            {/* 추천 할 일 (SPEC-TOPIC-13) */}
+            {/* 더 보기 — 긴 목록은 상세 화면으로(요약 + 상세, task common/022) */}
             <Card style={styles.rows}>
               <ListRow
+                icon="briefcase-outline"
+                title="준비 목록"
+                detail={lists.length > 0 ? lists.map((l) => l.title).join(' · ') : '외출 가방 · 여행 짐처럼 다시 쓰는 목록'}
+                onPress={() => router.push('/lists')}
+              />
+              <ListRow
+                divider
+                icon="grid-outline"
+                title="주제별 보기"
+                detail="접종 · 검진 일정, 기념일, 사이즈, 완료한 할 일"
+                onPress={() => router.push('/topics')}
+              />
+              <ListRow
+                divider
                 icon="star-outline"
                 title="추천 할 일"
                 detail="지금 시기에 맞는 할 일"
                 onPress={() => router.push('/todo-recommend')}
               />
             </Card>
-
-            {/* 주제 그리드 (SPEC-TOPIC-01) — 숫자는 지금 할 것(기한이 오늘까지거나 없는 것, 지금 기간인 접종 · 검진) */}
-            <View style={styles.section}>
-              <SectionHeader title="주제" />
-              <TopicGrid
-                topics={shown.map((t) => ({
-                  id: t.id,
-                  title: t.title,
-                  icon: iconOf(t),
-                  count: nowCount(t, todos) + (t.kind === 'checkup' ? dueGroups.length : 0),
-                }))}
-                onOpen={openTopic}
-              />
-              {hidden.length > 0 && (
-                <Pressable accessibilityRole="button" onPress={() => setShowHidden((v) => !v)} style={styles.hiddenToggle}>
-                  <ThemedText type="label" style={{ color: c.textSecondary }}>
-                    숨긴 주제 {hidden.length}개
-                  </ThemedText>
-                  <Ionicons name={showHidden ? 'chevron-up' : 'chevron-down'} size={14} color={c.textSecondary} />
-                </Pressable>
-              )}
-              {showHidden && hidden.length > 0 && (
-                <Card style={styles.rows}>
-                  {hidden.map((t, i) => (
-                    <ListRow
-                      key={t.id}
-                      divider={i > 0}
-                      icon={iconOf(t)}
-                      title={t.title}
-                      detail="숨김"
-                      right={
-                        <Pressable accessibilityRole="button" onPress={() => void updateTopic(t.id, { hidden: false })} hitSlop={8}>
-                          <ThemedText type="label" style={{ color: c.accentText, fontWeight: 600 }}>
-                            숨김 해제
-                          </ThemedText>
-                        </Pressable>
-                      }
-                    />
-                  ))}
-                </Card>
-              )}
-            </View>
 
             {/* 배너는 목록 끝에 — 적는 칸과 떨어뜨린다(SPEC-TOPIC-03 금지) */}
             {!typing && <AdBanner />}
@@ -247,17 +197,6 @@ export default function TodoScreen() {
       </SafeAreaView>
 
       {markDone.sheet}
-      <TopicSheet
-        key={newList ? 'topic-new' : 'topic-closed'}
-        open={newList}
-        topic={null}
-        existingTitles={topics.map((t) => t.title)}
-        onClose={() => setNewList(false)}
-        onSave={(title, icon, items) => {
-          setNewList(false);
-          void addTopic(title, icon, items).then((t) => openTopic(t.id));
-        }}
-      />
       <TodoSheet
         key={editing?.id ?? 'none'}
         todo={editing}
@@ -291,5 +230,4 @@ const styles = StyleSheet.create({
   section: { gap: 10 },
   rows: { paddingVertical: 2 },
   empty: { paddingVertical: Spacing.three },
-  hiddenToggle: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'center', paddingVertical: 6 },
 });

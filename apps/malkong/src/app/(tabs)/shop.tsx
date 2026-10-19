@@ -47,6 +47,7 @@ function splitPlace(text: string): { place: string; title: string } | null {
  */
 function stockDetail(r: Routine, logs: RoutineLog[], stockTodos: Todo[], now: Date): string {
   const s = todayState(r, logs, now);
+  if (s.skipped && !s.firstAt) return '오늘은 건너뛰었어요';
   if (s.due && !s.firstAt) return '오늘 확인해 보세요';
   const last = logs
     .filter((l) => l.routineId === r.id && l.step == null)
@@ -67,7 +68,7 @@ function shippingDetail(t: Todo): string {
 export default function ShopScreen() {
   const c = useTheme();
   const { topics, todos, loading, add, update, toggleDone, remove } = useTodos();
-  const { routines, logs, updateRoutine, completeStock } = useRoutines();
+  const { routines, logs, updateRoutine, completeStock, skipToday } = useRoutines();
   const [stockOpen, setStockOpen] = useState(false);
   const typing = useKeyboardVisible();
   const [ordering, setOrdering] = useState<Todo | null>(null);
@@ -256,6 +257,10 @@ export default function ShopScreen() {
           if (stock) void completeStock(stock.id, short);
         }}
         onAddItem={(name) => stock && void updateRoutine(stock.id, { items: [...(stock.items ?? []), name] })}
+        onSkip={() => {
+          setStockOpen(false);
+          if (stock) void skipToday(stock.id);
+        }}
         onClose={() => setStockOpen(false)}
       />
       <OrderSheet

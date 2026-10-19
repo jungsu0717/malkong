@@ -373,6 +373,7 @@ CREATE TABLE routine (                     -- 루틴(SPEC-MAIN-02 · 03 · 05 ·
   sort           INTEGER NOT NULL DEFAULT 0,
   running_since  TEXT,                     -- 타이머를 켠 때
   items          TEXT,                     -- JSON 글 배열 — check 는 단계(없으면 비움), stock 은 확인할 물건(task today/003)
+  weekdays       TEXT,                     -- JSON 숫자 배열(0 일요일 ~ 6 토요일) — 요일 반복. 있으면 every_days 대신 쓴다(task common/022)
   created_at     TEXT NOT NULL,
   updated_at     TEXT NOT NULL
 );
@@ -383,6 +384,7 @@ CREATE TABLE routine_log (                 -- 루틴을 한 번 할 때마다 �
   minutes     INTEGER,                     -- 타이머 루틴의 분. 체크는 비움
   by          TEXT,                        -- 누가 했나 — 가족 공유 이름(task my/009)
   step        INTEGER,                     -- 단계 번호(0부터). 루틴 전체를 끝낸 줄은 비움 — 오늘 했는지 · 지난번은 비운 줄로만 센다(task today/003)
+  skip        INTEGER NOT NULL DEFAULT 0,  -- 1 이면 「오늘은 건너뛰기」 줄 — 한 것으로 세지 않는다(task common/022)
   created_at  TEXT NOT NULL
 );
 CREATE INDEX ix_routine_log ON routine_log(routine_id, at);

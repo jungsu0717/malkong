@@ -12,13 +12,14 @@ import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Button, tap } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
-import { everyLabel, type Routine } from '@/data/routine';
+import { scheduleLabel, type Routine } from '@/data/routine';
 import { useTheme } from '@/hooks/use-theme';
 
 export function StockSheet({
   routine,
   onDone,
   onAddItem,
+  onSkip,
   onClose,
 }: {
   /** 열 루틴 — 없으면 닫힘 */
@@ -26,6 +27,8 @@ export function StockSheet({
   /** 부족한 물건으로 끝낸다 */
   onDone: (short: string[]) => void;
   onAddItem: (name: string) => void;
+  /** 「오늘은 건너뛰기」 — 다음 차례에 다시 확인한다 */
+  onSkip: () => void;
   onClose: () => void;
 }) {
   const c = useTheme();
@@ -64,7 +67,7 @@ export function StockSheet({
               <View style={styles.flex}>
                 <ThemedText type="title">{routine.title}</ThemedText>
                 <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                  {everyLabel(routine.everyDays)} · 부족한 것은 장보기에 추가돼요
+                  {scheduleLabel(routine)} · 부족한 것은 장보기에 추가돼요
                 </ThemedText>
               </View>
             </View>
@@ -131,6 +134,7 @@ export function StockSheet({
                 onDone(chosen);
               }}
             />
+            <Button variant="ghost" size="sm" label="오늘은 건너뛰기" onPress={onSkip} />
           </View>
         )}
       </KeyboardAvoidingView>

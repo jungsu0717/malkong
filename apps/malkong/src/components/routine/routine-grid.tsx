@@ -16,7 +16,7 @@ import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import { tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius } from '@/constants/theme';
-import { everyLabel, statusLine, timeLabel, type Routine, type RoutineTemplate, type TodayState } from '@/data/routine';
+import { statusLine, templateDetail, type Routine, type RoutineTemplate, type TodayState } from '@/data/routine';
 import { useTheme } from '@/hooks/use-theme';
 
 const COLUMNS = 3;
@@ -126,7 +126,8 @@ function RoutineTile({
       delayLongPress={350}
       style={({ pressed }) => [
         styles.tile,
-        { width, backgroundColor: pressed ? c.surfaceStrong : c.surface, opacity: state.due || running ? 1 : 0.5 },
+        // 오늘 할 날이 아니거나 건너뛴 것은 흐리게
+        { width, backgroundColor: pressed ? c.surfaceStrong : c.surface, opacity: running || (state.due && !(state.skipped && !line.done)) ? 1 : 0.5 },
       ]}>
       <View>
         <View style={[styles.iconCircle, { backgroundColor: filled ? c.ink : c.background }]}>
@@ -165,7 +166,7 @@ function RoutineTile({
       </ThemedText>
       <ThemedText
         type="caption"
-        numberOfLines={1}
+        numberOfLines={2}
         style={{ color: running || line.done ? c.text : c.textSecondary, fontWeight: running || line.done ? 600 : 400 }}>
         {running ? clock : line.text}
       </ThemedText>
@@ -181,7 +182,7 @@ function RoutineTile({
 /** 루틴이 하나도 없을 때의 추천 버튼 — 누르면 바로 추가된다 */
 function TemplateTile({ template, width, onPress }: { template: RoutineTemplate; width: number; onPress: () => void }) {
   const c = useTheme();
-  const sub = template.kind === 'minutes' ? '타이머' : template.time ? timeLabel(template.time) : everyLabel(template.everyDays);
+  const sub = templateDetail(template);
   return (
     <Pressable
       accessibilityRole="button"

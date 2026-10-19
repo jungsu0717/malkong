@@ -179,6 +179,9 @@ export function planIncoming(args: {
       title: str(d.title) ?? '',
       kind: kind === 'minutes' || kind === 'stock' ? kind : 'check',
       everyDays: Math.max(1, num(d.everyDays, 1)),
+      weekdays: Array.isArray(d.weekdays)
+        ? d.weekdays.filter((x): x is number => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 6)
+        : null,
       time: str(d.time),
       goalMinutes: typeof d.goalMinutes === 'number' ? d.goalMinutes : null,
       // 단계 · 확인할 물건(task today/003) — 글자만, 스무 개까지
@@ -215,6 +218,7 @@ export function planIncoming(args: {
       minutes: typeof d.minutes === 'number' ? d.minutes : null,
       by: str(d.by),
       step: typeof d.step === 'number' && Number.isInteger(d.step) && d.step >= 0 ? d.step : null,
+      skip: bool(d.skip),
       createdAt: str(d.createdAt) ?? item.updatedAt,
     });
     logIds.add(item.id);

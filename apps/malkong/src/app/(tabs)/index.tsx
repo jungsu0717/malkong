@@ -27,7 +27,7 @@ import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { readSetting, writeSetting } from '@/data/db';
 import { homeTemplates } from '@/data/recommend';
-import { dateLabel, everyLabel, hasSteps, nextDayLabel, timeLabel, todayPlan, type Routine, type RoutineTemplate } from '@/data/routine';
+import { dateLabel, hasSteps, nextDayLabel, scheduleLabel, timeLabel, todayPlan, todayState, type Routine, type RoutineTemplate } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
@@ -49,6 +49,7 @@ export default function RoutineScreen() {
     check,
     toggleStep,
     completeAll,
+    skipToday,
     completeStock,
     addMinutes,
     startTimer,
@@ -82,7 +83,15 @@ export default function RoutineScreen() {
   const plan = todayPlan(routines, logs, now);
   const templates = homeTemplates(age.month);
   const quickAdd = (t: RoutineTemplate) =>
-    void addRoutine({ title: t.title, kind: t.kind, everyDays: t.everyDays, time: t.time, goalMinutes: null, items: t.items ?? null });
+    void addRoutine({
+      title: t.title,
+      kind: t.kind,
+      everyDays: t.everyDays,
+      weekdays: t.weekdays ?? null,
+      time: t.time,
+      goalMinutes: null,
+      items: t.items ?? null,
+    });
   const onTimer = (r: Routine) => void (r.runningSince ? stopTimer(r.id) : startTimer(r.id));
   // 단계가 있으면 단계 시트, 재고 확인은 재고 확인 시트, 그 밖의 체크는 바로 완료 ↔ 되돌림
   const onCheck = (id: string) => {
@@ -231,7 +240,7 @@ export default function RoutineScreen() {
                   <ThemedText type="small" style={{ color: c.textSecondary }}>
                     다른 날
                   </ThemedText>
-                  {` · ${first.r.title} ${nextDayLabel(first.s.nextInDays, now)}`}
+                  {` · ${nextDayLabel(first.s.nextInDays, now)} ${first.r.title}`}
                   {plan.later.length > 1 ? ` 외 ${plan.later.length - 1}개` : ''}
                 </ThemedText>
                 <Ionicons name={showLater ? 'chevron-up' : 'chevron-down'} size={16} color={c.textTertiary} />
@@ -248,7 +257,7 @@ export default function RoutineScreen() {
                       {r.title}
                     </ThemedText>
                     <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                      {everyLabel(r.everyDays)} · {nextDayLabel(s.nextInDays, now)}
+                      {scheduleLabel(r)} · {nextDayLabel(s.nextInDays, now)}
                     </ThemedText>
                   </Pressable>
                 ))}
@@ -272,6 +281,12 @@ export default function RoutineScreen() {
         }}
         templates={templates}
         onQuickAdd={quickAdd}
+        onSkip={() => {
+          const target = sheet?.routine;
+          setSheet(null);
+          if (target) void skipToday(target.id);
+        }}
+        skippedToday={sheet?.routine ? todayState(sheet.routine, logs, now).skipped : false}
         onMore={() => {
           setSheet(null);
           router.push('/routine-recommend');
@@ -292,6 +307,10 @@ export default function RoutineScreen() {
           setStepsId(null);
           setSheet({ routine: stepsRoutine });
         }}
+        onSkip={() => {
+          if (stepsRoutine) void skipToday(stepsRoutine.id);
+          setStepsId(null);
+        }}
         onClose={() => setStepsId(null)}
       />
       <StockSheet
@@ -303,6 +322,10 @@ export default function RoutineScreen() {
           if (id) void completeStock(id, short);
         }}
         onAddItem={(name) => stockRoutine && void updateRoutine(stockRoutine.id, { items: [...(stockRoutine.items ?? []), name] })}
+        onSkip={() => {
+          if (stockRoutine) void skipToday(stockRoutine.id);
+          setStockId(null);
+        }}
         onClose={() => setStockId(null)}
       />
     </ThemedView>

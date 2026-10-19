@@ -29,8 +29,8 @@ const EVERY: { days: number; label: string }[] = [
   { days: 1, label: '매일' },
   { days: 2, label: '2일마다' },
   { days: 3, label: '3일마다' },
-  { days: 7, label: '매주' },
 ];
+const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const TEMPLATE_COLUMNS = 4;
 /** 단계는 여덟 개, 확인할 물건은 스무 개까지 */
 const MAX_ITEMS: Record<RoutineKind, number> = { check: 8, stock: 20, minutes: 0 };
@@ -51,6 +51,8 @@ export function RoutineSheet({
   templates,
   onQuickAdd,
   onMore,
+  onSkip,
+  skippedToday = false,
   onDelete,
 }: {
   open: boolean;
@@ -65,6 +67,9 @@ export function RoutineSheet({
   onQuickAdd: (t: RoutineTemplate) => void;
   /** 「시기별 추천 전체 보기」 */
   onMore: () => void;
+  /** 편집할 때 — 「오늘은 건너뛰기」 ↔ 「건너뛰기 취소」 */
+  onSkip?: () => void;
+  skippedToday?: boolean;
   onDelete?: () => void;
 }) {
   const c = useTheme();
@@ -72,6 +77,9 @@ export function RoutineSheet({
   const [title, setTitle] = useState(routine?.title ?? '');
   const [kind, setKind] = useState<RoutineKind>(routine?.kind ?? 'check');
   const [everyText, setEveryText] = useState(String(routine?.everyDays ?? 1));
+  /** 요일 반복 — 비어 있으면 N일마다 */
+  const [weekdays, setWeekdays] = useState<number[]>(routine?.weekdays ?? []);
+  const byWeekday = weekdays.length > 0;
   const [timeText, setTimeText] = useState(routine?.time ?? '');
   const [goalText, setGoalText] = useState(routine?.goalMinutes ? String(routine.goalMinutes) : '');
   const [items, setItems] = useState<string[]>(routine?.items ?? []);
@@ -84,7 +92,7 @@ export function RoutineSheet({
   const cleaned = items.map((x) => x.trim()).filter(Boolean).slice(0, MAX_ITEMS[kind]);
 
   const everyDays = Number(everyText);
-  const everyOk = Number.isInteger(everyDays) && everyDays >= 1 && everyDays <= 365;
+  const everyOk = byWeekday || (Number.isInteger(everyDays) && everyDays >= 1 && everyDays <= 365);
   const timeOk = !timeText.trim() || isTime(timeText);
   const goal = Number(goalText);
   const goalOk = !goalText.trim() || (Number.isInteger(goal) && goal >= 1 && goal <= 600);
@@ -184,20 +192,54 @@ export function RoutineSheet({
             </ThemedText>
             <View style={styles.chips}>
               {EVERY.map((e) => (
-                <Chip key={e.days} label={e.label} selected={everyDays === e.days} onPress={() => setEveryText(String(e.days))} />
+                <Chip
+                  key={e.days}
+                  label={e.label}
+                  selected={!byWeekday && everyDays === e.days}
+                  onPress={() => {
+                    setWeekdays([]);
+                    setEveryText(String(e.days));
+                  }}
+                />
               ))}
+              <Chip label="요일 지정" selected={byWeekday} onPress={() => !byWeekday && setWeekdays([new Date().getDay()])} />
             </View>
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.field, styles.number, { color: c.text, backgroundColor: c.surface }]}
-                value={everyText}
-                onChangeText={setEveryText}
-                keyboardType="number-pad"
-                maxLength={3}
-                accessibilityLabel="며칠마다"
-              />
-              <ThemedText type="body">일마다</ThemedText>
-            </View>
+            {byWeekday ? (
+              <View style={styles.days}>
+                {DAY_NAMES.map((name, d) => {
+                  const on = weekdays.includes(d);
+                  return (
+                    <Pressable
+                      key={d}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: on }}
+                      accessibilityLabel={`${name}요일`}
+                      onPress={() => {
+                        tap();
+                        // 하나는 남긴다 — 다 빼고 싶으면 위에서 「매일」 같은 반복을 고른다
+                        setWeekdays((prev) => (on ? (prev.length > 1 ? prev.filter((x) => x !== d) : prev) : [...prev, d].sort()));
+                      }}
+                      style={[styles.day, { backgroundColor: on ? c.ink : c.surface }]}>
+                      <ThemedText type="label" style={{ color: on ? c.onInk : c.text, fontWeight: on ? 700 : 400 }}>
+                        {name}
+                      </ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.row}>
+                <TextInput
+                  style={[styles.field, styles.number, { color: c.text, backgroundColor: c.surface }]}
+                  value={everyText}
+                  onChangeText={setEveryText}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                  accessibilityLabel="며칠마다"
+                />
+                <ThemedText type="body">일마다</ThemedText>
+              </View>
+            )}
 
             <ThemedText type="label" style={{ color: c.textSecondary }}>
               알림
@@ -292,13 +334,17 @@ export function RoutineSheet({
                 : onSave({
                 title: title.trim(),
                 kind,
-                everyDays,
+                everyDays: byWeekday ? 7 : everyDays,
+                weekdays: byWeekday ? weekdays : null,
                 time: timeText.trim() || null,
                 goalMinutes: kind === 'minutes' && goalText.trim() ? goal : null,
                 items: kind === 'minutes' || cleaned.length === 0 ? null : cleaned,
               })
             }
           />
+          {routine && onSkip && (
+            <Button variant="ghost" size="sm" label={skippedToday ? '건너뛰기 취소' : '오늘은 건너뛰기'} onPress={onSkip} />
+          )}
           {routine && onDelete && <Button variant="danger" size="sm" label="삭제" onPress={onDelete} />}
         </View>
       </KeyboardAvoidingView>
@@ -328,6 +374,8 @@ const styles = StyleSheet.create({
   number: { width: 72, textAlign: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   flex: { flex: 1 },
+  days: { flexDirection: 'row', gap: 6 },
+  day: { flex: 1, height: 40, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
   addItem: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', paddingVertical: 6 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   templates: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 14, columnGap: TEMPLATE_GAP },

@@ -16,8 +16,10 @@ export type Routine = {
   id: string;
   title: string;
   kind: RoutineKind;
-  /** 1 이면 매일, 7 이면 지난번에 한 날부터 7일마다 */
+  /** 1 이면 매일, 7 이면 지난번에 한 날부터 7일마다. 요일을 정했으면(`weekdays`) 쓰지 않는다 */
   everyDays: number;
+  /** 요일 반복(0 일요일 ~ 6 토요일) — 「매주 일요일」. 없으면 null(task common/022) */
+  weekdays: number[] | null;
   /** 알림 시각 `HH:MM` — 없으면 알리지 않고 「하루 중」에 묶인다 */
   time: string | null;
   /** 타이머 루틴의 하루 목표(분) — 없어도 된다 */
@@ -44,6 +46,8 @@ export type RoutineLog = {
   by: string | null;
   /** 단계 번호(0부터) — 루틴 전체를 한 줄이면 null */
   step: number | null;
+  /** 「오늘은 건너뛰기」 줄 — 한 것으로 세지 않고, 그날 알림과 진행에서 뺀다(task common/022) */
+  skip: boolean;
   createdAt: string;
 };
 
@@ -59,17 +63,26 @@ export function logsOn(routineId: string, logs: RoutineLog[], day: Date): Routin
   return logs.filter((l) => l.routineId === routineId && l.at >= from && l.at < to).sort((a, b) => a.at.localeCompare(b.at));
 }
 
-/** 그날 전(그날은 빼고)에 마지막으로 루틴을 끝낸 기록 — 단계 줄은 세지 않는다 */
+/** 루틴을 끝낸 줄인가 — 단계 줄과 건너뛴 줄은 아니다 */
+const isWhole = (l: RoutineLog) => l.step == null && !l.skip;
+
+/** 그날 전(그날은 빼고)에 마지막으로 루틴을 끝낸 기록 */
 function lastBefore(routineId: string, logs: RoutineLog[], day: Date): RoutineLog | undefined {
   const from = startOfDay(day).toISOString();
   return logs
-    .filter((l) => l.routineId === routineId && l.step == null && l.at < from)
+    .filter((l) => l.routineId === routineId && isWhole(l) && l.at < from)
     .sort((a, b) => a.at.localeCompare(b.at))
     .pop();
 }
 
-/** 그날이 할 차례인가 — 매일이면 늘, N일마다면 그날 전 마지막 기록부터 N일이 지났을 때(한 적이 없으면 차례) */
+const hasWeekdays = (r: Pick<Routine, 'weekdays'>) => !!r.weekdays && r.weekdays.length > 0;
+
+/**
+ * 그날이 할 차례인가 — 요일을 정했으면 그 요일, 매일이면 늘,
+ * N일마다면 그날 전 마지막 기록부터 N일이 지났을 때(한 적이 없으면 차례)
+ */
 export function isDueOn(routine: Routine, logs: RoutineLog[], day: Date): boolean {
+  if (hasWeekdays(routine)) return routine.weekdays!.includes(day.getDay());
   if (routine.everyDays <= 1) return true;
   const last = lastBefore(routine.id, logs, day);
   return !last || daysBetween(new Date(last.at), day) >= routine.everyDays;
@@ -92,19 +105,27 @@ export type TodayState = {
   nextInDays: number;
   /** 오늘 끝낸 단계 번호(단계가 있는 루틴) */
   stepsDone: number[];
+  /** 오늘은 건너뛰었나 */
+  skipped: boolean;
 };
 
 export function todayState(routine: Routine, logs: RoutineLog[], now = new Date()): TodayState {
   const all = logsOn(routine.id, logs, now);
-  const today = all.filter((l) => l.step == null);
+  const today = all.filter(isWhole);
+  const skipped = all.some((l) => l.skip);
   const stepsDone = [...new Set(all.filter((l) => l.step != null).map((l) => l.step as number))].sort((a, b) => a - b);
   const last = lastBefore(routine.id, logs, now);
   const sinceDays = last ? daysBetween(new Date(last.at), now) : null;
   const minutes = today.reduce((sum, l) => sum + (l.minutes ?? 0), 0);
   const done = routine.kind === 'minutes' ? (routine.goalMinutes ? minutes >= routine.goalMinutes : false) : today.length > 0;
-  const due = today.length > 0 || isDueOn(routine, logs, now);
-  const nextInDays = due || sinceDays === null ? 0 : Math.max(0, routine.everyDays - sinceDays);
-  return { due, done, firstAt: today[0]?.at ?? null, firstBy: today[0]?.by ?? null, minutes, sinceDays, nextInDays, stepsDone };
+  const due = today.length > 0 || skipped || isDueOn(routine, logs, now);
+  let nextInDays = 0;
+  if (!due && hasWeekdays(routine)) {
+    nextInDays = [1, 2, 3, 4, 5, 6, 7].find((n) => routine.weekdays!.includes(addDays(now, n).getDay())) ?? 7;
+  } else if (!due && sinceDays !== null) {
+    nextInDays = Math.max(0, routine.everyDays - sinceDays);
+  }
+  return { due, done, firstAt: today[0]?.at ?? null, firstBy: today[0]?.by ?? null, minutes, sinceDays, nextInDays, stepsDone, skipped };
 }
 
 /** 단계가 있는 체크 루틴인가 */
@@ -143,6 +164,17 @@ export function everyLabel(days: number): string {
   return `${days}일마다`;
 }
 
+const DAY_SHORT = ['일', '월', '화', '수', '목', '금', '토'];
+
+/** 반복 이름 — 요일을 정했으면 「매주 일요일」 「매주 월 · 수 · 금」(일곱 요일 다면 「매일」), 아니면 everyLabel */
+export function scheduleLabel(r: { everyDays: number; weekdays?: number[] | null }): string {
+  const days = [...new Set(r.weekdays ?? [])].sort((a, b) => a - b);
+  if (days.length === 0) return everyLabel(r.everyDays);
+  if (days.length === 7) return '매일';
+  if (days.length === 1) return `매주 ${DAY_SHORT[days[0]]}요일`;
+  return `매주 ${days.map((d) => DAY_SHORT[d]).join(' · ')}`;
+}
+
 /** 「08:10」 */
 export function clockLabel(iso: string): string {
   const d = new Date(iso);
@@ -156,6 +188,7 @@ export function clockLabel(iso: string): string {
  */
 export function statusLine(routine: Routine, state: TodayState): { text: string; done: boolean } {
   if (!state.due) return { text: state.nextInDays === 1 ? '내일' : `${state.nextInDays}일 뒤`, done: false };
+  if (state.skipped && !state.firstAt && state.minutes === 0) return { text: '오늘은 건너뜀', done: false };
   if (routine.kind === 'minutes') {
     if (routine.goalMinutes) return { text: `${state.minutes}분 / ${routine.goalMinutes}분`, done: state.done };
     if (state.minutes > 0) return { text: `오늘 ${state.minutes}분`, done: false };
@@ -167,11 +200,11 @@ export function statusLine(routine: Routine, state: TodayState): { text: string;
   if (hasSteps(routine)) {
     const total = routine.items!.length;
     if (state.stepsDone.length > 0) return { text: `${state.stepsDone.length} / ${total}단계`, done: false };
-    return { text: `${routine.time ? timeLabel(routine.time) : everyLabel(routine.everyDays)} · ${total}단계`, done: false };
+    return { text: `${routine.time ? timeLabel(routine.time) : scheduleLabel(routine)} · ${total}단계`, done: false };
   }
-  if (routine.everyDays > 1 && state.sinceDays) return { text: `마지막 ${state.sinceDays}일 전`, done: false };
+  if (!hasWeekdays(routine) && routine.everyDays > 1 && state.sinceDays) return { text: `마지막 ${state.sinceDays}일 전`, done: false };
   if (routine.time) return { text: timeLabel(routine.time), done: false };
-  return { text: routine.kind === 'minutes' ? '오늘 0분' : everyLabel(routine.everyDays), done: false };
+  return { text: routine.kind === 'minutes' ? '오늘 0분' : scheduleLabel(routine), done: false };
 }
 
 /** 진행 카드에서 「완료」로 셀까(SPEC-MAIN-01) — 체크는 오늘 했으면, 타이머는 목표가 있으면 채웠을 때 · 없으면 조금이라도 했으면 */
@@ -206,9 +239,11 @@ export function todayPlan(routines: Routine[], logs: RoutineLog[], now = new Dat
     .filter((x) => x.s.due)
     .sort((a, b) => (a.r.time ?? '99').localeCompare(b.r.time ?? '99') || a.r.sort - b.r.sort);
   const later = states.filter((x) => !x.s.due).sort((a, b) => a.s.nextInDays - b.s.nextInDays || a.r.sort - b.r.sort);
-  const done = today.filter((x) => countsDone(x.r, x.s)).length;
-  const next = today.find((x) => !countsDone(x.r, x.s)) ?? null;
-  return { today, later, done, total: today.length, next };
+  // 건너뛴 것은 진행에서 뺀다 — 화면에는 남겨 되돌릴 수 있게 한다
+  const counted = today.filter((x) => !(x.s.skipped && !countsDone(x.r, x.s)));
+  const done = counted.filter((x) => countsDone(x.r, x.s)).length;
+  const next = counted.find((x) => !countsDone(x.r, x.s)) ?? null;
+  return { today, later, done, total: counted.length, next };
 }
 
 export type RoutineReminder = { id: string; routineId: string; at: Date; title: string; body: string };
@@ -229,13 +264,13 @@ export function routineReminders(routines: Routine[], logs: RoutineLog[], now = 
       if (!isDueOn(r, logs, day)) continue;
       if (i === 0) {
         const state = todayState(r, logs, now);
-        if (state.done || (r.kind === 'check' && state.firstAt)) continue;
+        if (state.skipped || state.done || (r.kind !== 'minutes' && state.firstAt)) continue;
       }
       let body = `${SLOT_LABELS[slotOf(r.time)]}에 챙길 루틴이에요`;
       if (i === 0 && r.kind === 'minutes') {
         const minutes = todayState(r, logs, now).minutes;
         if (minutes > 0) body = `오늘 지금까지 ${minutes}분`;
-      } else if (r.everyDays > 1) {
+      } else if (!hasWeekdays(r) && r.everyDays > 1) {
         const last = lastBefore(r.id, logs, day);
         if (last) body = `마지막으로 한 지 ${daysBetween(new Date(last.at), day)}일 지났어요`;
       }
@@ -246,11 +281,18 @@ export function routineReminders(routines: Routine[], logs: RoutineLog[], now = 
 }
 
 /** 루틴 추천(SPEC-MAIN-03) — 한 번 만들어 두고 자주 고치지 않는다(헌장 8). 영양제 · 약은 넣지 않는다(헌장 5). 터미타임에 목표 분을 미리 넣지 않는다 */
-export type RoutineTemplate = { title: string; kind: RoutineKind; everyDays: number; time: string | null; items?: string[] };
+export type RoutineTemplate = {
+  title: string;
+  kind: RoutineKind;
+  everyDays: number;
+  time: string | null;
+  items?: string[];
+  weekdays?: number[];
+};
 
 /** 추천 줄의 설명 — 「2일마다 · 목욕 → 보습」 「매일 · 타이머」 「매주 · 분유 · 기저귀 · 물티슈」 「매일 · 오후 8:00」 */
 export function templateDetail(t: RoutineTemplate): string {
-  const every = everyLabel(t.everyDays);
+  const every = scheduleLabel(t);
   if (t.kind === 'minutes') return `${every} · 타이머`;
   if (t.kind === 'stock') return [every, ...(t.items ?? []).slice(0, 3)].join(' · ');
   if (t.items?.length) return `${every} · ${t.items.join(' → ')}`;
@@ -266,7 +308,7 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
   { title: '터미타임', kind: 'minutes', everyDays: 1, time: null },
   { title: '손발톱 확인', kind: 'check', everyDays: 3, time: null },
   { title: '젖병 소독', kind: 'check', everyDays: 1, time: null },
-  { title: '재고 확인', kind: 'stock', everyDays: 7, time: null, items: STOCK_ITEMS },
+  { title: '재고 확인', kind: 'stock', everyDays: 7, time: null, items: STOCK_ITEMS, weekdays: [0] },
   { title: '산책', kind: 'check', everyDays: 1, time: null },
   { title: '아기체육관 놀이', kind: 'minutes', everyDays: 1, time: null },
   { title: '책 읽어 주기', kind: 'check', everyDays: 1, time: null },
@@ -286,7 +328,7 @@ export function newRoutineLogId(): string {
   return `rl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export type RoutineInput = Pick<Routine, 'title' | 'kind' | 'everyDays' | 'time' | 'goalMinutes' | 'items'>;
+export type RoutineInput = Pick<Routine, 'title' | 'kind' | 'everyDays' | 'weekdays' | 'time' | 'goalMinutes' | 'items'>;
 
 export function makeRoutine(input: RoutineInput, sort: number, now = new Date()): Routine {
   const at = now.toISOString();
@@ -299,8 +341,9 @@ export function makeRoutineLog(
   minutes: number | null = null,
   by: string | null = null,
   step: number | null = null,
+  skip = false,
 ): RoutineLog {
-  return { id: newRoutineLogId(), routineId, at: at.toISOString(), minutes, by, step, createdAt: new Date().toISOString() };
+  return { id: newRoutineLogId(), routineId, at: at.toISOString(), minutes, by, step, skip, createdAt: new Date().toISOString() };
 }
 
 /** 같은 물건인가 — 띄어쓰기를 빼고 본다 */

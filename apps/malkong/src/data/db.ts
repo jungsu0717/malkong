@@ -88,6 +88,7 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           sort           INTEGER NOT NULL DEFAULT 0,
           running_since  TEXT,
           items          TEXT,
+          weekdays       TEXT,
           created_at     TEXT NOT NULL,
           updated_at     TEXT NOT NULL
         );
@@ -98,6 +99,7 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           minutes     INTEGER,
           by          TEXT,
           step        INTEGER,
+          skip        INTEGER NOT NULL DEFAULT 0,
           created_at  TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ix_routine_log ON routine_log(routine_id, at);
@@ -137,6 +139,13 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
       const routineColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(routine)');
       if (!routineColumns.some((col) => col.name === 'items')) {
         await db.execAsync('ALTER TABLE routine ADD COLUMN items TEXT');
+      }
+      // 요일 반복 · 건너뛰기(task common/022)
+      if (!routineColumns.some((col) => col.name === 'weekdays')) {
+        await db.execAsync('ALTER TABLE routine ADD COLUMN weekdays TEXT');
+      }
+      if (!logColumns.some((col) => col.name === 'skip')) {
+        await db.execAsync('ALTER TABLE routine_log ADD COLUMN skip INTEGER NOT NULL DEFAULT 0');
       }
       return db;
     })();
@@ -340,7 +349,18 @@ export async function deleteTodoRow(id: string): Promise<void> {
 
 // --- 루틴 (SPEC-MAIN-01~07, task today/001 · 003) ---
 
-type RoutineRow = Omit<Routine, 'hidden' | 'items'> & { hidden: number; items: string | null };
+type RoutineRow = Omit<Routine, 'hidden' | 'items' | 'weekdays'> & { hidden: number; items: string | null; weekdays: string | null };
+
+/** 요일 반복은 JSON 숫자 배열 — 깨졌으면 없는 것으로 */
+function parseWeekdays(text: string | null): number[] | null {
+  if (!text) return null;
+  try {
+    const v: unknown = JSON.parse(text);
+    return Array.isArray(v) ? v.filter((x): x is number => typeof x === 'number' && x >= 0 && x <= 6) : null;
+  } catch {
+    return null;
+  }
+}
 
 /** 단계 · 확인할 물건은 JSON 글 — 깨졌으면 없는 것으로 */
 function parseItems(text: string | null): string[] | null {
@@ -357,20 +377,20 @@ export async function readRoutineRows(): Promise<Routine[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<RoutineRow>(
     `SELECT id, title, kind, every_days AS everyDays, time, goal_minutes AS goalMinutes, hidden, sort, running_since AS runningSince,
-            items, created_at AS createdAt, updated_at AS updatedAt
+            items, weekdays, created_at AS createdAt, updated_at AS updatedAt
        FROM routine ORDER BY sort`,
   );
-  return rows.map((r) => ({ ...r, hidden: r.hidden === 1, items: parseItems(r.items) }));
+  return rows.map((r) => ({ ...r, hidden: r.hidden === 1, items: parseItems(r.items), weekdays: parseWeekdays(r.weekdays) }));
 }
 
 export async function upsertRoutineRow(r: Routine): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO routine (id, title, kind, every_days, time, goal_minutes, hidden, sort, running_since, items, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO routine (id, title, kind, every_days, time, goal_minutes, hidden, sort, running_since, items, weekdays, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET title = excluded.title, kind = excluded.kind, every_days = excluded.every_days, time = excluded.time,
        goal_minutes = excluded.goal_minutes, hidden = excluded.hidden, sort = excluded.sort, running_since = excluded.running_since,
-       items = excluded.items, updated_at = excluded.updated_at`,
+       items = excluded.items, weekdays = excluded.weekdays, updated_at = excluded.updated_at`,
     r.id,
     r.title,
     r.kind,
@@ -381,6 +401,7 @@ export async function upsertRoutineRow(r: Routine): Promise<void> {
     r.sort,
     r.runningSince,
     r.items && r.items.length > 0 ? JSON.stringify(r.items) : null,
+    r.weekdays && r.weekdays.length > 0 ? JSON.stringify(r.weekdays) : null,
     r.createdAt,
     r.updatedAt,
   );
@@ -390,22 +411,24 @@ export async function upsertRoutineRow(r: Routine): Promise<void> {
 export async function readRoutineLogRows(days = 400): Promise<RoutineLog[]> {
   const db = await getDb();
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
-  return db.getAllAsync<RoutineLog>(
-    `SELECT id, routine_id AS routineId, at, minutes, by, step, created_at AS createdAt FROM routine_log WHERE at >= ? ORDER BY at`,
+  const rows = await db.getAllAsync<Omit<RoutineLog, 'skip'> & { skip: number }>(
+    `SELECT id, routine_id AS routineId, at, minutes, by, step, skip, created_at AS createdAt FROM routine_log WHERE at >= ? ORDER BY at`,
     since,
   );
+  return rows.map((l) => ({ ...l, skip: l.skip === 1 }));
 }
 
 export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, minutes, by, step, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, minutes, by, step, skip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     l.id,
     l.routineId,
     l.at,
     l.minutes,
     l.by,
     l.step,
+    l.skip ? 1 : 0,
     l.createdAt,
   );
 }
