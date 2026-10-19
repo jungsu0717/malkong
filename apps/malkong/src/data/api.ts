@@ -8,59 +8,12 @@
 import { CryptoDigestAlgorithm, digestStringAsync } from 'expo-crypto';
 
 import { readSetting, writeSetting } from './db';
-import type { CareEvent } from './events';
-import type { BabyRecord, RecordKind } from './records';
+import type { BabyRecord } from './records';
 
 const API_URL =
   process.env.EXPO_PUBLIC_API_URL ?? 'https://malkong-server-481623022922.asia-northeast3.run.app';
 
-/** 모델이 20초씩 두 번 시도하고, 서버가 0 에서 깨어나는 시간까지 더한 여유 */
-const ASK_TIMEOUT_MS = 65_000;
 const SHORT_TIMEOUT_MS = 15_000;
-
-export type Source = { id: string; name: string; url: string };
-
-/** 답변 수위(SPEC-ASK-08) */
-export type AnswerLevel = '사실' | '일반' | '판단';
-
-export type RecordSuggestion = { kind: RecordKind; label: string; covers?: string[] | null };
-
-export type Followup = { question: string; chips: string[]; recordLabel: string };
-
-/** 바로 앞 대화 한 턴 — 부모(user)나 버디(buddy)의 말 */
-export type HistoryTurn = { role: 'user' | 'buddy'; text: string };
-
-export type AskRequest = {
-  question: string;
-  baby: { months: number; records: { kind: RecordKind; label: string }[] };
-  /** 바로 앞 대화, 오래된 것부터 최대 6턴 — 서버는 모델에 넘길 뿐 저장하지 않는다(계약) */
-  history?: HistoryTurn[];
-  /** 질문 말풍선의 id — 같은 값의 재요청은 서버가 같은 응답으로 돌려준다(계약) */
-  clientMessageId: string;
-  /** "eco" 면 기록 없이 일반 기준으로 답한다 */
-  mode?: 'eco';
-  /** 이전 대화 요약 — 지난 답에서 서버가 돌려준 것. 서버는 모델에 넘길 뿐 저장하지 않는다(decisions/022) */
-  conversationSummary?: string;
-};
-
-export type AskAnswer = {
-  type: 'answer';
-  answer: string;
-  level: AnswerLevel;
-  sources: Source[];
-  records: RecordSuggestion[];
-  /** 오늘 남은 정밀 답변 수. 운영자(가족) 기기는 null */
-  usage: { remaining: number | null };
-  eco: boolean;
-  /** 이번 질문과 답까지 넣은 대화 요약 — 다음 질문에 conversationSummary 로 붙인다. 옛 서버는 보내지 않는다 */
-  conversationSummary?: string | null;
-};
-
-export type AskFollowup = { type: 'followup'; followup: Followup; conversationSummary?: string | null };
-
-export type AskRedflag = { type: 'redflag'; answer: string; sources: Source[] };
-
-export type AskResponse = AskAnswer | AskFollowup | AskRedflag;
 
 /** 하루 정밀 답변을 다 썼을 때 서버가 함께 주는 것(429 LIMIT_EXCEEDED) */
 export type LimitInfo = { resetAt: string; rewardAvailable: boolean; ecoAvailable: boolean };
@@ -215,25 +168,8 @@ async function withDeviceKey<T>(
   }
 }
 
-export function postAsk(req: AskRequest): Promise<AskResponse> {
-  return withDeviceKey<AskResponse>('POST', '/v1/ask', req, ASK_TIMEOUT_MS);
-}
-
 export function getEntitlements(): Promise<Entitlements> {
   return withDeviceKey<Entitlements>('GET', '/v1/entitlements', undefined, SHORT_TIMEOUT_MS);
-}
-
-export type FeedbackRequest = {
-  answerId: string;
-  rating: 'up' | 'down';
-  comment?: string;
-  answer: { level: AnswerLevel; sourceIds: string[]; eco: boolean };
-  /** 사용자가 「질문과 답도 함께 보내기」를 골랐을 때만 */
-  shared?: { question: string; answer: string };
-};
-
-export function postFeedback(req: FeedbackRequest): Promise<void> {
-  return withDeviceKey<void>('POST', '/v1/feedback', req, SHORT_TIMEOUT_MS);
 }
 
 // --- 가족 공유 (SPEC-MY-05, task my/007) — api-contract /v1/family ---
@@ -242,22 +178,18 @@ export type FamilyInfo = { familyId: string; inviteCode: string; members: number
 export type SyncBaby = { id: string; name: string | null; birthDate: string; createdAt: string; updatedAt: string };
 /** 기록 한 줄 그대로 + 지웠는지 */
 export type SyncRecord = BabyRecord & { deleted: boolean };
-/** 빠른 기록 한 줄(SPEC-LOG-07) — 옛 서버는 events 를 모른다(없으면 빈 것으로) */
-export type SyncEvent = CareEvent & { deleted: boolean };
 /** 할 일 · 주제 · 루틴 · 루틴 기록(task my/009) — 옛 서버는 items 를 모른다(응답에 없으면 받아 주지 않은 것) */
 export type { SyncItem } from './family-items';
 export type SyncRequest = {
   since: number;
   baby?: SyncBaby;
   records: SyncRecord[];
-  events?: SyncEvent[];
   items?: import('./family-items').SyncItem[];
 };
 export type SyncResponse = {
   seq: number;
   baby: SyncBaby | null;
   records: SyncRecord[];
-  events?: SyncEvent[];
   items?: import('./family-items').SyncItem[];
   members: number;
 };

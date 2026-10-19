@@ -15,7 +15,6 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Colors, FontFamily } from '@/constants/theme';
 import { BabyProvider, useBaby } from '@/data/baby-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
-import { EventsProvider } from '@/data/events-context';
 import { FamilyProvider } from '@/data/family-context';
 import { loadStoredKnowledge, refreshKnowledge } from '@/data/knowledge-update';
 import { onTodoAlertOpened } from '@/data/notifications';
@@ -30,7 +29,7 @@ SplashScreen.preventAutoHideAsync();
 const queryClient = new QueryClient();
 
 /**
- * 저장된 생일이 없으면 온보딩으로 보낸다 (SPEC-MY-01). 만화는 처음 실행에 띄우지 않고 마이 → 도움말에서 본다 (SPEC-MY-07).
+ * 저장된 생일이 없으면 온보딩으로 보낸다 (SPEC-MY-01).
  */
 function OnboardingGate() {
   const { baby, loading } = useBaby();
@@ -105,20 +104,16 @@ export default function RootLayout() {
           <PreferencesProvider>
             <BabyProvider>
               <RecordsProvider>
-                <EventsProvider>
                 <FamilyProvider>
                 <TodosProvider>
                 <RoutinesProvider>
                   <OnboardingGate />
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(tabs)" />
-                    <Stack.Screen name="intro" options={{ animation: 'fade' }} />
                     <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
                     <Stack.Screen name="topic/[id]" options={{ ...header, title: '주제' }} />
                     <Stack.Screen name="notifications" options={{ ...header, title: '알림' }} />
                     <Stack.Screen name="family" options={{ ...header, title: '가족과 함께 보기' }} />
-                    <Stack.Screen name="log" options={{ ...header, title: '기록' }} />
-                    <Stack.Screen name="log-stats" options={{ ...header, title: '일주일 그래프' }} />
                     <Stack.Screen name="routine-recommend" options={{ ...header, title: '루틴 추천' }} />
                     <Stack.Screen name="todo-recommend" options={{ ...header, title: '할 일 추천' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
@@ -126,7 +121,6 @@ export default function RootLayout() {
                 </RoutinesProvider>
                 </TodosProvider>
                 </FamilyProvider>
-                </EventsProvider>
               </RecordsProvider>
             </BabyProvider>
           </PreferencesProvider>

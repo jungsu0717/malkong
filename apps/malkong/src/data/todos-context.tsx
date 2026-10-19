@@ -17,8 +17,6 @@ import { insertRoutineLogRow, readSetting, upsertRoutineRow, writeSetting } from
 import { memberName, noteDeleted } from './family';
 import { onRemoteChange, requestSync } from './sync-events';
 import { EVENING_HOUR, deliveryChecks, eveningPlan, morningPlan, reminderBody } from './alert-plan';
-import { runningOf } from './events';
-import { useEvents } from './events-context';
 import {
   askNotifications,
   cancelSnooze,
@@ -222,22 +220,15 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  // 할 일 알림 — 시각이 있고, 안 끝냈고, 아직 오지 않은 것만(SPEC-TOPIC-09). 반복 할 일은 「마지막으로 한 지 7일 지났어요」,
-  // 기록 탭에 잠이 재는 중이면 앞으로 3시간 안의 것은 소리 없이(task topic/006)
-  const { events } = useEvents();
-  const sleeping = !!runningOf(events, 'sleep');
+  // 할 일 알림 — 시각이 있고, 안 끝냈고, 아직 오지 않은 것만(SPEC-TOPIC-09). 반복 할 일은 「마지막으로 한 지 7일 지났어요」
   useEffect(() => {
     if (loading) return;
     const now = Date.now();
-    const quietUntil = sleeping ? now + 3 * 60 * 60 * 1000 : 0;
     const items = todos
       .filter((t) => t.hasTime && t.dueAt && !t.doneAt && new Date(t.dueAt).getTime() > now)
-      .map((t) => {
-        const at = new Date(t.dueAt as string);
-        return { id: t.id, at, title: t.title, body: reminderBody(t, todos), silent: at.getTime() < quietUntil };
-      });
+      .map((t) => ({ id: t.id, at: new Date(t.dueAt as string), title: t.title, body: reminderBody(t, todos) }));
     enqueue(() => scheduleTodoReminders(items));
-  }, [todos, loading, sleeping, enqueue]);
+  }, [todos, loading, enqueue]);
 
   // 아침 알림 · 전날 저녁 · 받으셨나요(SPEC-TOPIC-09 · SPEC-SHOP-04) — 일주일 치를 날짜마다.
   // 아침에는 지금 기간인 접종 · 검진 이름과 도착 예정도 넣는다. 전날 저녁은 아침 알림을 켰을 때만

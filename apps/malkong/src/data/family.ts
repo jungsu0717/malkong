@@ -14,7 +14,6 @@ import {
   leaveFamily,
   syncFamily,
   type FamilyInfo,
-  type SyncEvent,
   type SyncRecord,
 } from './api';
 import { loadBaby, replaceBaby } from './baby';
@@ -32,7 +31,6 @@ import {
   upsertTopicRow,
   writeSetting,
 } from './db';
-import { loadEvents, removeEvent, upsertEvents, type CareEvent } from './events';
 import { itemKindOfId, outgoingItems, planIncoming } from './family-items';
 import { loadRecords, removeRecord, upsertRecords, type BabyRecord } from './records';
 import { emitRemoteChange, type RemoteKind } from './sync-events';
@@ -40,8 +38,6 @@ import { emitRemoteChange, type RemoteKind } from './sync-events';
 const INFO_KEY = 'family.info';
 const SEQ_KEY = 'family.seq';
 const PUSHED_KEY = 'family.pushedAt';
-/** 빠른 기록을 마지막으로 올린 때 — 옛 서버는 events 를 버리므로, 받아 준 서버에서만 넘긴다 */
-const EVENTS_PUSHED_KEY = 'family.eventsPushedAt';
 const SYNCED_KEY = 'family.syncedAt';
 const TOMBSTONES_KEY = 'family.tombstones';
 const CONSENT_KEY = 'family.consentedAt';
@@ -64,7 +60,7 @@ export type FamilyState = {
 
 type Tombstone = { id: string; deletedAt: string };
 
-/** 빠른 기록의 id 는 `ev-` 로 시작한다(events.ts newEventId) — 지운 표시를 기록과 가른다 */
+/** 예전 빠른 기록의 id 는 `ev-` 로 시작한다 — 빠른 기록은 더 맞추지 않으니 그 지운 표시는 올리지 않는다(decisions/030) */
 const isEventId = (id: string) => id.startsWith('ev-');
 
 export async function loadFamilyState(): Promise<FamilyState | null> {
@@ -95,7 +91,6 @@ async function clearState(): Promise<void> {
   await writeSetting(INFO_KEY, '');
   await writeSetting(SEQ_KEY, '');
   await writeSetting(PUSHED_KEY, '');
-  await writeSetting(EVENTS_PUSHED_KEY, '');
   await writeSetting(ITEMS_PUSHED_KEY, '');
   await writeSetting(SYNCED_KEY, '');
   await writeSetting(TOMBSTONES_KEY, '');
@@ -184,23 +179,6 @@ export async function recoverFamily(): Promise<FamilyState | null> {
 
 export type SyncOutcome = { state: FamilyState; changed: boolean };
 
-function eventTombstone(t: Tombstone): SyncEvent {
-  return {
-    id: t.id,
-    kind: 'diaper',
-    startAt: t.deletedAt,
-    endAt: null,
-    amount: null,
-    side: null,
-    diaper: null,
-    color: null,
-    note: null,
-    createdAt: t.deletedAt,
-    updatedAt: t.deletedAt,
-    deleted: true,
-  };
-}
-
 function tombstoneOf(record: BabyRecord | Tombstone, deleted: boolean): SyncRecord {
   if (!deleted) return { ...(record as BabyRecord), deleted: false };
   const t = record as Tombstone;
@@ -225,10 +203,7 @@ function tombstoneOf(record: BabyRecord | Tombstone, deleted: boolean): SyncReco
 export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   const now = new Date().toISOString();
   const pushedAt = state.pushedAt ?? '';
-  const [records, events, baby, tombstones] = await Promise.all([loadRecords(), loadEvents(), loadBaby(), loadTombstones()]);
-
-  // 빠른 기록은 따로 센 때부터 — 들어간 직후(null)면 전부
-  const eventsPushedAt = state.pushedAt === null ? '' : ((await readSetting(EVENTS_PUSHED_KEY)) ?? '');
+  const [records, baby, tombstones] = await Promise.all([loadRecords(), loadBaby(), loadTombstones()]);
   const dirty = records.filter((r) => r.updatedAt > pushedAt).map((r) => tombstoneOf(r, false));
   const deleted = tombstones
     .filter((t) => !isEventId(t.id) && !itemKindOfId(t.id) && t.deletedAt > pushedAt)
@@ -237,29 +212,21 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   const itemsPushedAt = state.pushedAt === null ? '' : ((await readSetting(ITEMS_PUSHED_KEY)) ?? '');
   const [topics, todos, routines, logs] = await Promise.all([readTopicRows(), readTodoRows(), readRoutineRows(), readRoutineLogRows()]);
   const items = outgoingItems({ topics, todos, routines, logs, tombstones, since: itemsPushedAt });
-  // 빠른 기록(SPEC-LOG-07) — 고친 것과 지운 표시
-  const dirtyEvents: SyncEvent[] = [
-    ...events.filter((e) => e.updatedAt > eventsPushedAt).map((e) => ({ ...e, deleted: false })),
-    ...tombstones.filter((t) => isEventId(t.id) && t.deletedAt > eventsPushedAt).map(eventTombstone),
-  ];
   const first = state.pushedAt === null;
   const pushBaby = baby && !first && baby.updatedAt > pushedAt;
 
   let res = await syncFamily({
     since: state.seq,
     records: [...dirty, ...deleted],
-    events: dirtyEvents,
     items,
     ...(pushBaby ? { baby } : {}),
   });
   const incoming = [...res.records];
-  const incomingEvents = [...(res.events ?? [])];
   const incomingItems = [...(res.items ?? [])];
   // 들어간 직후 — 가족에 아기가 없을 때만 내 아기를 올린다
   if (first && res.baby === null && baby) {
     res = await syncFamily({ since: res.seq, records: [], baby });
     incoming.push(...res.records);
-    incomingEvents.push(...(res.events ?? []));
     incomingItems.push(...(res.items ?? []));
   }
 
@@ -287,28 +254,6 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
     changed = true;
   }
 
-  // 빠른 기록도 같은 규칙 — 늦게 고친 쪽이 이기고, 여기서 지운 것은 되살리지 않는다
-  const localEvents = new Map(events.map((e) => [e.id, e]));
-  const eventsToUpsert: CareEvent[] = [];
-  for (const e of incomingEvents) {
-    const deletedHere = byTombstone.get(e.id);
-    if (deletedHere && deletedHere >= e.updatedAt) continue;
-    const mine = localEvents.get(e.id);
-    if (mine && mine.updatedAt >= e.updatedAt) continue;
-    if (e.deleted) {
-      if (mine) {
-        await removeEvent(e.id);
-        changed = true;
-      }
-      continue;
-    }
-    const { deleted: _deleted, ...event } = e;
-    eventsToUpsert.push(event);
-  }
-  if (eventsToUpsert.length > 0) {
-    await upsertEvents(eventsToUpsert);
-    changed = true;
-  }
   if (res.baby && (first || !baby || res.baby.updatedAt > baby.updatedAt)) {
     const same =
       baby &&
@@ -337,15 +282,12 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   }
 
   // 올린 표시는 치운다 — 올린 때 이후 것만 남긴다
-  // 서버가 빠른 기록을 받아 줬는지 — 옛 서버는 events 칸이 없다. 못 받았으면 빠른 기록의 올린 때와 지운 표시를 남겨 둔다
-  const eventsAccepted = res.events !== undefined;
-  if (eventsAccepted) await writeSetting(EVENTS_PUSHED_KEY, now);
-  // 할 일 · 루틴도 같다 — 옛 서버는 items 칸이 없다
+  // 서버가 할 일 · 루틴을 받아 줬는지 — 옛 서버는 items 칸이 없다. 못 받았으면 그 지운 표시를 남겨 둔다
   const itemsAccepted = res.items !== undefined;
   if (itemsAccepted) await writeSetting(ITEMS_PUSHED_KEY, now);
   await saveTombstones(
     tombstones.filter(
-      (t) => t.deletedAt > now || (!eventsAccepted && isEventId(t.id)) || (!itemsAccepted && itemKindOfId(t.id) !== null),
+      (t) => !isEventId(t.id) && (t.deletedAt > now || (!itemsAccepted && itemKindOfId(t.id) !== null)),
     ),
   );
   const next: FamilyState = {

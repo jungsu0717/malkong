@@ -19,7 +19,6 @@ import {
   syncOnce,
   type FamilyState,
 } from './family';
-import { useEvents } from './events-context';
 import { useRecords } from './records-context';
 import { onSyncRequest } from './sync-events';
 
@@ -45,7 +44,6 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [syncing, setSyncing] = useState(false);
   const { reload: reloadRecords } = useRecords();
   const { reload: reloadBaby } = useBaby();
-  const { reload: reloadEvents } = useEvents();
   const stateRef = useRef<FamilyState | null>(null);
   const inFlight = useRef<Promise<void> | null>(null);
   const again = useRef(false);
@@ -65,7 +63,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
       const { state: next, changed } = await syncOnce(current);
       apply(next);
       if (changed) {
-        await Promise.all([reloadRecords(), reloadBaby(), reloadEvents()]);
+        await Promise.all([reloadRecords(), reloadBaby()]);
       }
     } catch (error) {
       // 서버가 가족을 모르면(마지막 사람이 나가 지워짐 등) 폰도 잊는다. 그 밖(연결 없음 등)은 다음에 다시
@@ -76,7 +74,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setSyncing(false);
     }
-  }, [apply, reloadBaby, reloadEvents, reloadRecords]);
+  }, [apply, reloadBaby, reloadRecords]);
 
   /** 겹치지 않게 — 도는 중에 또 부르면 끝난 뒤 한 번 더 */
   const sync = useCallback(async () => {

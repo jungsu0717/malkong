@@ -16,23 +16,11 @@ export type MorningDay = { day: Date; titles: string[] };
 
 export async function scheduleMorningAlerts(_time: string | null, _days: MorningDay[]): Promise<void> {}
 
-export async function scheduleRecordNudge(_at: Date | null): Promise<void> {}
-
-export function onRecordNudgeOpened(_listener: () => void): () => void {
-  return () => undefined;
-}
-
-export async function scheduleFeedReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
+export async function cancelRecordAlerts(): Promise<void> {}
 
 export function onTodoAlertOpened(_listener: () => void): () => void {
   return () => undefined;
 }
-
-export async function scheduleDiaperReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
-
-export async function scheduleSleepReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
-
-export async function scheduleTempReminders(_hours: number[] | null): Promise<void> {}
 
 export type TodoReminder = { id: string; at: Date; title: string; body?: string | null; silent?: boolean };
 export type AlertAction = 'done' | 'snooze';

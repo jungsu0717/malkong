@@ -1,5 +1,5 @@
 /**
- * 「챙길 것」 한 줄의 완료 알리기 흐름 — 브리핑과 우리 아기 탭이 같이 쓴다 (SPEC-HOME-02 완료 알림 · 저장 표시).
+ * 접종 · 검진 줄의 완료 알리기 흐름 — 할 일 탭과 주제 화면이 같이 쓴다.
  * 날짜는 묻지 않는다 — 기록의 시점은 알린 날이다.
  */
 
@@ -9,9 +9,11 @@ import { MarkDoneSheet } from '@/components/mark-done-sheet';
 import { tap } from '@/components/ui';
 import { useBaby } from '@/data/baby-context';
 import type { BabyRecord } from '@/data/records';
-import { monthDay } from '@/data/quick-ask';
 import { useRecords } from '@/data/records-context';
 import { groupLabel, isLifeGroup, type GapGroup, type L1Item } from '@/data/timeline';
+
+/** 「10월 19일」 */
+const monthDay = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
 
 export function useMarkDone() {
   const { age } = useBaby();

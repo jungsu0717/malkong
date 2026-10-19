@@ -12,7 +12,6 @@ import {
   addRecord,
   loadRecords,
   removeRecord,
-  updateRecordLabel,
   type BabyRecord,
 } from './records';
 import { requestSync } from './sync-events';
@@ -26,8 +25,6 @@ type RecordsContextValue = {
       Partial<Pick<BabyRecord, 'sourceMessageId'>>,
   ) => Promise<BabyRecord>;
   remove: (id: string) => Promise<void>;
-  /** 문구 고치기(SPEC-MY-02) — 홈 추천과 답변에 보내는 기록이 바로 따라 바뀐다 */
-  update: (id: string, label: string) => Promise<void>;
   /** 가족에게서 받은 기록이 폰에 적용된 뒤 다시 읽는다(task my/007) */
   reload: () => Promise<void>;
 };
@@ -66,20 +63,13 @@ export function RecordsProvider({ children }: { children: React.ReactNode }) {
     requestSync();
   }, []);
 
-  const update = useCallback(async (id: string, label: string) => {
-    await updateRecordLabel(id, label);
-    const updatedAt = new Date().toISOString();
-    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, label, stale: false, updatedAt } : r)));
-    requestSync();
-  }, []);
-
   const reload = useCallback(async () => {
     setRecords(await loadRecords());
   }, []);
 
   const value = useMemo(
-    () => ({ records, loading, add, remove, update, reload }),
-    [records, loading, add, remove, update, reload],
+    () => ({ records, loading, add, remove, reload }),
+    [records, loading, add, remove, reload],
   );
 
   return <RecordsContext.Provider value={value}>{children}</RecordsContext.Provider>;

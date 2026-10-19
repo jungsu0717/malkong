@@ -10,9 +10,6 @@
 import * as SQLite from 'expo-sqlite';
 
 import type { Baby } from './baby';
-import type { ChatMessage } from './chat';
-import type { CareEvent } from './events';
-import type { InboxCard } from './inbox';
 import type { BabyRecord } from './records';
 import { repeatFromText, repeatToText } from './repeat';
 import type { Routine, RoutineLog } from './routine';
@@ -50,36 +47,6 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           created_at         TEXT NOT NULL,
           updated_at         TEXT NOT NULL
         );
-        CREATE TABLE IF NOT EXISTS chat_message (
-          id          TEXT PRIMARY KEY,
-          role        TEXT NOT NULL CHECK (role IN ('user','malkong')),
-          content     TEXT NOT NULL,
-          meta_json   TEXT,
-          created_at  TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS ix_chat_created ON chat_message(created_at);
-        CREATE TABLE IF NOT EXISTS inbox_card (
-          id            TEXT PRIMARY KEY,
-          kind          TEXT NOT NULL,
-          payload_json  TEXT NOT NULL,
-          read_at       TEXT,
-          created_at    TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS ix_inbox_created ON inbox_card(created_at);
-        CREATE TABLE IF NOT EXISTS care_event (
-          id          TEXT PRIMARY KEY,
-          kind        TEXT NOT NULL,
-          start_at    TEXT NOT NULL,
-          end_at      TEXT,
-          amount      REAL,
-          side        TEXT,
-          diaper      TEXT,
-          color       TEXT,
-          note        TEXT,
-          created_at  TEXT NOT NULL,
-          updated_at  TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS ix_event_start ON care_event(start_at);
         CREATE TABLE IF NOT EXISTS topic (
           id          TEXT PRIMARY KEY,
           kind        TEXT NOT NULL,
@@ -139,11 +106,6 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
       const babyColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(baby)');
       if (!babyColumns.some((col) => col.name === 'updated_at')) {
         await db.execAsync('ALTER TABLE baby ADD COLUMN updated_at TEXT');
-      }
-      // 변 색(task log/002) — 그 전에 만든 기록 표에는 없다
-      const eventColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(care_event)');
-      if (!eventColumns.some((col) => col.name === 'color')) {
-        await db.execAsync('ALTER TABLE care_event ADD COLUMN color TEXT');
       }
       // 반복 규칙(task topic/002) — 그 전에 만든 할 일 표에는 없다
       const todoColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(todo)');
@@ -297,136 +259,8 @@ export async function deleteRecordRow(id: string): Promise<void> {
   await db.runAsync('DELETE FROM record WHERE id = ?', id);
 }
 
-type ChatRow = {
-  id: string;
-  role: ChatMessage['role'];
-  content: string;
-  meta_json: string | null;
-  created_at: string;
-};
-
-/** 대화 전체 — 오래된 것부터. 길어지면 날짜 단위로 나눠 읽는다(검색·보관함 task) */
-export async function readChatRows(): Promise<ChatMessage[]> {
-  const db = await getDb();
-  const rows = await db.getAllAsync<ChatRow>(
-    'SELECT id, role, content, meta_json, created_at FROM chat_message ORDER BY created_at, rowid',
-  );
-  return rows.map(
-    (row) =>
-      ({
-        id: row.id,
-        role: row.role,
-        content: row.content,
-        meta: row.meta_json ? JSON.parse(row.meta_json) : {},
-        createdAt: row.created_at,
-      }) as ChatMessage,
-  );
-}
-
-export async function insertChatRow(message: ChatMessage): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    'INSERT INTO chat_message (id, role, content, meta_json, created_at) VALUES (?, ?, ?, ?, ?)',
-    message.id,
-    message.role,
-    message.content,
-    JSON.stringify(message.meta),
-    message.createdAt,
-  );
-}
-
-/** 기록 문구 고치기 — 고친 시각을 남긴다(SPEC-MY-02 정정) */
-export async function updateRecordLabelRow(id: string, label: string): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    'UPDATE record SET label = ?, stale = 0, updated_at = ? WHERE id = ?',
-    label,
-    new Date().toISOString(),
-    id,
-  );
-}
-
-/** 말풍선의 곁 정보 고치기 — 피드백을 남겼다는 표시처럼 원문은 그대로 두고 meta 만 바꾼다 */
-export async function updateChatMetaRow(id: string, meta: ChatMessage['meta']): Promise<void> {
-  const db = await getDb();
-  await db.runAsync('UPDATE chat_message SET meta_json = ? WHERE id = ?', JSON.stringify(meta), id);
-}
-
-type InboxRow = { id: string; kind: InboxCard['kind']; payload_json: string; read_at: string | null; created_at: string };
-
-/** 알림함 전체 — 오래된 것부터 (SPEC-HOME-07) */
-export async function readInboxRows(): Promise<InboxCard[]> {
-  const db = await getDb();
-  const rows = await db.getAllAsync<InboxRow>(
-    'SELECT id, kind, payload_json, read_at, created_at FROM inbox_card ORDER BY created_at, rowid',
-  );
-  return rows.map((row) => ({
-    ...(JSON.parse(row.payload_json) as Pick<InboxCard, 'title' | 'summary' | 'day'>),
-    id: row.id,
-    kind: row.kind,
-    readAt: row.read_at,
-    createdAt: row.created_at,
-  }));
-}
-
-/** 같은 id 가 이미 있으면 그대로 둔다 — 읽은 표시가 지워지지 않게 */
-export async function insertInboxRow(card: InboxCard): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    'INSERT OR IGNORE INTO inbox_card (id, kind, payload_json, read_at, created_at) VALUES (?, ?, ?, ?, ?)',
-    card.id,
-    card.kind,
-    JSON.stringify({ title: card.title, summary: card.summary, day: card.day }),
-    card.readAt,
-    card.createdAt,
-  );
-}
-
-export async function markInboxReadRows(ids: string[], at: string): Promise<void> {
-  const db = await getDb();
-  for (const id of ids) {
-    await db.runAsync('UPDATE inbox_card SET read_at = ? WHERE id = ? AND read_at IS NULL', at, id);
-  }
-}
-
-// --- 빠른 기록 (SPEC-LOG-01, decisions/023) ---
-
-export async function readEventRows(): Promise<CareEvent[]> {
-  const db = await getDb();
-  return db.getAllAsync<CareEvent>(
-    `SELECT id, kind, start_at AS startAt, end_at AS endAt, amount, side, diaper, color, note,
-            created_at AS createdAt, updated_at AS updatedAt
-       FROM care_event ORDER BY start_at`,
-  );
-}
-
-/** 넣거나 덮어쓴다 — 고치기 · 가족에게서 받은 기록 모두 */
-export async function upsertEventRow(e: CareEvent): Promise<void> {
-  const db = await getDb();
-  await db.runAsync(
-    `INSERT INTO care_event (id, kind, start_at, end_at, amount, side, diaper, color, note, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, start_at = excluded.start_at, end_at = excluded.end_at,
-       amount = excluded.amount, side = excluded.side, diaper = excluded.diaper, color = excluded.color,
-       note = excluded.note, updated_at = excluded.updated_at`,
-    e.id,
-    e.kind,
-    e.startAt,
-    e.endAt,
-    e.amount,
-    e.side,
-    e.diaper,
-    e.color ?? null,
-    e.note,
-    e.createdAt,
-    e.updatedAt,
-  );
-}
-
-export async function deleteEventRow(id: string): Promise<void> {
-  const db = await getDb();
-  await db.runAsync('DELETE FROM care_event WHERE id = ?', id);
-}
+// 예전 대화 · 알림함 · 빠른 기록 표(chat_message · inbox_card · care_event)는 2026-10-19 에 쓰지 않게 됐다(decisions/030).
+// 이미 있는 폰의 표와 내용은 지우지 않는다(헌장 2).
 
 // --- 주제별 할 일 (SPEC-TOPIC-01~03, decisions/024) ---
 
