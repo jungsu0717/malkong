@@ -224,8 +224,6 @@ export default function ShopScreen() {
                 </Card>
               </View>
             )}
-
-            {!typing && <AdBanner />}
           </ScrollView>
 
           <TodoInput
@@ -246,6 +244,8 @@ export default function ShopScreen() {
               });
             }}
           />
+          {/* 배너는 바닥에 고정 — 넘겨도 가려지지 않는다. 적는 동안(키보드)은 적는 칸 바로 밑이라 잘못 눌리지 않게 숨긴다 */}
+          {!typing && <AdBanner anchored />}
         </KeyboardAvoidingView>
       </SafeAreaView>
 

@@ -246,10 +246,10 @@ export default function RoutineScreen() {
                 ))}
             </View>
           )}
-
-          <AdBanner />
         </View>
       </ScrollView>
+      {/* 배너는 바닥에 고정 — 넘겨도 가려지지 않는다 */}
+      <AdBanner anchored />
       {/* 아래로 넘긴 글이 상태 표시줄 밑으로 들어가도 시계가 보이게 */}
       <View style={[styles.statusStrip, { height: insets.top, backgroundColor: c.hero }]} />
 

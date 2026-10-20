@@ -179,9 +179,6 @@ export default function TodoScreen() {
                 onPress={() => router.push('/todo-recommend')}
               />
             </Card>
-
-            {/* 배너는 목록 끝에 — 적는 칸과 떨어뜨린다(SPEC-TOPIC-03 금지) */}
-            {!typing && <AdBanner />}
           </ScrollView>
 
           <TodoInput
@@ -193,6 +190,8 @@ export default function TodoScreen() {
               void add({ title: p.title, dueAt: dueAt.toISOString(), hasTime: p.hasTime, repeat: p.repeat });
             }}
           />
+          {/* 배너는 바닥에 고정 — 넘겨도 가려지지 않는다. 적는 동안(키보드)은 적는 칸 바로 밑이라 잘못 눌리지 않게 숨긴다 */}
+          {!typing && <AdBanner anchored />}
         </KeyboardAvoidingView>
       </SafeAreaView>
 
