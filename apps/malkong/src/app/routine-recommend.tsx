@@ -16,12 +16,10 @@ import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { monthStart } from '@/data/briefing';
 import { routineRecommend } from '@/data/recommend';
-import { templateDetail, type RoutineTemplate } from '@/data/routine';
+import { templateDetail, templateInput, titleKey, type RoutineTemplate } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { usePlace } from '@/hooks/use-place';
 import { useTheme } from '@/hooks/use-theme';
-
-const key = (title: string) => title.replace(/\s+/g, '');
 
 export default function RoutineRecommendScreen() {
   const c = useTheme();
@@ -31,18 +29,10 @@ export default function RoutineRecommendScreen() {
 
   if (!baby || !age) return <ScreenLoading />;
   const rec = routineRecommend(age.month, place);
-  const have = new Set(routines.map((r) => key(r.title)));
+  const have = new Set(routines.map((r) => titleKey(r.title)));
   const add = (t: RoutineTemplate) => {
     tap('success');
-    void addRoutine({
-      title: t.title,
-      kind: t.kind,
-      everyDays: t.everyDays,
-      weekdays: t.weekdays ?? null,
-      time: t.time,
-      goalMinutes: null,
-      items: t.items ?? null,
-    });
+    void addRoutine(templateInput(t));
   };
   const nextDate = rec.next ? monthStart(baby.birthDate, rec.next.fromMonth) : null;
 
@@ -61,7 +51,7 @@ export default function RoutineRecommendScreen() {
           {rec.templates.length > 0 && (
             <Card style={styles.rows}>
               {rec.templates.map((t, i) => {
-                const added = have.has(key(t.title));
+                const added = have.has(titleKey(t.title));
                 return (
                   <View key={t.title} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider }]}>
                     <View style={[styles.icon, { backgroundColor: c.surface }]}>

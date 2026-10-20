@@ -40,6 +40,13 @@ export const Colors = {
     space: '#0B0B10',
     onSpace: '#FFFFFF',
     onSpaceDim: 'rgba(255, 255, 255, 0.68)',
+    /** 루틴 탭 위쪽 먹색 머리(task today/004) — 그 위의 글씨 · 진행 고리 · 고리 바탕 */
+    hero: '#16161A',
+    onHero: '#FFFFFF',
+    onHeroDim: 'rgba(255, 255, 255, 0.66)',
+    /** 먹색 위에서 읽히는 밝은 코랄 */
+    heroAccent: '#FF7A66',
+    heroTrack: 'rgba(255, 255, 255, 0.14)',
   },
   dark: {
     text: '#F4F4F6',
@@ -65,6 +72,11 @@ export const Colors = {
     space: '#0B0B10',
     onSpace: '#FFFFFF',
     onSpaceDim: 'rgba(255, 255, 255, 0.68)',
+    hero: '#1C1C22',
+    onHero: '#FFFFFF',
+    onHeroDim: 'rgba(255, 255, 255, 0.62)',
+    heroAccent: '#FF7A66',
+    heroTrack: 'rgba(255, 255, 255, 0.12)',
   },
 } as const;
 

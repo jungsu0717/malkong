@@ -1,21 +1,24 @@
 /**
- * 루틴 — 육아비서 첫 화면 (SPEC-MAIN-01~04, task today/001 · 002 · 003, decisions/028 · 029).
+ * 루틴 — 육아비서 첫 화면 (SPEC-MAIN-01~04, task today/001 · 002 · 003 · 004, decisions/028 · 029).
  *
- * 「했나?」에 바로 답하는 곳이다. 위에 진행 카드(오늘 루틴 몇 개 중 몇 개 완료 · 다음 루틴), 그 아래 오늘 할 루틴을
- * 버튼 보기(routine-grid)나 시간순 보기(routine-timeline)로 보인다. 보기는 제목 오른쪽에서 바꾸고 마지막 것을 기억한다.
+ * 「했나?」에 바로 답하는 곳이다. 위쪽 먹색 머리(routine-hero)에 진행 고리 · 남은 개수 · 다음 루틴과 그것을 바로 하는 큰 단추,
+ * 그 아래 오늘 할 루틴을 버튼 보기(routine-grid)나 시간순 보기(routine-timeline)로 보인다. 보기는 머리 오른쪽에서 바꾸고 마지막 것을 기억한다.
  * 오늘 할 날이 아닌 루틴은 맨 아래 한 줄로 접는다. 할 일과 다가오는 날은 할 일 탭에 있다.
  * 단계가 있는 루틴은 누르면 단계 시트(SPEC-MAIN-05), 재고 확인은 재고 확인 시트(SPEC-MAIN-06)가 열린다.
+ * 추가는 추천 시트(routine-add-sheet), 직접 만들기 · 편집은 routine-form 화면이다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useIsFocused } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
+import { RoutineAddSheet } from '@/components/routine/routine-add-sheet';
 import { RoutineGrid } from '@/components/routine/routine-grid';
-import { RoutineSheet } from '@/components/routine/routine-sheet';
+import { RoutineHero, type RoutineView } from '@/components/routine/routine-hero';
 import { RoutineStepsSheet } from '@/components/routine/routine-steps-sheet';
 import { RoutineTimeline } from '@/components/routine/routine-timeline';
 import { StockSheet } from '@/components/routine/stock-sheet';
@@ -25,19 +28,37 @@ import { ThemedView } from '@/components/themed-view';
 import { tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
+import { monthStart } from '@/data/briefing';
 import { readSetting, writeSetting } from '@/data/db';
-import { homeTemplates } from '@/data/recommend';
-import { dateLabel, hasSteps, nextDayLabel, scheduleLabel, timeLabel, todayPlan, todayState, type Routine, type RoutineTemplate } from '@/data/routine';
+import { routineRecommend } from '@/data/recommend';
+import {
+  dateLabel,
+  hasSteps,
+  nextDayLabel,
+  scheduleLabel,
+  templateInput,
+  timeLabel,
+  todayPlan,
+  type Routine,
+} from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 
-type ViewMode = 'grid' | 'timeline';
 /** 마지막으로 고른 보기 — 다음에도 그 보기로 연다(SPEC-MAIN-01) */
 const VIEW_KEY = 'routine_view';
 
+/** 큰 단추의 이름표 — 단계 · 재고 확인은 시트를 열고, 타이머는 켜고 끄고, 그 밖에는 바로 완료 */
+function actionLabel(r: Routine): string {
+  if (hasSteps(r) || r.kind === 'stock') return `${r.title} 시작하기`;
+  if (r.kind === 'minutes') return r.runningSince ? `${r.title} 타이머 멈추기` : `${r.title} 타이머 시작`;
+  return `${r.title} 완료`;
+}
+
 export default function RoutineScreen() {
   const c = useTheme();
+  const insets = useSafeAreaInsets();
+  const focused = useIsFocused();
   const { baby, age } = useBaby();
   const {
     routines,
@@ -46,6 +67,7 @@ export default function RoutineScreen() {
     addRoutine,
     updateRoutine,
     removeRoutine,
+    restoreRoutine,
     check,
     toggleStep,
     completeAll,
@@ -55,13 +77,13 @@ export default function RoutineScreen() {
     startTimer,
     stopTimer,
   } = useRoutines();
-  const [sheet, setSheet] = useState<{ routine: Routine | null } | null>(null);
+  const [adding, setAdding] = useState(false);
   /** 단계 시트 · 재고 확인 시트로 연 루틴 id */
   const [stepsId, setStepsId] = useState<string | null>(null);
   const [stockId, setStockId] = useState<string | null>(null);
   const [arranging, setArranging] = useState(false);
   const [showLater, setShowLater] = useState(false);
-  const [view, setViewState] = useState<ViewMode>('grid');
+  const [view, setViewState] = useState<RoutineView>('grid');
   useEffect(() => {
     void readSetting(VIEW_KEY)
       .then((v) => {
@@ -69,7 +91,7 @@ export default function RoutineScreen() {
       })
       .catch(() => undefined);
   }, []);
-  const setView = (v: ViewMode) => {
+  const setView = (v: RoutineView) => {
     tap();
     setViewState(v);
     setArranging(false);
@@ -81,17 +103,9 @@ export default function RoutineScreen() {
 
   if (!baby || !age || loading) return <ScreenLoading />;
   const plan = todayPlan(routines, logs, now);
-  const templates = homeTemplates(age.month);
-  const quickAdd = (t: RoutineTemplate) =>
-    void addRoutine({
-      title: t.title,
-      kind: t.kind,
-      everyDays: t.everyDays,
-      weekdays: t.weekdays ?? null,
-      time: t.time,
-      goalMinutes: null,
-      items: t.items ?? null,
-    });
+  const rec = routineRecommend(age.month, 'home');
+  const templates = rec.templates;
+  const edit = (r: Routine) => router.push({ pathname: '/routine-form', params: { id: r.id } });
   const onTimer = (r: Routine) => void (r.runningSince ? stopTimer(r.id) : startTimer(r.id));
   // 단계가 있으면 단계 시트, 재고 확인은 재고 확인 시트, 그 밖의 체크는 바로 완료 ↔ 되돌림
   const onCheck = (id: string) => {
@@ -100,104 +114,73 @@ export default function RoutineScreen() {
     else if (r?.kind === 'stock') setStockId(id);
     else void check(id);
   };
+  const onAction = (r: Routine) => (r.kind === 'minutes' ? onTimer(r) : onCheck(r.id));
   const stepsRoutine = routines.find((r) => r.id === stepsId) ?? null;
   const stockRoutine = routines.find((r) => r.id === stockId) ?? null;
-  const nextText = plan.next ? [plan.next.r.title, plan.next.r.time ? timeLabel(plan.next.r.time) : null].filter(Boolean).join(' · ') : null;
   const first = plan.later[0];
+  const laterText = first ? `${nextDayLabel(first.s.nextInDays, now)} ${first.r.title}` : null;
+
+  // 머리 글 — 남은 개수와 다음 루틴. 오늘 할 루틴이 없으면 고리 없이 한 줄
+  const left = plan.total - plan.done;
+  const headline =
+    routines.length === 0
+      ? '자주 챙기는 일을 추가해 보세요'
+      : plan.total === 0
+        ? '오늘 할 루틴이 없어요'
+        : left > 0
+          ? `${left}개 남았어요`
+          : '모두 완료했어요';
+  const sub =
+    routines.length === 0
+      ? '정한 시간에 알려 드려요'
+      : plan.next
+        ? `다음 · ${plan.next.r.title}${plan.next.r.time ? ` ${timeLabel(plan.next.r.time)}` : ''}`
+        : plan.total === 0 && laterText
+          ? `다음 · ${laterText}`
+          : null;
+  const nextDate = rec.next ? monthStart(baby.birthDate, rec.next.fromMonth) : null;
+  const moreDetail =
+    rec.next && nextDate
+      ? `${nextDate.getMonth() + 1}월 ${nextDate.getDate()}일부터 ${rec.next.templates
+          .slice(0, 2)
+          .map((t) => t.title)
+          .join(' · ')} 추천`
+      : '병원 · 산후조리원에서 쓸 추천도 있어요';
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.flex} edges={['top']}>
-        <ScrollView style={styles.flex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.title}>
-            <View style={styles.titleRow}>
-              <ThemedText type="display">루틴</ThemedText>
-              <View style={[styles.toggle, { backgroundColor: c.surface }]} accessibilityLabel="보기 전환">
-                {(['grid', 'timeline'] as ViewMode[]).map((v) => {
-                  const on = view === v;
-                  return (
-                    <Pressable
-                      key={v}
-                      accessibilityRole="button"
-                      accessibilityLabel={v === 'grid' ? '버튼 보기' : '시간순 보기'}
-                      accessibilityState={{ selected: on }}
-                      onPress={() => setView(v)}
-                      style={[styles.toggleItem, on && { backgroundColor: c.background }]}>
-                      <Ionicons name={v === 'grid' ? 'grid-outline' : 'list-outline'} size={17} color={on ? c.text : c.textSecondary} />
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
-            <ThemedText type="small" style={{ color: c.textSecondary }}>
-              {dateLabel(now)} · 태어난 지 {age.days + 1}일
-            </ThemedText>
-          </View>
+      {focused && <StatusBar style="light" />}
+      <ScrollView style={styles.flex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <RoutineHero
+          topInset={insets.top}
+          dateText={`${dateLabel(now)} · 태어난 지 ${age.days + 1}일`}
+          view={view}
+          onView={setView}
+          ring={plan.total > 0 ? { done: plan.done, total: plan.total } : null}
+          headline={headline}
+          sub={sub}
+          action={plan.next ? { routine: plan.next.r, label: actionLabel(plan.next.r) } : null}
+          onAction={onAction}
+        />
 
-          {/* 진행 카드 (SPEC-MAIN-01) */}
-          {plan.total > 0 && (
-            <View style={[styles.progress, { backgroundColor: c.surface }]}>
-              <View style={styles.progressHead}>
-                <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
-                  오늘 루틴
-                </ThemedText>
-                <ThemedText type="label" style={{ color: c.textSecondary }}>
-                  <ThemedText type="title" style={{ fontSize: 26, lineHeight: 30 }}>
-                    {plan.done}
-                  </ThemedText>{' '}
-                  / {plan.total} 완료
-                </ThemedText>
-              </View>
-              <View style={[styles.bar, { backgroundColor: c.surfaceStrong }]}>
-                <View style={[styles.barFill, { backgroundColor: c.accent, width: `${(plan.done / plan.total) * 100}%` }]} />
-              </View>
-              <View style={styles.nextRow}>
-                <Ionicons name={nextText ? 'time-outline' : 'checkmark-circle-outline'} size={16} color={c.textSecondary} />
-                {nextText ? (
-                  <ThemedText type="small">
-                    <ThemedText type="small" style={{ color: c.textSecondary }}>
-                      다음
-                    </ThemedText>{' '}
-                    <ThemedText type="small" style={{ fontWeight: 600 }}>
-                      {nextText}
-                    </ThemedText>
-                  </ThemedText>
-                ) : (
-                  <ThemedText type="small" style={{ fontWeight: 600 }}>
-                    오늘 루틴을 모두 완료했어요
-                  </ThemedText>
-                )}
-              </View>
-            </View>
-          )}
-
+        <View style={styles.body}>
           {/* 오늘 할 루틴 (SPEC-MAIN-01 · 02 · 03) */}
           <View style={styles.section}>
             <View style={styles.headRow}>
-              <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
-                오늘 할 루틴
+              <ThemedText type="body" style={{ fontWeight: 700 }}>
+                {routines.length === 0 ? '추천 루틴' : '오늘 할 루틴'}
               </ThemedText>
               {routines.length > 0 && (
                 <Pressable
                   accessibilityRole="button"
                   hitSlop={8}
-                  onPress={() => (view === 'grid' ? setArranging((v) => !v) : setSheet({ routine: null }))}>
+                  onPress={() => (view === 'grid' ? setArranging((v) => !v) : setAdding(true))}>
                   <ThemedText type="label" style={{ color: c.accentText, fontWeight: 600 }}>
                     {view === 'timeline' ? '추가' : arranging ? '완료' : '편집'}
                   </ThemedText>
                 </Pressable>
               )}
             </View>
-            {routines.length === 0 && (
-              <ThemedText type="small" style={[styles.hint, { color: c.textSecondary }]}>
-                자주 챙기는 일을 눌러 추가해 보세요. 정한 시간에 알려 드려요
-              </ThemedText>
-            )}
-            {routines.length > 0 && plan.total === 0 && (
-              <ThemedText type="small" style={[styles.hint, { color: c.textSecondary }]}>
-                오늘 할 루틴이 없어요
-              </ThemedText>
-            )}
             {view === 'timeline' && routines.length > 0 ? (
               plan.total > 0 && (
                 <RoutineTimeline
@@ -207,7 +190,7 @@ export default function RoutineScreen() {
                   onCheck={onCheck}
                   onAddMinutes={(id, m) => void addMinutes(id, m)}
                   onTimer={onTimer}
-                  onEdit={(r) => setSheet({ routine: r })}
+                  onEdit={edit}
                 />
               )
             ) : (
@@ -220,9 +203,9 @@ export default function RoutineScreen() {
                 onCheck={onCheck}
                 onAddMinutes={(id) => void addMinutes(id, 1)}
                 onTimer={onTimer}
-                onEdit={(r) => setSheet({ routine: r })}
-                onAdd={() => setSheet({ routine: null })}
-                onQuickAdd={quickAdd}
+                onEdit={edit}
+                onAdd={() => setAdding(true)}
+                onQuickAdd={(t) => void addRoutine(templateInput(t))}
               />
             )}
           </View>
@@ -240,7 +223,7 @@ export default function RoutineScreen() {
                   <ThemedText type="small" style={{ color: c.textSecondary }}>
                     다른 날
                   </ThemedText>
-                  {` · ${nextDayLabel(first.s.nextInDays, now)} ${first.r.title}`}
+                  {` · ${laterText}`}
                   {plan.later.length > 1 ? ` 외 ${plan.later.length - 1}개` : ''}
                 </ThemedText>
                 <Ionicons name={showLater ? 'chevron-up' : 'chevron-down'} size={16} color={c.textTertiary} />
@@ -251,7 +234,7 @@ export default function RoutineScreen() {
                     key={r.id}
                     accessibilityRole="button"
                     accessibilityLabel={`${r.title} 편집`}
-                    onPress={() => setSheet({ routine: r })}
+                    onPress={() => edit(r)}
                     style={[styles.laterRow, { borderTopColor: c.divider }]}>
                     <ThemedText type="body" style={styles.flex}>
                       {r.title}
@@ -265,37 +248,30 @@ export default function RoutineScreen() {
           )}
 
           <AdBanner />
-        </ScrollView>
-      </SafeAreaView>
+        </View>
+      </ScrollView>
+      {/* 아래로 넘긴 글이 상태 표시줄 밑으로 들어가도 시계가 보이게 */}
+      <View style={[styles.statusStrip, { height: insets.top, backgroundColor: c.hero }]} />
 
-      <RoutineSheet
-        key={sheet ? `routine-${sheet.routine?.id ?? 'new'}` : 'routine-closed'}
-        open={sheet !== null}
-        routine={sheet?.routine ?? null}
-        existingTitles={routines.map((r) => r.title)}
-        onClose={() => setSheet(null)}
-        onSave={(input) => {
-          const target = sheet?.routine;
-          setSheet(null);
-          void (target ? updateRoutine(target.id, input) : addRoutine(input));
-        }}
+      <RoutineAddSheet
+        key={adding ? 'add-open' : 'add-closed'}
+        open={adding}
+        caption={`${rec.label} · 누르면 추가, 다시 누르면 빼요`}
+        moreDetail={moreDetail}
         templates={templates}
-        onQuickAdd={quickAdd}
-        onSkip={() => {
-          const target = sheet?.routine;
-          setSheet(null);
-          if (target) void skipToday(target.id);
+        routines={routines}
+        onAdd={(t) => void addRoutine(templateInput(t))}
+        onRemove={(r) => void removeRoutine(r.id)}
+        onUndo={(r) => void restoreRoutine(r.id)}
+        onCustom={() => {
+          setAdding(false);
+          router.push('/routine-form');
         }}
-        skippedToday={sheet?.routine ? todayState(sheet.routine, logs, now).skipped : false}
         onMore={() => {
-          setSheet(null);
+          setAdding(false);
           router.push('/routine-recommend');
         }}
-        onDelete={() => {
-          const target = sheet?.routine;
-          setSheet(null);
-          if (target) void removeRoutine(target.id);
-        }}
+        onClose={() => setAdding(false)}
       />
       <RoutineStepsSheet
         routine={stepsRoutine}
@@ -305,7 +281,7 @@ export default function RoutineScreen() {
         onCompleteAll={() => stepsRoutine && void completeAll(stepsRoutine.id)}
         onEdit={() => {
           setStepsId(null);
-          setSheet({ routine: stepsRoutine });
+          if (stepsRoutine) edit(stepsRoutine);
         }}
         onSkip={() => {
           if (stepsRoutine) void skipToday(stepsRoutine.id);
@@ -335,27 +311,18 @@ export default function RoutineScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  scroll: {
+  scroll: { paddingBottom: Spacing.four },
+  body: {
     paddingHorizontal: Gutter,
-    paddingTop: Spacing.three,
-    paddingBottom: Spacing.four,
+    paddingTop: 20,
     gap: Spacing.four,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
-  title: { gap: 2 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  toggle: { flexDirection: 'row', gap: 2, padding: 3, borderRadius: 12 },
-  toggleItem: { width: 38, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  progress: { borderRadius: Radius.xl, padding: 18, gap: 12 },
-  progressHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  bar: { height: 8, borderRadius: 4, overflow: 'hidden' },
-  barFill: { height: 8, borderRadius: 4 },
-  nextRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusStrip: { position: 'absolute', top: 0, left: 0, right: 0 },
   section: { gap: 10 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
-  hint: { paddingHorizontal: 4 },
   later: { borderWidth: 1, borderRadius: Radius.lg, paddingHorizontal: 16 },
   laterHead: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 50 },
   laterRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12, borderTopWidth: StyleSheet.hairlineWidth * 2 },

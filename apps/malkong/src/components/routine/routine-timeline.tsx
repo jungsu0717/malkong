@@ -100,7 +100,7 @@ function Row({
 
       <View style={styles.rail}>
         {r.kind === 'minutes' ? (
-          <View style={[styles.dot, done ? { backgroundColor: c.ink } : { borderWidth: 2, borderColor: next ? c.accent : c.text }]}>
+          <View style={[styles.dot, done ? { backgroundColor: c.accent } : { borderWidth: 2, borderColor: next ? c.accent : c.text }]}>
             <Ionicons name={done ? 'checkmark' : 'time-outline'} size={done ? 14 : 13} color={done ? c.onInk : c.text} />
           </View>
         ) : (
@@ -110,7 +110,7 @@ function Row({
             accessibilityLabel={r.title}
             hitSlop={10}
             onPress={toggle}
-            style={[styles.dot, done ? { backgroundColor: c.ink } : { borderWidth: 2, borderColor: next ? c.accent : c.text }]}>
+            style={[styles.dot, done ? { backgroundColor: c.accent } : { borderWidth: 2, borderColor: next ? c.accent : c.text }]}>
             {done && <Ionicons name="checkmark" size={14} color={c.onInk} />}
           </Pressable>
         )}
@@ -146,7 +146,7 @@ function Row({
           <>
             {r.goalMinutes ? (
               <View style={[styles.bar, { backgroundColor: c.surfaceStrong }]}>
-                <View style={[styles.barFill, { backgroundColor: c.ink, width: `${Math.min(100, (s.minutes / r.goalMinutes) * 100)}%` }]} />
+                <View style={[styles.barFill, { backgroundColor: c.accent, width: `${Math.min(100, (s.minutes / r.goalMinutes) * 100)}%` }]} />
               </View>
             ) : null}
             <View style={styles.buttons}>
@@ -181,7 +181,7 @@ function Row({
             </View>
           </>
         ) : (
-          <ThemedText type="caption" style={{ color: done ? c.text : c.textSecondary, fontWeight: done ? 600 : 400 }}>
+          <ThemedText type="caption" style={{ color: done ? c.accentText : c.textSecondary, fontWeight: done ? 600 : 400 }}>
             {done ? doneText : sub}
           </ThemedText>
         )}

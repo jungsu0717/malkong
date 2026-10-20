@@ -290,6 +290,16 @@ export type RoutineTemplate = {
   weekdays?: number[];
 };
 
+/** 같은 루틴인지 볼 때의 이름 — 띄어쓰기는 보지 않는다(「밤잠 준비」 = 「밤잠준비」) */
+export function titleKey(title: string): string {
+  return title.replace(/\s+/g, '');
+}
+
+/** 추천을 그대로 추가할 때의 값 */
+export function templateInput(t: RoutineTemplate): RoutineInput {
+  return { title: t.title, kind: t.kind, everyDays: t.everyDays, weekdays: t.weekdays ?? null, time: t.time, goalMinutes: null, items: t.items ?? null };
+}
+
 /** 추천 줄의 설명 — 「2일마다 · 목욕 → 보습」 「매일 · 타이머」 「매주 · 분유 · 기저귀 · 물티슈」 「매일 · 오후 8:00」 */
 export function templateDetail(t: RoutineTemplate): string {
   const every = scheduleLabel(t);
@@ -347,7 +357,7 @@ export function makeRoutineLog(
 }
 
 /** 같은 물건인가 — 띄어쓰기를 빼고 본다 */
-const sameName = (a: string, b: string) => a.replace(/\s+/g, '') === b.replace(/\s+/g, '');
+const sameName = (a: string, b: string) => titleKey(a) === titleKey(b);
 
 /**
  * 재고 확인에서 「부족」을 고른 것 중 장보기에 새로 넣을 것(SPEC-MAIN-06) — 살 것 · 배송 중(`open`)에 같은 이름이 있으면 뺀다.

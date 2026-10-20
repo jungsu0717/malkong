@@ -18,6 +18,8 @@ import {
   scheduleLabel,
   stockToBuy,
   templateDetail,
+  templateInput,
+  titleKey,
   timeLabel,
   todayPlan,
   todayState,
@@ -242,4 +244,12 @@ test('오늘은 건너뛰기 — 진행 · 알림에서 빠지고, 지난번으�
   assert.equal(routineReminders([bath], [skip], NOW, 1).length, 0);
   // 건너뛴 다음 날은 다시 할 날(건너뛴 것은 한 것이 아니다)
   assert.equal(isDueOn(bath, [skip], new Date(2026, 9, 17)), true);
+});
+
+test('같은 루틴인지는 띄어쓰기를 빼고 본다 · 추천은 그대로 추가 값이 된다(task today/004)', () => {
+  assert.equal(titleKey('밤잠 준비'), titleKey('밤잠준비'));
+  assert.notEqual(titleKey('목욕'), titleKey('목욕 준비'));
+  const input = templateInput({ title: '재고 확인', kind: 'stock', everyDays: 7, weekdays: [0], time: null, items: ['분유'] });
+  assert.deepEqual(input, { title: '재고 확인', kind: 'stock', everyDays: 7, weekdays: [0], time: null, goalMinutes: null, items: ['분유'] });
+  assert.equal(templateInput({ title: '목욕', kind: 'check', everyDays: 2, time: '20:00' }).weekdays, null);
 });

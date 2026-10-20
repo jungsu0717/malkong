@@ -1,9 +1,9 @@
 /**
  * 오늘 탭 루틴 버튼 모음 (SPEC-MAIN-01 · 02 · 03, task today/002) — 루틴을 3열 버튼으로 한눈에 다 보인다.
  *
- * - 체크: 누르면 완료(아이콘에 코랄 체크, 「08:10 완료」), 다시 누르면 되돌린다
+ * - 체크: 누르면 완료(연한 코랄 바탕에 코랄 체크 동그라미, 「08:10 완료」), 다시 누르면 되돌린다
  * - 타이머: 누르면 타이머 시작 · 멈춤, 오른쪽 위 「+1분」, 목표가 있으면 아래 진행 막대
- * - 루틴 탭은 오늘 할 루틴만 넘긴다(다른 날 루틴은 탭 아래 한 줄, task today/003)
+ * - 루틴 탭은 오늘 할 루틴만 넘긴다(다른 날 루틴은 탭 아래 한 줄, task today/003). 모양은 시안 C(task today/004)
  * - 편집 중이면 누르면 편집, 아니면 길게 눌러 편집. 마지막 칸은 「추가」
  * - 루틴이 하나도 없으면 추천이 버튼으로 다 보이고, 누르면 바로 추가된다
  */
@@ -15,7 +15,7 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import { tap } from '@/components/ui';
-import { Gutter, MaxContentWidth, Radius } from '@/constants/theme';
+import { Gutter, MaxContentWidth } from '@/constants/theme';
 import { statusLine, templateDetail, type Routine, type RoutineTemplate, type TodayState } from '@/data/routine';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -110,45 +110,60 @@ function RoutineTile({
   const line = statusLine(routine, state);
   const elapsed = running ? Math.max(0, Math.floor((now.getTime() - new Date(routine.runningSince!).getTime()) / 1000)) : 0;
   const clock = `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')}`;
-  const filled = line.done || running;
+  const done = line.done && !running;
   const label =
     routine.kind !== 'minutes'
       ? `${routine.title}, ${line.text}`
       : `${routine.title}, ${running ? `타이머 ${clock}` : line.text}, 누르면 타이머 ${running ? '멈춤' : '시작'}`;
 
+  // 「+1분」은 버튼 안의 버튼이 되지 않게 버튼 옆에 겹쳐 놓는다
   return (
-    <Pressable
-      accessibilityRole={routine.kind !== 'minutes' && !editing ? 'checkbox' : 'button'}
-      accessibilityState={routine.kind !== 'minutes' && !editing ? { checked: line.done } : undefined}
-      accessibilityLabel={editing ? `${routine.title} 편집` : label}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      delayLongPress={350}
-      style={({ pressed }) => [
-        styles.tile,
-        // 오늘 할 날이 아니거나 건너뛴 것은 흐리게
-        { width, backgroundColor: pressed ? c.surfaceStrong : c.surface, opacity: running || (state.due && !(state.skipped && !line.done)) ? 1 : 0.5 },
-      ]}>
-      <View>
-        <View style={[styles.iconCircle, { backgroundColor: filled ? c.ink : c.background }]}>
+    // 오늘 할 날이 아니거나 건너뛴 것은 흐리게
+    <View style={{ width, opacity: running || (state.due && !(state.skipped && !line.done)) ? 1 : 0.5 }}>
+      <Pressable
+        accessibilityRole={routine.kind !== 'minutes' && !editing ? 'checkbox' : 'button'}
+        accessibilityState={routine.kind !== 'minutes' && !editing ? { checked: line.done } : undefined}
+        accessibilityLabel={editing ? `${routine.title} 편집` : label}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={350}
+        style={({ pressed }) => [
+          styles.tile,
+          styles.fill,
+          { backgroundColor: done ? c.accentSoft : pressed ? c.surfaceStrong : c.surface, opacity: pressed && done ? 0.8 : 1 },
+        ]}>
+        <View style={[styles.iconCircle, { backgroundColor: running ? c.ink : done ? c.accent : c.background }]}>
           {running ? (
-            <Ionicons name="stop" size={18} color={c.onInk} />
+            <Ionicons name="stop" size={16} color={c.onInk} />
+          ) : done ? (
+            <Ionicons name="checkmark" size={18} color={c.onInk} />
           ) : (
-            <RoutineIcon title={routine.title} kind={routine.kind} size={22} color={filled ? c.onInk : c.text} />
+            <RoutineIcon title={routine.title} kind={routine.kind} size={19} color={c.text} />
           )}
         </View>
-        {line.done && !running && (
-          <View style={[styles.badge, { backgroundColor: c.accent, borderColor: c.surface }]}>
-            <Ionicons name="checkmark" size={11} color={c.onInk} />
+
+        {editing && (
+          <View style={[styles.corner, styles.editMark, { backgroundColor: c.background }]}>
+            <Ionicons name="pencil" size={12} color={c.text} />
           </View>
         )}
-      </View>
 
-      {editing ? (
-        <View style={[styles.corner, styles.editMark, { backgroundColor: c.background }]}>
-          <Ionicons name="pencil" size={12} color={c.text} />
-        </View>
-      ) : routine.kind === 'minutes' && state.due ? (
+        <ThemedText type="body" numberOfLines={2} lineBreakStrategyIOS="hangul-word" style={styles.name}>
+          {routine.title}
+        </ThemedText>
+        <ThemedText
+          type="caption"
+          numberOfLines={2}
+          style={{ color: done ? c.accentText : running ? c.text : c.textSecondary, fontWeight: running || done ? 600 : 400 }}>
+          {running ? clock : line.text}
+        </ThemedText>
+        {routine.kind === 'minutes' && routine.goalMinutes ? (
+          <View style={[styles.bar, { backgroundColor: done ? c.background : c.surfaceStrong }]}>
+            <View style={[styles.barFill, { backgroundColor: c.accent, width: `${Math.min(100, (state.minutes / routine.goalMinutes) * 100)}%` }]} />
+          </View>
+        ) : null}
+      </Pressable>
+      {!editing && routine.kind === 'minutes' && state.due && (
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={`${routine.title} 1분 더하기`}
@@ -159,23 +174,8 @@ function RoutineTile({
             +1분
           </ThemedText>
         </Pressable>
-      ) : null}
-
-      <ThemedText type="body" numberOfLines={2} lineBreakStrategyIOS="hangul-word" style={styles.name}>
-        {routine.title}
-      </ThemedText>
-      <ThemedText
-        type="caption"
-        numberOfLines={2}
-        style={{ color: running || line.done ? c.text : c.textSecondary, fontWeight: running || line.done ? 600 : 400 }}>
-        {running ? clock : line.text}
-      </ThemedText>
-      {routine.kind === 'minutes' && routine.goalMinutes ? (
-        <View style={[styles.bar, { backgroundColor: c.surfaceStrong }]}>
-          <View style={[styles.barFill, { backgroundColor: c.ink, width: `${Math.min(100, (state.minutes / routine.goalMinutes) * 100)}%` }]} />
-        </View>
-      ) : null}
-    </Pressable>
+      )}
+    </View>
   );
 }
 
@@ -194,7 +194,7 @@ function TemplateTile({ template, width, onPress }: { template: RoutineTemplate;
       style={({ pressed }) => [styles.tile, styles.dashed, { width, borderColor: c.border, backgroundColor: pressed ? c.surface : 'transparent' }]}>
       <View>
         <View style={[styles.iconCircle, { backgroundColor: c.surface }]}>
-          <RoutineIcon title={template.title} kind={template.kind} size={22} color={c.textSecondary} />
+          <RoutineIcon title={template.title} kind={template.kind} size={19} color={c.textSecondary} />
         </View>
         <View style={[styles.badge, { backgroundColor: c.ink, borderColor: c.background }]}>
           <Ionicons name="add" size={12} color={c.onInk} />
@@ -223,9 +223,7 @@ function AddTile({ width, label, onPress }: { width: number; label: string; onPr
         styles.addTile,
         { width, borderColor: c.border, backgroundColor: pressed ? c.surface : 'transparent' },
       ]}>
-      <View style={[styles.iconCircle, { backgroundColor: c.surface }]}>
-        <Ionicons name="add" size={22} color={c.text} />
-      </View>
+      <Ionicons name="add" size={22} color={c.text} />
       <ThemedText type="label" style={{ fontWeight: 600 }}>
         {label}
       </ThemedText>
@@ -235,14 +233,15 @@ function AddTile({ width, label, onPress }: { width: number; label: string; onPr
 
 const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: GAP },
-  tile: { minHeight: 112, borderRadius: Radius.lg, padding: 12, gap: 4 },
+  tile: { minHeight: 104, borderRadius: 18, padding: 12, gap: 4 },
+  fill: { flexGrow: 1 },
   dashed: { borderWidth: 1.5, borderStyle: 'dashed' },
   addTile: { alignItems: 'center', justifyContent: 'center', gap: 6 },
-  iconCircle: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  iconCircle: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   badge: {
     position: 'absolute',
-    left: 26,
-    top: 26,
+    left: 21,
+    top: 21,
     width: 18,
     height: 18,
     borderRadius: 9,
@@ -253,7 +252,7 @@ const styles = StyleSheet.create({
   corner: { position: 'absolute', top: 10, right: 10 },
   editMark: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   plus: { height: 26, paddingHorizontal: 8, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  name: { fontWeight: 600, marginTop: 6 },
+  name: { fontWeight: 700, marginTop: 6 },
   bar: { height: 4, borderRadius: 2, overflow: 'hidden', marginTop: 2 },
   barFill: { height: 4, borderRadius: 2 },
 });

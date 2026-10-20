@@ -11,7 +11,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { deleteRoutineLogRow, insertRoutineLogRow, readRoutineLogRows, readRoutineRows, readSetting, upsertRoutineRow, writeSetting } from './db';
 import { memberName, noteDeleted } from './family';
 import { askNotifications, onAlertAction, scheduleRoutineReminders, snoozeTodo } from './notifications';
-import { logsOn, makeRoutine, makeRoutineLog, routineReminders, stockToBuy, todayState, type Routine, type RoutineInput, type RoutineLog } from './routine';
+import { logsOn, makeRoutine, makeRoutineLog, routineReminders, stockToBuy, titleKey, todayState, type Routine, type RoutineInput, type RoutineLog } from './routine';
 import { onRemoteChange, requestSync } from './sync-events';
 import { placeOf } from './todos';
 import { useTodos } from './todos-context';
@@ -24,10 +24,13 @@ type RoutinesValue = {
   routines: Routine[];
   logs: RoutineLog[];
   loading: boolean;
+  /** 같은 이름으로 지운 루틴이 있으면 그것을 되살려 지난 기록을 잇는다(task today/004) */
   addRoutine: (input: RoutineInput) => Promise<Routine>;
   updateRoutine: (id: string, patch: Partial<RoutineInput>) => Promise<void>;
   /** 지우기 — 숨김이라 지난 기록은 남는다 */
   removeRoutine: (id: string) => Promise<void>;
+  /** 지운 루틴을 그대로 되살림 — 「되돌리기」 */
+  restoreRoutine: (id: string) => Promise<void>;
   /** 체크 루틴: 오늘 안 했으면 완료로, 했으면 오늘 것(단계 포함)을 되돌린다 */
   check: (id: string) => Promise<void>;
   /** 단계 하나를 끝냄 ↔ 되돌림. 마지막 단계까지 끝내면 루틴 전체 한 줄을 남기고, 단계를 되돌리면 그 줄도 지운다(SPEC-MAIN-05) */
@@ -112,8 +115,14 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
 
   const addRoutine = useCallback<RoutinesValue['addRoutine']>(
     async (input) => {
+      const title = input.title.trim();
+      const gone = current.current.all
+        .filter((r) => r.hidden && titleKey(r.title) === titleKey(title))
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
       const sort = Math.max(-1, ...current.current.all.map((r) => r.sort)) + 1;
-      const routine = makeRoutine({ ...input, title: input.title.trim() }, sort);
+      const routine = gone
+        ? { ...gone, ...input, title, hidden: false, sort, updatedAt: new Date().toISOString() }
+        : makeRoutine({ ...input, title }, sort);
       await save(routine);
       if (routine.time) await askOnce();
       return routine;
@@ -135,6 +144,14 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
     async (id: string) => {
       const before = current.current.all.find((r) => r.id === id);
       if (before) await save({ ...before, hidden: true, runningSince: null, updatedAt: new Date().toISOString() });
+    },
+    [save],
+  );
+
+  const restoreRoutine = useCallback(
+    async (id: string) => {
+      const before = current.current.all.find((r) => r.id === id);
+      if (before?.hidden) await save({ ...before, hidden: false, updatedAt: new Date().toISOString() });
     },
     [save],
   );
@@ -285,6 +302,7 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
       addRoutine,
       updateRoutine,
       removeRoutine,
+      restoreRoutine,
       check,
       toggleStep,
       completeAll,
@@ -295,7 +313,7 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
       startTimer,
       stopTimer,
     }),
-    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, check, toggleStep, completeAll, skipToday, completeStock, addMinutes, undoLast, startTimer, stopTimer],
+    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, restoreRoutine, check, toggleStep, completeAll, skipToday, completeStock, addMinutes, undoLast, startTimer, stopTimer],
   );
 
   return <RoutinesContext.Provider value={value}>{children}</RoutinesContext.Provider>;
