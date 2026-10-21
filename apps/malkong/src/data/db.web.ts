@@ -9,6 +9,7 @@
 import type { Baby } from './baby';
 import type { BabyRecord } from './records';
 import type { Routine, RoutineLog } from './routine';
+import type { Memo } from './stage';
 import type { Todo, Topic } from './todos';
 
 const KEY = 'malkong.baby';
@@ -186,4 +187,18 @@ export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {
 
 export async function deleteRoutineLogRow(id: string): Promise<void> {
   writeList(ROUTINE_LOGS_KEY, readList<RoutineLog>(ROUTINE_LOGS_KEY).filter((r) => r.id !== id));
+}
+
+const MEMOS_KEY = 'malkong.memos';
+
+export async function readMemoRows(): Promise<Memo[]> {
+  return readList<Memo>(MEMOS_KEY).sort((a, b) => b.at.localeCompare(a.at));
+}
+
+export async function upsertMemoRow(m: Memo): Promise<void> {
+  upsertIn(MEMOS_KEY, m);
+}
+
+export async function deleteMemoRow(id: string): Promise<void> {
+  writeList(MEMOS_KEY, readList<Memo>(MEMOS_KEY).filter((r) => r.id !== id));
 }

@@ -47,6 +47,11 @@ export const Colors = {
     /** 먹색 위에서 읽히는 밝은 코랄 */
     heroAccent: '#FF7A66',
     heroTrack: 'rgba(255, 255, 255, 0.14)',
+    /** 성장 탭 그림 — 모빌의 별 · 달 · 구름, 매트(task growth/004) */
+    heroStar: '#FDD686',
+    heroMoon: '#FFF1D6',
+    heroCloud: 'rgba(255, 255, 255, 0.88)',
+    heroMat: 'rgba(255, 255, 255, 0.06)',
   },
   dark: {
     text: '#F4F4F6',
@@ -77,6 +82,10 @@ export const Colors = {
     onHeroDim: 'rgba(255, 255, 255, 0.62)',
     heroAccent: '#FF7A66',
     heroTrack: 'rgba(255, 255, 255, 0.12)',
+    heroStar: '#FDD686',
+    heroMoon: '#FFF1D6',
+    heroCloud: 'rgba(255, 255, 255, 0.88)',
+    heroMat: 'rgba(255, 255, 255, 0.06)',
   },
 } as const;
 

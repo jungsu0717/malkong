@@ -13,6 +13,7 @@ import type { Baby } from './baby';
 import type { BabyRecord } from './records';
 import { repeatFromText, repeatToText } from './repeat';
 import type { Routine, RoutineLog } from './routine';
+import type { Memo } from './stage';
 import type { Todo, Topic } from './todos';
 
 const DB_NAME = 'malkong.db';
@@ -103,6 +104,13 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           created_at  TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS ix_routine_log ON routine_log(routine_id, at);
+        CREATE TABLE IF NOT EXISTS memo (
+          id          TEXT PRIMARY KEY,
+          at          TEXT NOT NULL,
+          text        TEXT NOT NULL,
+          created_at  TEXT NOT NULL,
+          updated_at  TEXT NOT NULL
+        );
       `);
       // 나중에 더한 칸 — 아기의 고친 때(가족 공유의 「늦게 고친 쪽이 이긴다」 기준, task my/007)
       const babyColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(baby)');
@@ -436,4 +444,28 @@ export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {
 export async function deleteRoutineLogRow(id: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM routine_log WHERE id = ?', id);
+}
+
+/** 우리 아기 메모(SPEC-STAGE-03, task growth/004) — 최근 것이 위로 */
+export async function readMemoRows(): Promise<Memo[]> {
+  const db = await getDb();
+  return db.getAllAsync<Memo>('SELECT id, at, text, created_at AS createdAt, updated_at AS updatedAt FROM memo ORDER BY at DESC');
+}
+
+export async function upsertMemoRow(m: Memo): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT INTO memo (id, at, text, created_at, updated_at) VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET at = excluded.at, text = excluded.text, updated_at = excluded.updated_at`,
+    m.id,
+    m.at,
+    m.text,
+    m.createdAt,
+    m.updatedAt,
+  );
+}
+
+export async function deleteMemoRow(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM memo WHERE id = ?', id);
 }

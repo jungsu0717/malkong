@@ -20,6 +20,7 @@ import { loadStoredKnowledge, refreshKnowledge } from '@/data/knowledge-update';
 import { onTodoAlertOpened } from '@/data/notifications';
 import { PreferencesProvider } from '@/data/preferences-context';
 import { RecordsProvider } from '@/data/records-context';
+import { MemosProvider } from '@/data/memos-context';
 import { RoutinesProvider } from '@/data/routines-context';
 import { TodosProvider } from '@/data/todos-context';
 
@@ -107,6 +108,7 @@ export default function RootLayout() {
                 <FamilyProvider>
                 <TodosProvider>
                 <RoutinesProvider>
+                <MemosProvider>
                   <OnboardingGate />
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(tabs)" />
@@ -115,11 +117,13 @@ export default function RootLayout() {
                     <Stack.Screen name="notifications" options={{ ...header, title: '알림' }} />
                     <Stack.Screen name="family" options={{ ...header, title: '가족과 함께 보기' }} />
                     <Stack.Screen name="routine-form" options={{ presentation: 'modal' }} />
+                    <Stack.Screen name="memos" options={{ ...header, title: '우리 아기 메모' }} />
                     <Stack.Screen name="routine-recommend" options={{ ...header, title: '루틴 추천' }} />
                     <Stack.Screen name="todo-recommend" options={{ ...header, title: '할 일 추천' }} />
                     <Stack.Screen name="lists" options={{ ...header, title: '준비 목록' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
+                </MemosProvider>
                 </RoutinesProvider>
                 </TodosProvider>
                 </FamilyProvider>
