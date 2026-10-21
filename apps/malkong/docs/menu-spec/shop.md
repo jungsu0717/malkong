@@ -1,14 +1,15 @@
-# 장보기 탭 — 살 것(살 곳별 · 배송 · 다시 담기 · 재고 확인)
+# 장보기 — 할 일 탭의 장보기 카테고리(살 곳별 · 배송 · 다시 담기 · 재고 확인)
 
 > 위에 있는 것: [constitution](../constitution.md) 1 · 2 · 3 · 8 · [main-design](../architecture/main-design.md) ·
 > [decisions/026](../decisions/026-everyday-shopping-home-tab.md) · [027](../decisions/027-log-under-my-shop-by-place.md) · [028](../decisions/028-assistant-today-routines.md) ·
-> [029](../decisions/029-routine-tab-structure.md). 메뉴 코드 `SHOP`(2026-10-16 리스트 → 장보기로 돌아왔다. 준비할 것은 할 일 탭 「준비 목록」)
+> [029](../decisions/029-routine-tab-structure.md) · [031](../decisions/031-merge-shop-growth-tab.md). 메뉴 코드 `SHOP` — 2026-10-21 부터 탭이 아니라 할 일 탭의 「장보기」 카테고리다
+> (SPEC-TOPIC-02). 준비할 것은 할 일 탭 「준비 목록」
 
 ## SPEC
 
 ### SPEC-SHOP-01 살 것
 ```
-평시 ▸ 장보기 탭에는 살 것만 있다. 재고 확인 루틴(SPEC-MAIN-06)이 있으면 맨 위에 「재고 확인」 한 줄(「매주 일요일 · 지난번에 부족한 2개를 추가했어요」)이
+평시 ▸ 장보기 카테고리에는 살 것만 있다. 재고 확인 루틴(SPEC-MAIN-06)이 있으면 맨 위에 「재고 확인」 한 줄(「매주 일요일 · 지난번에 부족한 2개를 추가했어요」)이
        보이고, 누르면 재고 확인 시트가 열린다. 재고 확인에서 들어간 살 것에는 「재고 확인에서 추가」가 보인다.
 평시 ▸ 살 것은 살 곳별로 묶여 보여야 한다 — 매장(사용자가 적은 곳, 최근 쓴 순) → 온라인 → 기타(살 곳을 안 정한 것). 묶음 머리에 개수.
 평시 ▸ 바닥 칸 위의 칩(선택 안 함 · 마트 · 온라인 · 사용자가 전에 쓴 곳)으로 살 곳을 고르고 적는다. 고른 칩은 다음에 적을 때도 남는다.
@@ -63,3 +64,4 @@
 - 2026-10-16 탭 이름 리스트, 살 것 · 준비할 것 전환(SPEC-SHOP-05), 직접 만든 목록을 할 일 탭에서 옮김 (Julian, decisions/028, task list/001)
 - 2026-10-16 「주문했어요」 → 「주문 완료」, 「받았어요」 → 「수령 완료」 (Julian, task today/002)
 - 2026-10-16 탭 이름 장보기로, 살 것만(준비할 것은 할 일 탭으로), 재고 확인 한 줄(SPEC-SHOP-01 · 05) (Julian, decisions/029, task today/003)
+- 2026-10-21 탭에서 할 일 탭의 「장보기」 카테고리로 옮김 — 내용은 그대로 (Julian, decisions/031, task topic/008)
