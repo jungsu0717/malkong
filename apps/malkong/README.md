@@ -3,7 +3,7 @@
 육아의 주제(분유, 기저귀, 접종 · 검진, 외출, 아플 때, 이유식, 장보기)마다 할 일을 적고, 기록과 끝낸 할 일이 쌓여
 다음에 먼저 꺼내 주는 앱. 빠른 기록(수유 · 기저귀 · 잠 · 체온 · 키와 몸무게)이 주제에 숫자를 채운다.
 
-## 지금 상태 (2026-10-20)
+## 지금 상태 (2026-10-22)
 
 - **방향 전환(2026-10-15)**: AI 육아 상담을 빼고 **주제별 육아 할 일과 기록**으로 바꿨다([decisions/024](docs/decisions/024-topic-todo-no-ai-answers.md)).
   헌장 · 제품 브리프 · 메인 설계를 새로 쓰고, 할 일 탭 SPEC([topic](docs/menu-spec/topic.md))을 새로 썼다. 버디 · 우리 아기 · 일정 탭의 SPEC 은 보관.
@@ -42,6 +42,9 @@
   2026-10-21 시안 「제안 4」([decisions/031](docs/decisions/031-merge-shop-growth-tab.md)) — 장보기를 할 일 탭의 카테고리로 합쳤고([topic/008](docs/task/topic/008-todo-shop-merge.md)),
   장보기 자리에 **성장 탭**([growth/004](docs/task/growth/004-stage-tab.md)): 시기마다 바뀌는 버디(누워서 바둥 · 기기 · 걷기, AI 로 만든 움직이는 그림),
   발달 막대(CDC), 이맘때, 우리 아기 메모(이 폰에만). 탭은 루틴 · 할 일 · 성장 · 마이.
+  2026-10-22 할 일 탭을 세 칸(내 할 일 · 장보기 · 아기 일정, [topic/009](docs/task/topic/009-todo-three-tabs.md))으로, 성장 탭을 한눈 요약 + 상세 화면 셋
+  (발달 체크 · 해 주면 좋아요 · 알아 두면 좋아요, [growth/005](docs/task/growth/005-stage-depth.md))으로 바꿨다. 성장 탭의 새 공공 지식 85개는 **승인 대기**다.
+  같은 날 처음 쓰는 부모로 하루 써 보고 불편한 곳 여섯을 고쳤고([common/023](docs/task/common/023-persona-polish.md)), Expo SDK 57 패치 버전을 맞췄다(expo-doctor 21/21 통과).
   아래 「앱」 줄은 방향 전환 전의 기록이다
 - **저장소**: 2026-10-14 에 저장소가 여러 앱을 담는 `julian-studio` 가 되면서 육아버디는 `apps/malkong/` 으로 옮겼다. 모든 앱에 통하는 규칙은 루트 [AGENTS.md](../../AGENTS.md)
 - **앱**: 시안 B 「단정한 비서」([decisions/012](docs/decisions/012-chat-first-three-tabs.md)), 탭 다섯 —
@@ -54,7 +57,7 @@
   하루 기록이 사흘째 비면 적을 카드와 저녁 알림 한 번([decisions/016](docs/decisions/016-daily-log-out-of-briefing.md)).
   브리핑은 기기 안 규칙과 문구 틀로 만든다([decisions/018](docs/decisions/018-daily-care-briefing.md)). 부모 돌봄 L1 넷 승인(2026-10-04).
   온보딩은 생일 → 브리핑 알림 시각. 만화 5컷([my/006](docs/task/my/006-intro-toon.md))은 마이 제목 줄 오른쪽 「육아버디 스토리」에서 본다(처음 실행에는 안 뜸, [my/008](docs/task/my/008-intro-in-my.md), 2026-10-12). 광고(AdMob 배너·보상형), 캐릭터 버디 아이콘
-- **Expo 계정** `@julian-malkong/malkong` 연결, 앱 식별자 `kr.malkong.app`. Julian 아이폰(Expo Go)으로 볼 수 있다
+- **Expo 계정** `@julian-malkong/malkong` 연결, 앱 식별자 `com.yugabuddy.app`(iOS · Android, app.json). Julian 아이폰(Expo Go)으로 볼 수 있다
 - **지식(L1)**: 승인된 77건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호·부모 돌봄(미국 CDC)
 - **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 재시도 안전, 피드백,
   보상형 광고 확인(SSV), 하루 한도 정책 v2 — 정밀 답변 10회 · 광고 1편에 5회(하루 2편) · 그 뒤 일반 기준 답 20회 ·
@@ -87,18 +90,20 @@
   버디의 짐작은 확인 뒤 기록([ask/008](docs/task/ask/008-confirm-guess.md)) · 대화는 최근 50줄부터, 날짜에서 그날 대화로([ask/009](docs/task/ask/009-recent-window-and-day-jump.md))
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점 (2026-10-21)
+## 다음 시작점 (2026-10-22)
 
-1. **Julian 이 아이폰(Expo Go)으로 써 보기** — 성장 탭(움직이는 버디 · 막대 · 메모), 할 일 탭 카테고리(장보기 포함), 루틴 탭(먹색 머리와 큰 단추 · 추천 다시 눌러 빼기 · 직접 만들기의 시각 바퀴 · 버튼 / 시간순 보기 · 밤잠 준비 단계 · 재고 확인 → 장보기 · 「오늘은 건너뛰기」 · 요일 반복 · 루틴 추천),
-   할 일 탭(오늘 · 예정 · 날짜 없음 + 준비 목록 · 주제별 보기 · 추천 할 일), 장보기, 마이, 알림 단추(완료 · 1시간 뒤 · 수령 완료, 앱을 닫아 둔 상태에서도).
-   기념일 예약 시기 · 사이즈 월령 · 루틴 추천 간격은 초안이라 고칠 곳을 말해 주면 된다. 켜는 법은 아래 「실행」(이 폴더에서)
-   성장 탭에 넣을 새 공공 지식(울음 · 0~3개월 잠 · 걷기 · WHO 범위)은 정리해서 「승인」을 받으러 간다([growth/004](docs/task/growth/004-stage-tab.md) 「남은 것」)
-2. **두 폰에서 가족 공유 확인**(마이 → 가족과 함께 보기에서 이름 고르기 → 한쪽에서 루틴 체크 · 살 것 적기 → 다른 폰에서 앱 열기).
-   배우자가 한 루틴의 알림이 내 폰에서도 바로 사라지게 하려면 서버 푸시가 필요하다 — 애플 개발자 계정이 생긴 뒤([common/022](docs/task/common/022-simplify-and-finish.md) 「남은 것」)
-   그다음: 약관 · 개인정보 초안 검토(Julian) → 스토어 문안과 그림 다시 만들기 → 서버의 질문 답변 기능 내리기(배포 승인)
-3. 헌장 · 제품 브리프 · 할 일 탭 SPEC 은 Julian 이 「ㅇㅇ ㄱ」로 진행을 허락했다(2026-10-15). 고칠 곳이 생기면 말한다
-4. **출시 전 Julian 몫**은 그대로다([common/008](docs/task/common/008-first-release-check.md) 「Julian 이 할 일」, 루트 [출시 체크리스트](../../docs/governance/release-checklist.md))
-5. 2026-10-12 까지의 AI 상담 쪽 후보(SSE 진행 단계, L1 늘리기, 답변 피드백, 위젯 등)는 방향 전환으로 접었다. 기록은 git 과 보관한 SPEC 에 있다
+1. **Julian 의 「승인」** — 성장 탭의 새 공공 지식 85개(CDC 발달 이정표 2 · 4 · 6 · 9 · 12개월, 해 주면 좋아요, 울음).
+   폰(Expo Go)의 성장 탭 → 발달 체크 · 해 주면 좋아요 · 알아 두면 좋아요에서 「승인 전」이 붙은 줄이다. 승인하면 status 를 approved 로 바꾸고
+   `src/data/l1/version.json` 판을 올린다. 승인 전에는 출시 빌드에 나오지 않는다([growth/005](docs/task/growth/005-stage-depth.md) 「승인 대기」)
+2. **Julian 이 아이폰(Expo Go)으로 써 보기** — 할 일 탭 세 칸, 성장 탭 상세 화면 셋과 「했어요」 → 메모, 루틴 탭의 남은 추천 · 다음 루틴 순서
+   ([common/023](docs/task/common/023-persona-polish.md)). 켜는 법은 아래 「실행」(이 폴더에서)
+3. **가족 공유에 메모 싣기** — 서버 `server/app/domain/family/schema.py` 의 종류에 `memo` 를 더하고 운영 배포(Julian 승인)가 필요하다. 그 전까지 메모는 이 폰에만 있다
+4. **두 폰에서 가족 공유 확인**(마이 → 가족과 함께 보기). 배우자가 한 루틴의 알림이 내 폰에서도 바로 사라지게 하려면 서버 푸시가 필요하다 —
+   애플 개발자 계정이 생긴 뒤([common/022](docs/task/common/022-simplify-and-finish.md) 「남은 것」)
+5. **출시 전 Julian 몫**([common/008](docs/task/common/008-first-release-check.md) 「Julian 이 할 일」, 루트 [출시 체크리스트](../../docs/governance/release-checklist.md)) —
+   스토어 계정 둘, AdMob 앱 · 광고 단위 만들기(지금 app.json 의 AdMob 앱 ID 는 구글 시험용이라 출시 전에 바꿔야 한다), 약관 · 개인정보 초안 검토,
+   스토어 문안과 그림을 지금 탭(루틴 · 할 일 · 성장 · 마이)으로 다시 만들기, 서버의 질문 답변 기능 내리기(배포 승인)
+6. 헌장 · 제품 브리프 · 할 일 탭 SPEC 은 Julian 이 「ㅇㅇ ㄱ」로 진행을 허락했다(2026-10-15). 2026-10-12 까지의 AI 상담 쪽 후보는 방향 전환으로 접었다
 
 ## 다른 PC 에서 시작하기
 
