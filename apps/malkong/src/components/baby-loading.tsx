@@ -1,86 +1,44 @@
 /**
- * 큰 로딩 — 육아 소품 아이콘이 톡톡 바뀐다 (app-design 「로딩과 모션」, decisions/015).
+ * 큰 로딩 — 가운데 작은 버디가 움직이고 그 아래 한 줄 (app-design 「로딩과 모션」, task growth/004).
  *
- * 동그란 바탕 안에서 쪽쪽이 → 젖병 → 딸랑이 → 곰돌이가 차례로 「뿅」 커지며 나타나고, 바뀔 때마다 바탕이 살짝 통통 튄다.
- * 아이콘은 탭과 같은 베이비 세트(`baby-icons.tsx`)다. 캐릭터 그림은 쓰지 않는다(Julian, 2026-10-04).
+ * 성장 탭의 버디 셋(누워서 바둥 · 기기 · 걷기, assets/images/buddy) 가운데 하나를 열 때마다 골라 보인다.
+ * 문구는 자세에 맞춘다 — 「바둥바둥 기다리는 중…」 「열심히 기어가는 중…」 「아장아장 걸어가는 중…」(Julian, 2026-10-22).
  */
 
-import type { ComponentType } from 'react';
-import { useEffect, useState } from 'react';
-import type { ColorValue } from 'react-native';
+import { Image } from 'expo-image';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSequence,
-  withSpring,
-  withTiming,
-  ZoomIn,
-  ZoomOut,
-} from 'react-native-reanimated';
 
-import { BottleIcon, PacifierIcon, RattleIcon, TeddyIcon } from '@/components/baby-icons';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 차례로 보일 아이콘 — 늘릴 때는 여기에 더한다 */
-const ICONS: ComponentType<{ size?: number; color: ColorValue }>[] = [
-  PacifierIcon,
-  BottleIcon,
-  RattleIcon,
-  TeddyIcon,
+/** 높이를 맞추고 너비는 그림 비율대로 */
+const HEIGHT = 96;
+
+const POSES = [
+  { src: require('@/assets/images/buddy/lie.webp'), width: 162, label: '바둥바둥 기다리는 중…' },
+  { src: require('@/assets/images/buddy/crawl.webp'), width: 107, label: '열심히 기어가는 중…' },
+  { src: require('@/assets/images/buddy/walk.webp'), width: 57, label: '아장아장 걸어가는 중…' },
 ];
 
-const CIRCLE = 72;
-const ICON = 38;
-const STEP_MS = 700;
-
-export function BabyLoading({ label }: { label?: string }) {
+export function BabyLoading() {
   const c = useTheme();
-  const [index, setIndex] = useState(0);
-  const bump = useSharedValue(1);
-
-  useEffect(() => {
-    const timer = setInterval(() => setIndex((i) => (i + 1) % ICONS.length), STEP_MS);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    bump.set(withSequence(withTiming(1.08, { duration: 110 }), withSpring(1, { damping: 9 })));
-  }, [index, bump]);
-
-  const circleStyle = useAnimatedStyle(() => ({ transform: [{ scale: bump.value }] }));
-  const Icon = ICONS[index];
+  const [pose] = useState(() => POSES[Math.floor(Math.random() * POSES.length)]);
 
   return (
-    <View style={styles.wrap}>
-      <Animated.View style={[styles.circle, { backgroundColor: c.accentSoft }, circleStyle]}>
-        <Animated.View
-          key={index}
-          entering={ZoomIn.springify().damping(11)}
-          exiting={ZoomOut.duration(140)}
-          style={styles.icon}>
-          <Icon size={ICON} color={c.accent} />
-        </Animated.View>
-      </Animated.View>
-      {label && (
-        <ThemedText type="caption" style={{ color: c.textSecondary, textAlign: 'center' }}>
-          {label}
-        </ThemedText>
-      )}
+    <View style={styles.wrap} accessibilityRole="progressbar" accessibilityLabel={pose.label}>
+      <View style={styles.art}>
+        <Image source={pose.src} style={{ width: pose.width, height: HEIGHT }} contentFit="contain" autoplay />
+      </View>
+      <ThemedText type="small" style={{ color: c.textSecondary, textAlign: 'center' }}>
+        {pose.label}
+      </ThemedText>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: Spacing.three, paddingVertical: Spacing.two, alignItems: 'center' },
-  circle: {
-    width: CIRCLE,
-    height: CIRCLE,
-    borderRadius: CIRCLE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  icon: { position: 'absolute' },
+  wrap: { gap: Spacing.two, paddingVertical: Spacing.two, alignItems: 'center' },
+  art: { height: HEIGHT, justifyContent: 'flex-end', alignItems: 'center' },
 });
