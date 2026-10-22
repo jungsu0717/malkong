@@ -9,6 +9,7 @@ import { test } from 'node:test';
 import {
   checklistIds,
   checkpointFor,
+  dayNumber,
   daysSince,
   forMonth,
   makeMemo,
@@ -27,6 +28,9 @@ const BIRTH = '2026-09-20';
 test('태어난 날은 D+0, 첫 주는 1주차', () => {
   assert.equal(daysSince(BIRTH, new Date(2026, 8, 20, 23, 0)), 0);
   assert.equal(daysSince(BIRTH, new Date(2026, 9, 22, 9, 0)), 32);
+  // 화면의 D+ 는 태어난 날이 1 — 100일 되는 날(태어나고 99일 뒤)이 D+100
+  assert.equal(dayNumber(BIRTH, new Date(2026, 8, 20, 23, 0)), 1);
+  assert.equal(dayNumber(BIRTH, new Date(2026, 8, 20 + 99)), 100);
   assert.equal(weekOf(0), 1);
   assert.equal(weekOf(32), 5);
 });

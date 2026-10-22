@@ -110,7 +110,7 @@ const LIFE_GROUP_NAMES: Partial<Record<L1Item['kind'], string>> = {
   생활: '놀이와 생활',
 };
 
-/** 차수가 같은 것끼리 이름을 이어 붙인다 — "DTaP·폴리오 3차 · 인플루엔자" */
+/** 차수가 같은 것끼리 이름을 쉼표로 이어 붙인다 — "DTaP, 폴리오 3차 · 인플루엔자". 쉼표 뒤 빈칸이 있어 좁은 칸에서도 낱말 사이에서 줄이 바뀐다 */
 export function groupLabel(items: L1Item[]): string {
   if (items.length === 1) return items[0].title;
   if (items.every((i) => isLifeKind(i.kind) && i.kind === items[0].kind)) {
@@ -124,11 +124,11 @@ export function groupLabel(items: L1Item[]): string {
     byDose.set(dose, [...(byDose.get(dose) ?? []), name]);
   }
   return [...byDose]
-    .map(([dose, names]) => (dose ? `${names.join('·')} ${dose}` : names.join(' · ')))
+    .map(([dose, names]) => (dose ? `${names.join(', ')} ${dose}` : names.join(' · ')))
     .join(' · ');
 }
 
-/** 분류가 섞인 목록의 이름 — 분류마다 따로 이어 붙인다(「DTaP·폴리오 2차 · 영유아 건강검진 2차」). 접종과 검진의 차수가 섞이지 않게 */
+/** 분류가 섞인 목록의 이름 — 분류마다 따로 이어 붙인다(「DTaP, 폴리오 2차 · 영유아 건강검진 2차」). 접종과 검진의 차수가 섞이지 않게 */
 export function labelByKind(items: L1Item[]): string {
   const kinds = [...new Set(items.map((i) => i.kind))];
   return kinds.map((kind) => groupLabel(items.filter((i) => i.kind === kind))).join(' · ');

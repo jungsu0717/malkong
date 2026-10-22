@@ -17,7 +17,7 @@ import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { itemById, itemsByIds } from '@/data/l1';
 import { useMemos } from '@/data/memos-context';
-import { checklistIds, checkpointFor, daysSince, monthDate, nextCheckpoint } from '@/data/stage';
+import { checklistIds, checkpointFor, dayNumber, monthDate, nextCheckpoint } from '@/data/stage';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function GrowthCheckScreen() {
@@ -71,7 +71,7 @@ export default function GrowthCheckScreen() {
                     {!item.approved && <DraftTag />}
                   </View>
                   <ThemedText type="label" style={at ? { color: c.accentText, fontWeight: 700 } : { color: c.textSecondary }}>
-                    {at ? `D+${daysSince(baby.birthDate, new Date(at))}` : '했어요'}
+                    {at ? `D+${dayNumber(baby.birthDate, new Date(at))}` : '했어요'}
                   </ThemedText>
                 </Pressable>
               );

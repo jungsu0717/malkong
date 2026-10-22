@@ -56,6 +56,15 @@ export function TodoInput({
   };
   const chipDue = (): Date | null =>
     when === 'today' ? dayOf(0) : when === 'tomorrow' ? dayOf(1) : when === 'none' ? null : when;
+  // 글에 날짜가 있으면 글이 이긴다 — 칩도 그 날을 가리켜, 「내일 10:00」인데 「오늘」이 눌려 보이지 않게 한다
+  const textDay = parsed?.dueAt ? new Date(parsed.dueAt.getFullYear(), parsed.dueAt.getMonth(), parsed.dueAt.getDate()) : null;
+  const shown: typeof when = !textDay
+    ? when
+    : textDay.getTime() === dayOf(0).getTime()
+      ? 'today'
+      : textDay.getTime() === dayOf(1).getTime()
+        ? 'tomorrow'
+        : textDay;
   const openPicker = () => {
     const start = when instanceof Date ? when : dayOf(1);
     if (INLINE_WHEEL) setPicking(start);
@@ -83,10 +92,10 @@ export function TodoInput({
       )}
       {dateChips && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.chips}>
-          <Chip label="오늘" selected={when === 'today'} onPress={() => setWhen('today')} />
-          <Chip label="내일" selected={when === 'tomorrow'} onPress={() => setWhen('tomorrow')} />
-          <Chip label={when instanceof Date ? `${when.getMonth() + 1}월 ${when.getDate()}일` : '날짜 고르기'} icon="calendar-outline" selected={when instanceof Date} onPress={openPicker} />
-          <Chip label="날짜 없음" selected={when === 'none'} onPress={() => setWhen('none')} />
+          <Chip label="오늘" selected={shown === 'today'} onPress={() => setWhen('today')} />
+          <Chip label="내일" selected={shown === 'tomorrow'} onPress={() => setWhen('tomorrow')} />
+          <Chip label={shown instanceof Date ? `${shown.getMonth() + 1}월 ${shown.getDate()}일` : '날짜 고르기'} icon="calendar-outline" selected={shown instanceof Date} onPress={openPicker} />
+          <Chip label="날짜 없음" selected={shown === 'none'} onPress={() => setWhen('none')} />
         </ScrollView>
       )}
       {parsed?.dueAt && (

@@ -1,5 +1,5 @@
 // 스토어 그림을 전부 찍는다 — node render.mjs [이름 …] (없으면 전부). 맥 · 리눅스 모두(크롬은 chrome.mjs 가 찾는다)
-//   out/01-flow · 02-log · 03-briefing · 04-sources · 05-redflag · 06-schedule · 07-baby  — 각각 -ios.png(1290×2796) · -play.png(1080×1920)
+//   out/01-routine · 02-todo · 03-shop · 04-baby · 05-growth · 06-family — 각각 -ios.png(1290×2796) · -play.png(1080×1920)
 //   out/feature.png — 구글 플레이 그래픽 이미지(1024×500)
 // 앱 화면(shots/*.png)은 웹 빌드를 띄우고 `node capture.mjs` 로 먼저 찍는다
 import { spawnSync } from 'node:child_process';
@@ -16,9 +16,7 @@ const chrome = findChrome();
 /** [이름, 페이지, 창 너비, 창 높이, 배율] — 플레이는 1290×2293 을 0.8372 배로 찍어 1080×1920 */
 const PLAY = 1080 / 1290;
 const pages = [
-  ['01-flow-ios', 'answer-flow.html?v=ios', 1290, 2796, 1],
-  ['01-flow-play', 'answer-flow.html?v=play', 1290, 2293, PLAY],
-  ...[['02', 'log'], ['03', 'briefing'], ['04', 'sources'], ['05', 'redflag'], ['06', 'schedule'], ['07', 'baby']].flatMap(([n, p]) => [
+  ...[['01', 'routine'], ['02', 'todo'], ['03', 'shop'], ['04', 'baby'], ['05', 'growth'], ['06', 'family']].flatMap(([n, p]) => [
     [`${n}-${p}-ios`, `store.html?p=${p}&v=ios`, 1290, 2796, 1],
     [`${n}-${p}-play`, `store.html?p=${p}&v=play`, 1290, 2293, PLAY],
   ]),

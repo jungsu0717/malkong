@@ -72,7 +72,7 @@ App Store Connect 「Manage Korea compliance information」 — 개인은 스토
    - 계정이 생기면 「앱 만들기」로 육아버디(무료, 앱) — 패키지 이름은 첫 빌드를 올릴 때 `com.yugabuddy.app` 로 정해진다
 2. **테스터 12명** — 새 개인 계정은 **12명 이상이 14일 동안 이어서** 비공개 테스트에 참여해야 프로덕션(정식 출시)을 신청할 수 있다.
    - 안드로이드 폰을 쓰는 지인 12명 이상의 Gmail 을 모은다. 이메일만 넣는 것으로는 안 되고, 각자 초대 링크로 「참여」를 눌러야 한다
-   - 2026년부터 구글이 실제로 앱을 썼는지도 본다 — 14일 동안 가끔 열어 질문 몇 개씩 해 달라고 부탁한다
+   - 2026년부터 구글이 실제로 앱을 썼는지도 본다 — 14일 동안 가끔 열어 루틴 · 할 일을 몇 개씩 써 달라고 부탁한다
    - 중간에 빠지는 사람이 있으니 15명쯤 모은다. 14일이 출시까지 가장 긴 줄이다
 3. **Apple Developer Program(개인)** — 아이폰의 「Apple Developer」 앱에서 가입, 1년 129,000원(해마다). Apple ID 2단계 인증이 켜져 있어야 한다.
    승인은 보통 하루 이틀, 길면 며칠. App Store Connect 의 한국 준수 정보에는 개인이면 **이메일**만(앱 페이지에 보인다)
@@ -83,10 +83,10 @@ App Store Connect 「Manage Korea compliance information」 — 개인은 스토
    (`npx eas-cli@latest build --platform ios --profile production`). 안드로이드는 Claude 가 돌려도 된다(키는 EAS 가 만든다).
    만든 안드로이드 파일(.aab)은 Play Console 「비공개 테스트」 트랙에 올리고 테스터 12명을 초대한다 — 여기서 14일이 시작된다
 5. **AdMob(개인)** — admob.google.com 가입, 결제 정보(이름 · 주소). 앱 두 개 등록(iOS · Android, 아직 스토어에 없으면 「아니요」로 등록),
-   광고 단위 넷(배너 iOS · Android, 보상형 iOS · Android). 보상형 단위에 서버 확인(SSV) 주소
-   `https://malkong-server-481623022922.asia-northeast3.run.app/v1/reward/ssv` 를 넣는다.
+   광고 단위 둘(배너 iOS · Android — 보상형은 질문 답변과 함께 뺐다, 2026-10-22).
    광고 콘텐츠 등급은 「G(모든 연령)」 또는 「PG」로 — 육아 앱에 어울리지 않는 광고를 막는다.
-   **Claude 에게 줄 것**: 앱 id 2개(`ca-app-pub-…~…`), 단위 id 4개(`ca-app-pub-…/…`). 비밀값이 아니라 대화에 붙여도 된다.
+   **Claude 에게 줄 것**: 앱 id 2개(`ca-app-pub-…~…`), 배너 단위 id 2개(`ca-app-pub-…/…`). 비밀값이 아니라 대화에 붙여도 된다.
+   지금 app.json 의 앱 id 는 구글 시험용이라, 이것을 받기 전에는 출시 빌드를 만들지 않는다
    광고 수익이 지급 기준에 닿으면 구글이 우편으로 PIN 을 보낸다(2~3주) — 그때 주소 인증
 6. **운영자 정보** — 약관 · 개인정보 처리방침에 들어간다. **Claude 에게 줄 것**: 운영자로 적을 이름(실명), 문의 이메일, 시행일(출시일).
    법률 검토를 받을지 정한다 — 아기 건강 기록을 다루고 가족 공유는 민감정보 동의를 받으므로 받는 쪽을 권한다(비용은 Julian 판단)
@@ -94,9 +94,11 @@ App Store Connect 「Manage Korea compliance information」 — 개인은 스토
 ### 3. 스토어 정보 넣기 — Claude 가 답안을 만들고 Julian 이 붙여 넣는다
 
 7. **App Store Connect** — 새 앱(번들 `com.yugabuddy.app`), 스크린샷(`marketing/store/out/*-ios.png`), 이름 · 부제 · 설명 · 키워드
-   (product-brief 「스토어 문안 초안」), 개인정보 처리방침 주소, 앱 개인정보 라벨, 연령 등급 설문, 심사 메모 → 심사 제출
+   ([product-brief](../../product/product-brief.md) 「스토어 문안」), 개인정보 처리방침 주소, 앱 개인정보 라벨, 연령 등급 설문, 심사 메모 → 심사 제출.
+   주소와 라벨 · 등급 · 심사 메모 답안은 [store-forms](../../product/store-forms.md)
 8. **Play Console 「앱 콘텐츠」** — 개인정보 처리방침 주소, 광고 포함 「예」, 콘텐츠 등급 설문, 타깃층(18세 이상 — 부모가 쓰는 앱),
-   데이터 보안, 건강 앱 신고서(건강 기능이 없어도 모든 앱이 낸다), 스토어 등록정보(스크린샷 `*-play.png`, 그래픽 `feature.png`)
+   데이터 보안, 건강 앱 신고서(건강 기능이 없어도 모든 앱이 낸다), 스토어 등록정보(스크린샷 `*-play.png`, 그래픽 `feature.png`).
+   답안은 [store-forms](../../product/store-forms.md)
 9. 14일이 지나면 Play Console 대시보드에서 **프로덕션 신청**
 
 ### 선택 — 출시를 막지 않는다
@@ -107,9 +109,10 @@ App Store Connect 「Manage Korea compliance information」 — 개인은 스토
 
 ### Claude 가 같이 할 것
 
-- 개인정보 처리방침 · 이용약관 **웹 주소** — 서버에 페이지로 올린다(배포는 Julian 승인). 저장소가 비공개라 GitHub Pages 는 유료다
-- EAS 출시 빌드 설정 점검, Julian 이 준 AdMob id 연결, 운영자 정보 반영
-- 스토어 입력 칸 답안 — App Store 개인정보 라벨 · 연령 등급 · 심사 메모, Play 데이터 보안 · 콘텐츠 등급 · 건강 앱 신고서
+- [x] 개인정보 처리방침 · 이용약관 **웹 주소** — 서버의 `/privacy` · `/terms`(2026-10-22, task common/024). 서버 배포 뒤 열린다
+- [x] EAS 출시 빌드 설정 점검 — expo-doctor 21/21, 암호화 질문 미리 답하기(`usesNonExemptEncryption: false`)
+- [ ] Julian 이 준 AdMob id 연결, 운영자 정보 반영(`legal.ts` 의 OPERATOR · DRAFT → `node scripts/export-legal.mjs` → 서버 배포)
+- [x] 스토어 입력 칸 답안 — [store-forms](../../product/store-forms.md)
 - 제출 전 전 화면 몰아 시험(웹, 모델 비용 0)
 
 ## 완료 조건

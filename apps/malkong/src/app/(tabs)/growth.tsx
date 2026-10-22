@@ -28,6 +28,7 @@ import {
   KNOW_COMMON,
   checklistIds,
   checkpointFor,
+  dayNumber,
   daysSince,
   forMonth,
   poseOf,
@@ -79,7 +80,7 @@ export default function GrowthScreen() {
     <ThemedView style={styles.container}>
       {focused && <StatusBar style="light" />}
       <ScrollView style={styles.flex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <GrowthHero topInset={insets.top} days={days} week={weekOf(days)} pose={poseOf(age.month)} stage={stage} onStop={openStop} />
+        <GrowthHero topInset={insets.top} days={dayNumber(baby.birthDate, now)} week={weekOf(days)} pose={poseOf(age.month)} stage={stage} onStop={openStop} />
 
         <View style={styles.body}>
           <View style={[styles.list, { borderColor: c.border }]}>
@@ -99,7 +100,7 @@ export default function GrowthScreen() {
             <Row
               icon="create-outline"
               title="우리 아기 메모"
-              sub={last ? `D+${daysSince(baby.birthDate, new Date(last.at))} · ${last.text}` : '처음 웃은 날을 적어 두세요'}
+              sub={last ? `D+${dayNumber(baby.birthDate, new Date(last.at))} · ${last.text}` : '처음 웃은 날을 적어 두세요'}
               divider
               onPress={() => router.push('/memos')}
             />

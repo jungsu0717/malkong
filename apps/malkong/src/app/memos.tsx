@@ -1,6 +1,6 @@
 /**
  * 우리 아기 메모 목록 (SPEC-STAGE-03, task growth/004) — 성장 탭 카드에서 들어온다.
- * 최근 것이 위로, 줄마다 「D+30」과 메모, 날짜. 누르면 고치기 · 삭제, 오른쪽 위 「추가」. 지금은 이 폰에만 저장된다.
+ * 최근 것이 위로, 줄마다 「D+30」과 메모, 날짜. 누르면 고치기 · 삭제, 오른쪽 위 「추가」. 가족 공유를 켜면 가족 폰과 맞춘다.
  */
 
 import { Stack } from 'expo-router';
@@ -15,7 +15,7 @@ import { tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { useMemos } from '@/data/memos-context';
-import { daysSince, weekOf, type Memo } from '@/data/stage';
+import { dayNumber, weekOf, type Memo } from '@/data/stage';
 import { useTheme } from '@/hooks/use-theme';
 
 export default function MemosScreen() {
@@ -26,8 +26,8 @@ export default function MemosScreen() {
   const [sheet, setSheet] = useState<{ memo: Memo | null } | null>(null);
   if (!baby || loading) return <ScreenLoading />;
 
-  const dayOf = (at: Date) => daysSince(baby.birthDate, at);
-  const dayText = (at: Date) => `D+${dayOf(at)} · ${weekOf(dayOf(at))}주차`;
+  const dayOf = (at: Date) => dayNumber(baby.birthDate, at);
+  const dayText = (at: Date) => `D+${dayOf(at)} · ${weekOf(dayOf(at) - 1)}주차`;
 
   return (
     <ThemedView style={styles.container}>

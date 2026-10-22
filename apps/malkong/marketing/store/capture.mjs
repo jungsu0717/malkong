@@ -1,8 +1,8 @@
-// 스토어 스크린샷에 넣을 진짜 앱 화면을 찍는다 (docs/task/common/021).
+// 스토어 스크린샷에 넣을 진짜 앱 화면을 찍는다 (docs/product/store-toon.md 「스토어 스크린샷」).
 //   1) npx expo export --platform web        → ../../dist
 //   2) node capture.mjs [이름 …]             → shots/<이름>.png (1170×2532, 아이폰 390×844 @3x)
-// 정적 파일 서버를 스스로 띄우고(8099) 크롬을 원격 조종해 앱을 연다. 서버로 가는 요청은 미리 정한 답으로
-// 바꿔 넣는다 — 모델(Gemini)을 부르지 않는다. 답 본문은 L1 승인 항목의 문장, 위험 신호 답은 서버의 고정 문장 그대로다.
+// 정적 파일 서버를 스스로 띄우고(8099) 크롬을 원격 조종해 앱을 연다. 서버로 가는 요청은 미리 정한 답으로 바꿔 넣는다 —
+// 자격은 광고 없음(배너 자리가 찍히지 않게), 나머지는 빈 204. 기기 저장소(localStorage)에 아기 · 루틴 · 할 일 · 메모를 미리 넣는다.
 // 크롬은 CHROME=경로 → 맥 크롬 → Playwright 크로미움(~/.cache/ms-playwright) 순서로 찾는다.
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -21,116 +21,114 @@ mkdirSync(join(here, 'shots'), { recursive: true });
 
 /* ───────── 찍을 장면 ───────── */
 
+// 오늘 오전 10시를 기준으로 데이터를 만든다 — 앱 시계도 그 시각으로 맞춘다(seedScript)
+const CLOCK = 10;
 const DAY = 864e5;
-const bornDaysAgo = (n) => new Date(Date.now() - n * DAY).toISOString().slice(0, 10);
-const at = (daysAgo, hour = 10) => {
-  const d = new Date(Date.now() - daysAgo * DAY);
-  d.setHours(hour, 0, 0, 0);
+const BASE = new Date();
+BASE.setHours(CLOCK, 0, 0, 0);
+/** 오늘부터 며칠 전(음수면 뒤) 몇 시 몇 분 */
+const at = (daysAgo, hour = CLOCK, minute = 0) => {
+  const d = new Date(BASE.getTime() - daysAgo * DAY);
+  d.setHours(hour, minute, 0, 0);
   return d.toISOString();
 };
-const KDCA = { name: '질병관리청 예방접종도우미', url: 'https://nip.kdca.go.kr/irhp/infm/goVcntInfo.do?menuLv=1&menuCd=115' };
-const CDC_UTI = { name: '미국 CDC 요로감염 안내', url: 'https://www.cdc.gov/uti/about/index.html' };
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+/** 그날 0시 — 시각 없는 기한 */
+const dayOf = (daysAgo) => {
+  const d = new Date(BASE.getTime() - daysAgo * DAY);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+};
+/** 지난 일요일까지 며칠 */
+const sinceSunday = BASE.getDay() === 0 ? 7 : BASE.getDay();
+/** 다음 월요일까지 며칠(음수 — 뒤) */
+const toMonday = -(((8 - BASE.getDay()) % 7) || 7);
 
-/** 기록 한 줄 — src/data/records.ts 의 BabyRecord */
-const rec = (id, covers, label, daysAgo, kind = '기록', whenLabel = null) => ({
-  id, kind, label, covers, whenLabel, sourceMessageId: null, stale: false, createdAt: at(daysAgo), updatedAt: at(daysAgo),
+/** 태어난 지 24일 — 성장은 「2개월까지」, 아기 일정은 1차 검진 · 50일 촬영 예약 · B형간염 2차(지난 일정이 없게) */
+const BORN = ymd(new Date(BASE.getTime() - 24 * DAY));
+
+const routine = (id, sort, o) => ({
+  id, title: '', kind: 'check', everyDays: 1, weekdays: null, time: null, goalMinutes: null, items: null,
+  hidden: false, sort, runningSince: null, createdAt: at(20), updatedAt: at(20), ...o,
 });
-
-/** 4개월 아기 — 0 · 1 · 2개월 접종과 검진은 다 했고, 4개월 접종이 이번 달 차례 */
-const RECORDS_4M = [
-  rec('r-01', ['k-vacc-0001', 'k-vacc-0002'], 'BCG · B형간염 1차 맞았어요', 126),
-  rec('r-02', ['k-chk-0001'], '영유아 건강검진 1차 다녀왔어요', 105),
-  rec('r-03', ['k-vacc-0101'], 'B형간염 2차 맞았어요', 98),
-  rec('r-04', ['k-vacc-0201', 'k-vacc-0202', 'k-vacc-0203', 'k-vacc-0204', 'k-vacc-0205'], '2개월 접종 다 맞았어요 (DTaP · 폴리오 · Hib · 폐렴구균 · 로타)', 66),
-  rec('r-05', [], '분유를 하루 6번, 한 번에 160ml 먹어요', 20, '요약'),
-  rec('r-06', [], '밤에 6시간쯤 통잠을 자요', 12, '요약'),
-  rec('r-07', [], '몸무게 7.1kg', 9, '요약'),
-  rec('r-08', [], '뒤집기를 시작했어요', 5, '요약'),
-  rec('r-09', ['k-dev-0201'], '얼굴 보고 웃고, 엎드리면 고개를 들어요', 40, '요약'),
+const ROUTINES = [
+  routine('rt-bath', 0, { title: '목욕', everyDays: 2, time: '20:00', items: ['목욕', '보습'] }),
+  routine('rt-night', 1, { title: '밤잠 준비', time: '20:30', items: ['스와들 입히기', '수유', '트림', '자장가 부르며 재우기'] }),
+  routine('rt-tummy', 2, { title: '터미타임', kind: 'minutes', goalMinutes: 15 }),
+  routine('rt-bottle', 3, { title: '젖병 소독' }),
+  routine('rt-nails', 4, { title: '손발톱 확인', everyDays: 3 }),
+  routine('rt-stock', 5, { title: '재고 확인', kind: 'stock', everyDays: 7, weekdays: [0], items: ['분유', '기저귀', '물티슈', '아기 바디워시', '보습 로션'] }),
+];
+let logN = 0;
+const log = (routineId, iso, o = {}) => ({ id: `rl-${(logN += 1)}`, routineId, at: iso, minutes: null, by: null, step: null, skip: false, createdAt: iso, ...o });
+/** 오늘 한 것 — `by` 를 주면 가족 이름(「엄마 · 08:10」) */
+const routineLogs = (mom = null, dad = null) => [
+  log('rt-bath', at(2, 20, 10)),
+  log('rt-nails', at(3, 21, 0)),
+  log('rt-stock', at(sinceSunday, 11, 0)),
+  log('rt-bottle', at(0, 8, 10), { by: mom }),
+  log('rt-nails', at(0, 9, 20), { by: dad }),
+  log('rt-tummy', at(0, 9, 30), { minutes: 8, by: mom }),
 ];
 
-/** 그동안 물어본 것들 — 우리 아기 탭의 「나눈 질문 N번」. 답은 싣지 않는다(그 장면에서 대화는 안 보인다) */
-const QUESTIONS_4M = [
-  'BCG 언제 맞아요?', '신생아 배꼽 소독 어떻게 해요?', '분유 양은 얼마나 줘야 해요?', '딸꾹질 자주 하는데 괜찮아요?',
-  '2개월 접종 뭐 맞아요?', '접종하고 열이 나면 어떡해요?', '밤에 자주 깨는데 왜 그래요?', '터미타임은 언제부터 해요?',
-  '이유식은 언제 시작해요?', '뒤집기는 보통 언제 해요?', '낮잠은 몇 번 재워요?', '4개월 접종은 뭐 맞아요?',
-].map((content, i) => ({ id: `q-${i}`, role: 'user', content, meta: {}, createdAt: at(120 - i * 9, 14) }));
+const T = { checkup: 'tp-checkup', milestone: 'tp-milestone', size: 'tp-size', general: 'tp-general', shopping: 'tp-shopping' };
+const TOPICS = [
+  ['checkup', '접종 · 검진'], ['milestone', '기념일'], ['size', '사이즈 바꾸기'], ['general', '내 할 일'], ['shopping', '장보기'],
+].map(([kind, title], sort) => ({ id: T[kind], kind, title, hidden: false, sort, icon: null, createdAt: at(33), updatedAt: at(33) }));
 
-const usage = { remaining: 9 };
-const ANSWER_BCG = {
-  type: 'answer', level: '사실', eco: false, usage, records: [],
-  answer: 'BCG는 결핵을 막는 예방접종으로, 생후 4주 안에 한 번 맞으면 끝나요.\n\n말콩이는 지금 생후 3주라 이번 주 안에 맞히면 돼요.',
-  sources: [{ id: 'k-vacc-0001', ...KDCA }],
-};
-const ANSWER_4M = {
-  type: 'answer', level: '사실', eco: false, usage, records: [],
-  answer:
-    '4개월에 맞는 접종은 DTaP 2차, 폴리오 2차, Hib 2차, 폐렴구균 2차, 로타바이러스 2차예요. ' +
-    'DTaP · Hib · 폐렴구균 3차는 6개월이고, 폴리오 3차는 6~18개월 사이에 맞아요.\n\n' +
-    '말콩이는 2개월 접종을 다 맞았으니, 이번 달에 2차를 맞을 차례예요.',
-  sources: [{ id: 'k-vacc-0401', ...KDCA }],
-};
-// 서버 app/domain/ask/service.py 의 REDFLAG_HEAD · 항목 title + body · REDFLAG_TAIL 그대로
-const REDFLAG = {
-  type: 'redflag',
-  answer:
-    '말씀하신 내용에 바로 진료가 필요할 수 있는 신호가 있어요.\n\n' +
-    '3개월 미만 아기의 열 — 38°C 이상이면 바로 의료진에게 연락\n' +
-    '생후 3개월이 안 된 아기가 38°C(100.4°F) 이상 열이 나면 바로 의료진에게 연락해요.\n\n' +
-    '증상이 심하거나 아기가 반응이 없으면 바로 119 에 전화하세요. 그렇지 않더라도 지금 소아청소년과나 응급실에서 진료를 받으세요.',
-  sources: [{ id: 'k-warn-0001', ...CDC_UTI }],
-};
-const ENTITLEMENTS = { ads: false, dailyLimit: 10, rewardPerAd: 3, rewardMaxPerDay: 2, remaining: 9 };
+let todoN = 0;
+const todo = (topic, title, o = {}) => ({
+  id: `td-store-${(todoN += 1)}`, topicId: T[topic], title, note: null, dueAt: null, hasTime: false, buy: false, source: 'manual',
+  doneAt: null, repeat: null, ref: null, orderedAt: null, arriveAt: null, store: null, doneBy: null,
+  createdAt: at(4), updatedAt: at(4), ...o,
+});
+const TODOS = [
+  // 내 할 일 — 오늘 · 예정 · 날짜 없음
+  todo('general', '분유 샘플 신청', { dueAt: dayOf(0) }),
+  todo('general', '산후조리원 퇴소 서류 정리', { doneAt: at(0, 9, 0), dueAt: dayOf(0) }),
+  todo('general', '카시트 커버 빨래', { dueAt: dayOf(toMonday) }),
+  todo('general', '아기 사진 정리'),
+  // 장보기 — 재고 확인에서 들어온 둘(지난 일요일), 다이소, 배송 중, 지난번 산 것
+  todo('shopping', '분유 800g', { store: '마트', source: 'stock', createdAt: at(sinceSunday, 11, 1), updatedAt: at(sinceSunday, 11, 1) }),
+  todo('shopping', '물티슈 캡형', { store: '마트', source: 'stock', createdAt: at(sinceSunday, 11, 1), updatedAt: at(sinceSunday, 11, 1) }),
+  todo('shopping', '기저귀 정리함', { store: '다이소' }),
+  todo('shopping', '기저귀 2단계', { orderedAt: at(1, 21, 0), arriveAt: dayOf(-1) }),
+  todo('shopping', '손톱 가위', { store: '다이소', doneAt: at(6, 15, 0) }),
+  todo('shopping', '아기 바디워시', { store: '마트', doneAt: at(5, 18, 0) }),
+];
 
-/** 기록 탭 장면(SPEC-LOG) — 지난 7일 분유 · 기저귀 · 잠을 3시간 텀으로 지어낸다. 오늘은 지금까지 */
-function careEvents() {
-  const out = [];
-  const now = Date.now();
-  const mk = (kind, start, extra = {}) => {
-    const iso = new Date(start).toISOString();
-    out.push({ id: `ev-${kind}-${start}`, kind, startAt: iso, endAt: null, amount: null, side: null, diaper: null, note: null, createdAt: iso, updatedAt: iso, ...extra });
-  };
-  const H = 3600 * 1000;
-  for (let d = 6; d >= 0; d--) {
-    const day = new Date(now - d * 24 * H);
-    day.setHours(0, 0, 0, 0);
-    const base = day.getTime();
-    [1, 4, 7, 10, 13, 16, 19, 22].forEach((h, i) => {
-      const t = base + h * H + ((d * 7 + i * 11) % 25) * 60 * 1000;
-      if (t > now - 40 * 60 * 1000) return;
-      mk('formula', t, { amount: [150, 160, 140, 170, 150, 160, 180, 150][(i + d) % 8] });
-      mk('diaper', t + 20 * 60 * 1000, { diaper: i % 3 === 1 ? 'poo' : 'pee' });
-    });
-    // 밤잠 · 낮잠
-    [[22.5, 6.5], [9.5, 11], [13.5, 15], [17, 18]].forEach(([a, b]) => {
-      const start = base + a * H - (a > 20 ? 24 * H : 0);
-      const end = base + b * H;
-      if (end < now - 10 * 60 * 1000) mk('sleep', start + d * 3 * 60 * 1000, { endAt: new Date(end).toISOString() });
-    });
-  }
-  mk('weight', now - 3 * 24 * H, { amount: 7.1 });
-  return out.sort((a, b) => a.startAt.localeCompare(b.startAt));
-}
+const memo = (id, text, daysAgo, ref = null) => ({ id, at: at(daysAgo, 11), text, ref, createdAt: at(daysAgo, 11), updatedAt: at(daysAgo, 11) });
+const MEMOS = [
+  memo('mm-k-dev-0219', '엎드려서 고개를 들어요', 6, 'k-dev-0219'),
+  memo('mm-k-dev-0214', '말 걸거나 웃어 주면 따라 웃어요', 3, 'k-dev-0214'),
+  memo('mm-store-1', '처음으로 소리 내서 웃었어요', 1),
+];
+
+/** 접종 · 검진 완료 기록 — 태어난 날 맞은 BCG · B형간염 1차(아기 일정에서 완료로 빠진다) */
+const RECORDS = [
+  {
+    id: 'r-store-1', kind: '기록', label: 'BCG · B형간염 1차 맞았어요', covers: ['k-vacc-0001', 'k-vacc-0002'], whenLabel: null,
+    sourceMessageId: null, stale: false, createdAt: at(23, 11), updatedAt: at(23, 11),
+  },
+];
+
+const ENTITLEMENTS = { ads: false, operator: false };
+
+const BASE_DATA = { routines: ROUTINES, logs: routineLogs(), topics: TOPICS, todos: TODOS, memos: MEMOS, records: RECORDS };
 
 const SHOTS = {
-  /** 첫 장 — 생후 3주, BCG 질문과 출처 */
-  answer: { born: 21, route: '/chat', ask: { q: 'BCG 언제 맞아요?', res: ANSWER_BCG, wait: '결핵을 막는' } },
-  /** 2장 — 4개월, 접종 질문과 출처 */
-  vaccine4: { born: 130, records: RECORDS_4M, route: '/chat', ask: { q: '4개월 접종은 뭐 맞아요?', res: ANSWER_4M, wait: '폐렴구균 2차' } },
-  /** 3장 — 생후 2개월, 열 → 위험 신호 안내 */
-  redflag: { born: 60, route: '/chat', ask: { q: '열이 38.5도예요. 해열제 먹여도 돼요?', res: REDFLAG, wait: '바로 진료가 필요할' } },
-  /** 4장 — 일정 탭. 오늘이 딱 4개월 되는 날이라 달력의 오늘에 접종 · 검진 무렵 점이 찍히고 그날 할 것이 보인다 */
-  schedule: { born: 4, bornUnit: 'month', records: RECORDS_4M, route: '/schedule', wait: '개월별 챙길 것' },
-  /** 기록 탭 — 첫 화면. 일주일치 지어낸 기록 */
-  log: { born: 130, records: RECORDS_4M, events: careEvents(), route: '/', wait: '마지막 수유' },
-  /** 5장 — 우리 아기 탭 */
-  baby: { born: 130, records: RECORDS_4M, chat: QUESTIONS_4M, route: '/baby', wait: '알게 된 내용' },
-  /** 1-2장 — 어제 저녁 열 기록 → 오늘 아침 안부. 아침 8시로 맞추고 대화 맨 위(안부)로 올린다 */
-  briefing: {
-    born: 150,
-    records: [...RECORDS_4M, { ...rec('r-10', [], '체온 38.2℃ — 저녁에 좀 보챘어요', 1), createdAt: at(1, 19), updatedAt: at(1, 19) }],
-    route: '/chat', wait: '열', settle: 2500, clock: 8, scrollTop: true,
-  },
+  /** 1장 — 루틴 탭: 먹색 머리, 진행 고리, 버튼 보기 */
+  routine: { ...BASE_DATA, route: '/', wait: '오늘 할 루틴' },
+  /** 2장 — 내 할 일: 「금요일 오전 10시 …」 를 적는 중, 날짜를 읽어 「내일 오전 10:00에 알려 드려요」 */
+  todo: { ...BASE_DATA, route: '/todo?cat=mine', wait: '아기 사진 정리', type: '금요일 오전 10시 산후 검진 예약', typeWait: '알려 드려요' },
+  /** 3장 — 장보기: 재고 확인 한 줄, 살 곳별, 배송 중 */
+  shop: { ...BASE_DATA, route: '/todo?cat=shop', wait: '기저귀 정리함' },
+  /** 4장 — 아기 일정: 생일로 앱이 채운 접종 · 검진 · 기념일 */
+  baby: { ...BASE_DATA, route: '/todo?cat=baby', wait: '이번 달' },
+  /** 5장 — 성장 탭: 버디 · 막대 · 발달 체크 2 / 11 · 메모 */
+  growth: { ...BASE_DATA, route: '/growth', wait: '발달 체크', settle: 2500 },
+  /** 6장 — 가족: 시간순 보기에 「엄마 · 08:10 완료」 「아빠 · 09:20 완료」 */
+  family: { ...BASE_DATA, logs: routineLogs('엄마', '아빠'), view: 'timeline', route: '/', wait: '오늘 할 루틴' },
 };
 
 /* ───────── 정적 파일 서버 — 라우트(/schedule)는 dist/schedule.html 로 ───────── */
@@ -202,8 +200,7 @@ const until = async (pred, ms = 20000) => {
   return false;
 };
 
-// 서버로 가는 요청 — 장면마다 정한 답으로 바꿔 넣는다(CORS 머리도 붙인다). 모르는 길은 빈 204
-let askResponse = null;
+// 서버로 가는 요청 — 자격은 광고 없음, 나머지는 빈 204(CORS 머리도 붙인다)
 const cors = [
   { name: 'Access-Control-Allow-Origin', value: '*' },
   { name: 'Access-Control-Allow-Headers', value: '*' },
@@ -214,10 +211,7 @@ handlers.push(async (m) => {
   if (m.method !== 'Fetch.requestPaused') return;
   const { requestId, request } = m.params;
   const path = new URL(request.url).pathname;
-  const body = request.method === 'OPTIONS' ? null
-    : path === '/v1/ask' ? askResponse
-    : path.startsWith('/v1/entitlements') ? ENTITLEMENTS
-    : null;
+  const body = request.method !== 'OPTIONS' && path.startsWith('/v1/entitlements') ? ENTITLEMENTS : null;
   await send('Fetch.fulfillRequest', {
     requestId,
     responseCode: body ? 200 : 204,
@@ -232,83 +226,75 @@ await send('Fetch.enable', { patterns: [{ urlPattern: '*run.app/*' }, { urlPatte
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 3, mobile: true });
 await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
 
-/** 온보딩을 마친 기기처럼 — 아기 · 기록 · 만화 본 표시 · 기기 키 · 알림 끔 */
+/** 온보딩을 마친 기기처럼 — 아기 · 루틴 · 할 일 · 메모 · 기기 키 · 알림 끔, 시계는 오늘 오전 10시 */
 function seedScript(shot) {
-  let born;
-  if (shot.bornUnit === 'month') {
-    // 오늘이 딱 N개월 되는 날 — 달력의 오늘에 그 달 접종 · 검진이 찍힌다
-    const d = new Date();
-    d.setMonth(d.getMonth() - shot.born);
-    born = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  } else born = bornDaysAgo(shot.born);
-  const baby = { id: 'store', name: '말콩이', birthDate: born, createdAt: `${born}T00:00:00.000Z`, updatedAt: `${born}T00:00:00.000Z` };
-  const settings = { intro_seen: 'yes', device_key: 'store-capture', briefing_time: 'off', record_nudge_card: 'off', record_nudge_push: 'off' };
-  // 시계를 오늘 몇 시로 맞춘다(인사말 「좋은 아침이에요」) — 날짜는 그대로라 「오늘」 셈은 안 바뀐다
-  const clock = shot.clock === undefined ? '' : `
-    const target = new Date(); target.setHours(${shot.clock}, 0, 0, 0);
-    const offset = target.getTime() - Date.now();
+  const baby = { id: 'store', name: '말콩이', birthDate: BORN, createdAt: `${BORN}T00:00:00.000Z`, updatedAt: `${BORN}T00:00:00.000Z` };
+  const settings = {
+    intro_seen: 'yes',
+    device_key: 'store-capture',
+    briefing_time: 'off',
+    todo_reminder_asked: 'yes',
+    routine_view: shot.view ?? 'grid',
+  };
+  const lists = {
+    'malkong.baby': baby,
+    'malkong.routines': shot.routines,
+    'malkong.routineLogs': shot.logs,
+    'malkong.topics': shot.topics,
+    'malkong.todos': shot.todos,
+    'malkong.memos': shot.memos,
+    'malkong.records': shot.records,
+  };
+  return `try {
+    localStorage.clear();
+    ${Object.entries(lists).map(([k, v]) => `localStorage.setItem('${k}', ${JSON.stringify(JSON.stringify(v))});`).join('\n    ')}
+    ${Object.entries(settings).map(([k, v]) => `localStorage.setItem('malkong.setting.${k}', '${v}');`).join('\n    ')}
+  } catch {}
+  {
+    const offset = ${BASE.getTime()} - Date.now();
     const RealDate = Date;
     class FakeDate extends RealDate {
       constructor(...a) { if (a.length === 0) super(RealDate.now() + offset); else super(...a); }
       static now() { return RealDate.now() + offset; }
     }
-    window.Date = FakeDate;`;
-  return `try {
-    localStorage.clear();
-    localStorage.setItem('malkong.baby', ${JSON.stringify(JSON.stringify(baby))});
-    localStorage.setItem('malkong.records', ${JSON.stringify(JSON.stringify(shot.records ?? []))});
-    localStorage.setItem('malkong.chat', ${JSON.stringify(JSON.stringify(shot.chat ?? []))});
-    localStorage.setItem('malkong.events', ${JSON.stringify(JSON.stringify(shot.events ?? []))});
-    ${Object.entries(settings).map(([k, v]) => `localStorage.setItem('malkong.setting.${k}', '${v}');`).join('\n    ')}
-  } catch {}${clock}`;
+    window.Date = FakeDate;
+  }
+  // 한국어 줄바꿈을 낱말 단위로 — 웹은 글자 단위로 끊어 「추가했어/요」처럼 보인다(폰 앱은 낱말 단위)
+  document.addEventListener('DOMContentLoaded', () => {
+    const style = document.createElement('style');
+    style.textContent = '* { word-break: keep-all; overflow-wrap: anywhere; }';
+    document.head.appendChild(style);
+  });`;
 }
-
-/** 대화 목록처럼 스크롤되는 칸을 맨 위로 — 브리핑의 안부가 보이게 */
-const SCROLL_TOP = `(() => {
-  const boxes = [...document.querySelectorAll('div')].filter((el) => {
-    const s = getComputedStyle(el);
-    return (s.overflowY === 'auto' || s.overflowY === 'scroll') && el.scrollHeight > el.clientHeight + 20;
-  });
-  boxes.forEach((el) => { el.scrollTop = 0; });
-  return boxes.length;
-})()`;
 
 let seedId = null;
 async function capture(name, shot) {
-  askResponse = shot.ask?.res ?? null;
   if (seedId) await send('Page.removeScriptToEvaluateOnNewDocument', { identifier: seedId });
   seedId = (await send('Page.addScriptToEvaluateOnNewDocument', { source: seedScript(shot) })).identifier;
   await send('Page.navigate', { url: 'about:blank' });
   await sleep(300);
   await send('Page.navigate', { url: `${APP}${shot.route}` });
-  const ready = await until(async () =>
-    shot.ask ? await run("!!document.querySelector('textarea')") : (await text())?.includes(shot.wait),
-  );
+  const ready = await until(async () => (await text())?.includes(shot.wait));
   if (!ready) console.log(`${name}: 화면이 안 떴어요 — ${(await text())?.slice(0, 200)}`);
   await sleep(shot.settle ?? 1500);
-  if (shot.ask) {
-    // 웹의 TextInput 은 textarea 라 값을 바꾸고 input 이벤트를 낸다
+  if (shot.type) {
+    // 웹의 TextInput 은 input 이나 textarea — 값을 바꾸고 input 이벤트를 낸다
     const typed = await run(`(() => {
-      const box = document.querySelector('textarea');
-      if (!box) return 'textarea 없음';
-      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(box, ${JSON.stringify(shot.ask.q)});
+      const box = [...document.querySelectorAll('input, textarea')].find((el) => el.offsetParent !== null);
+      if (!box) return '입력 칸 없음';
+      const proto = box.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, 'value').set.call(box, ${JSON.stringify(shot.type)});
       box.dispatchEvent(new Event('input', { bubbles: true }));
       return 'ok';
     })()`);
-    await sleep(400);
-    const sent = await run(`(() => { const b = document.querySelector('[aria-label="보내기"]'); if (!b) return '단추 없음'; b.click(); return 'ok'; })()`);
-    const answered = await until(async () => (await text())?.includes(shot.ask.wait));
-    console.log(`${name}: 입력 ${typed} · 보내기 ${sent} · 답 ${answered ? '옴' : '안 옴'}`);
+    const shown = await until(async () => (await text())?.includes(shot.typeWait), 5000);
+    console.log(`${name}: 입력 ${typed} · 미리 보기 ${shown ? '보임' : '안 보임'}`);
     await run('document.activeElement && document.activeElement.blur()');
-    await sleep(1200);
-  }
-  if (shot.scrollTop) {
-    console.log(`${name}: 맨 위로 올린 칸 ${await run(SCROLL_TOP)}`);
     await sleep(800);
   }
   const shotData = await send('Page.captureScreenshot', { format: 'png' });
   writeFileSync(join(here, 'shots', `${name}.png`), Buffer.from(shotData.data, 'base64'));
-  console.log(`${name}: shots/${name}.png — ${JSON.stringify((await text())?.replace(/\n+/g, ' / ').slice(0, 220))}`);
+  console.log(`${name}: shots/${name}.png — ${JSON.stringify((await text())?.replace(/\n+/g, ' / ').slice(0, 260))}`);
 }
 
 const names = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(SHOTS);

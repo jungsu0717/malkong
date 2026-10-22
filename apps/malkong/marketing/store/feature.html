@@ -10,7 +10,7 @@
     <style>
       /*
        * 구글 플레이 그래픽 이미지 1024×500. 앱 디자인 언어: 밝은 바탕 · 먹색 · 코랄 하나.
-       * 왼쪽에 슬로건(product-brief 「스토어 등록 소스」), 오른쪽에 버디(앱 캐릭터). 만화 아빠는 넣지 않는다(Julian, 2026-10-12).
+       * 왼쪽에 슬로건(product-brief 「스토어 문안」), 오른쪽에 버디(앱 캐릭터). 만화 아빠는 넣지 않는다(Julian, 2026-10-12).
        */
       :root { --ink: #16161a; --sub: #5e5e69; --accent: #c64536; }
       html, body { margin: 0; background: #f6f5f2; }
@@ -31,9 +31,9 @@
     <script>
       const c = document.getElementById('c');
       const add = (html) => c.insertAdjacentHTML('beforeend', html);
-      add(`<div class="name">육아버디 · 아빠가 만든 육아 비서</div>`);
-      add(`<h1>육아의 모든 질문,<br><em>우리 아기 기준</em>으로</h1>`);
-      add(`<div class="foot">공공 기관 출처로 답하고,<br>어제 일까지 기억해요</div>`);
+      add(`<div class="name">육아버디</div>`);
+      add(`<h1>육아 할 일,<br><em>버디</em>가 챙겨요</h1>`);
+      add(`<div class="foot">루틴 · 할 일 · 장보기 · 접종 일정을<br>가족과 함께 봐요</div>`);
       // 오른쪽 — 버디(앱 캐릭터, 360×506)
       add(`<img class="buddy" src="../../assets/images/mascot/standing.png" style="left:700px;top:60px;width:270px"/>`);
       document.fonts.ready.then(() => document.body.setAttribute('data-ready', '1'));

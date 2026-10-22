@@ -87,6 +87,14 @@ export function daysSince(birthDate: string, now = new Date()): number {
   return Math.max(0, Math.round((dayStart(now) - birthDay(birthDate).getTime()) / DAY));
 }
 
+/**
+ * 태어난 지 며칠째 — 태어난 날이 1일째(「D+1」). 화면의 D+ 는 이 셈이다.
+ * 50일 · 100일 칸, 루틴 탭의 「태어난 지 N일」과 같아서 100일 되는 날 「D+100」이 된다
+ */
+export function dayNumber(birthDate: string, now = new Date()): number {
+  return daysSince(birthDate, now) + 1;
+}
+
 /** 「5주차」 — 첫 주가 1주차 */
 export function weekOf(days: number): number {
   return Math.floor(days / 7) + 1;
