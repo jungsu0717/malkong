@@ -1,13 +1,15 @@
 /**
  * 우리 아기 메모 (SPEC-STAGE-03, task growth/004) — 그 시기 우리 아기가 어땠는지 적어 둔다.
  * 발달 체크에서 「했어요」를 누르면 그 항목이 오늘 날짜의 메모로 남는다(`ref` = L1 id, task growth/005).
- * 지금은 이 폰에만 저장한다. 가족 공유는 서버가 메모를 받게 된 뒤에 싣는다(배포는 Julian 승인).
+ * 가족과 함께 보기를 켜면 가족 폰과 맞춘다(task common/024) — 바꾸면 맞추기를 부르고, 가족 폰에서 온 메모는 다시 읽는다.
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { deleteMemoRow, readMemoRows, upsertMemoRow } from './db';
+import { noteDeleted } from './family';
 import { makeMemo, sortMemos, type Memo } from './stage';
+import { onRemoteChange, requestSync } from './sync-events';
 
 type MemosValue = {
   memos: Memo[];
@@ -40,26 +42,43 @@ export function MemosProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // 가족 폰에서 온 메모를 다시 읽는다
+  useEffect(
+    () =>
+      onRemoteChange((kinds) => {
+        if (!kinds.includes('memos')) return;
+        void readMemoRows()
+          .then((rows) => setMemos(sortMemos(rows)))
+          .catch(() => undefined);
+      }),
+    [],
+  );
+
+  const drop = useCallback(async (id: string) => {
+    await deleteMemoRow(id);
+    setMemos((prev) => prev.filter((m) => m.id !== id));
+    await noteDeleted(id);
+    requestSync();
+  }, []);
+
   const addMemo = useCallback(async (text: string) => {
     if (!text.trim()) return;
     const memo = makeMemo(text);
     await upsertMemoRow(memo);
     setMemos((prev) => sortMemos([memo, ...prev]));
+    requestSync();
   }, []);
 
   const toggleCheck = useCallback(
     async (ref: string, text: string) => {
       const have = memos.find((m) => m.ref === ref);
-      if (have) {
-        await deleteMemoRow(have.id);
-        setMemos((prev) => prev.filter((m) => m.id !== have.id));
-        return;
-      }
+      if (have) return drop(have.id);
       const memo = makeMemo(text, new Date(), ref);
       await upsertMemoRow(memo);
       setMemos((prev) => sortMemos([memo, ...prev]));
+      requestSync();
     },
-    [memos],
+    [memos, drop],
   );
 
   const updateMemo = useCallback(
@@ -69,14 +88,12 @@ export function MemosProvider({ children }: { children: ReactNode }) {
       const next = { ...before, text: text.trim(), updatedAt: new Date().toISOString() };
       await upsertMemoRow(next);
       setMemos((prev) => prev.map((m) => (m.id === id ? next : m)));
+      requestSync();
     },
     [memos],
   );
 
-  const removeMemo = useCallback(async (id: string) => {
-    await deleteMemoRow(id);
-    setMemos((prev) => prev.filter((m) => m.id !== id));
-  }, []);
+  const removeMemo = drop;
 
   const value = useMemo(
     () => ({ memos, loading, addMemo, toggleCheck, updateMemo, removeMemo }),

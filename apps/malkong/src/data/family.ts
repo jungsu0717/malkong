@@ -18,14 +18,17 @@ import {
 } from './api';
 import { loadBaby, replaceBaby } from './baby';
 import {
+  deleteMemoRow,
   deleteRoutineLogRow,
   deleteTodoRow,
   insertRoutineLogRow,
+  readMemoRows,
   readRoutineLogRows,
   readRoutineRows,
   readSetting,
   readTodoRows,
   readTopicRows,
+  upsertMemoRow,
   upsertRoutineRow,
   upsertTodoRow,
   upsertTopicRow,
@@ -43,6 +46,9 @@ const TOMBSTONES_KEY = 'family.tombstones';
 const CONSENT_KEY = 'family.consentedAt';
 /** 할 일 · 루틴을 마지막으로 올린 때(task my/009) — 옛 서버는 items 를 버리므로, 받아 준 서버에서만 넘긴다 */
 const ITEMS_PUSHED_KEY = 'family.itemsPushedAt';
+/** 메모를 마지막으로 올린 때와, 서버가 메모를 받는지(응답의 itemKinds) — 옛 서버에는 메모를 보내지 않는다(task common/024) */
+const MEMOS_PUSHED_KEY = 'family.memosPushedAt';
+const MEMO_OK_KEY = 'family.memoOk';
 /** 가족에게 보일 이 폰의 이름(엄마 · 아빠 …) — 누가 했는지 남긴다(task my/009) */
 const ME_KEY = 'family.me';
 /** 지운 표시는 올린 뒤 지우지만, 혹시 남아도 이만큼만 */
@@ -92,6 +98,7 @@ async function clearState(): Promise<void> {
   await writeSetting(SEQ_KEY, '');
   await writeSetting(PUSHED_KEY, '');
   await writeSetting(ITEMS_PUSHED_KEY, '');
+  await writeSetting(MEMOS_PUSHED_KEY, '');
   await writeSetting(SYNCED_KEY, '');
   await writeSetting(TOMBSTONES_KEY, '');
 }
@@ -210,8 +217,17 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
     .map((t) => tombstoneOf(t, true));
   // 할 일 · 주제 · 루틴 · 루틴 기록(task my/009) — 따로 센 때부터, 들어간 직후(null)면 전부
   const itemsPushedAt = state.pushedAt === null ? '' : ((await readSetting(ITEMS_PUSHED_KEY)) ?? '');
-  const [topics, todos, routines, logs] = await Promise.all([readTopicRows(), readTodoRows(), readRoutineRows(), readRoutineLogRows()]);
-  const items = outgoingItems({ topics, todos, routines, logs, tombstones, since: itemsPushedAt });
+  const [topics, todos, routines, logs, memos] = await Promise.all([
+    readTopicRows(),
+    readTodoRows(),
+    readRoutineRows(),
+    readRoutineLogRows(),
+    readMemoRows(),
+  ]);
+  // 메모는 서버가 받는다고 알려 준 뒤부터 — 처음 보낼 때는 전부
+  const memoOk = (await readSetting(MEMO_OK_KEY)) === '1';
+  const memoSince = !memoOk ? null : state.pushedAt === null ? '' : ((await readSetting(MEMOS_PUSHED_KEY)) ?? '');
+  const items = outgoingItems({ topics, todos, routines, logs, memos, tombstones, since: itemsPushedAt, memoSince });
   const first = state.pushedAt === null;
   const pushBaby = baby && !first && baby.updatedAt > pushedAt;
 
@@ -270,25 +286,37 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   // 할 일 · 루틴(task my/009) — 늦게 고친 쪽이 이기고, 기본 주제는 kind 로, 앱이 채운 할 일은 ref 로 합친다
   const remote: RemoteKind[] = [];
   if (incomingItems.length > 0) {
-    const plan = planIncoming({ items: incomingItems, topics, todos, routines, logs, tombstones });
+    const plan = planIncoming({ items: incomingItems, topics, todos, routines, logs, memos, tombstones });
     for (const t of plan.upsertTopics) await upsertTopicRow(t);
     for (const t of plan.upsertTodos) await upsertTodoRow(t);
     for (const id of plan.deleteTodos) await deleteTodoRow(id);
     for (const r of plan.upsertRoutines) await upsertRoutineRow(r);
     for (const l of plan.insertLogs) await insertRoutineLogRow(l);
     for (const id of plan.deleteLogs) await deleteRoutineLogRow(id);
+    for (const m of plan.upsertMemos) await upsertMemoRow(m);
+    for (const id of plan.deleteMemos) await deleteMemoRow(id);
     if (plan.upsertTopics.length + plan.upsertTodos.length + plan.deleteTodos.length > 0) remote.push('todos');
     if (plan.upsertRoutines.length + plan.insertLogs.length + plan.deleteLogs.length > 0) remote.push('routines');
+    if (plan.upsertMemos.length + plan.deleteMemos.length > 0) remote.push('memos');
   }
 
   // 올린 표시는 치운다 — 올린 때 이후 것만 남긴다
   // 서버가 할 일 · 루틴을 받아 줬는지 — 옛 서버는 items 칸이 없다. 못 받았으면 그 지운 표시를 남겨 둔다
   const itemsAccepted = res.items !== undefined;
   if (itemsAccepted) await writeSetting(ITEMS_PUSHED_KEY, now);
+  // 메모를 이번에 올렸으면 올린 때를 넘기고, 서버가 메모를 받는다고 하면 다음부터 올린다
+  const memosSent = memoSince !== null && itemsAccepted;
+  if (memosSent) await writeSetting(MEMOS_PUSHED_KEY, now);
+  await writeSetting(MEMO_OK_KEY, res.itemKinds?.includes('memo') ? '1' : '');
   await saveTombstones(
-    tombstones.filter(
-      (t) => !isEventId(t.id) && (t.deletedAt > now || (!itemsAccepted && itemKindOfId(t.id) !== null)),
-    ),
+    tombstones.filter((t) => {
+      if (isEventId(t.id)) return false;
+      if (t.deletedAt > now) return true;
+      const kind = itemKindOfId(t.id);
+      // 못 올린 지운 표시는 남겨 둔다 — 할 일 · 루틴은 옛 서버일 때, 메모는 이번에 메모를 올리지 않았을 때
+      if (kind === 'memo') return !memosSent;
+      return !itemsAccepted && kind !== null;
+    }),
   );
   const next: FamilyState = {
     info: { ...state.info, members: res.members },

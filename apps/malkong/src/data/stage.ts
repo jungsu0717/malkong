@@ -166,13 +166,14 @@ export function forMonth<T extends { months: number[] }>(items: T[], month: numb
   return items.filter((i) => i.months.includes(month));
 }
 
-/** 우리 아기 메모 (SPEC-STAGE-03) — 이 폰에만 있다(가족 공유는 서버가 받게 된 뒤). 발달 체크로 남긴 메모는 `ref` 에 그 L1 id */
+/** 우리 아기 메모 (SPEC-STAGE-03) — 가족과 함께 보기를 켜면 가족 폰과 맞춘다(task common/024). 발달 체크로 남긴 메모는 `ref` 에 그 L1 id */
 export type Memo = { id: string; at: string; text: string; ref: string | null; createdAt: string; updatedAt: string };
 
+/** 발달 체크 메모는 id 를 항목으로 정한다 — 가족의 두 폰에서 같은 것을 눌러도 한 줄이고, 지우면 함께 지워진다 */
 export function makeMemo(text: string, now = new Date(), ref: string | null = null): Memo {
   const iso = now.toISOString();
   return {
-    id: `mm-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    id: ref ? `mm-${ref}` : `mm-${now.getTime().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     at: iso,
     text: text.trim(),
     ref,

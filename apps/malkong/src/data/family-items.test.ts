@@ -8,6 +8,7 @@ import { test } from 'node:test';
 
 import { outgoingItems, planIncoming, type SyncItem } from './family-items.ts';
 import type { Routine, RoutineLog } from './routine.ts';
+import type { Memo } from './stage.ts';
 import type { Todo, Topic } from './todos.ts';
 
 const T = (h: number) => new Date(2026, 9, 16, h).toISOString();
@@ -204,4 +205,59 @@ test('요일 반복과 건너뛴 기록도 맞춘다', () => {
   });
   assert.deepEqual(plan.upsertRoutines[0].weekdays, [0, 3]);
   assert.equal(plan.insertLogs[0].skip, true);
+});
+
+const memo = (id: string, text: string, o: Partial<Memo> = {}): Memo => ({
+  id,
+  at: T(9),
+  text,
+  ref: null,
+  createdAt: T(9),
+  updatedAt: T(9),
+  ...o,
+});
+const base = { topics: [], todos: [], routines: [], logs: [] };
+
+test('메모는 서버가 받는다고 한 뒤에만 올린다 — 메모와 그 지운 표시', () => {
+  const memos = [memo('mm-1', '처음 웃었어요')];
+  const tombstones = [{ id: 'mm-2', deletedAt: T(10) }];
+  // 옛 서버(메모를 모름) — 하나도 싣지 않는다
+  assert.deepEqual(outgoingItems({ ...base, memos, tombstones, since: '', memoSince: null }), []);
+  const items = outgoingItems({ ...base, memos, tombstones, since: T(20), memoSince: '' });
+  assert.deepEqual(
+    items.map((i) => [i.kind, i.id, i.deleted]),
+    [
+      ['memo', 'mm-1', false],
+      ['memo', 'mm-2', true],
+    ],
+  );
+  assert.equal(items[0].data.text, '처음 웃었어요');
+});
+
+test('받은 메모 — 늦게 고친 쪽이 이기고, 발달 체크는 같은 항목의 내 줄로, 지운 것은 지운다', () => {
+  const mine = [memo('mm-a', '옛 글', { updatedAt: T(8) }), memo('mm-old-check', '웃어요', { ref: 'k-dev-0214', updatedAt: T(8) })];
+  const plan = planIncoming({
+    ...base,
+    memos: mine,
+    tombstones: [],
+    items: [
+      { kind: 'memo', id: 'mm-a', updatedAt: T(9), deleted: false, data: { ...memo('mm-a', '고친 글') } },
+      { kind: 'memo', id: 'mm-k-dev-0214', updatedAt: T(9), deleted: false, data: { ...memo('mm-k-dev-0214', '웃어요', { ref: 'k-dev-0214' }) } },
+      { kind: 'memo', id: 'mm-new', updatedAt: T(9), deleted: false, data: { ...memo('mm-new', '') } },
+    ],
+  });
+  assert.deepEqual(
+    plan.upsertMemos.map((m) => [m.id, m.text]),
+    [
+      ['mm-a', '고친 글'],
+      ['mm-old-check', '웃어요'],
+    ],
+  );
+  const gone = planIncoming({
+    ...base,
+    memos: mine,
+    tombstones: [],
+    items: [{ kind: 'memo', id: 'mm-a', updatedAt: T(10), deleted: true, data: {} }],
+  });
+  assert.deepEqual(gone.deleteMemos, ['mm-a']);
 });

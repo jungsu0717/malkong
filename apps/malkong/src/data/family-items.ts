@@ -1,5 +1,5 @@
 /**
- * 가족 공유로 맞추는 할 일 · 주제 · 루틴 · 루틴 기록(task my/009) — 무엇을 올리고, 받은 것을 폰에 어떻게 적용할지만 계산한다.
+ * 가족 공유로 맞추는 할 일 · 주제 · 루틴 · 루틴 기록(task my/009)과 우리 아기 메모(task common/024) — 무엇을 올리고, 받은 것을 폰에 어떻게 적용할지만 계산한다.
  * 저장은 부르는 쪽(family.ts)이 한다. 화면 코드를 가져오지 않는 순수 함수만 둔다(`node --test src/data/family-items.test.ts`).
  *
  * - 규칙은 기록과 같다 — 늦게 고친 쪽이 이기고(updatedAt), 여기서 지운 것은 되살리지 않는다(지운 표시)
@@ -7,12 +7,14 @@
  *   직접 만든 주제(목록)만 주제째 맞춘다
  * - 앱이 채운 할 일(기념일 · 사이즈)은 폰마다 따로 생겨 id 가 다르다 — 같은 ref 의 내 줄에 덮어쓴다
  * - 루틴 기록은 고치지 않는다 — 없으면 넣고, 지운 표시가 오면 지운다
+ * - 메모는 서버가 받는다고 알려 준 뒤에만 올린다(응답의 itemKinds). 옛 서버는 모르는 종류가 섞이면 요청 전체를 거절한다
  */
 
 import type { Routine, RoutineKind, RoutineLog } from './routine.ts';
+import type { Memo } from './stage.ts';
 import type { Todo, Topic, TopicKind } from './todos.ts';
 
-export type ItemKind = 'topic' | 'todo' | 'routine' | 'routineLog';
+export type ItemKind = 'topic' | 'todo' | 'routine' | 'routineLog' | 'memo';
 
 export type SyncItem = {
   kind: ItemKind;
@@ -24,25 +26,32 @@ export type SyncItem = {
 
 export type Tombstone = { id: string; deletedAt: string };
 
-/** 지운 표시의 id 로 무엇인지 가른다 — 할 일 `td-`, 루틴 기록 `rl-` */
+/** 지운 표시의 id 로 무엇인지 가른다 — 할 일 `td-`, 루틴 기록 `rl-`, 메모 `mm-` */
 export function itemKindOfId(id: string): ItemKind | null {
   if (id.startsWith('td-')) return 'todo';
+  if (id.startsWith('mm-')) return 'memo';
   if (id.startsWith('rl-')) return 'routineLog';
   if (id.startsWith('tp-')) return 'topic';
   if (id.startsWith('rt-')) return 'routine';
   return null;
 }
 
-/** 올릴 것 — `since` 뒤에 바뀐 것과 지운 표시. 처음이면 since 를 빈 글로 */
+/**
+ * 올릴 것 — `since` 뒤에 바뀐 것과 지운 표시. 처음이면 since 를 빈 글로.
+ * 메모는 따로 센 `memoSince` 뒤의 것만, 그것이 null 이면(서버가 아직 메모를 받지 않으면) 메모와 그 지운 표시는 싣지 않는다
+ */
 export function outgoingItems(args: {
   topics: Topic[];
   todos: Todo[];
   routines: Routine[];
   logs: RoutineLog[];
+  memos?: Memo[];
   tombstones: Tombstone[];
   since: string;
+  memoSince?: string | null;
 }): SyncItem[] {
   const { topics, todos, routines, logs, tombstones, since } = args;
+  const memoSince = args.memoSince ?? null;
   const kindOf = new Map(topics.map((t) => [t.id, t.kind]));
   const out: SyncItem[] = [];
   for (const t of topics) {
@@ -61,9 +70,17 @@ export function outgoingItems(args: {
   for (const l of logs) {
     if (l.createdAt > since) out.push({ kind: 'routineLog', id: l.id, updatedAt: l.createdAt, deleted: false, data: { ...l } });
   }
+  if (memoSince !== null) {
+    for (const m of args.memos ?? []) {
+      if (m.updatedAt > memoSince) out.push({ kind: 'memo', id: m.id, updatedAt: m.updatedAt, deleted: false, data: { ...m } });
+    }
+  }
   for (const t of tombstones) {
     const kind = itemKindOfId(t.id);
-    if (kind && t.deletedAt > since) out.push({ kind, id: t.id, updatedAt: t.deletedAt, deleted: true, data: {} });
+    if (!kind) continue;
+    if (kind === 'memo' ? memoSince !== null && t.deletedAt > memoSince : t.deletedAt > since) {
+      out.push({ kind, id: t.id, updatedAt: t.deletedAt, deleted: true, data: {} });
+    }
   }
   return out;
 }
@@ -75,6 +92,8 @@ export type IncomingPlan = {
   upsertRoutines: Routine[];
   insertLogs: RoutineLog[];
   deleteLogs: string[];
+  upsertMemos: Memo[];
+  deleteMemos: string[];
 };
 
 const str = (v: unknown): string | null => (typeof v === 'string' ? v : null);
@@ -88,9 +107,19 @@ export function planIncoming(args: {
   todos: Todo[];
   routines: Routine[];
   logs: RoutineLog[];
+  memos?: Memo[];
   tombstones: Tombstone[];
 }): IncomingPlan {
-  const plan: IncomingPlan = { upsertTopics: [], upsertTodos: [], deleteTodos: [], upsertRoutines: [], insertLogs: [], deleteLogs: [] };
+  const plan: IncomingPlan = {
+    upsertTopics: [],
+    upsertTodos: [],
+    deleteTodos: [],
+    upsertRoutines: [],
+    insertLogs: [],
+    deleteLogs: [],
+    upsertMemos: [],
+    deleteMemos: [],
+  };
   const gone = new Map(args.tombstones.map((t) => [t.id, t.deletedAt]));
   const blocked = (item: SyncItem) => {
     const at = gone.get(item.id);
@@ -222,6 +251,31 @@ export function planIncoming(args: {
       createdAt: str(d.createdAt) ?? item.updatedAt,
     });
     logIds.add(item.id);
+  }
+
+  // 메모 — 늦게 고친 쪽이 이긴다. 발달 체크 메모는 같은 항목(ref)의 내 줄로 합쳐 두 폰에서 눌러도 한 줄이다
+  const memos = new Map((args.memos ?? []).map((m) => [m.id, m]));
+  for (const item of args.items.filter((i) => i.kind === 'memo')) {
+    if (blocked(item)) continue;
+    const d = item.data;
+    const ref = str(d.ref);
+    const sameRef = ref ? [...memos.values()].find((m) => m.ref === ref && m.id !== item.id) : undefined;
+    const targetId = sameRef?.id ?? item.id;
+    const mine = memos.get(targetId);
+    if (mine && mine.updatedAt >= item.updatedAt) continue;
+    if (item.deleted) {
+      if (mine) {
+        plan.deleteMemos.push(targetId);
+        memos.delete(targetId);
+      }
+      continue;
+    }
+    const text = str(d.text)?.trim().slice(0, 500);
+    const at = str(d.at);
+    if (!text || !at) continue;
+    const memo: Memo = { id: targetId, at, text, ref, createdAt: mine?.createdAt ?? str(d.createdAt) ?? item.updatedAt, updatedAt: item.updatedAt };
+    plan.upsertMemos.push(memo);
+    memos.set(targetId, memo);
   }
   return plan;
 }

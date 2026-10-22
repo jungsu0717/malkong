@@ -191,6 +191,8 @@ export type SyncResponse = {
   baby: SyncBaby | null;
   records: SyncRecord[];
   items?: import('./family-items').SyncItem[];
+  /** 서버가 받는 줄 종류 — 여기에 'memo' 가 있어야 메모를 올린다(task common/024) */
+  itemKinds?: string[];
   members: number;
 };
 
