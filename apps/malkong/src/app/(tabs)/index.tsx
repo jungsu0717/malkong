@@ -11,7 +11,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useIsFocused } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,6 +31,7 @@ import { useBaby } from '@/data/baby-context';
 import { monthStart } from '@/data/briefing';
 import { readSetting, writeSetting } from '@/data/db';
 import { routineRecommend } from '@/data/recommend';
+import { happyMoment } from '@/data/review';
 import {
   dateLabel,
   hasSteps,
@@ -101,6 +102,16 @@ export default function RoutineScreen() {
 
   // 타이머가 켜져 있으면 1초마다, 아니면 30초마다 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다
   const now = useNow(routines.some((r) => r.kind === 'minutes' && r.runningSince));
+
+  // 좋은 순간 — 이 화면에서 그날 루틴(둘 이상)을 마지막 하나까지 완료한 때. 쌓이면 스토어 별점 창(SPEC-MY-09)
+  const leftBefore = useRef<number | null>(null);
+  useEffect(() => {
+    if (loading) return;
+    const p = todayPlan(routines, logs, now);
+    const left = p.total - p.done;
+    if (focused && leftBefore.current !== null && leftBefore.current > 0 && left === 0 && p.total >= 2) void happyMoment();
+    leftBefore.current = left;
+  }, [routines, logs, now, loading, focused]);
 
   if (!baby || !age || loading) return <ScreenLoading />;
   const plan = todayPlan(routines, logs, now);

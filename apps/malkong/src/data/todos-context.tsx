@@ -15,6 +15,7 @@ import { useBaby } from './baby-context';
 import { checkupGroups } from './checkup-todos';
 import { insertRoutineLogRow, readSetting, upsertRoutineRow, writeSetting } from './db';
 import { memberName, noteDeleted } from './family';
+import { happyMoment } from './review';
 import { onRemoteChange, requestSync } from './sync-events';
 import { EVENING_HOUR, deliveryChecks, eveningPlan, morningPlan, reminderBody } from './alert-plan';
 import {
@@ -355,6 +356,8 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       const now = new Date();
       // 누가 했는지 — 가족 공유를 켠 폰에서만 이름이 있다(task my/009)
       await update(id, { doneAt: now.toISOString(), doneBy: await memberName() });
+      // 좋은 순간 — 쌓이면 스토어 별점 창(SPEC-MY-09). 알림 단추로 완료하면 앱이 뒤에 있어 띄우지 않는다
+      void happyMoment();
       const next = nextRepeatTodo(before, now);
       if (next) {
         await saveTodo(next);

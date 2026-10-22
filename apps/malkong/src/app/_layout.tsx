@@ -20,6 +20,7 @@ import { loadStoredKnowledge, refreshKnowledge } from '@/data/knowledge-update';
 import { onTodoAlertOpened } from '@/data/notifications';
 import { PreferencesProvider } from '@/data/preferences-context';
 import { RecordsProvider } from '@/data/records-context';
+import { noteReviewStart } from '@/data/review';
 import { MemosProvider } from '@/data/memos-context';
 import { RoutinesProvider } from '@/data/routines-context';
 import { TodosProvider } from '@/data/todos-context';
@@ -40,6 +41,8 @@ function OnboardingGate() {
   useEffect(() => {
     if (loading) return;
     if (!baby && segments[0] !== 'onboarding') router.replace('/onboarding');
+    // 스토어 리뷰는 아기 생일을 넣고 며칠 쓴 뒤에만 묻는다(SPEC-MY-09)
+    if (baby) void noteReviewStart();
   }, [baby, loading, segments, router]);
 
   // 아침 알림 · 할 일 알림을 누르고 들어오면 할 일 탭으로

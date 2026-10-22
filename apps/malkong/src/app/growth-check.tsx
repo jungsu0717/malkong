@@ -17,6 +17,7 @@ import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { itemById, itemsByIds } from '@/data/l1';
 import { useMemos } from '@/data/memos-context';
+import { happyMoment } from '@/data/review';
 import { checklistIds, checkpointFor, dayNumber, monthDate, nextCheckpoint } from '@/data/stage';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -57,6 +58,8 @@ export default function GrowthCheckScreen() {
                   onPress={() => {
                     tap(at ? 'light' : 'success');
                     void toggleCheck(item.id, item.title);
+                    // 좋은 순간 — 쌓이면 스토어 별점 창(SPEC-MY-09)
+                    if (!at) void happyMoment();
                   }}
                   style={({ pressed }) => [styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider }, pressed && { opacity: 0.6 }]}>
                   {at ? (
