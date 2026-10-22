@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { l1Version } from '@/data/l1';
 import { DRAFT, legalDoc } from '@/data/legal';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -11,7 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 export default function LegalScreen() {
   const c = useTheme();
   const { doc: id } = useLocalSearchParams<{ doc: string }>();
-  const doc = legalDoc(id);
+  const doc = legalDoc(id, l1Version());
 
   return (
     <ThemedView style={styles.container}>

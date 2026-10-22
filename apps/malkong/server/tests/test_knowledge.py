@@ -28,7 +28,7 @@ def test_bundle_is_every_approved_item_as_written() -> None:
     body = res.json()
     repo = get_l1_repository()
     assert body["version"] == repo.version
-    assert len(body["items"]) == len(repo.approved()) > 0
+    assert len(body["items"]) == len(repo.bundle()) > 0
     for item in body["items"]:
         assert item["status"] == "approved"
         assert ITEM_KEYS <= item.keys()

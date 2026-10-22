@@ -1,6 +1,6 @@
 # 육아버디 서버(코드명 malkong) — 코드 작업 규칙
 
-이 폴더는 육아버디 agent 서버(FastAPI)다. 서버가 무엇을 하고 무엇을 저장하는지는
+이 폴더는 육아버디 서버(FastAPI)다. 지금 하는 일은 기기 키, 가족 공유, 공공 지식(L1) 내려받기 셋이다. 서버가 무엇을 하고 무엇을 저장하는지는
 [backend](../docs/architecture/backend.md) 서버 절이, API 모양은 [api-contract](../docs/architecture/api-contract.md)가
 정본이다. 이 파일은 코드를 어떻게 쓰는지만 다룬다.
 
@@ -19,9 +19,6 @@ uv run ruff check .
 uv run ruff format --check .                     # 고칠 때는 --check 를 빼고 돌린다
 uv run pytest
 
-# 실제 모델로 로컬 실행 — 모델은 환경변수로만 고른다(코드에 적지 않는다). 무료 티어 키면 아기 기록은 안 간다
-MALKONG_LLM_PROVIDER=gemini MALKONG_LLM_MODEL=gemini-3.5-flash-lite uv run uvicorn app.main:app --port 8000
-
 # Postgres 저장소를 실제 Postgres 로 시험 — 저장소 SQL 을 고쳤으면 돌린다(평소 pytest 에서는 건너뛴다).
 # 로컬 Postgres 는 pgserver 로 띄운다(설치 권한 불필요, Python 3.12 판만 있다). 운영 DB(Neon) 주소는 넣지 않는다
 URI=$(uv run --no-project --python 3.12 --with pgserver python -c \
@@ -31,22 +28,12 @@ kill $(head -1 /tmp/malkong-pg/postmaster.pid)                # 끝나면 끈다
 
 # L1 을 고친 뒤 — 서버 사본(app/data/l1/)을 원본(src/data/l1/)과 맞춘다. 어긋나면 tests/test_l1_copy.py 가 실패한다
 uv run python -m scripts.sync_l1
-
-# 모델 비교 (task common/003) — 실제 API 를 부르므로 돈이 든다. 모델 id 는 인자로 넘긴다
-uv run python -m eval.run --model gemini:<id> [--model anthropic:<id> --vertex-project malkong]
-uv run python -m eval.score eval/results/<날짜>
-
-# 근거 없이 일반론으로 답한 질문이 어느 주제 · 월령에 몰리는지 — 최근 7일(task common/017). 질문 원문은 애초에 없다
-gcloud logging read 'resource.type="cloud_run_revision" AND resource.labels.service_name="malkong-server" AND textPayload:"근거 없음"' \
-  --project malkong --freshness=7d --format="value(textPayload)" | sed 's/.*kinds=/kinds=/' | sort | uniq -c | sort -rn
 ```
 
-결과 폴더에는 그 판에 쓴 `system_prompt.txt` 를 함께 남긴다 — 프롬프트를 고치면 점수가 바뀌기 때문이다.
-
-- Gemini 키는 `server/.env` 에 둔다(`MALKONG_GEMINI_API_KEY`). 이 파일은 git, Docker 빌드, gcloud 업로드에서
-  모두 빠진다. 키 값을 출력하거나 로그·커밋에 남기지 않는다
-- Claude 는 Vertex AI 로 부른다 — 키가 없고, 로컬은 `gcloud auth application-default login` 권한을 쓴다.
-  Claude API 직결이 필요하면 `--claude-via api` 와 `MALKONG_ANTHROPIC_API_KEY`
+- 로컬에서 쓰는 비밀값(Neon 주소 같은 것)은 `server/.env` 에 둔다. 이 파일은 git, Docker 빌드, gcloud 업로드에서
+  모두 빠진다. 값을 출력하거나 로그·커밋에 남기지 않는다
+- 질문 답변(`/v1/ask`) · 피드백 · 보상 광고와 모델 어댑터 · 모델 비교 도구(eval)는 2026-10-22 에 뺐다(task common/022).
+  옛 코드는 git 기록에 있다
 
 ## 배포 (Cloud Run)
 
@@ -66,30 +53,19 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregi
 gcloud projects add-iam-policy-binding malkong --condition=None \
   --member="serviceAccount:481623022922-compute@developer.gserviceaccount.com" --role="roles/run.builder"
 
-# 처음 한 번 — Gemini 키를 Secret Manager 에 넣고(키 값은 화면에 나오지 않는다), 서버가 읽게 한다.
-# 키 넣기는 Julian 이 직접 한다. 키를 바꿀 때는 create 대신 `gcloud secrets versions add` 로 같은 파이프를 쓴다
-grep '^MALKONG_GEMINI_API_KEY=' .env | cut -d= -f2- | tr -d '\n' | \
-  gcloud secrets create malkong-gemini-key --replication-policy=automatic --data-file=-
-gcloud secrets add-iam-policy-binding malkong-gemini-key --condition=None \
-  --member="serviceAccount:481623022922-compute@developer.gserviceaccount.com" \
-  --role="roles/secretmanager.secretAccessor"
-
-# 배포 (server/ 에서) — 모델은 환경변수로, 키는 Secret Manager 에서
+# 배포 (server/ 에서) — 비밀값은 Secret Manager 에서. --set-secrets 는 적은 것만 남기므로 예전 Gemini 키는 빠진다.
+# --remove-env-vars 는 예전 모델 설정(MALKONG_LLM_*)을 지운다 — 2026-10-22 정리 뒤 첫 배포 한 번만 필요하다
 gcloud run deploy malkong-server --source . --region asia-northeast3 \
   --allow-unauthenticated --min-instances 0 --max-instances 2 \
-  --set-env-vars MALKONG_LLM_PROVIDER=gemini,MALKONG_LLM_MODEL=gemini-3.5-flash-lite,MALKONG_LLM_PAID_TIER=true \
-  --set-secrets MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest,MALKONG_DATABASE_URL=malkong-database-url:latest,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest
+  --remove-env-vars MALKONG_LLM_PROVIDER,MALKONG_LLM_MODEL,MALKONG_LLM_PAID_TIER \
+  --set-secrets MALKONG_DATABASE_URL=malkong-database-url:latest,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest
 
 # 바꾼 판을 먼저 시험하려면 --no-traffic --tag <이름> 을 붙여 트래픽 없는 시험판으로 올리고, 확인한 뒤
 # `gcloud run services update-traffic malkong-server --region asia-northeast3 --to-latest` 와 `--remove-tags <이름>` 으로 넘긴다.
 # --no-traffic 을 한 번 쓰면 트래픽이 그 판에 고정되므로 --to-latest 로 풀어 줘야 다음 배포가 자동으로 넘어간다
 
-# Gemini 키는 Malkong 프로젝트의 키(유료 · 선불 충전 · 월 한도 1만 원, AI Studio Spend 화면에서 Julian 이 관리)다.
-# 한도를 넘으면 Gemini 가 429 「monthly spending cap」으로 모든 호출을 거절한다 — 앱에는 곧바로 503 이 간다(task ask/006).
-# MALKONG_LLM_PAID_TIER=true 는 그 키가 유료 등급일 때만 켠다 — 무료 등급이면 구글이 입력을 학습·사람 검토에 쓰므로
-# 아기 기록을 보내지 않는다(Gemini API 약관 「Unpaid Services」). 키를 바꿀 때는 Julian 이:
-#   gcloud services api-keys get-key-string $(gcloud services api-keys list --project=malkong --format="value(name)" --limit=1) \
-#     --format="value(keyString)" | tr -d '\n' | gcloud secrets versions add malkong-gemini-key --data-file=- --project=malkong
+# 서버는 2026-10-22 부터 AI 모델을 부르지 않는다(task common/022). Secret Manager 의 malkong-gemini-key 는 서버가 더 읽지 않으니
+# 그대로 두어도 되고, Julian 이 나중에 지워도 된다
 
 # 배포마다 서버 이미지가 Artifact Registry(cloud-run-source-deploy)에 남는다 — 무료 구간은 0.5GB(이미지 하나 약 75MB).
 # 최근 2개만 남기고 7일 지난 것은 지우는 규칙을 한 번 걸어 둔다(규칙 파일 artifact-cleanup-policy.json). 지우는 일이라 Julian 이 직접 한다
@@ -103,8 +79,7 @@ gcloud artifacts repositories set-cleanup-policies cloud-run-source-deploy --loc
 
 - gcloud 는 Homebrew 로 깐다(`brew install --cask gcloud-cli` — 소스 컴파일 없이 Google 공식 파일을 받는다).
   로그인은 Julian 개인 구글 계정으로 `gcloud auth login`
-- 배포 뒤 확인은 Gemini 무료 할당량을 아끼려고 `/health` · 위험 신호 질문 하나(모델을 부르지 않는다) ·
-  사실 질문 하나만 한다
+- 배포 뒤 확인은 `/health` 와 `/v1/knowledge/version`(판 번호가 앱의 `src/data/l1/version.json` 과 같은지) 둘이면 된다
 
 ## 구조
 
@@ -119,26 +94,19 @@ app/
     router.py
     schema.py
     service.py
-  domain/ask/prompt.py 버디 시스템 프롬프트(system_prompt.txt)와 모델 출력 JSON 모양
-  domain/ask/redflag.py 위험 신호 문장 매칭 규칙 — 모델보다 먼저(SPEC-ASK-02)
-  domain/ask/retrieval.py L1 검색 — 질문에 맞는 승인된 항목을 골라 모델에 건넨다
-  domain/knowledge/repository.py 승인된 L1 만 읽는 저장소
-  data/l1/             L1 사본 — scripts/sync_l1.py 가 만든다. 손으로 고치지 않는다
-  domain/ask/cache.py  같은 clientMessageId 응답을 메모리에 10분 — 재시도 안전
-  domain/entitlements/ 기기 키 확인·하루 한도(service.py) · GET /entitlements · 저장소 팩토리
   domain/devices/      POST /devices — 기기 키 발급
-  infra/               바깥 시스템에 닿는 것
-    llm/               모델 어댑터 — 각 회사 공식 SDK 를 base.py 계약 뒤에 둔다(decisions/007)
-    db/usage_store.py  사용량 저장소 — Neon(Postgres)과 메모리 판. 주소가 없으면 메모리
+  domain/entitlements/ 기기 키 확인 · 광고 여부(service.py) · GET /entitlements · 저장소 팩토리
+  domain/family/       /family — 가족 만들기 · 참여 · 나가기 · 맞추기(아기 · 할 일 · 루틴 · 메모)
+  domain/knowledge/    /knowledge/version · bundle — 승인된 L1 만 읽는 저장소(repository.py)
+  data/l1/             L1 사본 — scripts/sync_l1.py 가 만든다. 손으로 고치지 않는다
+  infra/db/            바깥 저장소 — Neon(Postgres)과 메모리 판. 주소가 없으면 메모리
+    usage_store.py     기기 키 해시
+    family_store.py    가족 · 가족 기록
 scripts/               손으로 돌리는 도구(sync_l1). 서버 이미지에는 들어가지 않는다
 tests/
-eval/                  모델 비교 장치 — 질문 세트, 실행, 채점, 결과. 서버 이미지에는 들어가지 않는다
-  redflag_phrases.json 위험 신호 검증 문장 표(task common/004). expect 는 잡을 k-warn id · "없음" ·
-                       "아님:<id>"(그 id 는 나오면 안 됨) · "되도록:<id>". 실제 모델로 재면 무료 할당량을 쓴다
 ```
 
-도메인 이름은 api-contract 경로의 첫 토막을 쓴다 — `ask`, `knowledge`, `entitlements`, `reward`,
-`feedback`, `cohort`.
+도메인 이름은 api-contract 경로의 첫 토막을 쓴다 — `devices`, `entitlements`, `family`, `knowledge`.
 
 ## 계층 규칙 — Router → Service → Repository
 
@@ -160,7 +128,7 @@ eval/                  모델 비교 장치 — 질문 세트, 실행, 채점, �
 ## 설정
 
 - 설정값은 환경변수(접두어 `MALKONG_`)로만 받고, `common/core/setting.py` 한 곳에서 읽는다
-- 모델 이름, 접속 주소, 키를 코드에 적지 않는다(backend 「모델은 갈아끼우는 부품이다」)
+- 접속 주소와 키를 코드에 적지 않는다
 
 ## 금지
 
@@ -174,4 +142,4 @@ eval/                  모델 비교 장치 — 질문 세트, 실행, 채점, �
 ## 테스트
 
 - 새 엔드포인트를 만들면 `tests/` 에 테스트를 하나 이상 둔다
-- LLM 같은 바깥 호출은 `app.dependency_overrides` 로 가짜를 끼워 시험한다
+- 저장소 같은 바깥 의존은 `app.dependency_overrides` 로 메모리 판이나 가짜를 끼워 시험한다

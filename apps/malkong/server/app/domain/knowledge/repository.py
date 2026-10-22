@@ -11,27 +11,10 @@
 """
 
 import json
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 VERSION_FILE = "version.json"
-
-
-@dataclass(frozen=True)
-class L1Item:
-    id: str
-    months: tuple[int, ...]
-    kind: str
-    title: str
-    body: str
-    source_name: str
-    source_url: str
-    red_flag: bool
-
-    @property
-    def start(self) -> int:
-        return self.months[0]
 
 
 class L1Repository:
@@ -43,7 +26,6 @@ class L1Repository:
             if version_path.exists()
             else "0"
         )
-        items: list[L1Item] = []
         raw_items: list[dict[str, Any]] = []
         for path in sorted(directory.glob("*.json")):
             if path.name == VERSION_FILE:
@@ -51,34 +33,11 @@ class L1Repository:
             data = json.loads(path.read_text(encoding="utf-8"))
             if not isinstance(data, list):
                 continue
-            for raw in data:
-                if raw.get("status") != "approved":
-                    continue
-                raw_items.append(raw)
-                items.append(
-                    L1Item(
-                        id=raw["id"],
-                        months=tuple(raw["months"]),
-                        kind=raw["kind"],
-                        title=raw["title"],
-                        body=raw["body"],
-                        source_name=raw["source"]["name"],
-                        source_url=raw["source"]["url"],
-                        red_flag=bool(raw.get("red_flag")),
-                    )
-                )
-        if not items:
-            # 경로가 틀렸거나 사본이 비었다 — 조용히 0건으로 뜨면 모든 답이 근거 없이 나간다
+            raw_items.extend(raw for raw in data if raw.get("status") == "approved")
+        if not raw_items:
+            # 경로가 틀렸거나 사본이 비었다 — 조용히 0건으로 뜨면 앱이 빈 묶음으로 바꿔 끼울 수 있다
             raise RuntimeError(f"승인된 L1 항목을 찾지 못했다: {directory}")
-        self._items = items
         self._raw = raw_items
-        self._by_id = {item.id: item for item in items}
-
-    def approved(self) -> list[L1Item]:
-        return list(self._items)
-
-    def get(self, item_id: str) -> L1Item | None:
-        return self._by_id.get(item_id)
 
     def bundle(self) -> list[dict[str, Any]]:
         """앱에 내려줄 승인 항목 전부 — 파일에 적힌 모양 그대로."""

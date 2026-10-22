@@ -41,7 +41,7 @@ def test_unknown_path_uses_common_error_shape(client: TestClient) -> None:
 
 
 def test_wrong_method_keeps_allow_header(client: TestClient) -> None:
-    res = client.get("/v1/ask")
+    res = client.get("/v1/devices")
     assert res.status_code == 405
     assert res.json()["code"] == "METHOD_NOT_ALLOWED"
     assert res.headers["allow"] == "POST"
@@ -50,7 +50,7 @@ def test_wrong_method_keeps_allow_header(client: TestClient) -> None:
 @pytest.mark.parametrize("origin", ["http://localhost:8099", "http://127.0.0.1:8081"])
 def test_cors_allows_localhost(client: TestClient, origin: str) -> None:
     res = client.options(
-        "/v1/ask",
+        "/v1/devices",
         headers={
             "Origin": origin,
             "Access-Control-Request-Method": "POST",
@@ -64,7 +64,7 @@ def test_cors_allows_localhost(client: TestClient, origin: str) -> None:
 @pytest.mark.parametrize("origin", ["https://evil.example", "http://localhost.evil.example"])
 def test_cors_rejects_other_origins(client: TestClient, origin: str) -> None:
     res = client.options(
-        "/v1/ask", headers={"Origin": origin, "Access-Control-Request-Method": "POST"}
+        "/v1/devices", headers={"Origin": origin, "Access-Control-Request-Method": "POST"}
     )
     assert "access-control-allow-origin" not in res.headers
 

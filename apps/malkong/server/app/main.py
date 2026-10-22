@@ -8,13 +8,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.common.core.exception import register_exception_handlers
-from app.domain.ask.router import router as ask_router
 from app.domain.devices.router import router as devices_router
 from app.domain.entitlements.router import router as entitlements_router
 from app.domain.family.router import router as family_router
-from app.domain.feedback.router import router as feedback_router
 from app.domain.knowledge.router import router as knowledge_router
-from app.domain.reward.router import router as reward_router
+from app.domain.legal.router import router as legal_router
 
 
 def create_app() -> FastAPI:
@@ -32,13 +30,12 @@ def create_app() -> FastAPI:
         allow_headers=["Content-Type", "X-Device-Key", "X-As-User"],
     )
 
-    app.include_router(ask_router, prefix="/v1")
     app.include_router(devices_router, prefix="/v1")
     app.include_router(entitlements_router, prefix="/v1")
     app.include_router(family_router, prefix="/v1")
-    app.include_router(feedback_router, prefix="/v1")
     app.include_router(knowledge_router, prefix="/v1")
-    app.include_router(reward_router, prefix="/v1")
+    # 스토어에 넣을 공개 주소라 /v1 을 붙이지 않는다
+    app.include_router(legal_router)
 
     # /healthz 로 하지 않는다 — Cloud Run 은 z 로 끝나는 일부 경로를 예약해 두어
     # 그 요청이 앱까지 오지 않는다.

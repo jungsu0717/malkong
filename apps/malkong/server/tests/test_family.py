@@ -455,3 +455,32 @@ def test_sync_rejects_unknown_item_kind_and_big_data(app) -> None:
         },
     )
     assert big.status_code == 422
+
+
+def test_sync_memos_and_item_kinds(app) -> None:
+    """우리 아기 메모도 할 일처럼 가고(task common/024), 응답에 받는 종류가 실린다."""
+    a, b = phone(app), phone(app)
+    code = a.post("/v1/family", json=CONSENT).json()["inviteCode"]
+    b.post("/v1/family/join", json={"code": code, **CONSENT})
+    first = a.post("/v1/family/sync", json={"since": 0}).json()
+    assert "memo" in first["itemKinds"]
+    a.post(
+        "/v1/family/sync",
+        json={
+            "since": 0,
+            "items": [
+                item(
+                    "memo",
+                    "mm-1",
+                    "2026-10-22T09:00:00.000Z",
+                    at="2026-10-22T09:00:00.000Z",
+                    text="처음으로 눈 맞추고 웃었어요",
+                    ref=None,
+                )
+            ],
+        },
+    )
+    got = b.post("/v1/family/sync", json={"since": 0}).json()
+    assert [(i["kind"], i["id"], i["data"]["text"]) for i in got["items"]] == [
+        ("memo", "mm-1", "처음으로 눈 맞추고 웃었어요")
+    ]

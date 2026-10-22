@@ -1,70 +1,14 @@
 # API 계약 v0 — 앱 ↔ FastAPI
 
-> 근거: [backend](backend.md) · [ask 대화 상세](../menu-spec/ask.md)
+> 근거: [backend](backend.md)
 
-인증은 초기엔 익명 **디바이스 키**(설치 시 서버가 발급, 헤더 `X-Device-Key`)로 하고 한도 집계에만 쓴다.
-로그인 도입 시 계정 토큰이 이를 대체한다. 에러는 공통 형식 `{ code, message }`.
-운영자(가족) 기기는 헤더 `X-As-User: 1` 을 더해 `/v1/ask` · `/v1/entitlements` 를 일반 기기처럼 받을 수 있다
+인증은 익명 **디바이스 키**(설치 시 서버가 발급, 헤더 `X-Device-Key`)로 한다. 키는 사람 · 계정과 연결되지 않는다.
+에러는 공통 형식 `{ code, message }`.
+운영자(가족) 기기는 헤더 `X-As-User: 1` 을 더해 `/v1/entitlements` 를 일반 기기처럼 받을 수 있다
 (일반 사용자로 보기 — [backend](backend.md) 운영자 절). 일반 기기의 이 헤더는 무시한다.
 
-## POST /v1/ask — 질문
-
-요청:
-```json
-{
-  "question": "분유를 갑자기 잘 안 먹어요",
-  "baby": { "months": 3, "records": [ { "kind": "기록", "label": "수유 텀 3시간 · 160ml" } ] },
-  "history": [
-    { "role": "user", "text": "태열 예방하려면 얼마나 시원하게 해 줘야 해요?" },
-    { "role": "buddy", "text": "실내는 22~24도 정도로…" }
-  ],
-  "conversationSummary": "태열 예방으로 실내 온도를 물었고 22~24도를 안내했다.",
-  "clientMessageId": "로컬 메시지 id (중복 방지)"
-}
-```
-
-`history` 는 바로 앞 대화다 — 부모(`user`)와 버디(`buddy`)가 주고받은 말을 오래된 것부터, 최대 6턴(세 번의 주고받음).
-서버는 6턴을 넘으면 최근 것만 남기고 한 턴을 600자에서 자른다. 모델에 넘길 뿐 저장하지 않는다. 절약 모드에도 보낸다 —
-질문 글과 같은 성격이다(기기 안 기록은 보내지 않는다). 없으면 빈 배열이나 생략.
-
-`conversationSummary` 는 이전 대화 요약이다 — 지난 답(`answer` · `followup`)에서 서버가 돌려준 것을 폰이 들고 있다가 붙인다.
-하루가 지나면 붙이지 않는다. 서버는 600자에서 잘라 모델에 넘길 뿐 저장하지 않는다(decisions/022). 없으면 생략.
-
-`baby.records` 는 이번 질문의 주제에 닿는 기록만이다 — 앞 답을 문제 삼는 말이면 원래 질문의 주제로 고른다(폰 `src/data/ask-context.ts`).
-
-`baby` 에는 월령과 기록만 담는다. 아기 이름 · 생일은 보내지 않는다 — 개인정보 처리방침(`src/data/legal.ts`)이 그렇게
-약속하고 있고, 답을 「우리 아기」로 부르는 데 이름이 꼭 필요하지도 않다(Julian, 2026-10-08, task ask/011).
-
-응답 200 — `type` 으로 갈린다:
-
-| type | 뜻 | 함께 오는 것 |
-|---|---|---|
-| `answer` | 답변 | `answer`, `level`(사실·일반·판단), `sources[{id,name,url}]`, `records[]`(저장 제안 — kind·label·covers?), `usage{remaining}`(오늘 남은 정밀 답변 수, 운영자 기기는 null), `conversationSummary`(이번까지의 대화 요약, 없으면 null) |
-| `followup` | 답변 전 되묻기 | `followup{question, chips[], recordLabel}`, `conversationSummary` — 답을 받으면 같은 API 로 재요청 |
-| `redflag` | 위험 신호 고정 응답 | `answer`(병원·119 안내), `sources[]` — LLM 미호출 |
-
-```
-평시     ▸ type=answer 의 sources 는 비어 있어서는 안 된다. 예외는 공공 지식에 근거가 없는 답 하나다 —
-          level 이 "일반" 또는 "판단"이고 인용이 없을 때 sources 는 비어 있고, 앱은 "공공 지식 근거 없음 ·
-          일반 정보"를 표시한다. level 이 "사실"이면 sources 는 반드시 있다.
-평시     ▸ sources 의 id 는 서버가 모델에 건넨 L1 조각의 id 여야 한다. 모델이 지어낸 id 는 내보내지 않는다.
-조건 위반 ▸ 모델이 답하지 못하면(거절·형식 오류·시간 초과) 503 { code: "MODEL_UNAVAILABLE" } 를 반환한다.
-          모델 회사가 요금·호출 한도나 키 문제로 요청을 받지 않으면 다시 부르지 않고 곧바로 같은 503 을 돌려준다.
-조건 위반 ▸ 일일 한도 초과면 429 { code: "LIMIT_EXCEEDED", resetAt, rewardAvailable, ecoAvailable }
-          를 반환하고, 앱은 남은 선택지만 보인다 — 광고 충전(정밀, rewardAvailable)과 일반 기준 답(ecoAvailable).
-          `mode: eco` 요청도 일반 기준 답을 그날 다 썼으면 같은 429 에 ecoAvailable=false 다. 둘 다 false 면
-          앱은 「오늘은 여기까지」를 보인다.
-조건 위반 ▸ 서버 전체의 그날 모델 비용이 하루 천장을 넘었으면 503 { code: "DAILY_BUDGET_REACHED", message, resetAt }
-          — 모델을 부르지 않는다. 운영자(가족) 기기는 예외다(backend 일일 한도 절).
-평시     ▸ 요청에 "mode": "eco" 가 오면 서버는 L2 기록 없이 답하고, 응답에
-          "eco": true 를 넣는다 — 앱은 "일반 기준 답변" 표시를 붙인다(backend 일일 한도 절).
-          eco 답에는 되묻기(followup)가 오지 않는다 — 기록을 쓸 수 없는데 되물으면 같은 질문이 되풀이된다.
-평시     ▸ 같은 clientMessageId 재요청은 새로 처리하지 않고 같은 응답을 돌려준다(재시도 안전).
-          한도는 같은 clientMessageId 에 한 번만 차감한다.
-평시     ▸ 요청 머리에 `X-Device-Key`(POST /v1/devices 로 받은 키)를 보내야 한다. 키가 없거나 서버가 모르는
-          키면 401 { code: "DEVICE_KEY_INVALID" } — 앱은 키를 새로 받아 한 번 다시 보낸다.
-안전     ▸ 위험 신호 응답(redflag)은 키·한도와 상관없이 언제나 나간다.
-```
+지금 서버가 하는 일은 기기 키 · 기기 자격 · 공공 지식(L1) 내려받기 · 가족 공유 넷이다. 질문 답변(`/v1/ask`) ·
+보상형 광고 적립(`/v1/reward/ssv`) · 답변 피드백(`/v1/feedback`)은 2026-10-22 에 뺐다(아래 「뺀 것」).
 
 ## POST /v1/devices — 디바이스 키 발급
 
@@ -78,12 +22,12 @@
 
 ## GET /v1/knowledge/version — L1 판 확인
 
-응답: `{ "version": "2026.10.3" }`. 기기 키가 없어도 된다 — 공공 지식이라 숨길 것이 없고 한도와도 상관없다.
+응답: `{ "version": "2026.10.4" }`. 기기 키가 없어도 된다 — 공공 지식이라 숨길 것이 없다.
 앱은 하루에 한 번 자기 판(번들 판과 받아 둔 판 가운데 새 것)과 비교한다. 판은 `연도.월.순번` 꼴이고 숫자 토막씩 비교한다.
 
 ## GET /v1/knowledge/bundle — L1 묶음 내려받기
 
-응답: `{ "version": "2026.10.3", "items": [ ...항목 스키마 그대로... ] }` — 승인된 항목 **전부**(2026-10 에 77건, 약 45KB).
+응답: `{ "version": "2026.10.4", "items": [ ...항목 스키마 그대로... ] }` — 승인된 항목 **전부**(2026-10-22 에 165건).
 항목은 [l1-knowledge-base](l1-knowledge-base.md) 「항목 스키마」 그대로라(`red_flag` 도 그대로) 앱이 번들 파일 자리에 그대로 바꿔 끼운다.
 증분(`since` · `removedIds`)은 두지 않는다 — 묶음이 작아 통째로 받는 쪽이 지운 항목 관리까지 덜어 준다(task common/019).
 
@@ -102,7 +46,7 @@
 | `POST /v1/family/join` | 초대 코드로 들어가기 | `{ code, consentedAt }` → `{ familyId, inviteCode, members }`. 404 `INVITE_NOT_FOUND` · 409 `FAMILY_FULL`(6명) · 409 `ALREADY_IN_FAMILY`(다른 가족) · 429 `TOO_MANY_ATTEMPTS`(기기마다 하루 20번) |
 | `GET /v1/family` | 내 가족 | `{ familyId, inviteCode, members }`. 없으면 404 `NOT_IN_FAMILY` |
 | `DELETE /v1/family/me` | 나가기 | 204. 마지막 구성원이 나가면 가족과 데이터를 지운다 |
-| `POST /v1/family/sync` | 아기 · 기록 · 빠른 기록 · 할 일 · 루틴 맞추기 | `{ since, baby?, records[], events[], items[] }` → `{ seq, baby, records[], events[], items[], members }` |
+| `POST /v1/family/sync` | 아기 · 기록 · 빠른 기록 · 할 일 · 루틴 · 메모 맞추기 | `{ since, baby?, records[], events[], items[] }` → `{ seq, baby, records[], events[], items[], itemKinds, members }` |
 
 `consentedAt` 은 아기 · 건강 기록의 서버 저장 · 가족 공유에 동의한 때(ISO) — 구성원 행에 남는다.
 `baby` 는 기기 DB 의 `baby` 행 그대로(`id` · `name` · `birthDate` · `createdAt` · `updatedAt`), `records[]` 는 `record` 행 그대로에
@@ -110,9 +54,10 @@
 `endAt` · `amount` · `side` · `diaper` · `color`(변 색) · `note` · `createdAt` · `updatedAt`)에 `deleted` 를 더한 것이다(SPEC-LOG-07). `kind` 는
 breast · formula · diaper · sleep · temp · weight · height 가운데 하나. 서버는 내용을 읽지 않고 맞추기만 한다 — 빠른 기록도
 기록과 같은 번호로 센다. 응답에 `events` 가 없으면 옛 서버다(앱은 빠른 기록을 올린 때를 넘기지 않는다).
-`items[]` 는 할 일 · 주제 · 루틴 · 루틴 기록(task my/009) — `{ kind: topic | todo | routine | routineLog, id, updatedAt, deleted, data }`.
+`items[]` 는 할 일 · 주제 · 루틴 · 루틴 기록(task my/009)과 우리 아기 메모 — `{ kind: topic | todo | routine | routineLog | memo, id, updatedAt, deleted, data }`.
 `data` 는 기기 DB 의 줄 그대로(할 일에는 주제 kind 를 `topicKind` 로 더한다)이고 서버는 읽지 않는다(한 줄 4000자까지, 한 번에 2000줄).
 기록과 같은 표 · 같은 번호 · 같은 규칙(늦게 고친 쪽이 이긴다)으로 맞춘다. 응답에 `items` 가 없으면 옛 서버다(앱은 할 일 · 루틴을 올린 때를 넘기지 않는다).
+응답의 `itemKinds` 는 이 서버가 받는 `kind` 목록이다 — 앱은 여기 있는 종류만 올린다(옛 서버에 `memo` 를 보내 요청 전체가 422 로 거절되지 않게).
 
 ```
 평시 ▸ 늦게 고친 쪽이 이긴다 — 기록 · 아기 모두 updatedAt(ISO) 비교. 서버는 기록마다 늘어나는 번호(seq)를 매기고,
@@ -123,59 +68,26 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 
 ## GET /v1/entitlements — 기기 자격
 
-요청 머리 `X-Device-Key`. 응답: `{ "ads": true, "dailyLimit": 10, "rewardPerAd": 5, "rewardMaxPerDay": 2, "remaining": 7, "operator": false }`
-(`rewardPerAd` 는 광고 1편이 채우는 정밀 답변 수) — 운영자(가족) 기기는
-`{ "ads": false, "dailyLimit": null, "rewardPerAd": 0, "rewardMaxPerDay": 0, "remaining": null, "operator": true }`.
+요청 머리 `X-Device-Key`. 응답: `{ "ads": true, "operator": false }` — 운영자(가족) 기기는 `{ "ads": false, "operator": true }`.
 `operator` 는 키가 운영자 allowlist 에 있는지다 — `X-As-User: 1` 로 일반 기기처럼 받는 중에도 true 라서,
 앱은 이 값으로 숨은 「일반 사용자로 보기」 스위치를 보인다.
-키가 없거나 모르는 키면 401 `DEVICE_KEY_INVALID`. 앱은 부팅 시 1회 받아 광고 표시·한도 안내에 쓴다.
-지정은 서버 allowlist([backend](backend.md) 운영자 절). 차감·리셋 규칙은 backend 의 일일 한도 절이 정본.
+키가 없거나 모르는 키면 401 `DEVICE_KEY_INVALID`. 앱은 부팅 시 1회 받아 광고 표시에 쓴다.
+지정은 서버 allowlist([backend](backend.md) 운영자 절).
 
-## GET /v1/reward/ssv — 보상형 광고 적립 (AdMob 서버가 호출)
+## GET /privacy · /terms — 개인정보 처리방침 · 이용약관 웹 페이지
 
-AdMob 의 서버 측 검증(SSV) 콜백. AdMob 은 GET 쿼리로 부른다(`user_id` · `transaction_id` · `signature` · `key_id` 등).
-앱은 광고를 요청할 때 `userId` 에 **기기 키의 SHA-256** 을 싣는다 — 키 원문은 광고 회사로 보내지 않는다.
+스토어에 넣을 공개 주소다(`/v1` 없음, 기기 키 없음). HTML 한 장을 그대로 준다. 본문 정본은 앱의 `src/data/legal.ts` 이고,
+`node scripts/export-legal.mjs`(앱 폴더)가 `server/app/data/legal/` 에 만든다. 본문과 어긋나면 `legal-html.test.ts` 가 실패한다(task common/024).
 
-```
-평시     ▸ 서버는 signature 앞까지의 쿼리 문자열을 Google 공개 키로 검증한 뒤, user_id 의 기기에 +1회 적립한다(하루 3회 상한).
-평시     ▸ 같은 transaction_id 는 한 번만 적립한다. 검증된 콜백이면 적립하지 않았어도 200 — AdMob 이 되풀이하지 않게.
-조건 위반 ▸ 서명이 없거나 틀리면 403 { code: "INVALID_SIGNATURE" }.
-금지     ▸ 앱의 자체 신고로는 적립하지 않는다 — 광고를 끝까지 봤다는 판정은 AdMob→서버 경로만 믿는다.
-```
+## 뺀 것 (2026-10-22, task common/022)
 
-## POST /v1/feedback — 답변 피드백 (SPEC-ASK-06)
+앱이 AI 상담을 뺀 뒤([decisions/024](../decisions/024-topic-todo-no-ai-answers.md)) 부르지 않게 된 것을 서버에서도 지웠다.
+옛 계약은 git 기록(이 파일의 2026-10-21 판)에 있다.
 
-요청 머리 `X-Device-Key`. 요청:
-```json
-{
-  "answerId": "앱의 답변 말풍선 id",
-  "rating": "up",
-  "comment": "선택 — 500자까지",
-  "answer": { "level": "일반", "sourceIds": ["k-feed-0001"], "eco": true },
-  "shared": { "question": "선택", "answer": "선택" }
-}
-```
-→ 204.
-
-```
-평시     ▸ 서버는 기기 키와 분리해 저장한다 — 피드백 행에 키(해시 포함)를 넣지 않는다.
-평시     ▸ 서버는 답을 저장하지 않으므로, 품질을 고치는 데 쓸 정보(수위 · 인용 id · 절약 모드)를 앱이 함께 보낸다.
-동의     ▸ 질문과 답 원문(shared)은 사용자가 그 피드백에서 「질문과 답도 함께 보내기」를 골랐을 때만 온다.
-조건 위반 ▸ 같은 기기에서 하루 50건을 넘으면 429 { code: "TOO_MANY_FEEDBACK" }. 같은 answerId 는 마지막 것만 남긴다.
-```
-
-## GET /v1/cohort/faq?months=<월령> — 또래 질문 묶음 (SPEC-GROW-05)
-
-응답: `{ "band": "3~4개월", "items": [ { "topic": "...", "question": "대표 질문(재서술)",
-"answerId": "캐시 답변 id", "count": 128 } ] }` — 익명 집계만. 표본이 작으면 서버가 밴드를 넓혀 돌려준다.
-
-아침 브리핑은 1단계가 온디바이스 생성이라 API 가 없다([backend](backend.md) 능동 브리핑 절).
-서버 생성으로 올라갈 때 푸시 토큰 등록과 함께 정의한다.
-
-## 미결
-
-- 답변 스트리밍(SSE) 여부 — v0 는 단건 JSON 으로 시작하고, 체감이 느리면 도입. 도입할 때
-  처리 단계(trace) 이벤트도 함께 정의한다 — 화면 쪽 표시 규칙은 SPEC-ASK-05 가 이미 정해 두었다
+- `POST /v1/ask` — 질문 답변(위험 신호 규칙 · L1 검색 · 모델 · 답 검사)과 하루 한도 · 일반 기준 답 · 하루 비용 천장
+- `GET /v1/reward/ssv` — 보상형 광고 적립
+- `POST /v1/feedback` — 답변 피드백
+- `GET /v1/cohort/faq` — 또래 질문 묶음(만들지 않았다)
 
 ## changelog
 
@@ -192,3 +104,5 @@ AdMob 의 서버 측 검증(SSV) 콜백. AdMob 은 GET 쿼리로 부른다(`user
 - 2026-10-12 `/v1/family` — 가족 만들기 · 초대 코드로 들어가기 · 나가기 · 아기 · 기록 맞추기(늦게 고친 쪽이 이김, seq) (task my/007)
 - 2026-10-12 `/v1/ask` 요청에 `conversationSummary`, 답 · 되묻기 응답에 `conversationSummary` — 대화 요약은 폰이 들고 다닌다. `baby.records` 는 질문 주제에 닿는 것만 (decisions/022, task ask/013)
 - 2026-10-12 `/v1/family/sync` 에 `events[]` — 기록 탭의 빠른 기록(care_event 모양 + deleted). 서버는 기록과 같은 표 · 같은 번호로 맞추고 돌려줄 때 가른다. 옛 앱은 보내지 않아도 된다 (SPEC-LOG-07, task log/001)
+- 2026-10-22 질문 답변 · 보상 광고 · 피드백 · 또래 질문을 뺌, 자격은 `{ ads, operator }` 만, 가족 맞추기에 메모(`memo`)와 `itemKinds` (task common/022 · 024)
+- 2026-10-22 `GET /privacy` · `/terms` 웹 페이지 (task common/024)

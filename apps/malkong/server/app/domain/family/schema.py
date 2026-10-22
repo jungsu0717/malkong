@@ -68,17 +68,22 @@ class EventIn(ApiModel):
     deleted: bool = False
 
 
+ItemKind = Literal["topic", "todo", "routine", "routineLog", "memo"]
+# 이 서버가 받는 줄 종류 — 응답에 실어 보낸다.
+# 앱이 옛 서버에 모르는 종류(메모)를 보내 요청 전체가 거절되는 일을 피한다
+ITEM_KINDS: list[str] = ["topic", "todo", "routine", "routineLog", "memo"]
+
 # 한 줄의 내용(data)이 이보다 길면 받지 않는다 — 할 일 · 루틴 한 줄은 수백 자면 충분하다
 MAX_ITEM_DATA_CHARS = 4000
 
 
 class ItemIn(ApiModel):
-    """할 일 · 주제 · 루틴 · 루틴 기록 한 줄(task my/009).
+    """할 일 · 주제 · 루틴 · 루틴 기록 · 우리 아기 메모 한 줄(task my/009 · common/024).
 
     폰의 줄을 data 에 그대로 싣는다. 서버는 내용을 읽지 않는다.
     """
 
-    kind: Literal["topic", "todo", "routine", "routineLog"]
+    kind: ItemKind
     id: NonEmptyStr = Field(max_length=100)
     updated_at: NonEmptyStr = Field(max_length=40)
     deleted: bool = False
@@ -110,4 +115,6 @@ class SyncResponse(ApiModel):
     events: list[EventIn] = []
     # 이 칸이 오면 서버가 items 를 받아 준 것이다 — 앱은 그때만 올린 때를 넘긴다
     items: list[ItemIn] = []
+    # 이 서버가 받는 줄 종류 — 앱은 여기에 있는 종류만 올린다(메모는 2026-10-22 부터)
+    item_kinds: list[str] = Field(default_factory=lambda: list(ITEM_KINDS))
     members: int

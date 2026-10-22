@@ -6,8 +6,6 @@
  * 개인정보 처리방침은 스토어 등록에 공개 주소가 필요해 출시 때 웹에도 같은 본문을 올린다.
  */
 
-import { l1Version } from './l1';
-
 /** 출시 전에 채운다 — 비어 있으면 화면에 「출시 전 확정」으로 보인다 */
 export const OPERATOR = {
   name: null as string | null,
@@ -178,7 +176,7 @@ function terms(): LegalDoc {
   };
 }
 
-function medical(): LegalDoc {
+function medical(version: string): LegalDoc {
   return {
     id: 'medical',
     title: '의학 정보 출처와 한계 고지',
@@ -196,7 +194,7 @@ function medical(): LegalDoc {
           '예방접종 일정: 질병관리청 예방접종도우미.',
           '영유아 건강검진 일정: 국민건강보험공단.',
           '성장 탭의 발달 단계 · 발달 체크 · 해 주면 좋아요 · 알아 두면 좋아요(잠 · 수유 · 울음 · 안전): 미국 질병통제예방센터(CDC)의 공개 자료(발달 이정표, 영유아 영양, 안전한 잠, 영유아 학대성 머리 손상 예방)를 우리 말로 옮겼어요. 발달 단계는 대부분(75% 이상)의 아기가 그 시기까지 하는 것이고, 아기마다 빠르고 느려요. CDC 가 육아버디를 보증하는 것은 아니에요.',
-          `모든 항목은 사람이 출처와 대조해 승인한 뒤에만 앱에 실려요. 지금 판: ${l1Version()}.`,
+          `모든 항목은 출처와 대조해 승인한 뒤에만 앱에 실려요.${version ? ` 지금 판: ${version}.` : ''}`,
         ],
       },
       {
@@ -259,14 +257,15 @@ function faq(): LegalDoc {
   };
 }
 
-export function legalDoc(id: string): LegalDoc | null {
+/** `version` 은 지금 쓰는 공공 지식 판(l1Version) — 의학 정보 고지에 적는다. 이 파일은 아무것도 가져오지 않아 node 로 웹 페이지를 만들 수 있다 */
+export function legalDoc(id: string, version = ''): LegalDoc | null {
   switch (id) {
     case 'terms':
       return terms();
     case 'privacy':
       return privacy();
     case 'medical':
-      return medical();
+      return medical(version);
     case 'faq':
       return faq();
     default:

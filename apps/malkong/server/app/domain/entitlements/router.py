@@ -18,16 +18,16 @@ logger = logging.getLogger("uvicorn.error")
 
 @lru_cache
 def get_usage_store() -> UsageStore:
-    """Neon 주소가 있으면 Postgres, 없거나 닿지 않으면 메모리(backend 「사용량을 세는 법」)."""
+    """Neon 주소가 있으면 Postgres, 없거나 닿지 않으면 메모리(backend 「기기 키」)."""
     url = get_settings().database_url
     if url:
         try:
             return PostgresUsageStore(url.get_secret_value())
         except Exception as exc:
             # 접속 주소가 로그에 남지 않게 예외 종류만 적는다
-            logger.error("usage: 저장소에 닿지 못해 메모리로 돈다 (%s)", type(exc).__name__)
+            logger.error("devices: 저장소에 닿지 못해 메모리로 돈다 (%s)", type(exc).__name__)
     else:
-        logger.warning("usage: MALKONG_DATABASE_URL 이 없어 메모리 저장소로 돈다")
+        logger.warning("devices: MALKONG_DATABASE_URL 이 없어 메모리 저장소로 돈다")
     return MemoryUsageStore()
 
 
