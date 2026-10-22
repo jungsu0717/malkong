@@ -17,11 +17,3 @@ export async function startAds(): Promise<boolean> {
 export function useAdsReady(): boolean {
   return false;
 }
-
-export function canOfferRewardedAd(): boolean {
-  return false;
-}
-
-export async function watchRewardedAd(): Promise<boolean> {
-  return false;
-}

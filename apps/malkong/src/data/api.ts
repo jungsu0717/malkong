@@ -15,17 +15,12 @@ const API_URL =
 
 const SHORT_TIMEOUT_MS = 15_000;
 
-/** 하루 정밀 답변을 다 썼을 때 서버가 함께 주는 것(429 LIMIT_EXCEEDED) */
-export type LimitInfo = { resetAt: string; rewardAvailable: boolean; ecoAvailable: boolean };
-
 /** 서버가 준 오류(`{code, message}`) 또는 연결 실패(status 0, code NETWORK) */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     readonly code: string,
     message: string,
-    /** 429 LIMIT_EXCEEDED 일 때만 */
-    readonly limit?: LimitInfo,
   ) {
     super(message);
     this.name = 'ApiError';
@@ -34,11 +29,6 @@ export class ApiError extends Error {
 
 export type Entitlements = {
   ads: boolean;
-  dailyLimit: number | null;
-  /** 보상형 광고 1편이 채우는 정밀 답변 수 */
-  rewardPerAd: number;
-  rewardMaxPerDay: number;
-  remaining: number | null;
   /** 이 키가 가족 명단에 있는지 — 일반 사용자로 보기 중에도 true. 옛 서버는 보내지 않는다 */
   operator?: boolean;
 };
@@ -131,18 +121,8 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as
-      | ({ code?: string; message?: string } & Partial<LimitInfo>)
-      | null;
-    const limit =
-      error?.code === 'LIMIT_EXCEEDED'
-        ? {
-            resetAt: error.resetAt ?? '',
-            rewardAvailable: !!error.rewardAvailable,
-            ecoAvailable: error.ecoAvailable !== false,
-          }
-        : undefined;
-    throw new ApiError(response.status, error?.code ?? 'UNKNOWN', error?.message ?? '', limit);
+    const error = (await response.json().catch(() => null)) as { code?: string; message?: string } | null;
+    throw new ApiError(response.status, error?.code ?? 'UNKNOWN', error?.message ?? '');
   }
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;

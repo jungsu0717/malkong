@@ -1,8 +1,8 @@
 /**
- * 이 기기가 무엇을 쓸 수 있는가 — 광고 표시 여부와 하루 질문 한도.
+ * 이 기기가 무엇을 쓸 수 있는가 — 광고 표시 여부.
  *
  * 값이 정해지는 자리는 셋이고, 아래로 갈수록 세다:
- *   1. 기본값 — 광고 보여주고 하루 10회(광고 1편에 5회, 하루 2편 — decisions/019)
+ *   1. 기본값 — 광고를 보여 준다
  *   2. 광고 제거 구매 — 스토어가 정본이고, 여기 저장되는 건 복원용 사본이다
  *   3. 서버 자격(GET /v1/entitlements) — 운영자(가족) 기기 면제가 여기서 온다
  *
@@ -15,24 +15,12 @@ import { readSetting, writeSetting } from './db';
 export type Entitlements = {
   /** 광고를 보여줄지. 구매했거나 운영자 기기면 false */
   ads: boolean;
-  /** 하루 질문 한도. null 이면 무제한 */
-  dailyLimit: number | null;
-  /** 보상형 광고 1편이 채우는 정밀 답변 수 */
-  rewardPerAd: number;
-  /** 하루에 볼 수 있는 보상형 광고 편수 */
-  rewardMaxPerDay: number;
-  /** 오늘 남은 정밀 답변 수 — 서버에서 받기 전이거나 무제한이면 null */
-  remaining: number | null;
   /** 가족 기기 키인지 — 마이의 숨은 「일반 사용자로 보기」 스위치를 보일지 */
   operator: boolean;
 };
 
 export const DEFAULT_ENTITLEMENTS: Entitlements = {
   ads: true,
-  dailyLimit: 10,
-  rewardPerAd: 5,
-  rewardMaxPerDay: 2,
-  remaining: null,
   operator: false,
 };
 
