@@ -8,7 +8,10 @@
     "scheme": "yugabuddy",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "bundleIdentifier": "com.yugabuddy.app"
+      "bundleIdentifier": "com.yugabuddy.app",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.yugabuddy.app",
