@@ -1,6 +1,6 @@
 /**
- * 알림 시각 고르기 (task today/004) — 폰의 시각 바퀴를 쓴다.
- * iOS 는 시각 줄 바로 아래에 바퀴를 펼치고(`TimeWheel`), 안드로이드는 시계 창을 띄운다(`pickTime`). 웹은 time-picker.web.tsx.
+ * 시각 · 날짜 고르기 (task today/004 · topic/009) — 폰의 기본 선택기를 쓴다.
+ * iOS 는 화면 안에 펼치고(`TimeWheel` · `DateWheel`), 안드로이드는 창을 띄운다(`pickTime` · `pickDate`). 웹은 time-picker.web.tsx.
  */
 
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -44,6 +44,29 @@ export function TimeWheel({ value, onChange }: { value: string; onChange: (time:
 export function pickTime(value: string, onChange: (time: string) => void) {
   if (Platform.OS !== 'android') return;
   DateTimePickerAndroid.open({ mode: 'time', is24Hour: false, value: toDate(value), onValueChange: (_, d) => onChange(toTime(d)) });
+}
+
+/** iOS 의 달력 — 오늘부터 고른다 */
+export function DateWheel({ value, onChange }: { value: Date; onChange: (date: Date) => void }) {
+  const scheme = useColorScheme();
+  if (Platform.OS !== 'ios') return null;
+  return (
+    <DateTimePicker
+      mode="date"
+      display="inline"
+      locale="ko-KR"
+      minimumDate={new Date()}
+      themeVariant={scheme === 'dark' ? 'dark' : 'light'}
+      value={value}
+      onValueChange={(_, d) => onChange(d)}
+    />
+  );
+}
+
+/** 안드로이드의 달력 창 */
+export function pickDate(value: Date, onChange: (date: Date) => void) {
+  if (Platform.OS !== 'android') return;
+  DateTimePickerAndroid.open({ mode: 'date', value, minimumDate: new Date(), onValueChange: (_, d) => onChange(d) });
 }
 
 const styles = StyleSheet.create({

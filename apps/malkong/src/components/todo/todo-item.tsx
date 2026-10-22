@@ -1,5 +1,5 @@
 /**
- * 할 일 한 줄 (SPEC-TOPIC-02 · 11) — 누르면 끝냄 ↔ 되돌림, 오른쪽 단추나 길게 누르기로 편집.
+ * 할 일 한 줄 (SPEC-TOPIC-02 · 11, task topic/009) — 동그라미를 누르면 끝냄 ↔ 되돌림, 이름을 누르면 편집.
  * 작은 글씨는 기한 · 반복 · 주제만 짧게. 주제 화면에서는 앱이 채운 할 일의 안내 한 줄도 보인다.
  * 끝낸 줄은 흐리게 긋는다(지우지 않는다).
  */
@@ -52,42 +52,41 @@ export function TodoItem({
         accessibilityRole="checkbox"
         accessibilityState={{ checked: done }}
         accessibilityLabel={todo.title}
+        hitSlop={8}
         onPress={() => {
           tap(done ? 'light' : 'success');
           onToggle();
         }}
-        onLongPress={onEdit}
-        delayLongPress={350}
-        style={({ pressed }) => [styles.main, pressed && { opacity: 0.6 }]}>
+        style={({ pressed }) => [styles.check, pressed && { opacity: 0.6 }]}>
         <Ionicons name={done ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={done ? c.textTertiary : c.text} />
-        <View style={styles.text}>
-          <ThemedText
-            type="body"
-            style={{ color: done ? c.textTertiary : c.text, textDecorationLine: done ? 'line-through' : 'none' }}>
-            {todo.title}
-          </ThemedText>
-          {detail ? (
-            <ThemedText type="caption" style={{ color: overdue ? c.accentText : c.textSecondary }}>
-              {detail}
-            </ThemedText>
-          ) : null}
-          {note && !done ? (
-            <ThemedText type="caption" style={{ color: c.textSecondary }}>
-              {note}
-            </ThemedText>
-          ) : null}
-        </View>
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={`${todo.title} 편집`} hitSlop={8} onPress={onEdit} style={styles.edit}>
-        <Ionicons name="ellipsis-horizontal" size={18} color={c.textTertiary} />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${todo.title} 편집`}
+        onPress={onEdit}
+        style={({ pressed }) => [styles.text, pressed && { opacity: 0.6 }]}>
+        <ThemedText
+          type="body"
+          style={{ color: done ? c.textTertiary : c.text, textDecorationLine: done ? 'line-through' : 'none' }}>
+          {todo.title}
+        </ThemedText>
+        {detail ? (
+          <ThemedText type="caption" style={{ color: overdue ? c.accentText : c.textSecondary }}>
+            {detail}
+          </ThemedText>
+        ) : null}
+        {note && !done ? (
+          <ThemedText type="caption" style={{ color: c.textSecondary }}>
+            {note}
+          </ThemedText>
+        ) : null}
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', minHeight: 52 },
-  main: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
-  text: { flex: 1, gap: 2 },
-  edit: { paddingHorizontal: 6, paddingVertical: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', minHeight: 52, gap: 12 },
+  check: { paddingVertical: 10 },
+  text: { flex: 1, gap: 2, paddingVertical: 10 },
 });

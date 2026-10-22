@@ -1,7 +1,7 @@
 /**
  * 준비 목록 하나 (SPEC-TOPIC-01 · 12, task topic/005 · todo/001) — 외출 가방 · 여행 짐처럼 직접 만든 목록.
  * 내용은 할 일 탭 카테고리와 같은 TopicContent 이고, 바닥 칸에 적으면 이 목록에 들어간다. 오른쪽 위에서 이름 · 아이콘 편집과 숨기기.
- * 기본 주제(접종 · 검진 · 기념일 · 사이즈 · 내 할 일 · 장보기)는 할 일 탭 카테고리로 보낸다.
+ * 기본 주제는 할 일 탭의 칸으로 보낸다 — 내 할 일 · 장보기 · 아기 일정(접종 · 검진 · 기념일 · 사이즈).
  */
 
 import { Redirect, Stack, router, useLocalSearchParams } from 'expo-router';
@@ -41,8 +41,8 @@ export default function TopicScreen() {
     );
   }
 
-  // 기본 주제는 할 일 탭의 카테고리에 있다(SPEC-TOPIC-02)
-  if (topic.kind !== 'custom') return <Redirect href={{ pathname: '/todo', params: { cat: topic.kind === 'shopping' ? 'shop' : topic.id } }} />;
+  // 기본 주제는 할 일 탭의 칸에 있다(SPEC-TOPIC-02)
+  if (topic.kind !== 'custom') return <Redirect href={{ pathname: '/todo', params: { cat: topic.kind === 'shopping' ? 'shop' : topic.kind === 'general' ? 'mine' : 'baby' } }} />;
 
   return (
     <ThemedView style={styles.container}>
