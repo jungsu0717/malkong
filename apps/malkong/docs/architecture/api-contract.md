@@ -74,9 +74,9 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 키가 없거나 모르는 키면 401 `DEVICE_KEY_INVALID`. 앱은 부팅 시 1회 받아 광고 표시에 쓴다.
 지정은 서버 allowlist([backend](backend.md) 운영자 절).
 
-## GET /privacy · /terms — 개인정보 처리방침 · 이용약관 웹 페이지
+## GET /privacy · /terms · /support — 개인정보 처리방침 · 이용약관 · 자주 묻는 질문 웹 페이지
 
-스토어에 넣을 공개 주소다(`/v1` 없음, 기기 키 없음). HTML 한 장을 그대로 준다. 본문 정본은 앱의 `src/data/legal.ts` 이고,
+스토어에 넣을 공개 주소다(`/v1` 없음, 기기 키 없음). `/support` 는 자주 묻는 질문과 문의 이메일 — App Store 의 지원 URL. HTML 한 장을 그대로 준다. 본문 정본은 앱의 `src/data/legal.ts` 이고,
 `node scripts/export-legal.mjs`(앱 폴더)가 `server/app/data/legal/` 에 만든다. 본문과 어긋나면 `legal-html.test.ts` 가 실패한다(task common/024).
 
 ## 뺀 것 (2026-10-22, task common/022)

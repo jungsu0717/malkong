@@ -90,18 +90,18 @@
   버디의 짐작은 확인 뒤 기록([ask/008](docs/task/ask/008-confirm-guess.md)) · 대화는 최근 50줄부터, 날짜에서 그날 대화로([ask/009](docs/task/ask/009-recent-window-and-day-jump.md))
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점 (2026-10-22 저녁) — Julian 만 할 수 있는 것
+## 다음 시작점 (2026-10-22 저녁) — 애플 먼저, Julian 만 할 수 있는 것
 
-Claude 가 할 수 있는 준비는 끝났다(공공 지식 승인, 메모 가족 공유, 서버 정리, 약관 웹 페이지, 스토어 그림 · 문안 · 입력 칸 답안 —
-[common/024](docs/task/common/024-memo-family-and-release.md)), 서버도 2026-10-22 에 배포했다(revision 00022-bkk). 남은 것은 셋이다.
+Julian(2026-10-22): 애플만 먼저 출시한다. 순서 전체는 [common/008](docs/task/common/008-first-release-check.md) 「애플 먼저」.
+Claude 가 할 수 있는 준비는 끝났다(공공 지식 승인, 메모 가족 공유, 서버 정리 · 배포, 약관 · 지원 웹 페이지, 스토어 그림 · 문안 · 입력 칸 답안,
+빌드 번호 자동 관리 · 개인정보 매니페스트 · 암호화 질문, 스토어 리뷰 요청). Julian 몫은 셋이다.
 
-1. **계정 셋** — Apple Developer(1년 129,000원), Google Play(25달러 한 번 + 테스터 12명이 14일), AdMob(무료).
-   AdMob 에서 앱 2개 · 배너 단위 2개를 만들어 id 넷을 Claude 에게 준다. 순서와 자세한 방법은 [common/008](docs/task/common/008-first-release-check.md) 「Julian 이 할 일」
-2. **운영자 정보** — 약관 · 개인정보 처리방침에 들어갈 이름(실명), 문의 이메일, 시행일. 법률 검토를 받을지도 정한다
-3. **첫 iOS 빌드의 애플 로그인** — 계정이 생긴 뒤 `npx eas-cli@latest login` 과 첫 iOS 빌드에서 애플 로그인을 직접 친다
+1. **Apple Developer 가입** — 아이폰 「Apple Developer」 앱, 1년 129,000원
+2. **AdMob** — iOS 앱 1개 · 배너 단위 1개를 만들고 id 둘을 Claude 에게
+3. **운영자 정보** — 약관 · 지원 페이지에 들어갈 실명, 문의 이메일, 시행일. 법률 검토를 받을지
 
-스토어에 넣을 그림은 `marketing/store/out/`, 문안은 [product-brief](docs/product/product-brief.md) 「스토어 문안」,
-입력 칸 답안은 [store-forms](docs/product/store-forms.md). 폰(Expo Go)으로 볼 때는 패키지가 바뀌었으니 켜 둔 `npx expo start` 를 한 번 다시 켠다.
+셋이 오면 Claude 가 앱 · 약관에 넣고 서버를 다시 배포(승인 받고)한 뒤, Julian 이 Expo 로그인과 첫 iOS 빌드의 애플 로그인을 한 번 친다.
+폰(Expo Go)으로 볼 때는 패키지가 바뀌었으니 켜 둔 `npx expo start` 를 한 번 다시 켠다.
 
 ## 다른 PC 에서 시작하기
 

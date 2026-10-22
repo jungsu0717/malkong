@@ -63,6 +63,22 @@ App Store Connect 「Manage Korea compliance information」 — 개인은 스토
 
 앱 식별자는 iOS · Android 모두 `com.yugabuddy.app`(app.json) — 스토어에 한 번 올리면 바꿀 수 없다.
 
+## 애플 먼저 (Julian, 2026-10-22 「애플만 먼저 출시해 보자」)
+
+구글 플레이는 테스터 12명 · 14일이 걸려서 뒤로 미룬다. 아래 순서로 App Store 만 먼저 낸다. 안드로이드 쪽(app.json 의 안드로이드 AdMob 앱 id)은 시험용 그대로 둔다.
+
+1. **Julian** — Apple Developer Program(개인) 가입. 아이폰 「Apple Developer」 앱, 1년 129,000원, 승인 하루 이틀
+2. **Julian** — AdMob 가입, **iOS 앱 1개 · 배너 단위 1개**만 만들고 id 둘을 Claude 에게
+3. **Julian** — 운영자 정보(실명 · 문의 이메일 · 시행일)와 법률 검토 여부를 Claude 에게
+4. **Claude** — 2 · 3 을 앱(app.json · eas.json · legal.ts)에 넣고 약관 · 지원 페이지를 다시 만든 뒤 서버 배포(승인 받고)
+5. **Julian** — 터미널에서 한 번 `npx eas-cli@latest login`(Expo 계정 julian-malkong), 이어서 첫 iOS 빌드
+   `npx eas-cli@latest build --platform ios --profile production` — 애플 로그인을 묻는다. 인증서 · 번들 id 는 EAS 가 만든다
+6. **Julian** — App Store Connect 「앱」 → 「+」 → 새 앱: 이름 「육아버디 - 육아 루틴과 할 일」, 기본 언어 한국어, 번들 id `com.yugabuddy.app`, SKU `yugabuddy`
+7. **Claude** — `npx eas-cli@latest submit --platform ios` 로 빌드를 올린다(10~15분 뒤 TestFlight 에 보인다). Julian 폰에서 TestFlight 로 한 번 써 본다.
+   TestFlight 앱은 기기 키가 새로 생겨 광고가 진짜로 나온다 — 누르지 않는다(AdMob 정지 사유). 새 기기 키를 가족 기기 명단에 넣으면 광고가 빠진다
+8. **Julian** — App Store Connect 에 붙여 넣기: 스크린샷(`marketing/store/out/*-ios.png`, 6.9형 칸), 문안(product-brief 「스토어 문안」),
+   개인정보 처리방침 URL `…/privacy`, 지원 URL `…/support`, 앱 개인정보 · 연령 등급 · 심사 메모([store-forms](../../product/store-forms.md)), 한국 준수 정보(개인은 이메일만) → 심사 제출
+
 ### 1. 오래 걸리는 것부터 — 오늘 시작
 
 1. **Google Play 개발자 계정(개인)** — play.google.com/console, 등록비 25달러 한 번. 신분증으로 본인 인증.

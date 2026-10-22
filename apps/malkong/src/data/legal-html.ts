@@ -1,12 +1,12 @@
 /**
- * 약관 · 개인정보 처리방침을 웹 페이지 한 장으로 — 스토어에 넣을 공개 주소용(task common/024).
- * 서버가 `/privacy` · `/terms` 로 그대로 내보낸다. 만드는 명령은 `node scripts/export-legal.mjs`,
+ * 약관 · 개인정보 처리방침 · 자주 묻는 질문을 웹 페이지 한 장으로 — 스토어에 넣을 공개 주소용(task common/024).
+ * 서버가 `/privacy` · `/terms` · `/support`(자주 묻는 질문 — App Store 의 지원 URL)로 그대로 내보낸다. 만드는 명령은 `node scripts/export-legal.mjs`,
  * 서버 사본이 본문(legal.ts)과 어긋나면 `legal-html.test.ts` 가 실패한다.
  */
 
 import { DRAFT, legalDoc } from './legal.ts';
 
-export const WEB_DOCS = ['privacy', 'terms'] as const;
+export const WEB_DOCS = ['privacy', 'terms', 'faq'] as const;
 
 const escape = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
@@ -38,7 +38,7 @@ p { margin: 0 0 8px; color: var(--sub); }
 <main>
 <p class="brand">육아버디</p>
 <h1>${escape(doc.title)}</h1>
-${DRAFT ? '<p class="draft">초안이에요 — 출시 전에 검토해 확정해요</p>\n' : ''}${sections}
+${DRAFT && id !== 'faq' ? '<p class="draft">초안이에요 — 출시 전에 검토해 확정해요</p>\n' : ''}${sections}
 </main>
 </body>
 </html>
