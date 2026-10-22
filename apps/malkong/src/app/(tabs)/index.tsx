@@ -38,6 +38,7 @@ import {
   scheduleLabel,
   templateInput,
   timeLabel,
+  titleKey,
   todayPlan,
   type Routine,
 } from '@/data/routine';
@@ -105,6 +106,9 @@ export default function RoutineScreen() {
   const plan = todayPlan(routines, logs, now);
   const rec = routineRecommend(age.month, 'home');
   const templates = rec.templates;
+  // 루틴이 세 개가 안 되면 아직 안 넣은 추천을 그리드 뒤에 함께 보인다 — 하나 넣어도 나머지가 사라지지 않게
+  const have = new Set(routines.map((r) => titleKey(r.title)));
+  const suggestions = routines.length < 3 && !arranging ? templates.filter((t) => !have.has(titleKey(t.title))) : [];
   const edit = (r: Routine) => router.push({ pathname: '/routine-form', params: { id: r.id } });
   const onTimer = (r: Routine) => void (r.runningSince ? stopTimer(r.id) : startTimer(r.id));
   // 단계가 있으면 단계 시트, 재고 확인은 재고 확인 시트, 그 밖의 체크는 바로 완료 ↔ 되돌림
@@ -196,8 +200,7 @@ export default function RoutineScreen() {
             ) : (
               <RoutineGrid
                 items={plan.today}
-                showTemplates={routines.length === 0}
-                templates={templates}
+                templates={suggestions}
                 now={now}
                 editing={arranging}
                 onCheck={onCheck}

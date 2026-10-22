@@ -158,7 +158,11 @@ test('루틴 탭 — 오늘 할 것과 다른 날, 완료 수, 다음 루틴', (
   );
   assert.equal(plan.done, 1);
   assert.equal(plan.total, 3);
-  assert.equal(plan.next?.r.id, 'b');
+  // 오후 2시 — 밤 8시 목욕보다 시각 없는 터미타임이 먼저, 저녁 7시 반이면 목욕이 먼저
+  assert.equal(plan.next?.r.id, 't');
+  assert.equal(todayPlan([tummy, stock, bath, vitamin], logs, new Date(2026, 9, 16, 19, 30)).next?.r.id, 'b');
+  // 오전 8시 비타민D를 아직 안 했으면 지난 것이 먼저
+  assert.equal(todayPlan([tummy, stock, bath, vitamin], logs.slice(1), NOW).next?.r.id, 'v');
   // 타이머는 목표가 없으면 조금이라도 하면 완료로 센다
   assert.equal(countsDone(tummy, todayState(tummy, [log(iso(10, 16, 9), 2, 't')], NOW)), true);
   assert.equal(countsDone({ ...tummy, goalMinutes: 15 }, todayState({ ...tummy, goalMinutes: 15 }, [log(iso(10, 16, 9), 2, 't')], NOW)), false);

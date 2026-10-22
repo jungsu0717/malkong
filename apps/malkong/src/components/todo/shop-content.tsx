@@ -49,6 +49,8 @@ function stockDetail(r: Routine, logs: RoutineLog[], stockTodos: Todo[], now: Da
     .pop();
   const added = last ? stockTodos.filter((t) => new Date(t.createdAt).toDateString() === last.toDateString()).length : 0;
   if (s.firstAt) return added > 0 ? `오늘 부족한 ${added}개를 추가했어요` : '오늘 확인했어요 · 모두 충분해요';
+  // 아직 한 번도 확인하지 않았으면 지난번 결과는 쓰지 않는다
+  if (!last) return `다음 확인 ${nextDayLabel(s.nextInDays, now)}`;
   return `다음 확인 ${nextDayLabel(s.nextInDays, now)} · ${added > 0 ? `지난번에 부족한 ${added}개를 추가했어요` : '지난번엔 모두 충분했어요'}`;
 }
 

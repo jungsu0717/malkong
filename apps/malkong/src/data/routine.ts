@@ -149,6 +149,12 @@ export function isTime(text: string): boolean {
   return !!m && Number(m[1]) <= 23 && Number(m[2]) <= 59;
 }
 
+/** `HH:MM` → 자정부터 몇 분 */
+function minutesOfDay(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + m;
+}
+
 /** 「오후 7:00」 */
 export function timeLabel(time: string): string {
   const [h, m] = time.split(':').map(Number);
@@ -231,7 +237,9 @@ export type TodayItem = { r: Routine; s: TodayState };
 
 /**
  * 루틴 탭에 보일 것(SPEC-MAIN-01) — 오늘 할 루틴(알림 시각 순, 시각 없는 것은 뒤에), 다른 날 루틴(가까운 순), 진행(완료 수 · 다음 루틴).
- * 누를 때마다 자리가 바뀌지 않게 완료 여부로는 순서를 바꾸지 않는다. 다음 루틴은 아직 안 한 것 중 맨 앞.
+ * 누를 때마다 자리가 바뀌지 않게 완료 여부로는 순서를 바꾸지 않는다.
+ * 다음 루틴은 아직 안 한 것 중 시각이 지났거나 한 시간 안에 올 것, 없으면 시각 없는 것, 그것도 없으면 가장 가까운 시각의 것.
+ * 오후 3시에 밤 8시 반 루틴보다 아직 안 한 터미타임을 먼저 권한다.
  */
 export function todayPlan(routines: Routine[], logs: RoutineLog[], now = new Date()) {
   const states = routines.map((r) => ({ r, s: todayState(r, logs, now) }));
@@ -242,7 +250,10 @@ export function todayPlan(routines: Routine[], logs: RoutineLog[], now = new Dat
   // 건너뛴 것은 진행에서 뺀다 — 화면에는 남겨 되돌릴 수 있게 한다
   const counted = today.filter((x) => !(x.s.skipped && !countsDone(x.r, x.s)));
   const done = counted.filter((x) => countsDone(x.r, x.s)).length;
-  const next = counted.find((x) => !countsDone(x.r, x.s)) ?? null;
+  const open = counted.filter((x) => !countsDone(x.r, x.s));
+  const soon = now.getHours() * 60 + now.getMinutes() + 60;
+  const next =
+    open.find((x) => x.r.time && isTime(x.r.time) && minutesOfDay(x.r.time) <= soon) ?? open.find((x) => !x.r.time) ?? open[0] ?? null;
   return { today, later, done, total: counted.length, next };
 }
 

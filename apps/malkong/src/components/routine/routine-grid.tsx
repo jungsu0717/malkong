@@ -5,7 +5,7 @@
  * - 타이머: 누르면 타이머 시작 · 멈춤, 오른쪽 위 「+1분」, 목표가 있으면 아래 진행 막대
  * - 루틴 탭은 오늘 할 루틴만 넘긴다(다른 날 루틴은 탭 아래 한 줄, task today/003). 모양은 시안 C(task today/004)
  * - 편집 중이면 누르면 편집, 아니면 길게 눌러 편집. 마지막 칸은 「추가」
- * - 루틴이 하나도 없으면 추천이 버튼으로 다 보이고, 누르면 바로 추가된다
+ * - 루틴이 적을 때는 아직 안 넣은 추천이 점선 버튼으로 뒤따르고, 누르면 바로 추가된다 — 하나 넣어도 나머지는 남는다
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -24,7 +24,6 @@ const GAP = 8;
 
 export function RoutineGrid({
   items,
-  showTemplates,
   templates,
   now,
   editing,
@@ -37,8 +36,7 @@ export function RoutineGrid({
 }: {
   /** 보일 순서대로 */
   items: { r: Routine; s: TodayState }[];
-  /** 루틴이 하나도 없을 때 — 지금 시기의 추천(`templates`)을 버튼으로 보인다 */
-  showTemplates: boolean;
+  /** 루틴 뒤에 보일 추천 — 아직 안 넣은 것만, 루틴이 적을 때만 넘긴다 */
   templates: RoutineTemplate[];
   now: Date;
   editing: boolean;
@@ -55,33 +53,34 @@ export function RoutineGrid({
 
   return (
     <View style={styles.grid} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      {showTemplates
-        ? templates.map((t) => <TemplateTile key={t.title} template={t} width={tileWidth} onPress={() => onQuickAdd(t)} />)
-        : items.map(({ r, s }) => (
-            <RoutineTile
-              key={r.id}
-              routine={r}
-              state={s}
-              now={now}
-              width={tileWidth}
-              editing={editing}
-              onPress={() => {
-                if (editing) return onEdit(r);
-                if (r.kind !== 'minutes') {
-                  tap(s.firstAt ? 'light' : 'success');
-                  return onCheck(r.id);
-                }
-                tap();
-                onTimer(r);
-              }}
-              onLongPress={() => onEdit(r)}
-              onAddMinutes={() => {
-                tap('success');
-                onAddMinutes(r.id);
-              }}
-            />
-          ))}
-      <AddTile width={tileWidth} label={showTemplates ? '직접 추가' : '추가'} onPress={onAdd} />
+      {items.map(({ r, s }) => (
+        <RoutineTile
+          key={r.id}
+          routine={r}
+          state={s}
+          now={now}
+          width={tileWidth}
+          editing={editing}
+          onPress={() => {
+            if (editing) return onEdit(r);
+            if (r.kind !== 'minutes') {
+              tap(s.firstAt ? 'light' : 'success');
+              return onCheck(r.id);
+            }
+            tap();
+            onTimer(r);
+          }}
+          onLongPress={() => onEdit(r)}
+          onAddMinutes={() => {
+            tap('success');
+            onAddMinutes(r.id);
+          }}
+        />
+      ))}
+      {templates.map((t) => (
+        <TemplateTile key={t.title} template={t} width={tileWidth} onPress={() => onQuickAdd(t)} />
+      ))}
+      <AddTile width={tileWidth} onPress={onAdd} />
     </View>
   );
 }
@@ -155,7 +154,8 @@ function RoutineTile({
           type="caption"
           numberOfLines={2}
           style={{ color: done ? c.accentText : running ? c.text : c.textSecondary, fontWeight: running || done ? 600 : 400 }}>
-          {running ? clock : line.text}
+          {/* 「오후 8:00 · 2단계」는 좁은 칸에서 낱말 가운데가 끊기지 않게 점에서 줄을 바꾼다 */}
+          {running ? clock : line.text.replace(' · ', '\n')}
         </ThemedText>
         {routine.kind === 'minutes' && routine.goalMinutes ? (
           <View style={[styles.bar, { backgroundColor: done ? c.background : c.surfaceStrong }]}>
@@ -179,7 +179,7 @@ function RoutineTile({
   );
 }
 
-/** 루틴이 하나도 없을 때의 추천 버튼 — 누르면 바로 추가된다 */
+/** 아직 안 넣은 추천 버튼 — 누르면 바로 추가된다 */
 function TemplateTile({ template, width, onPress }: { template: RoutineTemplate; width: number; onPress: () => void }) {
   const c = useTheme();
   const sub = templateDetail(template);
@@ -210,12 +210,12 @@ function TemplateTile({ template, width, onPress }: { template: RoutineTemplate;
   );
 }
 
-function AddTile({ width, label, onPress }: { width: number; label: string; onPress: () => void }) {
+function AddTile({ width, onPress }: { width: number; onPress: () => void }) {
   const c = useTheme();
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`루틴 ${label}`}
+      accessibilityLabel="루틴 추가"
       onPress={onPress}
       style={({ pressed }) => [
         styles.tile,
@@ -225,7 +225,7 @@ function AddTile({ width, label, onPress }: { width: number; label: string; onPr
       ]}>
       <Ionicons name="add" size={22} color={c.text} />
       <ThemedText type="label" style={{ fontWeight: 600 }}>
-        {label}
+        추가
       </ThemedText>
     </Pressable>
   );

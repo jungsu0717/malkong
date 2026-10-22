@@ -211,11 +211,6 @@ export default function FamilyScreen() {
               <View style={styles.actions}>
                 <Button label="가족 만들기" size="lg" busy={busy} disabled={!consent} onPress={() => void act(create)} />
                 <Button label="초대 코드로 참여" size="lg" variant="secondary" disabled={!consent || busy} onPress={() => setJoining(true)} />
-                {!consent && (
-                  <ThemedText type="caption" style={[styles.center, { color: c.textSecondary }]}>
-                    위 내용에 동의하면 누를 수 있어요
-                  </ThemedText>
-                )}
               </View>
             )}
             {error && (

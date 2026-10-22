@@ -136,8 +136,8 @@ export default function OnboardingScreen() {
                       setYear(v);
                       if (v.length === 4) monthRef.current?.focus();
                     }}
-                    placeholder="2026"
-                    placeholderTextColor={c.textTertiary}
+                    // 회색 예시 숫자는 이미 적힌 것처럼 보여서 두지 않는다. 처음 시작할 때는 바로 자판이 뜬다
+                    autoFocus={!isEdit}
                     keyboardType="number-pad"
                     maxLength={4}
                   />
@@ -154,8 +154,6 @@ export default function OnboardingScreen() {
                       setMonth(v);
                       if (v.length === 2) dayRef.current?.focus();
                     }}
-                    placeholder="07"
-                    placeholderTextColor={c.textTertiary}
                     keyboardType="number-pad"
                     maxLength={2}
                   />
@@ -168,8 +166,6 @@ export default function OnboardingScreen() {
                     style={[styles.dateInput, { color: c.text }]}
                     value={day}
                     onChangeText={(t) => setDay(onlyDigits(t, 2))}
-                    placeholder="06"
-                    placeholderTextColor={c.textTertiary}
                     keyboardType="number-pad"
                     maxLength={2}
                   />
