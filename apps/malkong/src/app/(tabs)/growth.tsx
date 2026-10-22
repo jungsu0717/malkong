@@ -1,16 +1,15 @@
 /**
- * 성장 탭 (SPEC-STAGE-01~03, task growth/004, decisions/031) — 지금 시기의 우리 아기.
+ * 성장 탭 (SPEC-STAGE-01~03, task growth/004 · 005, decisions/031) — 지금 시기의 우리 아기, 한 화면 요약.
  *
- * 위쪽 먹색 그림(growth-hero)에 태어난 지 며칠 · 몇 주차, 시기에 맞는 버디, 다음 발달 네 칸 막대.
- * 그 아래 카드 둘(다음 발달 · 우리 아기 메모)과 「이맘때」(해 주면 좋아요 · 잠 · 먹기, 세 줄까지).
- * 내용은 모두 승인된 공공 지식(L1, 미국 CDC)이다 — 블로그 · 커뮤니티 · 원더윅스는 쓰지 않는다(헌장 5).
- * 「이맘때」의 터미타임 · 책 읽어 주기는 그 자리에서 루틴에 추가할 수 있다.
+ * 위쪽 먹색 그림(growth-hero)에 태어난 지 며칠 · 몇 주차, 시기에 맞는 버디, 달마다 · 50일 · 100일 칸의 막대.
+ * 그 아래 목록 하나에 네 줄 — 발달 체크 · 해 주면 좋아요 · 알아 두면 좋아요 · 우리 아기 메모. 긴 내용은 줄을 눌러 들어가는 상세 화면에.
+ * 내용은 승인된 공공 지식(L1)이고, 출처는 화면 대신 「의학 정보 출처와 한계 고지」에 모은다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import { router, useIsFocused } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,29 +20,30 @@ import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { tap, type IconName } from '@/components/ui';
-import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
-import { allItems, itemsForMonth, type KnowledgeItem } from '@/data/l1';
+import { itemById, itemsByIds, type KnowledgeItem } from '@/data/l1';
 import { useMemos } from '@/data/memos-context';
-import { ROUTINE_TEMPLATES, templateInput, titleKey, type RoutineTemplate } from '@/data/routine';
-import { useRoutines } from '@/data/routines-context';
-import { daysSince, nowItems, poseOf, splitTitle, stageWindow, weekOf, type StageStop } from '@/data/stage';
+import {
+  KNOW_COMMON,
+  checklistIds,
+  checkpointFor,
+  daysSince,
+  forMonth,
+  poseOf,
+  splitTitle,
+  stageWindow,
+  tipIds,
+  weekOf,
+  type StageStop,
+} from '@/data/stage';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 
-/** 「이맘때」 줄에서 바로 루틴으로 — L1 항목 → 루틴 추천 이름 */
-const ROUTINE_OF: Record<string, string> = {
-  'k-life-0001': '터미타임',
-  'k-life-0002': '책 읽어 주기',
+const heads = (items: KnowledgeItem[], n = 2) => {
+  const names = items.slice(0, n).map((i) => splitTitle(i.title).head);
+  return names.join(' · ') + (items.length > n ? ` 외 ${items.length - n}가지` : '');
 };
-
-const KIND_ICON: Record<string, IconName> = {
-  생활: 'happy-outline',
-  수면: 'moon-outline',
-  수유: 'nutrition-outline',
-};
-
-type Detail = { item: KnowledgeItem; title: string; sub: string | null; template: RoutineTemplate | null };
 
 export default function GrowthScreen() {
   const c = useTheme();
@@ -51,35 +51,29 @@ export default function GrowthScreen() {
   const focused = useIsFocused();
   const { baby, age } = useBaby();
   const { memos } = useMemos();
-  const { routines, addRoutine } = useRoutines();
   const now = useNow(false);
-  const [detail, setDetail] = useState<Detail | null>(null);
+  const [detail, setDetail] = useState<{ item: KnowledgeItem; title: string; sub: string | null } | null>(null);
 
   if (!baby || !age) return <ScreenLoading />;
   const days = daysSince(baby.birthDate, now);
   const stage = stageWindow(baby.birthDate, now);
-  const items = allItems();
-  const have = new Set(routines.map((r) => titleKey(r.title)));
-  const templateOf = (item: KnowledgeItem) => {
-    const name = ROUTINE_OF[item.id];
-    return name ? (ROUTINE_TEMPLATES.find((t) => t.title === name) ?? null) : null;
-  };
+  const cp = checkpointFor(age.month);
+  const checks = itemsByIds(checklistIds(cp));
+  const doneRefs = new Set(memos.map((m) => m.ref).filter(Boolean));
+  const done = checks.filter((i) => doneRefs.has(i.id)).length;
+  const tips = forMonth(itemsByIds(tipIds(cp)), age.month);
+  const common = forMonth(itemsByIds(KNOW_COMMON), age.month);
+  const last = memos[0];
+
   const openStop = (s: StageStop) => {
-    const item = s.l1Id ? items.find((i) => i.id === s.l1Id) : null;
-    if (item) setDetail({ item, title: s.name, sub: `대부분 ${s.month}개월까지`, template: null });
+    if (s.milestone) {
+      const item = itemById(s.milestone.l1Id);
+      if (item) setDetail({ item, title: s.milestone.name, sub: `대부분 ${s.label}까지` });
+      return;
+    }
+    // 50일 · 100일 · 돌 — 기념일 할 일(촬영 예약 같은)이 있는 아기 일정으로
+    router.push({ pathname: '/todo', params: { cat: 'baby' } });
   };
-  const openItem = (item: KnowledgeItem) => {
-    const { head, tail } = splitTitle(item.title);
-    setDetail({ item, title: head, sub: tail, template: templateOf(item) });
-  };
-  const addTemplate = (t: RoutineTemplate) => {
-    tap('success');
-    void addRoutine(templateInput(t));
-  };
-  const next = stage.next ?? stage.stops[stage.stops.length - 1];
-  const lastMemo = memos[0];
-  const list = nowItems(itemsForMonth(age.month));
-  const detailTemplate = detail?.template && !have.has(titleKey(detail.template.title)) ? detail.template : null;
 
   return (
     <ThemedView style={styles.container}>
@@ -88,122 +82,88 @@ export default function GrowthScreen() {
         <GrowthHero topInset={insets.top} days={days} week={weekOf(days)} pose={poseOf(age.month)} stage={stage} onStop={openStop} />
 
         <View style={styles.body}>
-          {/* 다음 발달 · 우리 아기 메모 (SPEC-STAGE-01 · 03) */}
-          <View style={styles.cards}>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                tap();
-                openStop(next);
-              }}
-              style={({ pressed }) => [styles.card, { backgroundColor: pressed ? c.surfaceStrong : c.surface }]}>
-              <ThemedText type="label" style={{ color: c.textSecondary }}>
-                {stage.next ? '다음 발달 ›' : '발달 ›'}
-              </ThemedText>
-              <ThemedText type="heading" style={styles.cardValue} numberOfLines={1}>
-                {next.name}
-              </ThemedText>
-              <ThemedText type="caption" style={{ color: c.accentText, fontWeight: 600 }}>
-                대부분 {next.month}개월까지
-              </ThemedText>
-            </Pressable>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => {
-                tap();
-                router.push('/memos');
-              }}
-              style={({ pressed }) => [styles.card, { backgroundColor: pressed ? c.surfaceStrong : c.surface }]}>
-              <ThemedText type="label" style={{ color: c.textSecondary }}>
-                우리 아기 메모 ›
-              </ThemedText>
-              <ThemedText type="heading" style={styles.cardValue}>
-                {memos.length}개
-              </ThemedText>
-              <ThemedText type="caption" style={{ color: c.textSecondary }} numberOfLines={1}>
-                {lastMemo ? `마지막 · D+${daysSince(baby.birthDate, new Date(lastMemo.at))}` : '처음 웃은 날을 적어 두세요'}
-              </ThemedText>
-            </Pressable>
+          <View style={[styles.list, { borderColor: c.border }]}>
+            <Row
+              icon="checkbox-outline"
+              title="발달 체크"
+              sub={`${cp}개월까지 대부분 하는 것`}
+              right={checks.length > 0 ? <Progress done={done} total={checks.length} /> : null}
+              onPress={() => router.push('/growth-check')}
+            />
+            {tips.length > 0 && (
+              <Row icon="chatbubble-outline" title="해 주면 좋아요" sub={heads(tips)} divider onPress={() => router.push('/growth-tips')} />
+            )}
+            {common.length > 0 && (
+              <Row icon="information-circle-outline" title="알아 두면 좋아요" sub={heads(common)} divider onPress={() => router.push('/growth-know')} />
+            )}
+            <Row
+              icon="create-outline"
+              title="우리 아기 메모"
+              sub={last ? `D+${daysSince(baby.birthDate, new Date(last.at))} · ${last.text}` : '처음 웃은 날을 적어 두세요'}
+              divider
+              onPress={() => router.push('/memos')}
+            />
           </View>
-
-          {/* 이맘때 (SPEC-STAGE-02) */}
-          {list.length > 0 && (
-            <View style={styles.section}>
-              <ThemedText type="body" style={styles.sectionTitle}>
-                이맘때
-              </ThemedText>
-              <View style={[styles.list, { backgroundColor: c.surface }]}>
-                {list.map((item, i) => {
-                  const { head } = splitTitle(item.title);
-                  const template = templateOf(item);
-                  const added = template ? have.has(titleKey(template.title)) : false;
-                  return (
-                    // 「루틴에 추가」는 줄 버튼 안의 버튼이 되지 않게 옆에 둔다
-                    <View
-                      key={item.id}
-                      style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.surfaceStrong }]}>
-                      <Pressable
-                        accessibilityRole="button"
-                        onPress={() => {
-                          tap();
-                          openItem(item);
-                        }}
-                        style={({ pressed }) => [styles.rowMain, pressed && { opacity: 0.6 }]}>
-                        <View style={[styles.icon, { backgroundColor: c.background }]}>
-                          <Ionicons name={KIND_ICON[item.kind] ?? 'ellipse-outline'} size={19} color={c.text} />
-                        </View>
-                        <View style={styles.flex}>
-                          <ThemedText type="caption" style={{ color: item.label === '해 주면 좋아요' ? c.accentText : c.textSecondary, fontWeight: 700 }}>
-                            {item.label}
-                          </ThemedText>
-                          <ThemedText type="body" style={{ fontWeight: 700 }} numberOfLines={2}>
-                            {head}
-                          </ThemedText>
-                        </View>
-                        {!(template && !added) && <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />}
-                      </Pressable>
-                      {template && !added && (
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel={`${template.title} 루틴에 추가`}
-                          hitSlop={6}
-                          onPress={() => addTemplate(template)}
-                          style={({ pressed }) => [styles.pill, { backgroundColor: c.ink, opacity: pressed ? 0.8 : 1 }]}>
-                          <ThemedText type="caption" style={{ color: c.onInk, fontWeight: 700 }}>
-                            루틴에 추가
-                          </ThemedText>
-                        </Pressable>
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-          )}
         </View>
       </ScrollView>
       {/* 아래로 넘긴 글이 상태 표시줄 밑으로 들어가도 시계가 보이게 */}
       <View style={[styles.statusStrip, { height: insets.top, backgroundColor: c.hero }]} />
       <AdBanner anchored />
 
-      <KnowledgeSheet
-        item={detail?.item ?? null}
-        title={detail?.title ?? ''}
-        sub={detail?.sub}
-        action={
-          detailTemplate
-            ? {
-                label: `${detailTemplate.title} 루틴에 추가`,
-                onPress: () => {
-                  addTemplate(detailTemplate);
-                  setDetail(null);
-                },
-              }
-            : null
-        }
-        onClose={() => setDetail(null)}
-      />
+      <KnowledgeSheet item={detail?.item ?? null} title={detail?.title ?? ''} sub={detail?.sub} onClose={() => setDetail(null)} />
     </ThemedView>
+  );
+}
+
+function Row({
+  icon,
+  title,
+  sub,
+  right,
+  divider = false,
+  onPress,
+}: {
+  icon: IconName;
+  title: string;
+  sub: string;
+  right?: ReactNode;
+  divider?: boolean;
+  onPress: () => void;
+}) {
+  const c = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => {
+        tap();
+        onPress();
+      }}
+      style={({ pressed }) => [styles.row, pressed && { backgroundColor: c.surface }]}>
+      {divider && <View style={[styles.divider, { backgroundColor: c.divider }]} />}
+      <View style={[styles.icon, { backgroundColor: c.surface }]}>
+        <Ionicons name={icon} size={20} color={c.text} />
+      </View>
+      <View style={styles.text}>
+        <ThemedText type="body" style={styles.title}>
+          {title}
+        </ThemedText>
+        <ThemedText type="small" style={{ color: c.textSecondary }} numberOfLines={1}>
+          {sub}
+        </ThemedText>
+      </View>
+      {right}
+      <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
+    </Pressable>
+  );
+}
+
+/** 「2 / 11」 — 체크한 수 */
+function Progress({ done, total }: { done: number; total: number }) {
+  const c = useTheme();
+  return (
+    <ThemedText type="label" style={{ color: done > 0 ? c.accentText : c.textSecondary, fontWeight: 700 }}>
+      {done} / {total}
+    </ThemedText>
   );
 }
 
@@ -213,21 +173,16 @@ const styles = StyleSheet.create({
   scroll: { paddingBottom: Spacing.four },
   body: {
     paddingHorizontal: Gutter,
-    paddingTop: 18,
-    gap: Spacing.four,
+    paddingTop: 12,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
   },
   statusStrip: { position: 'absolute', top: 0, left: 0, right: 0 },
-  cards: { flexDirection: 'row', gap: 10 },
-  card: { flex: 1, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16, gap: 2 },
-  cardValue: { fontWeight: 700 },
-  section: { gap: 10 },
-  sectionTitle: { fontWeight: 700, paddingHorizontal: 4 },
-  list: { borderRadius: 18 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingRight: 14 },
-  rowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingLeft: 14 },
-  icon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  pill: { height: 30, paddingHorizontal: 12, borderRadius: Radius.pill, justifyContent: 'center' },
+  list: { borderWidth: 1, borderRadius: 20, overflow: 'hidden' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 11, paddingHorizontal: 16 },
+  divider: { position: 'absolute', top: 0, left: 70, right: 0, height: StyleSheet.hairlineWidth * 2 },
+  icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  text: { flex: 1, minWidth: 0, gap: 2 },
+  title: { fontWeight: 700, fontSize: 16 },
 });

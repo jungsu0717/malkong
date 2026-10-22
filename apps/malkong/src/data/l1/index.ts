@@ -10,6 +10,7 @@ import care from './care.json';
 import checkup from './checkup.json';
 import development from './development.json';
 import parent from './parent.json';
+import stage from './stage.json';
 import type { Confidence, KnowledgeItem, KnowledgeKind } from './types';
 import vaccination from './vaccination.json';
 import versionFile from './version.json';
@@ -19,7 +20,7 @@ export type { Confidence, KnowledgeItem, KnowledgeKind, ReviewStatus, SourceRef 
 /** 번들 판 번호 — version.json 이 정본이다(서버 사본도 같은 파일). 항목을 고치면 올린다 */
 export const L1_VERSION: string = versionFile.version;
 
-const BUNDLED = [...vaccination, ...checkup, ...development, ...care, ...parent] as KnowledgeItem[];
+const BUNDLED = [...vaccination, ...checkup, ...development, ...care, ...parent, ...stage] as KnowledgeItem[];
 
 const KINDS: KnowledgeKind[] = ['접종', '검진', '발달', '수유', '수면', '생활', '안전', '대응', '부모'];
 const CONFIDENCES: Confidence[] = ['표준', '권고', '참고'];
@@ -84,11 +85,6 @@ export function itemsOfKind(kind: KnowledgeKind, month?: number): KnowledgeItem[
   );
 }
 
-/** 답변이 인용할 수 있는 것은 전달된 id 의 항목뿐이다 (menu-spec/ask.md 프롬프트 골격) */
-export function itemById(id: string): KnowledgeItem | undefined {
-  return current.items.find((item) => item.id === id);
-}
-
 /** 번들에서 승인 대기 중인 항목 수 — 구축 진행을 눈으로 보려고 둔다 */
 export function pendingReviewCount(): number {
   return BUNDLED.length - APPROVED.length;
@@ -146,4 +142,24 @@ export function applyBundle(version: string, items: KnowledgeItem[]): boolean {
   if (approved.length === 0 || findProblems(approved).length > 0) return false;
   current = { version, items: approved };
   return true;
+}
+
+/**
+ * 승인 전(draft) 항목을 개발 빌드에서만 함께 보인다 — Julian 이 폰(Expo Go)에서 실제 자리에 놓고 보며 승인할 수 있게(task growth/005).
+ * 출시 빌드(__DEV__ false)에서는 언제나 승인된 것만 나간다.
+ */
+export const SHOW_DRAFTS = __DEV__;
+
+/** id 로 한 항목 — 승인된 것, 그리고 개발 빌드면 승인 전 것까지. `approved` 로 구분한다 */
+export function itemById(id: string): (KnowledgeItem & { approved: boolean }) | null {
+  const live = current.items.find((i) => i.id === id);
+  if (live) return { ...live, approved: true };
+  if (!SHOW_DRAFTS) return null;
+  const draft = BUNDLED.find((i) => i.id === id);
+  return draft ? { ...draft, approved: draft.status === 'approved' } : null;
+}
+
+/** 여러 id 를 그 순서대로 — 없는 것은 빠진다 */
+export function itemsByIds(ids: string[]): (KnowledgeItem & { approved: boolean })[] {
+  return ids.map(itemById).filter((i): i is KnowledgeItem & { approved: boolean } => !!i);
 }

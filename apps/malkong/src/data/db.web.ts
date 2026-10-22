@@ -192,7 +192,9 @@ export async function deleteRoutineLogRow(id: string): Promise<void> {
 const MEMOS_KEY = 'malkong.memos';
 
 export async function readMemoRows(): Promise<Memo[]> {
-  return readList<Memo>(MEMOS_KEY).sort((a, b) => b.at.localeCompare(a.at));
+  return readList<Memo>(MEMOS_KEY)
+    .map((m) => ({ ...m, ref: m.ref ?? null }))
+    .sort((a, b) => b.at.localeCompare(a.at));
 }
 
 export async function upsertMemoRow(m: Memo): Promise<void> {

@@ -3,7 +3,8 @@
  *
  * 아기방 모빌(별 · 달 · 구름) 아래 매트 위에서 버디가 움직인다 — 개월에 맞춰 누워서 바둥(0~5) · 기기(6~11) · 걷기(12~).
  * 버디 그림은 AI 로 만든 4초 반복 그림(assets/images/buddy, decisions/031)이다.
- * 막대에는 지난 단계 하나와 앞으로 올 단계 — 네 칸. 지난 칸에는 체크, 다음 칸에는 「다음」. 칸을 누르면 그 단계의 내용.
+ * 막대에는 달마다 · 50일 · 100일 칸 가운데 지난 칸 하나와 앞으로 올 칸 — 네 칸. 발달 단계가 있는 달은 아래에 코랄 글씨(「2개월 · 미소」).
+ * 지난 칸에는 체크, 다음 칸에는 「다음」. 발달 단계 · 기념일 칸을 누르면 그 내용으로 간다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -57,7 +58,7 @@ export function GrowthHero({
   const art = POSES[pose];
   const span = Math.max(0, width - DOT_INSET * 2);
   const centerOf = (i: number) => DOT_INSET + (span * i) / (stage.stops.length - 1);
-  const nextShort = stage.next?.short;
+  const nextKey = stage.next?.key;
 
   return (
     <View style={[styles.hero, { backgroundColor: c.hero, paddingTop: topInset + 16 }]}>
@@ -98,7 +99,7 @@ export function GrowthHero({
           <Animated.View style={[styles.fill, { backgroundColor: c.heroAccent }, fillStyle]} />
           {width > 0 &&
             stage.stops.map((s, i) => (
-              <View key={s.month} style={[styles.dot, { left: centerOf(i) - 4, backgroundColor: c.onHero }]} />
+              <View key={s.key} style={[styles.dot, { left: centerOf(i) - 4, backgroundColor: c.onHero }]} />
             ))}
         </View>
         <View style={styles.labels}>
@@ -109,29 +110,33 @@ export function GrowthHero({
               const last = i === stage.stops.length - 1;
               const left = first ? 0 : last ? width - LABEL_WIDTH : centerOf(i) - LABEL_WIDTH / 2;
               const align = first ? 'flex-start' : last ? 'flex-end' : 'center';
+              const tappable = !!s.milestone || s.kind === 'day' || s.key === 'm12' || s.key === 'm24';
               return (
                 <Pressable
-                  key={s.month}
+                  key={s.key}
                   accessibilityRole="button"
-                  accessibilityLabel={`${s.name}, ${s.month === 0 ? '태어난 날' : `대부분 ${s.month}개월까지`}${passed ? ', 지남' : ''}`}
-                  disabled={!s.l1Id}
+                  accessibilityLabel={`${s.label}, ${s.milestone ? `대부분 이때까지 ${s.milestone.name}` : s.sub}${passed ? ', 지남' : ''}`}
+                  disabled={!tappable}
                   onPress={() => {
                     tap();
                     onStop(s);
                   }}
                   style={[styles.label, { left, alignItems: align }]}>
                   <ThemedText type="label" style={{ color: c.onHero, fontWeight: 700 }} numberOfLines={1}>
-                    {s.short}
+                    {s.label}
                   </ThemedText>
-                  <ThemedText type="caption" style={{ color: c.onHeroDim }}>
-                    {s.month === 0 ? 'D+0' : `${s.month}개월`}
+                  <ThemedText
+                    type="caption"
+                    numberOfLines={1}
+                    style={s.milestone ? { color: c.heroAccent, fontWeight: 700 } : { color: c.onHeroDim }}>
+                    {s.sub}
                   </ThemedText>
                   <View style={styles.status}>
                     {passed ? (
                       <View style={[styles.check, { backgroundColor: c.heroAccent }]}>
                         <Ionicons name="checkmark" size={13} color={c.hero} />
                       </View>
-                    ) : s.short === nextShort ? (
+                    ) : s.key === nextKey ? (
                       <View style={[styles.next, { backgroundColor: c.heroTrack }]}>
                         <ThemedText type="caption" style={{ color: c.heroAccent, fontWeight: 700, fontSize: 11 }}>
                           다음

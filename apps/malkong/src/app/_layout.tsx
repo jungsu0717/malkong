@@ -118,6 +118,9 @@ export default function RootLayout() {
                     <Stack.Screen name="family" options={{ ...header, title: '가족과 함께 보기' }} />
                     <Stack.Screen name="routine-form" options={{ presentation: 'modal' }} />
                     <Stack.Screen name="memos" options={{ ...header, title: '우리 아기 메모' }} />
+                    <Stack.Screen name="growth-check" options={{ ...header, title: '발달 체크' }} />
+                    <Stack.Screen name="growth-tips" options={{ ...header, title: '해 주면 좋아요' }} />
+                    <Stack.Screen name="growth-know" options={{ ...header, title: '알아 두면 좋아요' }} />
                     <Stack.Screen name="routine-recommend" options={{ ...header, title: '루틴 추천' }} />
                     <Stack.Screen name="todo-recommend" options={{ ...header, title: '할 일 추천' }} />
                     <Stack.Screen name="lists" options={{ ...header, title: '준비 목록' }} />
