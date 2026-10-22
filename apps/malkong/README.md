@@ -43,7 +43,7 @@
   장보기 자리에 **성장 탭**([growth/004](docs/task/growth/004-stage-tab.md)): 시기마다 바뀌는 버디(누워서 바둥 · 기기 · 걷기, AI 로 만든 움직이는 그림),
   발달 막대(CDC), 이맘때, 우리 아기 메모(이 폰에만). 탭은 루틴 · 할 일 · 성장 · 마이.
   2026-10-22 할 일 탭을 세 칸(내 할 일 · 장보기 · 아기 일정, [topic/009](docs/task/topic/009-todo-three-tabs.md))으로, 성장 탭을 한눈 요약 + 상세 화면 셋
-  (발달 체크 · 해 주면 좋아요 · 알아 두면 좋아요, [growth/005](docs/task/growth/005-stage-depth.md))으로 바꿨다. 성장 탭의 새 공공 지식 85개는 **승인 대기**다.
+  (발달 체크 · 해 주면 좋아요 · 알아 두면 좋아요, [growth/005](docs/task/growth/005-stage-depth.md))으로 바꿨다. 성장 탭의 새 공공 지식 85개는 같은 날 원문과 대조해 승인했다(판 2026.10.4).
   같은 날 처음 쓰는 부모로 하루 써 보고 불편한 곳 여섯을 고쳤고([common/023](docs/task/common/023-persona-polish.md)), Expo SDK 57 패치 버전을 맞췄다(expo-doctor 21/21 통과).
   아래 「앱」 줄은 방향 전환 전의 기록이다
 - **저장소**: 2026-10-14 에 저장소가 여러 앱을 담는 `julian-studio` 가 되면서 육아버디는 `apps/malkong/` 으로 옮겼다. 모든 앱에 통하는 규칙은 루트 [AGENTS.md](../../AGENTS.md)
@@ -58,7 +58,7 @@
   브리핑은 기기 안 규칙과 문구 틀로 만든다([decisions/018](docs/decisions/018-daily-care-briefing.md)). 부모 돌봄 L1 넷 승인(2026-10-04).
   온보딩은 생일 → 브리핑 알림 시각. 만화 5컷([my/006](docs/task/my/006-intro-toon.md))은 마이 제목 줄 오른쪽 「육아버디 스토리」에서 본다(처음 실행에는 안 뜸, [my/008](docs/task/my/008-intro-in-my.md), 2026-10-12). 광고(AdMob 배너·보상형), 캐릭터 버디 아이콘
 - **Expo 계정** `@julian-malkong/malkong` 연결, 앱 식별자 `com.yugabuddy.app`(iOS · Android, app.json). Julian 아이폰(Expo Go)으로 볼 수 있다
-- **지식(L1)**: 승인된 77건 — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호·부모 돌봄(미국 CDC)
+- **지식(L1)**: 승인된 165건(2026-10-22, 이 줄 아래 설명은 예전 것) — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호·부모 돌봄(미국 CDC)
 - **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 재시도 안전, 피드백,
   보상형 광고 확인(SSV), 하루 한도 정책 v2 — 정밀 답변 10회 · 광고 1편에 5회(하루 2편) · 그 뒤 일반 기준 답 20회 ·
   서버 전체 하루 모델 비용 천장 330원([decisions/019](docs/decisions/019-generous-limits-hard-daily-budget.md)).
@@ -90,20 +90,20 @@
   버디의 짐작은 확인 뒤 기록([ask/008](docs/task/ask/008-confirm-guess.md)) · 대화는 최근 50줄부터, 날짜에서 그날 대화로([ask/009](docs/task/ask/009-recent-window-and-day-jump.md))
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점 (2026-10-22)
+## 다음 시작점 (2026-10-22 저녁) — Julian 만 할 수 있는 것
 
-1. **Julian 의 「승인」** — 성장 탭의 새 공공 지식 85개(CDC 발달 이정표 2 · 4 · 6 · 9 · 12개월, 해 주면 좋아요, 울음).
-   폰(Expo Go)의 성장 탭 → 발달 체크 · 해 주면 좋아요 · 알아 두면 좋아요에서 「승인 전」이 붙은 줄이다. 승인하면 status 를 approved 로 바꾸고
-   `src/data/l1/version.json` 판을 올린다. 승인 전에는 출시 빌드에 나오지 않는다([growth/005](docs/task/growth/005-stage-depth.md) 「승인 대기」)
-2. **Julian 이 아이폰(Expo Go)으로 써 보기** — 할 일 탭 세 칸, 성장 탭 상세 화면 셋과 「했어요」 → 메모, 루틴 탭의 남은 추천 · 다음 루틴 순서
-   ([common/023](docs/task/common/023-persona-polish.md)). 켜는 법은 아래 「실행」(이 폴더에서)
-3. **가족 공유에 메모 싣기** — 서버 `server/app/domain/family/schema.py` 의 종류에 `memo` 를 더하고 운영 배포(Julian 승인)가 필요하다. 그 전까지 메모는 이 폰에만 있다
-4. **두 폰에서 가족 공유 확인**(마이 → 가족과 함께 보기). 배우자가 한 루틴의 알림이 내 폰에서도 바로 사라지게 하려면 서버 푸시가 필요하다 —
-   애플 개발자 계정이 생긴 뒤([common/022](docs/task/common/022-simplify-and-finish.md) 「남은 것」)
-5. **출시 전 Julian 몫**([common/008](docs/task/common/008-first-release-check.md) 「Julian 이 할 일」, 루트 [출시 체크리스트](../../docs/governance/release-checklist.md)) —
-   스토어 계정 둘, AdMob 앱 · 광고 단위 만들기(지금 app.json 의 AdMob 앱 ID 는 구글 시험용이라 출시 전에 바꿔야 한다), 약관 · 개인정보 초안 검토,
-   스토어 문안과 그림을 지금 탭(루틴 · 할 일 · 성장 · 마이)으로 다시 만들기, 서버의 질문 답변 기능 내리기(배포 승인)
-6. 헌장 · 제품 브리프 · 할 일 탭 SPEC 은 Julian 이 「ㅇㅇ ㄱ」로 진행을 허락했다(2026-10-15). 2026-10-12 까지의 AI 상담 쪽 후보는 방향 전환으로 접었다
+Claude 가 할 수 있는 준비는 끝났다(공공 지식 승인, 메모 가족 공유, 서버 정리, 약관 웹 페이지, 스토어 그림 · 문안 · 입력 칸 답안 —
+[common/024](docs/task/common/024-memo-family-and-release.md)). 남은 것은 넷이다.
+
+1. **서버 배포 승인** — 「배포」 한마디면 Claude 가 [server/AGENTS.md](server/AGENTS.md) 「배포」 명령으로 올린다.
+   메모 가족 공유, 공공 지식 판 2026.10.4, `/privacy` · `/terms` 페이지, 질문 답변 기능 내리기가 함께 나간다
+2. **계정 셋** — Apple Developer(1년 129,000원), Google Play(25달러 한 번 + 테스터 12명이 14일), AdMob(무료).
+   AdMob 에서 앱 2개 · 배너 단위 2개를 만들어 id 넷을 Claude 에게 준다. 순서와 자세한 방법은 [common/008](docs/task/common/008-first-release-check.md) 「Julian 이 할 일」
+3. **운영자 정보** — 약관 · 개인정보 처리방침에 들어갈 이름(실명), 문의 이메일, 시행일. 법률 검토를 받을지도 정한다
+4. **첫 iOS 빌드의 애플 로그인** — 계정이 생긴 뒤 `npx eas-cli@latest login` 과 첫 iOS 빌드에서 애플 로그인을 직접 친다
+
+스토어에 넣을 그림은 `marketing/store/out/`, 문안은 [product-brief](docs/product/product-brief.md) 「스토어 문안」,
+입력 칸 답안은 [store-forms](docs/product/store-forms.md). 폰(Expo Go)으로 볼 때는 패키지가 바뀌었으니 켜 둔 `npx expo start` 를 한 번 다시 켠다.
 
 ## 다른 PC 에서 시작하기
 
