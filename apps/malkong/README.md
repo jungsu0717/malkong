@@ -93,14 +93,12 @@
 ## 다음 시작점 (2026-10-22 저녁) — Julian 만 할 수 있는 것
 
 Claude 가 할 수 있는 준비는 끝났다(공공 지식 승인, 메모 가족 공유, 서버 정리, 약관 웹 페이지, 스토어 그림 · 문안 · 입력 칸 답안 —
-[common/024](docs/task/common/024-memo-family-and-release.md)). 남은 것은 넷이다.
+[common/024](docs/task/common/024-memo-family-and-release.md)), 서버도 2026-10-22 에 배포했다(revision 00022-bkk). 남은 것은 셋이다.
 
-1. **서버 배포 승인** — 「배포」 한마디면 Claude 가 [server/AGENTS.md](server/AGENTS.md) 「배포」 명령으로 올린다.
-   메모 가족 공유, 공공 지식 판 2026.10.4, `/privacy` · `/terms` 페이지, 질문 답변 기능 내리기가 함께 나간다
-2. **계정 셋** — Apple Developer(1년 129,000원), Google Play(25달러 한 번 + 테스터 12명이 14일), AdMob(무료).
+1. **계정 셋** — Apple Developer(1년 129,000원), Google Play(25달러 한 번 + 테스터 12명이 14일), AdMob(무료).
    AdMob 에서 앱 2개 · 배너 단위 2개를 만들어 id 넷을 Claude 에게 준다. 순서와 자세한 방법은 [common/008](docs/task/common/008-first-release-check.md) 「Julian 이 할 일」
-3. **운영자 정보** — 약관 · 개인정보 처리방침에 들어갈 이름(실명), 문의 이메일, 시행일. 법률 검토를 받을지도 정한다
-4. **첫 iOS 빌드의 애플 로그인** — 계정이 생긴 뒤 `npx eas-cli@latest login` 과 첫 iOS 빌드에서 애플 로그인을 직접 친다
+2. **운영자 정보** — 약관 · 개인정보 처리방침에 들어갈 이름(실명), 문의 이메일, 시행일. 법률 검토를 받을지도 정한다
+3. **첫 iOS 빌드의 애플 로그인** — 계정이 생긴 뒤 `npx eas-cli@latest login` 과 첫 iOS 빌드에서 애플 로그인을 직접 친다
 
 스토어에 넣을 그림은 `marketing/store/out/`, 문안은 [product-brief](docs/product/product-brief.md) 「스토어 문안」,
 입력 칸 답안은 [store-forms](docs/product/store-forms.md). 폰(Expo Go)으로 볼 때는 패키지가 바뀌었으니 켜 둔 `npx expo start` 를 한 번 다시 켠다.

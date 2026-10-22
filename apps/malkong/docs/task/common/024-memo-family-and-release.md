@@ -1,6 +1,6 @@
 # 024 우리 아기 메모 가족 공유와 출시 전 정리
 
-> 상태: 완료 (2026-10-22) — 운영 배포만 Julian 승인 뒤
+> 상태: 완료 (2026-10-22) — 운영 배포까지(revision 00022-bkk, Julian 「배포」)
 > 근거: SPEC-STAGE-03, SPEC-MY-05, SPEC-MY-03
 
 ## 목표
@@ -26,4 +26,4 @@ Julian(2026-10-22): 「다 하고 진짜 내가 필요한 것만 남겨 줘. 공
 - [x] (SPEC-MY-03) 동의 문구 · 개인정보 처리방침에 메모
 - [x] (SPEC-MY-03) 개인정보 처리방침 · 이용약관 웹 페이지(`/privacy` · `/terms`) — 서버 시험 1건, 앱 시험 1건
 - [x] tsc · lint, node 시험, 서버 ruff · pytest
-- [ ] 운영 배포 — Julian 승인 뒤
+- [x] 운영 배포 — 2026-10-22 revision `malkong-server-00022-bkk`. `/health` · `/v1/knowledge/version`(2026.10.4) · `/privacy` · `/terms` 200, `/v1/ask` 404, 환경변수는 DB 주소와 가족 기기 키 둘만

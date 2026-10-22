@@ -49,6 +49,6 @@ Julian(2026-10-19): 쓰기 쉽고 직관적으로, 쓸데없는 기능은 빼고
   아이폰 개발 빌드에는 애플 개발자 계정과 푸시 키가 필요하다. 계정이 생기면: 가족 공유를 켠 폰은 루틴 알림을 폰에서 걸지 않고, 서버가 알림 시각마다
   아직 아무도 안 한 루틴만 가족 폰에 보낸다(Cloud Scheduler 로 몇 분마다 돌기 · Expo 푸시 토큰 저장). 서버 배포 · 스케줄러는 Julian 승인 뒤
 - [x] 서버 정리(코드, 2026-10-22): `/v1/ask` · `/v1/feedback` · `/v1/reward` 와 한도 셈 · 하루 비용 천장 · 모델 어댑터 · 모델 비교 도구(eval)를 지웠다.
-  ruff · pytest 통과. **운영 배포는 Julian 승인 뒤** — 명령은 server/AGENTS.md 「배포」(예전 모델 환경변수와 Gemini 키를 빼는 판).
+  ruff · pytest 통과. **운영 배포 2026-10-22**(Julian 「배포」, revision 00022-bkk) — 예전 모델 환경변수와 Gemini 키를 뺐다.
   Neon 에 남은 옛 표(`daily_usage` · `counted_message` · `reward_tx` · `daily_cost` · `feedback`)는 서버가 더 쓰지 않는다. 지울지는 Julian 이 정한다
 - 폰에서 써 보기 — Julian
