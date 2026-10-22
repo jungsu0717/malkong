@@ -42,7 +42,7 @@
 ## 구현 메모
 
 - 화면 `src/app/(tabs)/growth.tsx` · 머리 그림 `src/components/growth/growth-hero.tsx` · 상세 `growth-check.tsx` · `growth-tips.tsx` · `growth-know.tsx` · 시트 `knowledge-sheet.tsx` · 메모 `src/app/memos.tsx` · `memo-sheet.tsx`
-- 새 L1(승인 전): `src/data/l1/stage.json` — 발달 체크 `k-dev-MM11~`, 해 주면 좋아요 `k-life-MM11~15`, 울음 `k-life-0003`
+- 새 L1(2026-10-22 승인): `src/data/l1/stage.json` — 발달 체크 `k-dev-MM11~`, 해 주면 좋아요 `k-life-MM11~15`, 울음 `k-life-0003`
 - 계산 `src/data/stage.ts`(시험 `stage.test.ts`) · 메모 저장 `memos-context.tsx` · 기기 DB `memo` 표(db.ts · db.web.ts)
 - 버디 그림 `assets/images/buddy/{lie,crawl,walk}.webp` — 원본(영상 · 그림)은 `assets/brand/poses/`(저장소에 올리지 않음). 만드는 방법은 task growth/004
 

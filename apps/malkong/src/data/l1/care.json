@@ -42,7 +42,7 @@
     },
     "confidence": "참고",
     "red_flag": false,
-    "status": "draft"
+    "status": "approved"
   },
   {
     "id": "k-feed-0003",
@@ -462,7 +462,7 @@
     },
     "confidence": "참고",
     "red_flag": false,
-    "status": "draft"
+    "status": "approved"
   },
   {
     "id": "k-sleep-1201",
@@ -477,7 +477,7 @@
     },
     "confidence": "참고",
     "red_flag": false,
-    "status": "draft"
+    "status": "approved"
   },
   {
     "id": "k-feed-0601",

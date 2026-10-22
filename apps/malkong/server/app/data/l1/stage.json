@@ -1,0 +1,1613 @@
+[
+ {
+  "id": "k-dev-0211",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "말 걸거나 안아 주면 진정해요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0212",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "얼굴을 바라봐요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0213",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "다가가면 반가워해요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0214",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "말 걸거나 웃어 주면 따라 웃어요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0215",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "울음 말고 다른 소리를 내요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0216",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "큰 소리에 반응해요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0217",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "움직이는 사람을 눈으로 따라가요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0218",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "장난감을 몇 초 동안 바라봐요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0219",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "엎드려서 고개를 들어요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0220",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "두 팔과 두 다리를 움직여요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0221",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "발달",
+  "title": "손을 잠깐 펴요",
+  "body": "대부분(75% 이상)의 아기가 2개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0411",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "눈길을 끌려고 스스로 웃어요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0412",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "웃겨 주면 작게 소리 내 웃어요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0413",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "관심을 끌려고 쳐다보거나 소리를 내요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0414",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "「아 · 우」 같은 옹알이를 해요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0415",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "말을 걸면 소리로 대답해요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0416",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "목소리 나는 쪽으로 고개를 돌려요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0417",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "배고플 때 젖이나 젖병을 보면 입을 벌려요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0418",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "자기 손을 신기하게 바라봐요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0419",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "안아 주면 목을 가눠요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0420",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "손에 쥐여 준 장난감을 잡아요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0421",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "장난감 쪽으로 팔을 휘둘러요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0422",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "손을 입으로 가져가요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0423",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "발달",
+  "title": "엎드려서 팔꿈치로 상체를 들어요",
+  "body": "대부분(75% 이상)의 아기가 4개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0611",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "익숙한 사람을 알아봐요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0612",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "거울 속 자기 모습 보기를 좋아해요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0613",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "소리 내어 웃어요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0614",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "번갈아 가며 소리를 주고받아요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0615",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "혀를 내밀어 「푸르르」 소리를 내요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0616",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "꺅 하는 소리를 내요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0617",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "물건을 입에 넣어 살펴봐요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0618",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "갖고 싶은 장난감에 손을 뻗어 잡아요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0619",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "더 먹기 싫으면 입을 다물어요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0620",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "배에서 등으로 뒤집어요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0621",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "엎드려서 팔을 쭉 펴 상체를 밀어 올려요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0622",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "발달",
+  "title": "앉을 때 손으로 짚어 몸을 받쳐요",
+  "body": "대부분(75% 이상)의 아기가 6개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0911",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "낯선 사람을 보면 수줍어하거나 매달려요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0912",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "기쁨 · 슬픔 · 화남 · 놀람 같은 여러 표정을 지어요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0913",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "이름을 부르면 쳐다봐요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0914",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "보호자가 자리를 뜨면 쳐다보거나 손을 뻗거나 울어요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0915",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "까꿍 놀이를 하면 웃어요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0916",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "「마마마」 「바바바」처럼 여러 소리를 내요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0917",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "안아 달라고 두 팔을 들어요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0918",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "떨어져 안 보이는 물건을 찾아요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0919",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "두 물건을 맞부딪쳐요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0920",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "혼자 앉는 자세로 바꿔 앉아요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0921",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "물건을 한 손에서 다른 손으로 옮겨요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0922",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "손가락으로 음식을 끌어당겨요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-0923",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "발달",
+  "title": "받쳐 주지 않아도 혼자 앉아요",
+  "body": "대부분(75% 이상)의 아기가 9개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1211",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "짝짜꿍 같은 놀이를 함께 해요",
+  "body": "대부분(75% 이상)의 아기가 12개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1212",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "손을 흔들어 「빠이빠이」 해요",
+  "body": "대부분(75% 이상)의 아기가 12개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1213",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "엄마 · 아빠를 부르거나 특별한 이름으로 불러요",
+  "body": "대부분(75% 이상)의 아기가 12개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1214",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "「안 돼」를 알아들어요 — 잠깐 멈추거나 그만해요",
+  "body": "대부분(75% 이상)의 아기가 12개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1215",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "블록을 컵에 넣듯 물건을 통에 넣어요",
+  "body": "대부분(75% 이상)의 아기가 12개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1216",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "숨기는 걸 본 물건을 찾아요",
+  "body": "대부분(75% 이상)의 아기가 12개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1217",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "잡고 일어서요",
+  "body": "대부분(75% 이상)의 아기가 12개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1218",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "가구를 잡고 걸어요",
+  "body": "대부분(75% 이상)의 아기가 12개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1219",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "잡아 주면 뚜껑 없는 컵으로 마셔요",
+  "body": "대부분(75% 이상)의 아기가 12개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1220",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "엄지와 검지로 작은 것을 집어요",
+  "body": "대부분(75% 이상)의 아기가 12개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0211",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "생활",
+  "title": "아기 소리를 따라 하며 주고받기",
+  "body": "「아」 하면 「아」 하고 대답해 줘요. 소리를 주고받는 것이 말을 배우는 바탕이 돼요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0212",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "생활",
+  "title": "딸랑이로 소리 찾기 놀이",
+  "body": "머리 한쪽에서 딸랑이를 흔들고 소리 나는 쪽을 보는지 살펴봐요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0213",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "생활",
+  "title": "아기용 거울 옆에 두기",
+  "body": "안전한 아기용 거울을 곁에 두고 거울 속 얼굴을 함께 봐요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0214",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "생활",
+  "title": "먹이고 입히고 씻길 때 말 걸기",
+  "body": "하는 일을 말로 들려주면 하루 일과가 놀이가 돼요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0215",
+  "months": [
+   0,
+   1
+  ],
+  "kind": "생활",
+  "title": "선명한 그림이나 얼굴을 함께 보기",
+  "body": "색이 선명한 그림이나 얼굴을 함께 보며 이야기해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0411",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "생활",
+  "title": "장난감을 천천히 움직이기",
+  "body": "밝은 장난감을 좌우와 위아래로 천천히 움직여 눈으로 따라오는지 봐요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0412",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "생활",
+  "title": "쥐기 쉬운 장난감 주기",
+  "body": "딸랑이나 헝겊 책처럼 안전하고 쥐기 쉬운 장난감을 손 닿는 곳에 둬요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0413",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "생활",
+  "title": "까꿍 놀이",
+  "body": "까꿍 놀이를 하며 웃는지, 무엇을 좋아하는지 살펴봐요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0414",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "생활",
+  "title": "매일 바닥이나 놀이 매트에서 놀기",
+  "body": "스윙 · 유모차 · 바운서에 오래 두지 말고, 바닥에서 움직일 시간을 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0415",
+  "months": [
+   2,
+   3
+  ],
+  "kind": "생활",
+  "title": "노래하며 팔다리를 살살 움직여 주기",
+  "body": "말을 걸거나 노래하며 팔다리를 부드럽게 움직여 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/4-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0611",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "생활",
+  "title": "소리 주고받기 놀이",
+  "body": "웃고 소리를 따라 하며 번갈아 주고받아요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0612",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "생활",
+  "title": "매일 그림책 읽어 주기",
+  "body": "색이 선명한 그림책을 읽어 주고, 옹알이에 대답해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0613",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "생활",
+  "title": "손이 닿을락 말락 한 곳에 장난감",
+  "body": "엎드리거나 누워 있을 때 조금 떨어진 곳에 장난감을 두면 뒤집기 연습이 돼요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0614",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "생활",
+  "title": "보이는 것의 이름 말해 주기",
+  "body": "밖에서 본 자동차 · 나무 · 동물의 이름을 말해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0615",
+  "months": [
+   4,
+   5
+  ],
+  "kind": "생활",
+  "title": "떨어뜨린 장난감 주워 주기",
+  "body": "떨어뜨린 장난감을 다시 주면 원인과 결과를 배워요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/6-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0911",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "생활",
+  "title": "아기 소리에 쉬운 낱말 더해 주기",
+  "body": "「바바」 하면 「바나나」처럼 그 소리가 들어간 낱말을 들려줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0912",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "생활",
+  "title": "손이 닿을락 말락 한 곳에 장난감",
+  "body": "기거나 밀어서 다가가게 하고, 잡으면 칭찬해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0913",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "생활",
+  "title": "「빠이빠이」 같은 몸짓 가르치기",
+  "body": "손 흔들기, 고개 젓기 같은 간단한 몸짓을 보여 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0914",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "생활",
+  "title": "천으로 까꿍 놀이",
+  "body": "얼굴을 천으로 가리고 아기가 걷어 내게 해요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0915",
+  "months": [
+   6,
+   7,
+   8
+  ],
+  "kind": "생활",
+  "title": "담요 밑에 장난감 숨기고 찾기",
+  "body": "장난감을 담요 밑에 숨기고 찾아보게 해요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/9-months.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1211",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "생활",
+  "title": "하루 일을 말과 노래로 들려주기",
+  "body": "지금 하는 일을 말로 들려주고 노래로 불러 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1212",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "생활",
+  "title": "아기 말에 낱말 더해 다시 말하기",
+  "body": "아기가 낸 말을 조금 더 길게 다시 말해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1213",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "생활",
+  "title": "가리키는 것에 말로 대답하기",
+  "body": "아기가 손가락으로 가리키면 그 이름을 말해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1214",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "생활",
+  "title": "손을 쓰는 블록 · 장난감 놀이",
+  "body": "쌓고 넣고 꺼내는 놀이로 손을 쓰게 해요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1215",
+  "months": [
+   9,
+   10,
+   11,
+   12,
+   13,
+   14
+  ],
+  "kind": "생활",
+  "title": "손이나 튼튼한 가구를 잡고 걷기",
+  "body": "손을 잡아 주거나 가구를 잡고 걷게 해요. 보행기는 쓰지 않아요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/1-year.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "권고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-0003",
+  "months": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "kind": "생활",
+  "title": "울음이 많은 때예요 — 자라면서 나아져요",
+  "body": "처음 몇 달은 우는 일이 많고, 아무리 달래도 그치지 않는 울음도 흔해요. 자라면서 나아져요.",
+  "source": {
+   "name": "미국 CDC 영유아 학대성 머리 손상 예방",
+   "url": "https://www.cdc.gov/child-abuse-neglect/about/about-abusive-head-trauma.html",
+   "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ }
+]
