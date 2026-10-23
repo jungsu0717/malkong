@@ -230,7 +230,7 @@ function BabyRow({ row, divider, onCheck, onOpen }: { row: Row; divider: boolean
         </Pressable>
       )}
       <Pressable accessibilityRole="button" disabled={row.future} onPress={onOpen} style={({ pressed }) => [styles.text, pressed && { opacity: 0.6 }]}>
-        <ThemedText type="body" style={{ color: row.future ? c.textSecondary : c.text }}>
+        <ThemedText type="body" lineBreakStrategyIOS="hangul-word" style={{ color: row.future ? c.textSecondary : c.text }}>
           {row.title}
         </ThemedText>
         <View style={styles.meta}>
