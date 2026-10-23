@@ -40,7 +40,8 @@ function OnboardingGate() {
 
   useEffect(() => {
     if (loading) return;
-    if (!baby && segments[0] !== 'onboarding') router.replace('/onboarding');
+    // 아기가 없어도 가족 화면은 둔다 — 초대받은 가족이 생일 없이 참여하는 길이다(task common/026)
+    if (!baby && segments[0] !== 'onboarding' && segments[0] !== 'family') router.replace('/onboarding');
     // 스토어 리뷰는 아기 생일을 넣고 며칠 쓴 뒤에만 묻는다(SPEC-MY-09)
     if (baby) void noteReviewStart();
   }, [baby, loading, segments, router]);

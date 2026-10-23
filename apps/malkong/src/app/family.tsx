@@ -1,9 +1,12 @@
 /**
  * 가족과 함께 보기 (SPEC-MY-05, task my/007 · 009) — 마이의 한 줄에서 들어온다.
- * 가족이 없으면 설명 · 동의 · 「가족 만들기」 · 「초대 코드로 참여」, 있으면 초대 코드 · 가족에게 보일 이름 · 함께 보는 폰 수 · 나가기.
+ * 가족이 없으면 설명 · 동의 · 가족에게 보일 이름 · 「가족 만들기」 · 「초대 코드로 참여」, 있으면 초대 코드 · 가족에게 보일 이름 · 함께 보는 폰 수 · 나가기.
+ * 이름은 만들기 · 참여 전에 고른다 — 처음 완료한 것부터 「아빠 · 08:10」처럼 남게(task common/026).
+ * 온보딩의 「초대 코드가 있어요」(`?from=onboarding`)로 오면 참여 칸이 바로 열리고, 참여해 가족의 아기가 들어오면 첫 화면으로 간다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, StyleSheet, TextInput, View } from 'react-native';
 
@@ -43,8 +46,10 @@ export default function FamilyScreen() {
   const c = useTheme();
   const { baby } = useBaby();
   const { status, state, syncing, create, join, leave, syncNow } = useFamily();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const fromOnboarding = from === 'onboarding';
   const [consent, setConsent] = useState(false);
-  const [joining, setJoining] = useState(false);
+  const [joining, setJoining] = useState(fromOnboarding);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +63,28 @@ export default function FamilyScreen() {
     setMe(value);
     void saveMemberName(value);
   };
+  // 온보딩에서 와서 참여했고 가족의 아기가 들어왔으면 첫 화면으로
+  useEffect(() => {
+    if (fromOnboarding && status === 'member' && baby) router.replace('/');
+  }, [fromOnboarding, status, baby]);
+  const named = me.trim().length > 0;
+  const namePicker = (
+    <>
+      <View style={styles.chips}>
+        {MEMBER_NAMES.map((n) => (
+          <Chip key={n} label={n} selected={me.trim() === n} onPress={() => pickMe(n)} />
+        ))}
+      </View>
+      <TextInput
+        style={[styles.input, { color: c.text, backgroundColor: c.surface }]}
+        value={MEMBER_NAMES.includes(me.trim()) ? '' : me}
+        onChangeText={pickMe}
+        placeholder="직접 적기 (예: 이모)"
+        placeholderTextColor={c.textTertiary}
+        maxLength={10}
+      />
+    </>
+  );
 
   const act = async (work: () => Promise<void>) => {
     setBusy(true);
@@ -74,7 +101,9 @@ export default function FamilyScreen() {
 
   const share = async (inviteCode: string) => {
     try {
-      await Share.share({ message: `육아버디 초대 코드: ${inviteCode}\n마이 → 가족과 함께 보기 → 초대 코드로 참여에 입력해 주세요` });
+      await Share.share({
+        message: `육아버디 초대 코드: ${inviteCode}\n앱을 처음 열면 「초대 코드가 있어요」, 이미 쓰고 있으면 마이 → 가족과 함께 보기 → 초대 코드로 참여에 입력해 주세요`,
+      });
     } catch {
       // 웹처럼 공유가 없는 곳에서는 코드를 보고 적는다
     }
@@ -93,7 +122,7 @@ export default function FamilyScreen() {
                 {state.info.inviteCode}
               </ThemedText>
               <ThemedText type="small" style={{ color: c.textSecondary }}>
-                가족 폰에서 마이 → 가족과 함께 보기 → 초대 코드로 참여에 입력하면 돼요
+                가족 폰의 처음 화면 「초대 코드가 있어요」나 마이 → 가족과 함께 보기 → 초대 코드로 참여에 입력하면 돼요
               </ThemedText>
               <Button label="코드 보내기" icon="share-outline" onPress={() => void share(state.info.inviteCode)} />
             </Card>
@@ -106,19 +135,7 @@ export default function FamilyScreen() {
               <ThemedText type="small" style={{ color: c.textSecondary }}>
                 루틴이나 할 일을 완료하면 누가 언제 했는지 가족 폰에 보여요
               </ThemedText>
-              <View style={styles.chips}>
-                {MEMBER_NAMES.map((n) => (
-                  <Chip key={n} label={n} selected={me.trim() === n} onPress={() => pickMe(n)} />
-                ))}
-              </View>
-              <TextInput
-                style={[styles.input, { color: c.text, backgroundColor: c.surface }]}
-                value={MEMBER_NAMES.includes(me.trim()) ? '' : me}
-                onChangeText={pickMe}
-                placeholder="직접 적기 (예: 이모)"
-                placeholderTextColor={c.textTertiary}
-                maxLength={10}
-              />
+              {namePicker}
             </Card>
 
             <Card style={styles.card}>
@@ -178,6 +195,13 @@ export default function FamilyScreen() {
               </Pressable>
             </Card>
 
+            <Card style={styles.card}>
+              <ThemedText type="heading" style={{ fontSize: 15 }}>
+                가족에게 보일 이름
+              </ThemedText>
+              {namePicker}
+            </Card>
+
             {joining ? (
               <Card style={styles.card}>
                 <ThemedText type="label" style={{ color: c.textSecondary }}>
@@ -194,23 +218,31 @@ export default function FamilyScreen() {
                   maxLength={6}
                   editable={!busy}
                 />
-                <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                  참여하면 이 폰의 아기 정보는 가족의 아기로 바뀌고, 기록은 합쳐져요
-                </ThemedText>
+                {/* 이 폰에 아기가 있을 때만 — 처음부터 참여하는 폰은 바뀔 것이 없다 */}
+                {baby && (
+                  <ThemedText type="caption" style={{ color: c.textSecondary }}>
+                    참여하면 이 폰의 아기 정보는 가족의 아기로 바뀌고, 기록은 합쳐져요
+                  </ThemedText>
+                )}
                 <View style={styles.row}>
                   <Button
                     label="참여하기"
                     busy={busy}
-                    disabled={!consent || code.trim().length < 6}
+                    disabled={!consent || !named || code.trim().length < 6}
                     onPress={() => void act(() => join(code))}
                   />
-                  <Button label="취소" variant="ghost" disabled={busy} onPress={() => setJoining(false)} />
+                  <Button
+                    label="취소"
+                    variant="ghost"
+                    disabled={busy}
+                    onPress={() => (fromOnboarding ? router.back() : setJoining(false))}
+                  />
                 </View>
               </Card>
             ) : (
               <View style={styles.actions}>
-                <Button label="가족 만들기" size="lg" busy={busy} disabled={!consent} onPress={() => void act(create)} />
-                <Button label="초대 코드로 참여" size="lg" variant="secondary" disabled={!consent || busy} onPress={() => setJoining(true)} />
+                <Button label="가족 만들기" size="lg" busy={busy} disabled={!consent || !named} onPress={() => void act(create)} />
+                <Button label="초대 코드로 참여" size="lg" variant="secondary" disabled={!consent || !named || busy} onPress={() => setJoining(true)} />
               </View>
             )}
             {error && (

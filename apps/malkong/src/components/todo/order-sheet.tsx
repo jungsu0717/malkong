@@ -117,9 +117,11 @@ export function OrderSheet({
               placeholderTextColor={c.textTertiary}
               maxLength={20}
             />
-            <ThemedText type="caption" style={{ color: unread ? c.accentText : c.textSecondary }}>
-              {unread ? '날짜를 읽지 못했어요' : shown ? `${dueLabel(shown, false)} 도착 예정` : '도착 날짜를 모르면 비워 두세요'}
-            </ThemedText>
+            {(unread || shown) && (
+              <ThemedText type="caption" style={{ color: unread ? c.accentText : c.textSecondary }}>
+                {unread ? '날짜를 읽지 못했어요' : `${dueLabel(shown as Date, false)} 도착 예정`}
+              </ThemedText>
+            )}
           </ScrollView>
 
           <Button
