@@ -66,7 +66,7 @@ export function GrowthHero({
       <View style={[styles.overscroll, { backgroundColor: c.hero }]} />
       <View style={styles.inner}>
         <View style={styles.mobile} pointerEvents="none">
-          <Mobile />
+          <HeroMobile />
         </View>
 
         <ThemedText type="title" style={[styles.title, { color: c.onHero }]}>
@@ -153,8 +153,8 @@ export function GrowthHero({
   );
 }
 
-/** 아기방 모빌 — 별 · 달 · 구름 */
-function Mobile() {
+/** 아기방 모빌 — 별 · 달 · 구름. 시작 화면도 같은 모빌을 쓴다(`scale` 로 키우고, 초승달을 파낼 바탕색 `cutout`) */
+export function HeroMobile({ scale = 1, cutout }: { scale?: number; cutout?: string }) {
   const c = useTheme();
   const star = (cx: number, cy: number, ro: number, ri: number) => {
     const pts: string[] = [];
@@ -166,13 +166,13 @@ function Mobile() {
     return `M${pts.join(' L')}Z`;
   };
   return (
-    <Svg width={140} height={110} viewBox="0 0 140 110">
+    <Svg width={140 * scale} height={110 * scale} viewBox="0 0 140 110">
       <Path d="M8 16 Q70 0 132 16" fill="none" stroke={c.heroTrack} strokeWidth={3} strokeLinecap="round" />
       <Path d="M70 0 L70 8" stroke={c.heroTrack} strokeWidth={3} strokeLinecap="round" />
       <Path d="M26 13 L26 54 M70 8 L70 74 M114 13 L114 48" stroke={c.heroTrack} strokeWidth={1.5} />
       <Path d={star(26, 68, 13, 5.6)} fill={c.heroStar} />
       <Circle cx={70} cy={89} r={14} fill={c.heroMoon} />
-      <Circle cx={77} cy={84} r={12.5} fill={c.hero} />
+      <Circle cx={77} cy={84} r={12.5} fill={cutout ?? c.hero} />
       <G fill={c.heroCloud}>
         <Circle cx={106} cy={60} r={8} />
         <Circle cx={116} cy={55} r={10} />

@@ -14,8 +14,8 @@ export const Colors = {
     /** 장식·아이콘·자리 표시 글 — 본문 글자에는 쓰지 않는다(대비가 모자람) */
     textTertiary: '#8A8A95',
     background: '#FFFFFF',
-    /** 시작 화면 바탕 — 우주복 노랑(decisions/015). app.json 의 expo-splash-screen backgroundColor 와 같아야 한다 */
-    splash: '#FDD686',
+    /** 시작 화면 바탕 — 앱 아이콘 · 루틴 탭 머리와 같은 먹색(decisions/032). app.json 의 expo-splash-screen backgroundColor 와 같아야 한다 */
+    splash: '#16161A',
     /** 옅은 회색 면 — 입력창 · 칩 · 묶음 카드 */
     surface: '#F4F4F6',
     /** 눌렀을 때 · 골랐을 때 · 꺼진 단추 */
@@ -25,7 +25,7 @@ export const Colors = {
     /** 주요 단추 바탕 */
     ink: '#16161A',
     onInk: '#FFFFFF',
-    accent: '#C64536', // 버디의 쪽쪽이 코랄을 흰 글씨가 읽히게 진하게 — 브랜드 노랑(#FDD686)은 아이콘 · 시작 화면에
+    accent: '#C64536', // 버디의 쪽쪽이 코랄을 흰 글씨가 읽히게 진하게 — 노랑(#FDD686)은 아이콘 · 로고의 별에만
     accentSoft: '#FCEBE8',
     /** accentSoft 위의 글자 */
     accentText: '#8F2E23',
@@ -52,14 +52,17 @@ export const Colors = {
     heroMoon: '#FFF1D6',
     heroCloud: 'rgba(255, 255, 255, 0.88)',
     heroMat: 'rgba(255, 255, 255, 0.06)',
+    /** 먹색 위의 작은 카드 — 시작 화면의 루틴 · 할 일 · 성장 카드. 테두리는 비치지 않는 색(기울인 카드에 반투명 테두리를 두면 모서리가 깨진다) */
+    heroCard: '#29292E',
+    heroCardLine: '#3E3E43',
   },
   dark: {
     text: '#F4F4F6',
     textSecondary: '#A0A0AB',
     textTertiary: '#6E6E79',
     background: '#0E0E11',
-    /** 다크 모드 시작 화면은 바탕색 그대로(app.json dark.backgroundColor) */
-    splash: '#0E0E11',
+    /** 시작 화면은 다크 모드에서도 같은 먹색(app.json dark.backgroundColor) */
+    splash: '#16161A',
     surface: '#1A1A1F',
     surfaceStrong: '#26262D',
     border: '#2A2A31',
@@ -86,6 +89,8 @@ export const Colors = {
     heroMoon: '#FFF1D6',
     heroCloud: 'rgba(255, 255, 255, 0.88)',
     heroMat: 'rgba(255, 255, 255, 0.06)',
+    heroCard: '#29292E',
+    heroCardLine: '#3E3E43',
   },
 } as const;
 

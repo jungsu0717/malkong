@@ -24,7 +24,7 @@
     "android": {
       "package": "com.yugabuddy.app",
       "adaptiveIcon": {
-        "backgroundColor": "#FDD686",
+        "backgroundColor": "#16161A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -43,11 +43,11 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FDD686",
+          "backgroundColor": "#16161A",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 160,
           "dark": {
-            "backgroundColor": "#0E0E11",
+            "backgroundColor": "#16161A",
             "image": "./assets/images/splash-icon.png"
           }
         }

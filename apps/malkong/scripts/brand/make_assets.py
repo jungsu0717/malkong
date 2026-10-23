@@ -1,4 +1,6 @@
-"""잘라 낸 캐릭터로 앱 그림을 만든다 — 아이콘 · 안드로이드 셋 · 알림 · 시작 화면 · 웹 · 로딩 부품."""
+"""잘라 낸 캐릭터로 앱 그림을 만든다 — 아이콘 · 안드로이드 셋 · 알림 · 시작 화면 · 웹 · 로딩 부품.
+2026-10-23 부터 앱 아이콘 · 적응형 전경 · 배경은 icon-dark.html(먹색 + 별, decisions/032)로 만들고, 테두리 흰 점은 clean-halo.mjs 로 지운다.
+아래의 노란 아이콘 부분은 예전 것이다."""
 from PIL import Image, ImageFilter
 import numpy as np, os
 OUT = 'assets'; os.makedirs(OUT, exist_ok=True)
