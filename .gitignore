@@ -11,3 +11,4 @@ node_modules/
 
 # Claude Code 개인 설정(이 PC 의 허용 규칙) — 커밋하지 않는다
 .claude/settings.local.json
+.claude/worktrees/
