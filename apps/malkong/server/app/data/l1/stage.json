@@ -900,9 +900,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "발달",
   "title": "짝짜꿍 같은 놀이를 함께 해요",
@@ -922,9 +920,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "발달",
   "title": "손을 흔들어 「빠이빠이」 해요",
@@ -944,9 +940,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "발달",
   "title": "엄마 · 아빠를 부르거나 특별한 이름으로 불러요",
@@ -966,9 +960,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "발달",
   "title": "「안 돼」를 알아들어요 — 잠깐 멈추거나 그만해요",
@@ -988,9 +980,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "발달",
   "title": "블록을 컵에 넣듯 물건을 통에 넣어요",
@@ -1010,9 +1000,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "발달",
   "title": "숨기는 걸 본 물건을 찾아요",
@@ -1032,9 +1020,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "발달",
   "title": "잡고 일어서요",
@@ -1054,9 +1040,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "발달",
   "title": "가구를 잡고 걸어요",
@@ -1076,9 +1060,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "발달",
   "title": "잡아 주면 뚜껑 없는 컵으로 마셔요",
@@ -1098,9 +1080,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "발달",
   "title": "엄지와 검지로 작은 것을 집어요",
@@ -1485,9 +1465,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "생활",
   "title": "하루 일을 말과 노래로 들려주기",
@@ -1507,9 +1485,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "생활",
   "title": "아기 말에 낱말 더해 다시 말하기",
@@ -1529,9 +1505,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "생활",
   "title": "가리키는 것에 말로 대답하기",
@@ -1551,9 +1525,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "생활",
   "title": "손을 쓰는 블록 · 장난감 놀이",
@@ -1573,9 +1545,7 @@
    9,
    10,
    11,
-   12,
-   13,
-   14
+   12
   ],
   "kind": "생활",
   "title": "손이나 튼튼한 가구를 잡고 걷기",
@@ -1605,6 +1575,1124 @@
    "name": "미국 CDC 영유아 학대성 머리 손상 예방",
    "url": "https://www.cdc.gov/child-abuse-neglect/about/about-abusive-head-trauma.html",
    "checked": "2026-10-22"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1511",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "놀 때 다른 아이를 따라 해요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1512",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "좋아하는 물건을 보여 줘요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1513",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "신나면 손뼉을 쳐요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1514",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "인형이나 장난감을 안아요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1515",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "안거나 뽀뽀하며 애정을 보여요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1516",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "「엄마」 「아빠」 말고 한두 낱말을 말하려 해요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1517",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "익숙한 물건 이름을 들으면 그쪽을 봐요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1518",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "몸짓과 말로 한 부탁을 따라요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1519",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "갖고 싶거나 도움이 필요하면 손가락으로 가리켜요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1520",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "전화기 · 컵 · 책을 제대로 쓰려 해요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1521",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "블록 같은 작은 것을 두 개 이상 쌓아요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1522",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "혼자 몇 걸음 걸어요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1523",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "발달",
+  "title": "손가락으로 음식을 집어 먹어요",
+  "body": "대부분(75% 이상)의 아이가 15개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1511",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "생활",
+  "title": "하려던 낱말을 말해 주기 — 「바」 하면 「공」",
+  "body": "아이가 「바」 하면 「공」처럼 하려던 낱말을 또박또박 말해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1512",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "생활",
+  "title": "가리키는 물건의 이름 말해 주기",
+  "body": "아이가 가리키면 이름을 말해 주고, 잠깐 기다렸다가 따라 하면 반겨 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1513",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "생활",
+  "title": "쉬운 일을 함께하기",
+  "body": "신발 가져오기, 간식을 가방에 넣기처럼 쉬운 일을 맡겨 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1514",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "생활",
+  "title": "블록 쌓고 무너뜨리기",
+  "body": "블록을 쌓아 주고 아이가 무너뜨리게 해요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1515",
+  "months": [
+   13,
+   14
+  ],
+  "kind": "생활",
+  "title": "뚜껑 없는 컵 · 숟가락 연습",
+  "body": "뚜껑 없는 컵으로 마시고 숟가락으로 먹어 보게 해요. 흘려도 괜찮아요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1811",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "떨어져 놀다가도 보호자가 가까이 있는지 돌아봐요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1812",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "재미있는 것을 손가락으로 가리켜 보여 줘요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1813",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "손을 씻겨 달라고 내밀어요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1814",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "함께 책을 몇 장 넘기며 봐요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1815",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "옷 입힐 때 팔을 넣거나 발을 들어 도와요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1816",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "「엄마」 「아빠」 말고 세 낱말 넘게 말하려 해요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1817",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "몸짓 없이 말로만 한 부탁을 따라요 — 「그거 줘」",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1818",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "빗자루질 같은 집안일을 따라 해요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1819",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "장난감 자동차를 밀듯 장난감을 쓰며 놀아요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1820",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "아무것도 잡지 않고 혼자 걸어요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1821",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "끄적끄적 낙서해요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1822",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "뚜껑 없는 컵으로 마셔요 — 가끔 흘려요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1823",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "손가락으로 집어 먹어요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1824",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "숟가락을 쓰려 해요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-1825",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "발달",
+  "title": "소파나 의자에 혼자 오르내려요",
+  "body": "대부분(75% 이상)의 아이가 18개월까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1811",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "생활",
+  "title": "인형에게 밥 먹이는 흉내 놀이",
+  "body": "숟가락을 주고 인형에게 밥 먹이는 흉내를 번갈아 해 봐요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1812",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "생활",
+  "title": "다른 사람의 기분을 말로 알려 주기",
+  "body": "「친구가 슬퍼 보이네, 장난감을 가져다줄까?」처럼 다른 사람의 기분과 다정하게 하는 법을 알려 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1813",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "생활",
+  "title": "두 가지 중에 고르게 하기",
+  "body": "티셔츠 두 장 가운데 고르게 하는 것처럼 쉬운 선택을 맡겨요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1814",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "생활",
+  "title": "몸 이름 알려 주기",
+  "body": "아이와 내 몸을 가리키며 눈 · 코 · 입 같은 이름을 말해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-1815",
+  "months": [
+   15,
+   16,
+   17
+  ],
+  "kind": "생활",
+  "title": "공 굴리기 · 밀고 끄는 장난감",
+  "body": "공을 주고받으며 굴리고, 밀거나 끄는 장난감으로 놀아요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2411",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "다른 사람이 다치거나 울면 알아채요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2412",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "처음 보는 상황에서 보호자 얼굴을 살펴요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2413",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "「곰 어디 있어?」 하면 책에서 가리켜요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2414",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "「우유 더」처럼 두 낱말을 이어 말해요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2415",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "물으면 몸의 두 군데 이상을 가리켜요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2416",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "뽀뽀를 날리거나 고개를 끄덕이는 몸짓을 해요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2417",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "한 손으로 통을 잡고 다른 손으로 뚜껑을 열어요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2418",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "장난감의 스위치 · 손잡이 · 단추를 써 보려 해요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2419",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "장난감 접시에 음식을 올리듯 두 가지를 함께 갖고 놀아요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2420",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "공을 차요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2421",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "뛰어요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2422",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "계단 몇 칸을 걸어서 올라가요 — 도움을 받아도 돼요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-dev-2423",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "발달",
+  "title": "숟가락으로 먹어요",
+  "body": "대부분(75% 이상)의 아이가 2세까지 하는 것 가운데 하나예요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-2411",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "생활",
+  "title": "서툰 말을 바른 소리로 다시 들려주기",
+  "body": "아이가 서툴게 말하면 바른 소리로 다시 말해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-2412",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "생활",
+  "title": "친구와 놀 때 곁에서 도와주기",
+  "body": "친구와 놀 때 곁에 있으면서 나눠 쓰기와 차례 지키기를 도와줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-2413",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "생활",
+  "title": "식사 준비를 함께하기",
+  "body": "가벼운 것을 식탁에 가져오게 하고 고맙다고 말해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-2414",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "생활",
+  "title": "공 차기 · 굴리기 · 던지기",
+  "body": "공을 차고 굴리고 던지며 놀아요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
+  },
+  "confidence": "참고",
+  "red_flag": false,
+  "status": "approved"
+ },
+ {
+  "id": "k-life-2415",
+  "months": [
+   18,
+   19,
+   20,
+   21,
+   22,
+   23,
+   24
+  ],
+  "kind": "생활",
+  "title": "도형 · 동물 퍼즐 맞추기",
+  "body": "쉬운 퍼즐을 맞추며 조각마다 이름을 말해 줘요.",
+  "source": {
+   "name": "미국 CDC 발달 이정표",
+   "url": "https://www.cdc.gov/act-early/milestones/2-years.html",
+   "checked": "2026-10-23"
   },
   "confidence": "참고",
   "red_flag": false,
