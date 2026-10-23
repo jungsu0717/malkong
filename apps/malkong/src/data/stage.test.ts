@@ -4,6 +4,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import {
@@ -12,6 +13,8 @@ import {
   dayNumber,
   daysSince,
   forMonth,
+  KNOW_COMMON,
+  KNOW_MUST,
   makeMemo,
   nextCheckpoint,
   poseOf,
@@ -77,9 +80,14 @@ test('발달 체크 단계와 항목 id', () => {
   assert.equal(checkpointFor(1), 2);
   assert.equal(checkpointFor(2), 4);
   assert.equal(checkpointFor(8), 9);
-  assert.equal(checkpointFor(15), 12);
+  assert.equal(checkpointFor(12), 12);
+  assert.equal(checkpointFor(13), 15);
+  assert.equal(checkpointFor(15), 18);
+  assert.equal(checkpointFor(18), 24);
+  assert.equal(checkpointFor(30), 24);
   assert.equal(nextCheckpoint(2), 4);
-  assert.equal(nextCheckpoint(12), null);
+  assert.equal(nextCheckpoint(12), 15);
+  assert.equal(nextCheckpoint(24), null);
   assert.equal(checklistIds(2).length, 11);
   assert.equal(checklistIds(2)[0], 'k-dev-0211');
   assert.deepEqual(tipIds(4).slice(0, 2), ['k-life-0001', 'k-life-0411']);
@@ -102,4 +110,40 @@ test('메모 — 앞뒤 빈칸을 빼고, 최근 것이 위로, 체크로 남긴
   assert.equal(b.ref, 'k-dev-0214');
   assert.ok(a.id.startsWith('mm-'));
   assert.deepEqual(sortMemos([a, b]).map((m) => m.text), ['4시간 잤어요', '처음으로 웃었어요']);
+});
+
+/** 앱에 실린 L1 — 승인된 것만 */
+type L1Row = { id: string; months: number[]; kind: string; status: string };
+const L1: L1Row[] = ['vaccination', 'checkup', 'development', 'care', 'parent', 'stage'].flatMap(
+  (f) => JSON.parse(readFileSync(new URL(`./l1/${f}.json`, import.meta.url), 'utf8')) as L1Row[],
+);
+const approved = new Map(L1.filter((i) => i.status === 'approved').map((i) => [i.id, i]));
+const byIds = (ids: string[]) => ids.map((id) => approved.get(id)).filter((i): i is L1Row => !!i);
+
+test('돌 뒤(12~24개월)에도 발달 체크 · 해 주면 좋아요 · 알아 두면 좋아요가 비지 않는다(task growth/006)', () => {
+  for (const [month, cp] of [[12, 12], [13, 15], [14, 15], [15, 18], [17, 18], [18, 24], [20, 24], [24, 24]]) {
+    assert.equal(checkpointFor(month), cp, `${month}개월`);
+    const checks = checklistIds(cp);
+    assert.ok(checks.length > 0 && checks.every((id) => approved.has(id)), `${month}개월 체크 항목이 모두 승인돼 있어야 해요`);
+    assert.ok(forMonth(byIds(tipIds(cp)), month).length >= 5, `${month}개월 해 주면 좋아요`);
+    assert.ok(forMonth(byIds(KNOW_COMMON), month).length > 0, `${month}개월 이맘때 흔해요`);
+    assert.ok(forMonth(byIds(KNOW_MUST), month).length > 0, `${month}개월 꼭 지켜요`);
+  }
+});
+
+test('15 · 18개월 · 두 돌 칸에 발달 단계 이름과 승인된 요약', () => {
+  const stops = stageStops(BIRTH);
+  for (const label of ['15개월', '18개월', '두 돌']) {
+    const stop = stops.find((s) => s.label === label);
+    assert.ok(stop?.milestone, label);
+    assert.ok(approved.has(stop.milestone.l1Id), `${label} 요약 ${stop.milestone.l1Id}`);
+  }
+});
+
+test('12개월 뒤 접종 · 검진 — DTaP 4차, 일본뇌염 · A형간염 다음 차수, 건강검진 4 · 5차', () => {
+  for (const id of ['k-vacc-1207', 'k-vacc-1501', 'k-vacc-1801', 'k-vacc-2401', 'k-chk-1801', 'k-chk-1802', 'k-chk-3001']) {
+    const item = approved.get(id);
+    assert.ok(item, id);
+    assert.ok(item.kind === '접종' || item.kind === '검진', id);
+  }
 });

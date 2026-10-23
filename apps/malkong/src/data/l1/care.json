@@ -613,5 +613,80 @@
     "confidence": "권고",
     "red_flag": false,
     "status": "approved"
+  },
+  {
+    "id": "k-life-1202",
+    "months": [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "생활",
+    "title": "떼쓰기는 이맘때 흔해요 — 피곤하거나 배고플 때 더",
+    "body": "이맘때는 떼를 쓰는 일이 흔하고, 피곤하거나 배고플 때 더 자주 일어나요. 다른 것으로 관심을 돌려 보거나 지나갈 때까지 기다린 뒤, 마음을 가라앉히도록 도와줘요.",
+    "source": {
+      "name": "미국 CDC 발달 이정표",
+      "url": "https://www.cdc.gov/act-early/milestones/15-months.html",
+      "checked": "2026-10-23"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-life-1203",
+    "months": [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "생활",
+    "title": "하지 말라는 말보다 바라는 행동을 칭찬해요",
+    "body": "바라는 행동을 했을 때 말이나 안아 주기로 칭찬하고, 하지 않았으면 하는 행동에는 반응을 줄여요. 「안 돼」만 말하기보다 대신 무엇을 하면 되는지 말해 주거나 보여 줘요.",
+    "source": {
+      "name": "미국 CDC 걸음마기(1~2세) 육아 도움말",
+      "url": "https://www.cdc.gov/child-development/positive-parenting-tips/toddlers-1-2-years.html",
+      "checked": "2026-10-23"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-life-1801",
+    "months": [18, 19, 20, 21, 22, 23, 24],
+    "kind": "생활",
+    "title": "배변 훈련은 서두르지 않아요 — 대부분 2~3세에 준비돼요",
+    "body": "대부분의 아이는 2~3세가 되어야 배변 훈련을 할 준비가 돼요. 너무 일찍 시키면 아이에게 스트레스가 되고 오히려 잘 안 될 수 있어요. 준비가 됐는지는 소아과 의사나 선생님과 상의해요.",
+    "source": {
+      "name": "미국 CDC 발달 이정표",
+      "url": "https://www.cdc.gov/act-early/milestones/18-months.html",
+      "checked": "2026-10-23"
+    },
+    "confidence": "참고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-safe-1202",
+    "months": [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "안전",
+    "title": "약 · 세제는 잠가 두고, 계단엔 안전문을 달아요",
+    "body": "약, 세제, 독이 될 수 있는 것은 잠가 둬요. 계단은 작은 안전문으로 막고, 다리미 · 히터 같은 가전과 가위 · 칼처럼 날카로운 것은 손이 닿지 않는 곳에 둬요.",
+    "source": {
+      "name": "미국 CDC 걸음마기(1~2세) 육아 도움말",
+      "url": "https://www.cdc.gov/child-development/positive-parenting-tips/toddlers-1-2-years.html",
+      "checked": "2026-10-23"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
+  },
+  {
+    "id": "k-safe-1203",
+    "months": [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
+    "kind": "안전",
+    "title": "차 안에 아이를 혼자 두지 않아요",
+    "body": "잠깐이라도 차 안에 아이를 혼자 두지 않아요.",
+    "source": {
+      "name": "미국 CDC 걸음마기(1~2세) 육아 도움말",
+      "url": "https://www.cdc.gov/child-development/positive-parenting-tips/toddlers-1-2-years.html",
+      "checked": "2026-10-23"
+    },
+    "confidence": "권고",
+    "red_flag": false,
+    "status": "approved"
   }
 ]

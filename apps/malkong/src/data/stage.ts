@@ -26,6 +26,9 @@ const MILESTONES: Record<number, { name: string; short: string }> = {
   6: { name: '뒤집기', short: '뒤집기' },
   9: { name: '혼자 앉기', short: '혼자 앉기' },
   12: { name: '잡고 서기', short: '잡고 서기' },
+  15: { name: '첫걸음', short: '첫걸음' },
+  18: { name: '혼자 걷기', short: '혼자 걷기' },
+  24: { name: '두 낱말 말하기', short: '두 낱말' },
 };
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
@@ -135,13 +138,18 @@ export function stageWindow(birthDate: string, now = new Date(), stops = stageSt
   return { stops: shown, progress: Math.min(1, Math.max(0, progress)), passed, next: nextIndex < 0 ? null : stops[nextIndex] };
 }
 
-/** 발달 체크의 단계 — 지금 개월 다음의 CDC 이정표(2 · 4 · 6 · 9 · 12개월) */
-export const CHECKPOINTS = [2, 4, 6, 9, 12] as const;
+/** 발달 체크의 단계 — 지금 개월 다음의 CDC 이정표(2 · 4 · 6 · 9 · 12 · 15 · 18 · 24개월) */
+export const CHECKPOINTS = [2, 4, 6, 9, 12, 15, 18, 24] as const;
 /** 단계마다 체크 항목 수 — L1 `k-dev-MM11` 부터 */
-const CHECK_COUNTS: Record<number, number> = { 2: 11, 4: 13, 6: 12, 9: 13, 12: 10 };
+const CHECK_COUNTS: Record<number, number> = { 2: 11, 4: 13, 6: 12, 9: 13, 12: 10, 15: 13, 18: 15, 24: 13 };
 
+/**
+ * 지금 개월에 볼 단계 — 다음 이정표. 돌(12개월)에는 12개월 목록을 그대로 보고, 13~14개월은 15개월,
+ * 15~17개월은 18개월, 18개월부터는 2세 목록이다(task growth/006)
+ */
 export function checkpointFor(month: number): number {
-  return CHECKPOINTS.find((cp) => month < cp) ?? 12;
+  if (month === 12) return 12;
+  return CHECKPOINTS.find((cp) => month < cp) ?? CHECKPOINTS[CHECKPOINTS.length - 1];
 }
 
 export function nextCheckpoint(cp: number): number | null {
@@ -159,9 +167,32 @@ export function tipIds(cp: number): string[] {
   return ['k-life-0001', ...Array.from({ length: 5 }, (_, i) => `k-life-${pad2(cp)}${pad2(11 + i)}`)];
 }
 
-/** 「알아 두면 좋아요」 — 흔한 것 · 꼭 지킬 것. 개월이 맞는 것만 보인다 */
-export const KNOW_COMMON = ['k-life-0003', 'k-sleep-0006', 'k-sleep-0401', 'k-feed-0001', 'k-parent-0001'];
-export const KNOW_MUST = ['k-sleep-0001', 'k-safe-0001', 'k-safe-0003', 'k-feed-0004'];
+/** 「알아 두면 좋아요」 — 흔한 것 · 꼭 지킬 것. 개월이 맞는 것만 보인다. 뒤쪽은 1~2세(task growth/006) */
+export const KNOW_COMMON = [
+  'k-life-0003',
+  'k-sleep-0006',
+  'k-sleep-0401',
+  'k-feed-0001',
+  'k-parent-0001',
+  'k-life-1202',
+  'k-life-1203',
+  'k-life-1801',
+  'k-sleep-1201',
+  'k-life-1201',
+  'k-feed-0607',
+];
+export const KNOW_MUST = [
+  'k-sleep-0001',
+  'k-safe-0001',
+  'k-safe-0003',
+  'k-feed-0004',
+  'k-safe-0002',
+  'k-safe-0005',
+  'k-feed-0606',
+  'k-safe-1202',
+  'k-safe-1203',
+  'k-safe-1201',
+];
 
 /** L1 제목 「깨어 있을 때 터미타임 — 지켜보는 가운데 엎드려 놀기」 → 앞뒤 둘로 */
 export function splitTitle(title: string): { head: string; tail: string | null } {
