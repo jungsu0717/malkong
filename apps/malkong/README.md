@@ -100,7 +100,7 @@ Claude 가 할 수 있는 준비는 끝났다(공공 지식 승인, 메모 가�
 2. ~~운영자 정보~~ — 2026-10-23 약관에 넣었다(문의 메일 `julian.studio.help@gmail.com`)
 3. **Expo 로그인과 첫 iOS 빌드의 애플 로그인** — Julian 이 직접 친다
 
-약관 웹 페이지(`/privacy` · `/terms` · `/support`)에 운영자 정보를 싣는 서버 배포는 Julian 승인 뒤.
+약관 웹 페이지(`/privacy` · `/terms` · `/support`)는 운영자 정보까지 2026-10-23 배포했다(revision 00023-c8c).
 폰(Expo Go)으로 볼 때는 패키지가 바뀌었으니 켜 둔 `npx expo start` 를 한 번 다시 켠다.
 
 ## 다른 PC 에서 시작하기
