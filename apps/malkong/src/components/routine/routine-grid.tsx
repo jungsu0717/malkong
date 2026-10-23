@@ -5,7 +5,8 @@
  * - 타이머: 누르면 타이머 시작 · 멈춤, 오른쪽 위 「+1분」, 목표가 있으면 아래 진행 막대
  * - 루틴 탭은 오늘 할 루틴만 넘긴다(다른 날 루틴은 탭 아래 한 줄, task today/003). 모양은 시안 C(task today/004)
  * - 편집 중이면 누르면 편집, 아니면 길게 눌러 편집. 마지막 칸은 「추가」
- * - 루틴이 적을 때는 아직 안 넣은 추천이 점선 버튼으로 뒤따르고, 누르면 바로 추가된다 — 하나 넣어도 나머지는 남는다
+ * - 아직 안 넣은 추천이 점선 버튼으로 뒤따르고(루틴이 적을 때는 지금 시기 추천 전부, 그 뒤에는 이 시기에 새로 들어온 것 두 개까지),
+ *   누르면 바로 추가, 길게 누르면 숨긴다(task today/005)
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -33,10 +34,11 @@ export function RoutineGrid({
   onEdit,
   onAdd,
   onQuickAdd,
+  onHideSuggestion,
 }: {
   /** 보일 순서대로 */
   items: { r: Routine; s: TodayState }[];
-  /** 루틴 뒤에 보일 추천 — 아직 안 넣은 것만, 루틴이 적을 때만 넘긴다 */
+  /** 루틴 뒤에 보일 추천 — 아직 안 넣고 숨기지 않은 것(recommend.ts gridSuggestions) */
   templates: RoutineTemplate[];
   now: Date;
   editing: boolean;
@@ -46,6 +48,8 @@ export function RoutineGrid({
   onEdit: (routine: Routine) => void;
   onAdd: () => void;
   onQuickAdd: (t: RoutineTemplate) => void;
+  /** 추천 버튼을 길게 눌러 숨긴다 */
+  onHideSuggestion: (t: RoutineTemplate) => void;
 }) {
   const window = useWindowDimensions();
   const [width, setWidth] = useState(() => Math.min(window.width, MaxContentWidth) - Gutter * 2);
@@ -78,7 +82,7 @@ export function RoutineGrid({
         />
       ))}
       {templates.map((t) => (
-        <TemplateTile key={t.title} template={t} width={tileWidth} onPress={() => onQuickAdd(t)} />
+        <TemplateTile key={t.title} template={t} width={tileWidth} onPress={() => onQuickAdd(t)} onLongPress={() => onHideSuggestion(t)} />
       ))}
       <AddTile width={tileWidth} onPress={onAdd} />
     </View>
@@ -179,18 +183,31 @@ function RoutineTile({
   );
 }
 
-/** 아직 안 넣은 추천 버튼 — 누르면 바로 추가된다 */
-function TemplateTile({ template, width, onPress }: { template: RoutineTemplate; width: number; onPress: () => void }) {
+/** 아직 안 넣은 추천 버튼 — 누르면 바로 추가, 길게 누르면 숨긴다 */
+function TemplateTile({
+  template,
+  width,
+  onPress,
+  onLongPress,
+}: {
+  template: RoutineTemplate;
+  width: number;
+  onPress: () => void;
+  onLongPress: () => void;
+}) {
   const c = useTheme();
   const sub = templateDetail(template);
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`${template.title} 추가`}
+      accessibilityHint="길게 누르면 이 추천을 숨겨요"
       onPress={() => {
         tap('success');
         onPress();
       }}
+      onLongPress={onLongPress}
+      delayLongPress={450}
       style={({ pressed }) => [styles.tile, styles.dashed, { width, borderColor: c.border, backgroundColor: pressed ? c.surface : 'transparent' }]}>
       <View>
         <View style={[styles.iconCircle, { backgroundColor: c.surface }]}>

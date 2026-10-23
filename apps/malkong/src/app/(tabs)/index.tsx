@@ -30,7 +30,7 @@ import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { monthStart } from '@/data/briefing';
 import { readSetting, writeSetting } from '@/data/db';
-import { routineRecommend } from '@/data/recommend';
+import { gridSuggestions, routineRecommend } from '@/data/recommend';
 import { happyMoment } from '@/data/review';
 import {
   dateLabel,
@@ -39,9 +39,9 @@ import {
   scheduleLabel,
   templateInput,
   timeLabel,
-  titleKey,
   todayPlan,
   type Routine,
+  type RoutineTemplate,
 } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { useNow } from '@/hooks/use-now';
@@ -49,6 +49,8 @@ import { useTheme } from '@/hooks/use-theme';
 
 /** 마지막으로 고른 보기 — 다음에도 그 보기로 연다(SPEC-MAIN-01) */
 const VIEW_KEY = 'routine_view';
+/** 길게 눌러 숨긴 추천 버튼의 이름(SPEC-MAIN-03) */
+const HIDDEN_SUGGESTIONS_KEY = 'routine.hiddenSuggestions';
 
 /** 큰 단추의 이름표 — 단계 · 재고 확인은 시트를 열고, 타이머는 켜고 끄고, 그 밖에는 바로 완료 */
 function actionLabel(r: Routine): string {
@@ -93,6 +95,21 @@ export default function RoutineScreen() {
       })
       .catch(() => undefined);
   }, []);
+  const [hiddenSuggestions, setHiddenSuggestions] = useState<string[]>([]);
+  useEffect(() => {
+    void readSetting(HIDDEN_SUGGESTIONS_KEY)
+      .then((v) => {
+        const list: unknown = v ? JSON.parse(v) : [];
+        if (Array.isArray(list)) setHiddenSuggestions(list.filter((x): x is string => typeof x === 'string'));
+      })
+      .catch(() => undefined);
+  }, []);
+  const hideSuggestion = (t: RoutineTemplate) => {
+    tap();
+    const next = [...hiddenSuggestions, t.title];
+    setHiddenSuggestions(next);
+    void writeSetting(HIDDEN_SUGGESTIONS_KEY, JSON.stringify(next)).catch(() => undefined);
+  };
   const setView = (v: RoutineView) => {
     tap();
     setViewState(v);
@@ -117,9 +134,8 @@ export default function RoutineScreen() {
   const plan = todayPlan(routines, logs, now);
   const rec = routineRecommend(age.month, 'home');
   const templates = rec.templates;
-  // 루틴이 세 개가 안 되면 아직 안 넣은 추천을 그리드 뒤에 함께 보인다 — 하나 넣어도 나머지가 사라지지 않게
-  const have = new Set(routines.map((r) => titleKey(r.title)));
-  const suggestions = routines.length < 3 && !arranging ? templates.filter((t) => !have.has(titleKey(t.title))) : [];
+  // 그리드 뒤의 점선 추천 — 루틴이 세 개가 안 되면 지금 시기 추천 전부, 그 뒤에는 이 시기에 새로 들어온 것 두 개까지(이유식 · 양치 …)
+  const suggestions = arranging ? [] : gridSuggestions(age.month, routines.map((r) => r.title), hiddenSuggestions);
   const edit = (r: Routine) => router.push({ pathname: '/routine-form', params: { id: r.id } });
   const onTimer = (r: Routine) => void (r.runningSince ? stopTimer(r.id) : startTimer(r.id));
   // 단계가 있으면 단계 시트, 재고 확인은 재고 확인 시트, 그 밖의 체크는 바로 완료 ↔ 되돌림
@@ -220,6 +236,7 @@ export default function RoutineScreen() {
                 onEdit={edit}
                 onAdd={() => setAdding(true)}
                 onQuickAdd={(t) => void addRoutine(templateInput(t))}
+                onHideSuggestion={hideSuggestion}
               />
             )}
           </View>
