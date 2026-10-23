@@ -45,6 +45,10 @@
   2026-10-22 할 일 탭을 세 칸(내 할 일 · 장보기 · 아기 일정, [topic/009](docs/task/topic/009-todo-three-tabs.md))으로, 성장 탭을 한눈 요약 + 상세 화면 셋
   (발달 체크 · 해 주면 좋아요 · 알아 두면 좋아요, [growth/005](docs/task/growth/005-stage-depth.md))으로 바꿨다. 성장 탭의 새 공공 지식 85개는 같은 날 원문과 대조해 승인했다(판 2026.10.4).
   같은 날 처음 쓰는 부모로 하루 써 보고 불편한 곳 여섯을 고쳤고([common/023](docs/task/common/023-persona-polish.md)), Expo SDK 57 패치 버전을 맞췄다(expo-doctor 21/21 통과).
+  2026-10-23 아이콘 · 시작 화면을 먹색 + 별로, 로고(글자 + 별)([decisions/032](docs/decisions/032-dark-icon-logo-splash.md)), 스토어 리뷰 요청([my/010](docs/task/my/010-store-review-prompt.md)).
+  같은 날 엄마 · 아빠 × 신생아 · 6개월 이후 페르소나 시험 뒤 고친 것 — 12~24개월 공공 지식(접종 · 검진 · CDC 15 · 18 · 24개월, [growth/006](docs/task/growth/006-toddler-knowledge.md)),
+  월령별 루틴 · 할 일 추천(2개월부터 스와들 대신 수면 조끼, [today/005](docs/task/today/005-age-recommend.md)), 생일이 바뀌면 앱 할 일 다시 맞추기 · 초대 코드로 바로 참여 ·
+  온라인 쇼핑몰 묶기([common/026](docs/task/common/026-persona-fixes.md)), 성장 탭 오늘의 놀이 · 성장 일기 · 성장 소식([growth/007](docs/task/growth/007-growth-plus.md)).
   아래 「앱」 줄은 방향 전환 전의 기록이다
 - **저장소**: 2026-10-14 에 저장소가 여러 앱을 담는 `julian-studio` 가 되면서 육아버디는 `apps/malkong/` 으로 옮겼다. 모든 앱에 통하는 규칙은 루트 [AGENTS.md](../../AGENTS.md)
 - **앱**: 시안 B 「단정한 비서」([decisions/012](docs/decisions/012-chat-first-three-tabs.md)), 탭 다섯 —
@@ -58,7 +62,7 @@
   브리핑은 기기 안 규칙과 문구 틀로 만든다([decisions/018](docs/decisions/018-daily-care-briefing.md)). 부모 돌봄 L1 넷 승인(2026-10-04).
   온보딩은 생일 → 브리핑 알림 시각. 만화 5컷([my/006](docs/task/my/006-intro-toon.md))은 마이 제목 줄 오른쪽 「육아버디 스토리」에서 본다(처음 실행에는 안 뜸, [my/008](docs/task/my/008-intro-in-my.md), 2026-10-12). 광고(AdMob 배너·보상형), 캐릭터 버디 아이콘
 - **Expo 계정** `@julian-malkong/malkong` 연결, 앱 식별자 `com.yugabuddy.app`(iOS · Android, app.json). Julian 아이폰(Expo Go)으로 볼 수 있다
-- **지식(L1)**: 승인된 165건(2026-10-22, 이 줄 아래 설명은 예전 것) — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호·부모 돌봄(미국 CDC)
+- **지식(L1)**: 판 2026.10.5 — 0~35개월 접종 · 검진, CDC 2개월~2세 발달 · 놀이 · 알아 둘 것(이 줄 아래 설명은 예전 것) — 접종·검진(질병관리청·건보공단 일정)과 발달·수유·수면·생활·안전·위험 신호·부모 돌봄(미국 CDC)
 - **서버**: `/v1/ask`(위험 신호 규칙 → L1 검색 → Gemini 3.5 Flash-Lite → 답 검사), 기기 키, 재시도 안전, 피드백,
   보상형 광고 확인(SSV), 하루 한도 정책 v2 — 정밀 답변 10회 · 광고 1편에 5회(하루 2편) · 그 뒤 일반 기준 답 20회 ·
   서버 전체 하루 모델 비용 천장 330원([decisions/019](docs/decisions/019-generous-limits-hard-daily-budget.md)).
@@ -90,18 +94,17 @@
   버디의 짐작은 확인 뒤 기록([ask/008](docs/task/ask/008-confirm-guess.md)) · 대화는 최근 50줄부터, 날짜에서 그날 대화로([ask/009](docs/task/ask/009-recent-window-and-day-jump.md))
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점 (2026-10-22 저녁) — 애플 먼저, Julian 만 할 수 있는 것
+## 다음 시작점 (2026-10-23) — 애플 먼저, Julian 만 할 수 있는 것
 
 Julian(2026-10-22): 애플만 먼저 출시한다. 순서 전체는 [common/008](docs/task/common/008-first-release-check.md) 「애플 먼저」.
-Claude 가 할 수 있는 준비는 끝났다(공공 지식 승인, 메모 가족 공유, 서버 정리 · 배포, 약관 · 지원 웹 페이지, 스토어 그림 · 문안 · 입력 칸 답안,
-빌드 번호 자동 관리 · 개인정보 매니페스트 · 암호화 질문, 스토어 리뷰 요청). Julian 몫은 아래와 같다.
+애플 개발자 · AdMob(iOS id 둘) · 운영자 정보는 끝났다(2026-10-23). 남은 것은 둘이다.
 
-1. ~~Apple Developer 가입~~ · ~~AdMob iOS 앱 · 배너~~ — 2026-10-23 끝(id 는 app.json · eas.json 에 넣었다)
-2. ~~운영자 정보~~ — 2026-10-23 약관에 넣었다(문의 메일 `julian.studio.help@gmail.com`)
-3. **Expo 로그인과 첫 iOS 빌드의 애플 로그인** — Julian 이 직접 친다
+1. **서버 배포 승인(「배포」)** — 공공 지식 판 2026.10.5(12~24개월)와 의학 정보 고지 출처가 서버 사본 · 약관 웹 페이지에 나간다
+2. **첫 iOS 빌드** — 새 Ubuntu 터미널에서 `cd ~/personal/malkong/apps/malkong && npx eas-cli@latest build --platform ios --profile production`,
+   애플 로그인과 인증 코드를 직접 친다. 그 뒤 App Store Connect 새 앱 · TestFlight · 심사 제출은 common/008 「애플 먼저」 6~8
 
-약관 웹 페이지(`/privacy` · `/terms` · `/support`)는 운영자 정보까지 2026-10-23 배포했다(revision 00023-c8c).
-폰(Expo Go)으로 볼 때는 패키지가 바뀌었으니 켜 둔 `npx expo start` 를 한 번 다시 켠다.
+출시 뒤 첫 업데이트 후보: 키 · 몸무게 · 달마다 카드(시안 「출시 뒤 제안」), 구글 플레이(테스터 12명 · 14일), `app-ads.txt` 용 도메인.
+폰(Expo Go)으로 볼 때는 켜 둔 `npx expo start` 를 한 번 다시 켠다.
 
 ## 다른 PC 에서 시작하기
 
