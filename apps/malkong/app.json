@@ -57,7 +57,7 @@
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-3940256099942544~3347511713",
-          "iosAppId": "ca-app-pub-3940256099942544~1458002511",
+          "iosAppId": "ca-app-pub-7537990576991165~3022494902",
           "delayAppMeasurementInit": true,
           "userTrackingUsageDescription": "맞춤형 광고를 보여 드리는 데만 써요. 허용하지 않아도 육아버디는 그대로 쓸 수 있어요."
         }
