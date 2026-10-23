@@ -37,11 +37,17 @@ export async function cancelSnooze(_todoId: string): Promise<void> {}
 
 export async function scheduleEveningAlerts(_on: boolean, _days: MorningDay[], _hour: number): Promise<void> {}
 
+export async function scheduleGrowthNotices(_items: { id: string; at: Date; title: string; body: string }[]): Promise<void> {}
+
 export async function scheduleDeliveryChecks(_items: { id: string; title: string; at: Date }[]): Promise<void> {}
 
 export function onAlertAction(
   _target: 'todo' | 'routine',
   _listener: (action: AlertAction, id: string, title: string, body: string | null) => void,
 ): () => void {
+  return () => undefined;
+}
+
+export function onGrowthAlertOpened(_listener: () => void): () => void {
   return () => undefined;
 }

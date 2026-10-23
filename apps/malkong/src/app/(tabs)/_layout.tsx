@@ -4,11 +4,14 @@ import { Platform } from 'react-native';
 
 import { RepeatCheckIcon, TeddyIcon } from '@/components/baby-icons';
 import { FontFamily } from '@/constants/theme';
+import { useGrowthAlerts } from '@/hooks/use-growth';
 import { useTheme } from '@/hooks/use-theme';
 
 /** 탭 넷 — 루틴(첫 화면) · 할 일(장보기 · 준비 목록 포함) · 성장 · 마이 (decisions/027 · 029 · 031) */
 export default function TabLayout() {
   const c = useTheme();
+  // 성장 소식(주차 · 달이 바뀌는 날 아침) — 앱을 열 때마다 다시 건다
+  useGrowthAlerts();
 
   return (
     <Tabs

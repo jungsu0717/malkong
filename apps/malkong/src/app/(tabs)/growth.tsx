@@ -2,7 +2,8 @@
  * 성장 탭 (SPEC-STAGE-01~03, task growth/004 · 005, decisions/031) — 지금 시기의 우리 아기, 한 화면 요약.
  *
  * 위쪽 먹색 그림(growth-hero)에 태어난 지 며칠 · 몇 주차, 시기에 맞는 버디, 달마다 · 50일 · 100일 칸의 막대.
- * 그 아래 목록 하나에 네 줄 — 발달 체크 · 해 주면 좋아요 · 알아 두면 좋아요 · 우리 아기 메모. 긴 내용은 줄을 눌러 들어가는 상세 화면에.
+ * 그 아래 날마다 바뀌는 「오늘의 놀이」(task growth/007), 목록 하나에 세 줄 — 발달 체크 · 성장 일기 · 알아 두면 좋아요.
+ * 긴 내용은 줄을 눌러 들어가는 상세 화면에.
  * 내용은 승인된 공공 지식(L1)이고, 출처는 화면 대신 「의학 정보 출처와 한계 고지」에 모은다.
  */
 
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AdBanner } from '@/components/ad-banner';
 import { GrowthHero } from '@/components/growth/growth-hero';
 import { KnowledgeSheet } from '@/components/growth/knowledge-sheet';
+import { TodayPlay } from '@/components/growth/today-play';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -23,6 +25,7 @@ import { tap, type IconName } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { itemById, itemsByIds, type KnowledgeItem } from '@/data/l1';
+import { isPlayMemo } from '@/data/growth-plus';
 import { useMemos } from '@/data/memos-context';
 import {
   KNOW_COMMON,
@@ -34,7 +37,6 @@ import {
   poseOf,
   splitTitle,
   stageWindow,
-  tipIds,
   weekOf,
   type StageStop,
 } from '@/data/stage';
@@ -62,9 +64,9 @@ export default function GrowthScreen() {
   const checks = itemsByIds(checklistIds(cp));
   const doneRefs = new Set(memos.map((m) => m.ref).filter(Boolean));
   const done = checks.filter((i) => doneRefs.has(i.id)).length;
-  const tips = forMonth(itemsByIds(tipIds(cp)), age.month);
   const common = forMonth(itemsByIds(KNOW_COMMON), age.month);
-  const last = memos[0];
+  // 성장 일기 줄에는 놀이를 뺀 마지막 기록(메모 · 발달 체크)
+  const last = memos.find((m) => !isPlayMemo(m));
 
   const openStop = (s: StageStop) => {
     if (s.milestone) {
@@ -83,6 +85,7 @@ export default function GrowthScreen() {
         <GrowthHero topInset={insets.top} days={dayNumber(baby.birthDate, now)} week={weekOf(days)} pose={poseOf(age.month)} stage={stage} onStop={openStop} />
 
         <View style={styles.body}>
+          <TodayPlay birthDate={baby.birthDate} now={now} />
           <View style={[styles.list, { borderColor: c.border }]}>
             <Row
               icon="checkbox-outline"
@@ -91,19 +94,16 @@ export default function GrowthScreen() {
               right={checks.length > 0 ? <Progress done={done} total={checks.length} /> : null}
               onPress={() => router.push('/growth-check')}
             />
-            {tips.length > 0 && (
-              <Row icon="chatbubble-outline" title="해 주면 좋아요" sub={heads(tips)} divider onPress={() => router.push('/growth-tips')} />
-            )}
-            {common.length > 0 && (
-              <Row icon="information-circle-outline" title="알아 두면 좋아요" sub={heads(common)} divider onPress={() => router.push('/growth-know')} />
-            )}
             <Row
-              icon="create-outline"
-              title="우리 아기 메모"
+              icon="book-outline"
+              title="성장 일기"
               sub={last ? `D+${dayNumber(baby.birthDate, new Date(last.at))} · ${last.text}` : '처음 웃은 날을 적어 두세요'}
               divider
               onPress={() => router.push('/memos')}
             />
+            {common.length > 0 && (
+              <Row icon="information-circle-outline" title="알아 두면 좋아요" sub={heads(common)} divider onPress={() => router.push('/growth-know')} />
+            )}
           </View>
         </View>
       </ScrollView>
@@ -175,6 +175,7 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: Gutter,
     paddingTop: 12,
+    gap: 12,
     width: '100%',
     maxWidth: MaxContentWidth,
     alignSelf: 'center',

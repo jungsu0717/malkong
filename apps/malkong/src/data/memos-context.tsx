@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { deleteMemoRow, readMemoRows, upsertMemoRow } from './db';
 import { noteDeleted } from './family';
+import { playRef } from './growth-plus';
 import { makeMemo, sortMemos, type Memo } from './stage';
 import { onRemoteChange, requestSync } from './sync-events';
 
@@ -17,6 +18,8 @@ type MemosValue = {
   addMemo: (text: string) => Promise<void>;
   /** 발달 체크 — 그 항목의 메모가 있으면 지우고, 없으면 오늘 날짜로 남긴다 */
   toggleCheck: (ref: string, text: string) => Promise<void>;
+  /** 오늘의 놀이 「했어요」 — 오늘 그 놀이의 메모가 있으면 지우고, 없으면 남긴다(SPEC-STAGE-04) */
+  togglePlay: (itemId: string, name: string) => Promise<boolean>;
   updateMemo: (id: string, text: string) => Promise<void>;
   removeMemo: (id: string) => Promise<void>;
 };
@@ -81,6 +84,23 @@ export function MemosProvider({ children }: { children: ReactNode }) {
     [memos, drop],
   );
 
+  const togglePlay = useCallback(
+    async (itemId: string, name: string) => {
+      const ref = playRef(itemId, new Date());
+      const have = memos.find((m) => m.ref === ref);
+      if (have) {
+        await drop(have.id);
+        return false;
+      }
+      const memo = makeMemo(name, new Date(), ref);
+      await upsertMemoRow(memo);
+      setMemos((prev) => sortMemos([memo, ...prev]));
+      requestSync();
+      return true;
+    },
+    [memos, drop],
+  );
+
   const updateMemo = useCallback(
     async (id: string, text: string) => {
       const before = memos.find((m) => m.id === id);
@@ -96,8 +116,8 @@ export function MemosProvider({ children }: { children: ReactNode }) {
   const removeMemo = drop;
 
   const value = useMemo(
-    () => ({ memos, loading, addMemo, toggleCheck, updateMemo, removeMemo }),
-    [memos, loading, addMemo, toggleCheck, updateMemo, removeMemo],
+    () => ({ memos, loading, addMemo, toggleCheck, togglePlay, updateMemo, removeMemo }),
+    [memos, loading, addMemo, toggleCheck, togglePlay, updateMemo, removeMemo],
   );
   return <MemosContext.Provider value={value}>{children}</MemosContext.Provider>;
 }

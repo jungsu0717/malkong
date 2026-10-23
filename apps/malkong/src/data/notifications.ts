@@ -1,5 +1,6 @@
 /**
- * 기기가 스스로 띄우는 로컬 알림 — 아침 알림(SPEC-TOPIC-09, 일주일 치를 날짜마다), 할 일 알림(SPEC-TOPIC-09), 루틴 알림(SPEC-MAIN-04).
+ * 기기가 스스로 띄우는 로컬 알림 — 아침 알림(SPEC-TOPIC-09, 일주일 치를 날짜마다), 할 일 알림(SPEC-TOPIC-09), 루틴 알림(SPEC-MAIN-04),
+ * 성장 소식(SPEC-STAGE-06, 주차 · 달이 바뀌는 날 아침).
  *
  * 서버 푸시가 아니다 — 기기 토큰을 서버에 두지 않는다. 아침 알림과 할 일 알림을 누르면 할 일 탭으로 연다.
  * 알림 본문에는 아기 이름과 기록 내용을 넣지 않는다 — 잠금 화면에 보이므로. 할 일 알림은 사용자가 적은 할 일 제목만 보인다.
@@ -29,6 +30,35 @@ const TODO_LIMIT = 20;
 const ROUTINE_PREFIX = 'routine-';
 const ROUTINE_TYPE = 'routine';
 const ROUTINE_CATEGORY = 'routineActions';
+const GROWTH_PREFIX = 'growth-';
+const GROWTH_TYPE = 'growth';
+
+/** 성장 소식을 누르고 들어오면 성장 탭으로 */
+export function onGrowthAlertOpened(listener: () => void): () => void {
+  const handle = (response: Notifications.NotificationResponse | null) => {
+    if (response?.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER || response.notification.request.content.data?.type !== GROWTH_TYPE) return;
+    Notifications.clearLastNotificationResponse();
+    listener();
+  };
+  handle(Notifications.getLastNotificationResponse());
+  const sub = Notifications.addNotificationResponseReceivedListener(handle);
+  return () => sub.remove();
+}
+
+/** 성장 소식(SPEC-STAGE-06) — 주차 · 달이 바뀌는 날 아침. 걸린 것을 지우고 다시 건다. `items` 가 비면 끈 것 */
+export async function scheduleGrowthNotices(items: { id: string; at: Date; title: string; body: string }[]): Promise<void> {
+  await cancelPrefix(GROWTH_PREFIX);
+  if (items.length === 0 || !(await notificationsAllowed())) return;
+  for (const item of items) {
+    if (item.at.getTime() <= Date.now()) continue;
+    await Notifications.scheduleNotificationAsync({
+      identifier: `${GROWTH_PREFIX}${item.id}`,
+      content: { title: item.title, body: item.body, data: { type: GROWTH_TYPE } },
+      trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: item.at, channelId: CHANNEL_ID },
+    });
+  }
+}
+
 /** 전날 저녁 미리(task topic/006) */
 const EVENING_PREFIX = 'evening-day-';
 /** 받으셨나요(SPEC-SHOP-04) */

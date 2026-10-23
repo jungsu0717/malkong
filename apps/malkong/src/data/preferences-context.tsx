@@ -13,6 +13,8 @@ import { cancelRecordAlerts } from './notifications';
  * 알림을 거는 것은 그날 할 일을 아는 todos-context 가 이 값을 보고 한다(task topic/002)
  */
 const BRIEFING_TIME_KEY = 'briefing_time';
+/** 성장 소식(주차 · 달이 바뀌는 날 아침 알림, SPEC-STAGE-06) — 기본은 켬 */
+const GROWTH_ALERTS_KEY = 'growth_alerts';
 export const DEFAULT_BRIEFING_TIME = '08:00';
 
 type PreferencesValue = {
@@ -22,6 +24,9 @@ type PreferencesValue = {
   briefingTime: string | null;
   /** 바꾸면 todos-context 가 알림을 다시 건다 — 허락은 부르는 쪽이 먼저 받는다 */
   setBriefingTime: (time: string | null) => Promise<void>;
+  /** 성장 소식 — 주차 · 달이 바뀌는 날 아침 */
+  growthAlerts: boolean;
+  setGrowthAlerts: (on: boolean) => Promise<void>;
 };
 
 const PreferencesContext = createContext<PreferencesValue | null>(null);
@@ -29,14 +34,17 @@ const PreferencesContext = createContext<PreferencesValue | null>(null);
 export function PreferencesProvider({ children }: { children: React.ReactNode }) {
   const [briefingTime, setTime] = useState<string | null>(DEFAULT_BRIEFING_TIME);
   const [loading, setLoading] = useState(true);
+  const [growthAlerts, setGrowth] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     // 예전 기록 알림을 걸어 둔 폰이 있다 — 기록 기능을 뺐으니 지운다(decisions/030)
     void cancelRecordAlerts().catch(() => undefined);
-    readSetting(BRIEFING_TIME_KEY)
-      .then((time) => {
-        if (!cancelled) setTime(time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME));
+    Promise.all([readSetting(BRIEFING_TIME_KEY), readSetting(GROWTH_ALERTS_KEY)])
+      .then(([time, growth]) => {
+        if (cancelled) return;
+        setTime(time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME));
+        setGrowth(growth !== 'off');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -51,7 +59,15 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     await writeSetting(BRIEFING_TIME_KEY, time ?? 'off');
   }, []);
 
-  const value = useMemo(() => ({ loading, briefingTime, setBriefingTime }), [loading, briefingTime, setBriefingTime]);
+  const setGrowthAlerts = useCallback(async (on: boolean) => {
+    setGrowth(on);
+    await writeSetting(GROWTH_ALERTS_KEY, on ? 'on' : 'off');
+  }, []);
+
+  const value = useMemo(
+    () => ({ loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts }),
+    [loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts],
+  );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
 }
