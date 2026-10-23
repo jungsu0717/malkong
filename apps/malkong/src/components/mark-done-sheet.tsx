@@ -60,11 +60,6 @@ export function MarkDoneSheet({
           ]}>
           <View style={[styles.grabber, { backgroundColor: colors.surfaceStrong }]} />
           <ThemedText type="title">{life ? '확인한 항목 선택' : '완료한 항목 선택'}</ThemedText>
-          <ThemedText type="small" style={{ color: colors.textSecondary }}>
-            {life
-              ? '확인한 항목만 골라 주세요'
-              : `${items.length > 1 ? '완료한 항목만 골라 주세요. ' : ''}날짜는 입력하지 않아도 돼요`}
-          </ThemedText>
 
           <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
             {items.map((item) => {

@@ -126,7 +126,8 @@ export function ShopContent({ shop }: { shop: Topic }) {
                 <ShopRow
                   key={t.id}
                   todo={t}
-                  detail={t.source === 'stock' ? '재고 확인에서 추가' : undefined}
+                  // 온라인 묶음에서는 쇼핑몰 이름(「쿠팡」)을 작게
+                  detail={t.source === 'stock' ? '재고 확인에서 추가' : g.place === ONLINE && t.store && t.store !== ONLINE ? t.store : undefined}
                   divider={i > 0}
                   onCheck={() => void toggleDone(t.id)}
                   onLong={() => setEditing(t)}

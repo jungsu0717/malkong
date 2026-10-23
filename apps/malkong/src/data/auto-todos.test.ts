@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { addMonths, autoRulesToAdd, birthOf, milestoneDays, upcomingAuto } from './auto-todos.ts';
+import { AUTO_RULES, addMonths, autoRulesToAdd, birthOf, milestoneDays, reconcileAuto, upcomingAuto } from './auto-todos.ts';
 
 const ymd = (d: Date) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 const refs = (birth: string, now: Date, have: string[] = []) =>
@@ -48,4 +48,24 @@ test('다가오는 할 일은 가까운 순', () => {
 
 test('달 더하기 — 없는 날은 말일', () => {
   assert.equal(ymd(addMonths(new Date(2026, 0, 31), 1)), '2026-2-28');
+});
+
+test('생일이 바뀌면 — 안 끝낸 앱 할 일은 새 생일로, 끝낸 것과 직접 적은 것은 그대로(task common/026)', () => {
+  const now = new Date(2026, 9, 15);
+  const oldBirth = birthOf('2025-12-20');
+  const newBirth = birthOf('2025-11-01');
+  const due = (birth: Date, ref: string) => AUTO_RULES.find((r) => r.ref === ref)!.due(birth).toISOString();
+  const todos = [
+    // 돌잔치 장소 예약 — 새 생일로는 한참 지나서 지운다
+    { id: 'a', ref: 'day:y1-party', dueAt: due(oldBirth, 'day:y1-party'), doneAt: null },
+    // 돌상 준비 — 새 생일로 지금 보일 때라 기한만 고친다
+    { id: 'b', ref: 'day:y1-table', dueAt: due(oldBirth, 'day:y1-table'), doneAt: null },
+    // 끝낸 것 · 직접 적은 것 · 이미 맞는 것
+    { id: 'c', ref: 'day:y1-photo', dueAt: due(oldBirth, 'day:y1-photo'), doneAt: now.toISOString() },
+    { id: 'd', ref: null, dueAt: null, doneAt: null },
+    { id: 'e', ref: 'size:carseat-9', dueAt: due(newBirth, 'size:carseat-9'), doneAt: null },
+  ];
+  const { update, remove } = reconcileAuto(todos, newBirth, now);
+  assert.deepEqual(remove, ['a']);
+  assert.deepEqual(update, [{ id: 'b', dueAt: due(newBirth, 'day:y1-table') }]);
 });

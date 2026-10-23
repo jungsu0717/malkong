@@ -19,6 +19,7 @@ import { useTheme } from '@/hooks/use-theme';
  * 온보딩 — 생일 하나로 시작하고(SPEC-MY-01), 아침 브리핑 알림 시각을 묻는다(SPEC-HOME-06).
  * 이름은 선택이고, 그 밖의 정보는 요구하지 않는다. 나머지는 대화에서 쌓인다.
  * `?edit=1` 로 들어오면 마이의 프로필 수정으로 쓰인다(SPEC-MY-02) — 그때는 알림을 묻지 않는다.
+ * 가족에게 초대받은 사람은 생일 대신 「초대 코드가 있어요」로 바로 참여한다 — 아기는 가족의 아기로 들어온다(task common/026).
  */
 export default function OnboardingScreen() {
   const c = useTheme();
@@ -207,6 +208,14 @@ export default function OnboardingScreen() {
               busy={saving}
               onPress={saveBirthday}
             />
+            {!isEdit && (
+              <Button
+                label="초대 코드가 있어요"
+                variant="ghost"
+                disabled={saving}
+                onPress={() => router.push({ pathname: '/family', params: { from: 'onboarding' } })}
+              />
+            )}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>

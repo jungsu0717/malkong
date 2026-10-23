@@ -3,7 +3,8 @@
  *
  * 접종 · 검진(공공 일정), 기념일 · 사이즈 바꾸기(생일로 계산)를 날짜순으로 「이번 달 · 다음 달 · 그 뒤」에 나눈다.
  * 줄은 내 할 일과 같은 모양 — 동그라미 · 이름 · 작은 이름표와 날짜 · 오른쪽 D-day. 아직 목록에 생기지 않은 앞날 일정은 동그라미 대신 달력.
- * 접종 · 검진의 동그라미는 무엇을 했는지 고르는 시트를 연다. 지난 일정은 「지난 일정 N개 보기」로 접어 둔다.
+ * 접종 · 검진의 동그라미는 무엇을 했는지 고르는 시트를 연다.
+ * 맨 위 「지난 일정」에는 지난달까지 기한이었는데 아직 안 한 앱 할 일(「지남」)을 두고, 놓친 접종 · 검진은 그 아래 「지난 접종 · 검진 N개 보기」로 접어 둔다(task common/026).
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -128,9 +129,12 @@ export function BabySchedule() {
     ),
   ].sort((a, b) => a.at - b.at);
 
+  const thisStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const next1 = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
   const next2 = new Date(now.getFullYear(), now.getMonth() + 2, 1).getTime();
-  const thisMonth = rows.filter((r) => r.at < next1);
+  // 지난달까지 기한이었던 앱 할 일은 「이번 달」이 아니라 「지난 일정」에
+  const overdue = rows.filter((r) => r.todo && r.at < thisStart);
+  const thisMonth = rows.filter((r) => r.at < next1 && !overdue.includes(r));
   const nextMonth = rows.filter((r) => r.at >= next1 && r.at < next2);
   const later = rows.filter((r) => r.at >= next2).slice(0, LATER_LIMIT);
   const missed = groups.filter((g) => g.status === 'missed');
@@ -167,14 +171,10 @@ export function BabySchedule() {
           </ThemedText>
         </Card>
       ) : null}
-      {section('이번 달', thisMonth)}
-      {section('다음 달', nextMonth)}
-      {section('그 뒤', later)}
-      {missed.length > 0 &&
-        (showPast ? (
-          section(
-            '지난 일정',
-            missed.map((g) => ({
+      {section('지난 일정', [
+        ...overdue,
+        ...(showPast
+          ? missed.map((g) => ({
               key: g.key,
               at: 0,
               title: g.label,
@@ -183,15 +183,19 @@ export function BabySchedule() {
               right: null,
               future: false,
               group: g,
-            })),
-          )
-        ) : (
-          <Pressable accessibilityRole="button" onPress={() => setShowPast(true)} style={styles.past}>
-            <ThemedText type="label" style={{ color: c.accentText, fontWeight: 600 }}>
-              지난 일정 {missed.length}개 보기
-            </ThemedText>
-          </Pressable>
-        ))}
+            }))
+          : []),
+      ])}
+      {missed.length > 0 && !showPast && (
+        <Pressable accessibilityRole="button" onPress={() => setShowPast(true)} style={styles.past}>
+          <ThemedText type="label" style={{ color: c.accentText, fontWeight: 600 }}>
+            지난 접종 · 검진 {missed.length}개 보기
+          </ThemedText>
+        </Pressable>
+      )}
+      {section('이번 달', thisMonth)}
+      {section('다음 달', nextMonth)}
+      {section('그 뒤', later)}
 
       {markDone.sheet}
       <TodoSheet

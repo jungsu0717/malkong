@@ -86,6 +86,31 @@ export function autoRulesToAdd(birth: Date, now: Date, have: Set<string>): AutoR
   });
 }
 
+/**
+ * 생일이 바뀌었을 때(프로필 수정 · 가족 아기로 바뀜) — 앱이 만든 할 일 중 안 끝낸 것을 새 생일에 맞춘다(task common/026).
+ * 새 기한이 지금 보일 때(lead ~ grace)면 기한만 고치고, 아직 보일 때가 아니거나 한참 지났으면 지운다 — 때가 되면 autoRulesToAdd 가 다시 만든다.
+ * 끝낸 것과 사용자가 적은 것은 그대로 둔다. 생일이 바뀔 때만 부른다(사용자가 고친 기한을 덮지 않게).
+ */
+export function reconcileAuto(
+  todos: { id: string; ref: string | null; dueAt: string | null; doneAt: string | null }[],
+  birth: Date,
+  now: Date,
+): { update: { id: string; dueAt: string }[]; remove: string[] } {
+  const today = startOfDay(now).getTime();
+  const update: { id: string; dueAt: string }[] = [];
+  const remove: string[] = [];
+  for (const t of todos) {
+    const rule = ruleOf(t.ref);
+    if (!rule || t.doneAt) continue;
+    const due = rule.due(birth);
+    if (t.dueAt === due.toISOString()) continue;
+    const shown = today >= due.getTime() - rule.lead * DAY_MS && today <= due.getTime() + rule.grace * DAY_MS;
+    if (shown) update.push({ id: t.id, dueAt: due.toISOString() });
+    else remove.push(t.id);
+  }
+  return { update, remove };
+}
+
 /** 주제 화면의 「다가오는 할 일」 — 아직 할 일로 만들지 않은 것 중 기한이 오늘 뒤인 것, 가까운 순 */
 export function upcomingAuto(kind: AutoKind, birth: Date, now: Date, have: Set<string>): { rule: AutoRule; due: Date }[] {
   const today = startOfDay(now).getTime();

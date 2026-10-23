@@ -10,7 +10,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-import { autoRulesToAdd, birthOf } from './auto-todos';
+import { autoRulesToAdd, birthOf, reconcileAuto } from './auto-todos';
 import { useBaby } from './baby-context';
 import { checkupGroups } from './checkup-todos';
 import { insertRoutineLogRow, readSetting, upsertRoutineRow, writeSetting } from './db';
@@ -66,6 +66,8 @@ const PAPER_REMOVED_KEY = 'paper_todos_removed';
 const SHOP_READY_KEY = 'shop_tab_ready';
 /** 앱이 만든 할 일 중 사용자가 지운 것의 규칙 열쇠 — 다시 만들지 않는다. JSON 배열 */
 const AUTO_REMOVED_KEY = 'auto_todo_removed';
+/** 앱이 만든 할 일을 마지막으로 맞춘 생일 — 생일이 바뀌면 안 끝낸 것을 새 생일로 다시 맞춘다(task common/026) */
+const AUTO_BIRTH_KEY = 'auto_todo_birth';
 
 function readJsonList(raw: string | null): string[] {
   try {
@@ -263,6 +265,42 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
 
   // 앱이 채워 주는 할 일 — 기한 전 보일 날이 되면 그 주제의 할 일로 만든다(SPEC-TOPIC-11). 숨긴 주제에는 만들지 않는다
   const birthDate = baby?.birthDate ?? null;
+
+  // 생일이 바뀌면(프로필 수정 · 가족에 참여해 가족의 아기로 바뀜) 예전 생일로 만든 할 일을 새 생일에 맞춘다(task common/026).
+  // 처음 실행은 지금 생일을 적어 두기만 한다 — 사용자가 고친 기한을 덮지 않게 생일이 바뀔 때만 맞춘다
+  const reconciling = useRef(false);
+  useEffect(() => {
+    if (loading || !birthDate || reconciling.current) return;
+    reconciling.current = true;
+    void (async () => {
+      const last = await readSetting(AUTO_BIRTH_KEY);
+      if (last === birthDate) return;
+      if (last) {
+        const { update, remove } = reconcileAuto(currentTodos.current, birthOf(birthDate), new Date());
+        const at = new Date().toISOString();
+        const moved = new Map(update.map((u) => [u.id, u.dueAt]));
+        for (const t of currentTodos.current) {
+          const dueAt = moved.get(t.id);
+          if (dueAt) await saveTodo({ ...t, dueAt, updatedAt: at });
+        }
+        for (const id of remove) {
+          await removeTodo(id);
+          await noteDeleted(id);
+        }
+        if (update.length + remove.length > 0) {
+          setTodos((prev) =>
+            prev
+              .filter((t) => !remove.includes(t.id))
+              .map((t) => (moved.has(t.id) ? { ...t, dueAt: moved.get(t.id) as string, updatedAt: at } : t)),
+          );
+          requestSync();
+        }
+      }
+      await writeSetting(AUTO_BIRTH_KEY, birthDate);
+    })().finally(() => {
+      reconciling.current = false;
+    });
+  }, [loading, birthDate]);
   const filling = useRef(false);
   useEffect(() => {
     if (loading || !birthDate || filling.current) return;

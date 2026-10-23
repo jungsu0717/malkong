@@ -88,9 +88,6 @@ export default function TodoRecommendScreen() {
               );
             })}
           </Card>
-          <ThemedText type="caption" style={[styles.pad, { color: c.textSecondary }]}>
-            추가한 할 일은 할 일 탭 「날짜 없음」에 있어요
-          </ThemedText>
         </View>
       </ScrollView>
     </ThemedView>
