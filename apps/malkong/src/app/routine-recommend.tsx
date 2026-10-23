@@ -1,6 +1,7 @@
 /**
  * 루틴 추천 (SPEC-MAIN-07, task today/003) — 「지금 아기와 있는 곳」과 개월 수에 맞춘 추천, 다음 범위 미리 보기.
  * 줄마다 「추가」(이미 있으면 「추가됨」). 우리가 고른 고정 목록이고, 영양제 · 약은 추천하지 않는다(헌장 5).
+ * 같은 이름의 루틴이 있지만 시기에 맞는 단계가 바뀌었으면(신생아 때 넣은 밤잠 준비의 속싸개) 「단계 바꾸기」(task today/005).
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +16,7 @@ import { Button, Card, SectionHeader, tap } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { monthStart } from '@/data/briefing';
-import { routineRecommend } from '@/data/recommend';
+import { routineRecommend, stepsDiffer } from '@/data/recommend';
 import { templateDetail, templateInput, titleKey, type RoutineTemplate } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { usePlace } from '@/hooks/use-place';
@@ -24,12 +25,12 @@ import { useTheme } from '@/hooks/use-theme';
 export default function RoutineRecommendScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
-  const { routines, addRoutine } = useRoutines();
+  const { routines, addRoutine, updateRoutine } = useRoutines();
   const [place, setPlace] = usePlace();
 
   if (!baby || !age) return <ScreenLoading />;
   const rec = routineRecommend(age.month, place);
-  const have = new Set(routines.map((r) => titleKey(r.title)));
+  const byKey = new Map(routines.map((r) => [titleKey(r.title), r]));
   const add = (t: RoutineTemplate) => {
     tap('success');
     void addRoutine(templateInput(t));
@@ -51,7 +52,8 @@ export default function RoutineRecommendScreen() {
           {rec.templates.length > 0 && (
             <Card style={styles.rows}>
               {rec.templates.map((t, i) => {
-                const added = have.has(titleKey(t.title));
+                const mine = byKey.get(titleKey(t.title));
+                const restep = mine && stepsDiffer(t, mine.items);
                 return (
                   <View key={t.title} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider }]}>
                     <View style={[styles.icon, { backgroundColor: c.surface }]}>
@@ -65,7 +67,17 @@ export default function RoutineRecommendScreen() {
                         {templateDetail(t)}
                       </ThemedText>
                     </View>
-                    {added ? (
+                    {restep ? (
+                      <Button
+                        label="단계 바꾸기"
+                        size="sm"
+                        variant="secondary"
+                        onPress={() => {
+                          tap('success');
+                          void updateRoutine(mine.id, { items: t.items ?? null });
+                        }}
+                      />
+                    ) : mine ? (
                       <View style={styles.added}>
                         <Ionicons name="checkmark" size={14} color={c.textSecondary} />
                         <ThemedText type="label" style={{ color: c.textSecondary }}>
@@ -97,9 +109,6 @@ export default function RoutineRecommendScreen() {
           </View>
         )}
 
-        <ThemedText type="caption" style={[styles.pad, { color: c.textSecondary }]}>
-          영양제와 약은 추천하지 않아요. 필요하면 직접 추가해 주세요.
-        </ThemedText>
       </ScrollView>
     </ThemedView>
   );

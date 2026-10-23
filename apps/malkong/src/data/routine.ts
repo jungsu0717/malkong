@@ -339,6 +339,14 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
   { title: '아기 침구 빨래', kind: 'check', everyDays: 7, time: null },
   { title: '가습기 청소', kind: 'check', everyDays: 7, time: null },
   { title: '쪽쪽이 바꾸기', kind: 'check', everyDays: 60, time: null },
+  // 6개월부터 · 9개월부터 · 12개월부터(task today/005) — 시기마다 다른 단계는 recommend.ts 가 바꿔 넣는다
+  { title: '이유식', kind: 'check', everyDays: 1, time: '10:00' },
+  { title: '낮잠', kind: 'check', everyDays: 1, time: '13:00' },
+  { title: '컵으로 마시기 연습', kind: 'check', everyDays: 1, time: null },
+  { title: '걸음마 연습', kind: 'minutes', everyDays: 1, time: null },
+  { title: '양치', kind: 'check', everyDays: 1, time: null, items: ['아침 양치', '자기 전 양치'] },
+  { title: '유아식', kind: 'check', everyDays: 1, time: null, items: ['아침', '점심', '저녁'] },
+  { title: '간식', kind: 'check', everyDays: 1, time: '15:00' },
 ];
 
 export function newRoutineId(): string {
