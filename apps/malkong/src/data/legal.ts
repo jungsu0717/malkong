@@ -2,19 +2,20 @@
  * 약관 · 개인정보 처리방침 · 의학 정보 고지 · 자주 묻는 질문 본문 (SPEC-MY-03, task my/003).
  *
  * 이 파일이 본문의 정본이다 — 앱이 실제로 저장하고 보내는 것(backend · api-contract)과 어긋나면 이 파일을
- * 고친다. 지금은 **초안**이다. 출시 전에 Julian 이 운영자 정보를 채우고 법률 검토 여부를 정한 뒤 `DRAFT` 를 내린다.
+ * 고친다. 운영자 정보는 2026-10-23 Julian 이 줬다. 법률 검토는 첫 출시에서 건너뛰었다 — 받으면 고치고 시행일을 바꾼다.
  * 개인정보 처리방침은 스토어 등록에 공개 주소가 필요해 출시 때 웹에도 같은 본문을 올린다.
  */
 
 /** 출시 전에 채운다 — 비어 있으면 화면에 「출시 전 확정」으로 보인다 */
 export const OPERATOR = {
-  name: null as string | null,
-  email: null as string | null,
-  effectiveDate: null as string | null,
+  name: '윤정수' as string | null,
+  /** 모든 앱이 같이 쓰는 문의 메일 — 앱스토어 페이지에도 보인다 */
+  email: 'julian.studio.help@gmail.com' as string | null,
+  effectiveDate: '2026년 10월 23일' as string | null,
 };
 
-/** 초안 표시 — 검토를 마치면 false 로 */
-export const DRAFT = true;
+/** 초안 표시 — 운영자 정보를 채워 2026-10-23 에 내렸다 */
+export const DRAFT = false;
 
 export type LegalDocId = 'terms' | 'privacy' | 'medical' | 'faq';
 

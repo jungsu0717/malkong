@@ -72,7 +72,7 @@ App Store Connect 「Manage Korea compliance information」 — 개인은 스토
    eas.json 출시 빌드의 `EXPO_PUBLIC_ADMOB_BANNER_IOS`(비밀값이 아니다). 개발 빌드 · Expo Go 는 그대로 구글 시험 단위를 쓴다.
    `app-ads.txt` 는 개발자 웹사이트 도메인 루트에 둬야 하는데, 지금 서버 주소(`…asia-northeast3.run.app`)는 하위 도메인이 깊어 AdMob 이 읽지 못할 수 있다.
    없어도 광고는 나온다 — 출시 뒤 도메인을 살지 정할 때 함께 본다(선택)
-3. **Julian** — 운영자 정보(실명 · 문의 이메일 · 시행일)와 법률 검토 여부를 Claude 에게
+3. ~~**Julian** — 운영자 정보~~ — 2026-10-23: 윤정수, 문의 메일 `julian.studio.help@gmail.com`(모든 앱이 같이 쓰는 새 메일), 시행일 2026-10-23. 법률 검토는 첫 출시에서 건너뜀(Claude 권장, Julian 동의)
 4. **Claude** — 2 · 3 을 앱(app.json · eas.json · legal.ts)에 넣고 약관 · 지원 페이지를 다시 만든 뒤 서버 배포(승인 받고)
 5. **Julian** — 터미널에서 한 번 `npx eas-cli@latest login`(Expo 계정 julian-malkong), 이어서 첫 iOS 빌드
    `npx eas-cli@latest build --platform ios --profile production` — 애플 로그인을 묻는다. 인증서 · 번들 id 는 EAS 가 만든다
