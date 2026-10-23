@@ -126,7 +126,8 @@ export function routineRecommend(month: number, place: Place): RoutineRecommend 
 export function gridSuggestions(month: number, routineTitles: string[], hidden: string[] = []): RoutineTemplate[] {
   const skip = new Set([...routineTitles, ...hidden].map(titleKey));
   const left = (list: RoutineTemplate[]) => list.filter((t) => !skip.has(titleKey(t.title)));
-  if (routineTitles.length < 3) return left(homeTemplates(month));
+  // 처음에는 여덟 개까지 — 한 화면에 다 보이게(그 밖은 「추가」 시트와 추천 화면에)
+  if (routineTitles.length < 3) return left(homeTemplates(month)).slice(0, 8);
   return left(newInStage(stageIndex(month))).slice(0, 2);
 }
 

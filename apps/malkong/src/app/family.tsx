@@ -76,7 +76,7 @@ export default function FamilyScreen() {
         ))}
       </View>
       <TextInput
-        style={[styles.input, { color: c.text, backgroundColor: c.surface }]}
+        style={[styles.nameInput, { color: c.text, backgroundColor: c.surface }]}
         value={MEMBER_NAMES.includes(me.trim()) ? '' : me}
         onChangeText={pickMe}
         placeholder="직접 적기 (예: 이모)"
@@ -284,4 +284,6 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     fontFamily: FontFamily.semibold,
   },
+  // 이름 칸은 초대 코드 칸과 달리 글자 사이를 벌리지 않는다
+  nameInput: { borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, fontFamily: FontFamily.regular },
 });
