@@ -74,10 +74,13 @@ App Store Connect 「Manage Korea compliance information」 — 개인은 스토
    없어도 광고는 나온다 — 출시 뒤 도메인을 살지 정할 때 함께 본다(선택)
 3. ~~**Julian** — 운영자 정보~~ — 2026-10-23: 윤정수, 문의 메일 `julian.studio.help@gmail.com`(모든 앱이 같이 쓰는 새 메일), 시행일 2026-10-23. 법률 검토는 첫 출시에서 건너뜀(Claude 권장, Julian 동의)
 4. **Claude** — 2 · 3 을 앱(app.json · eas.json · legal.ts)에 넣고 약관 · 지원 페이지를 다시 만든 뒤 서버 배포(승인 받고)
-5. **Julian** — 터미널에서 한 번 `npx eas-cli@latest login`(Expo 계정 julian-malkong), 이어서 첫 iOS 빌드
-   `npx eas-cli@latest build --platform ios --profile production` — 애플 로그인을 묻는다. 인증서 · 번들 id 는 EAS 가 만든다
-6. **Julian** — App Store Connect 「앱」 → 「+」 → 새 앱: 이름 「육아버디 - 육아 루틴과 할 일」, 기본 언어 한국어, 번들 id `com.yugabuddy.app`, SKU `yugabuddy`
-7. **Claude** — `npx eas-cli@latest submit --platform ios` 로 빌드를 올린다(10~15분 뒤 TestFlight 에 보인다). Julian 폰에서 TestFlight 로 한 번 써 본다.
+5. **Julian** — 애플 승인(2026-10-26) 뒤 새 Ubuntu 터미널에서 한 번
+   `npx eas-cli@latest build --platform ios --profile production --auto-submit` — 애플 로그인과 인증 코드를 직접 친다.
+   인증서 · 번들 id 는 EAS 가 만든다. `--auto-submit` 이라 같은 명령에서 App Store Connect 앱도 만들어지고, 빌드가 끝나면 TestFlight 로 올라간다
+6. ~~**Julian** — App Store Connect 새 앱~~ — 손으로 만들지 않는다. eas.json `submit.production.ios`(이름 「육아버디 - 육아 루틴과 할 일」,
+   기본 언어 `ko`, SKU `yugabuddy`)로 EAS 가 만든다. 이름이 이미 있으면 EAS 가 뒤에 무작위 글자를 붙여 만드니 App Store Connect 에서 고친다.
+   개인 계정은 개발자 이름이 실명으로 나가서 따로 정할 것이 없다
+7. **Julian** — TestFlight 에 보이면(빌드 뒤 10~30분) 폰의 TestFlight 앱으로 한 번 써 본다. 제출이 실패했으면 `npx eas-cli@latest submit --platform ios --latest`.
    TestFlight 앱은 기기 키가 새로 생겨 광고가 진짜로 나온다 — 누르지 않는다(AdMob 정지 사유). 새 기기 키를 가족 기기 명단에 넣으면 광고가 빠진다
 8. **Julian** — App Store Connect 에 붙여 넣기: 스크린샷(`marketing/store/out/*-ios.png`, 6.9형 칸), 문안(product-brief 「스토어 문안」),
    개인정보 처리방침 URL `…/privacy`, 지원 URL `…/support`, 앱 개인정보 · 연령 등급 · 심사 메모([store-forms](../../product/store-forms.md)), 한국 준수 정보(개인은 이메일만) → 심사 제출

@@ -18,6 +18,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appName": "육아버디 - 육아 루틴과 할 일",
+        "language": "ko",
+        "sku": "yugabuddy"
+      }
+    }
   }
 }

@@ -100,8 +100,9 @@ Julian(2026-10-22): 애플만 먼저 출시한다. 순서 전체는 [common/008]
 애플 개발자 · AdMob(iOS id 둘) · 운영자 정보는 끝났다(2026-10-23). 남은 것은 첫 iOS 빌드다.
 
 1. ~~서버 배포~~ — 2026-10-26 revision 00024-zc4, 공공 지식 판 2026.10.5(236개)
-2. **첫 iOS 빌드** — 새 Ubuntu 터미널에서 `cd ~/personal/malkong/apps/malkong && npx eas-cli@latest build --platform ios --profile production`,
-   애플 로그인과 인증 코드를 직접 친다. 그 뒤 App Store Connect 새 앱 · TestFlight · 심사 제출은 common/008 「애플 먼저」 6~8
+2. **첫 iOS 빌드와 TestFlight** — 애플 승인 끝(2026-10-26). 새 Ubuntu 터미널에서
+   `cd ~/personal/malkong/apps/malkong && npx eas-cli@latest build --platform ios --profile production --auto-submit`,
+   애플 로그인과 인증 코드를 직접 친다. App Store Connect 앱도 이 명령이 만든다. 그 뒤 TestFlight 확인 · 스토어 정보 · 심사 제출은 common/008 「애플 먼저」 7~8
 
 출시 뒤 첫 업데이트 후보: 키 · 몸무게 · 달마다 카드(시안 「출시 뒤 제안」), 구글 플레이(테스터 12명 · 14일), `app-ads.txt` 용 도메인.
 폰(Expo Go)으로 볼 때는 켜 둔 `npx expo start` 를 한 번 다시 켠다.
