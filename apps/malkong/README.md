@@ -97,9 +97,9 @@
 ## 다음 시작점 (2026-10-23) — 애플 먼저, Julian 만 할 수 있는 것
 
 Julian(2026-10-22): 애플만 먼저 출시한다. 순서 전체는 [common/008](docs/task/common/008-first-release-check.md) 「애플 먼저」.
-애플 개발자 · AdMob(iOS id 둘) · 운영자 정보는 끝났다(2026-10-23). 남은 것은 둘이다.
+애플 개발자 · AdMob(iOS id 둘) · 운영자 정보는 끝났다(2026-10-23). 남은 것은 첫 iOS 빌드다.
 
-1. **서버 배포 승인(「배포」)** — 공공 지식 판 2026.10.5(12~24개월)와 의학 정보 고지 출처가 서버 사본 · 약관 웹 페이지에 나간다
+1. ~~서버 배포~~ — 2026-10-26 revision 00024-zc4, 공공 지식 판 2026.10.5(236개)
 2. **첫 iOS 빌드** — 새 Ubuntu 터미널에서 `cd ~/personal/malkong/apps/malkong && npx eas-cli@latest build --platform ios --profile production`,
    애플 로그인과 인증 코드를 직접 친다. 그 뒤 App Store Connect 새 앱 · TestFlight · 심사 제출은 common/008 「애플 먼저」 6~8
 
