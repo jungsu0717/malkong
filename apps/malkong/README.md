@@ -94,15 +94,15 @@
   버디의 짐작은 확인 뒤 기록([ask/008](docs/task/ask/008-confirm-guess.md)) · 대화는 최근 50줄부터, 날짜에서 그날 대화로([ask/009](docs/task/ask/009-recent-window-and-day-jump.md))
 - 끝난 작업과 진척의 정본은 [docs/task/](docs/task/) 의 task 파일이다
 
-## 다음 시작점 (2026-10-23) — 애플 먼저, Julian 만 할 수 있는 것
+## 다음 시작점 (2026-10-26) — 애플 먼저, Julian 만 할 수 있는 것
 
 Julian(2026-10-22): 애플만 먼저 출시한다. 순서 전체는 [common/008](docs/task/common/008-first-release-check.md) 「애플 먼저」.
-애플 개발자 · AdMob(iOS id 둘) · 운영자 정보는 끝났다(2026-10-23). 남은 것은 첫 iOS 빌드다.
+애플 개발자 · AdMob(iOS id 둘) · 운영자 정보는 끝났다(2026-10-23). 첫 빌드는 TestFlight 에 올라갔다(2026-10-26).
 
 1. ~~서버 배포~~ — 2026-10-26 revision 00024-zc4, 공공 지식 판 2026.10.5(236개)
-2. **첫 iOS 빌드와 TestFlight** — 애플 승인 끝(2026-10-26). 새 Ubuntu 터미널에서
-   `cd ~/personal/malkong/apps/malkong && npx eas-cli@latest build --platform ios --profile production --auto-submit`,
-   애플 로그인과 인증 코드를 직접 친다. App Store Connect 앱도 이 명령이 만든다. 그 뒤 TestFlight 확인 · 스토어 정보 · 심사 제출은 common/008 「애플 먼저」 7~8
+2. ~~첫 iOS 빌드~~ — 2026-10-26 빌드 1.0.0 (3), `--auto-submit` 으로 App Store Connect 에 올림(TestFlight 만, 심사 제출 아님)
+3. **TestFlight 로 써 보기** — Julian 폰의 TestFlight 앱. 진짜 광고가 나오니 누르지 않는다
+4. **출시는 Julian 이 정할 때** — 스토어 정보 붙여 넣기 · 심사 제출은 common/008 「애플 먼저」 8
 
 출시 뒤 첫 업데이트 후보: 키 · 몸무게 · 달마다 카드(시안 「출시 뒤 제안」), 구글 플레이(테스터 12명 · 14일), `app-ads.txt` 용 도메인.
 폰(Expo Go)으로 볼 때는 켜 둔 `npx expo start` 를 한 번 다시 켠다.

@@ -74,7 +74,7 @@ App Store Connect 「Manage Korea compliance information」 — 개인은 스토
    없어도 광고는 나온다 — 출시 뒤 도메인을 살지 정할 때 함께 본다(선택)
 3. ~~**Julian** — 운영자 정보~~ — 2026-10-23: 윤정수, 문의 메일 `julian.studio.help@gmail.com`(모든 앱이 같이 쓰는 새 메일), 시행일 2026-10-23. 법률 검토는 첫 출시에서 건너뜀(Claude 권장, Julian 동의)
 4. **Claude** — 2 · 3 을 앱(app.json · eas.json · legal.ts)에 넣고 약관 · 지원 페이지를 다시 만든 뒤 서버 배포(승인 받고)
-5. **Julian** — 애플 승인(2026-10-26) 뒤 새 Ubuntu 터미널에서 한 번
+5. ~~**Julian** — 첫 iOS 빌드~~ — 2026-10-26 빌드 1.0.0 (3), App Store Connect 제출 완료(TestFlight). 명령:
    `npx eas-cli@latest build --platform ios --profile production --auto-submit` — 애플 로그인과 인증 코드를 직접 친다.
    인증서 · 번들 id 는 EAS 가 만든다. `--auto-submit` 이라 같은 명령에서 App Store Connect 앱도 만들어지고, 빌드가 끝나면 TestFlight 로 올라간다
 6. ~~**Julian** — App Store Connect 새 앱~~ — 손으로 만들지 않는다. eas.json `submit.production.ios`(이름 「육아버디 - 육아 루틴과 할 일」,
