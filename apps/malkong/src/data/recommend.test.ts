@@ -16,8 +16,7 @@ test('집 — 시기마다 추천, 다음 시기에 새로 들어오는 것', ()
   assert.equal(now.label, '생후 0~2개월 추천');
   assert.deepEqual(
     now.templates.map((t) => t.title),
-    ['목욕', '밤잠 준비', '손발톱 깎기', '아기 빨래', '가제수건 삶기', '젖병 소독', '터미타임', '재고 확인',
-      '기저귀 휴지통 비우기', '아기 침구 빨래', '분유포트 세척', '가습기 청소'],
+    ['목욕', '밤잠 준비', '손발톱 깎기', '터미타임', '재고 확인', '아기 침구 빨래', '분유포트 세척', '가습기 청소'],
   );
   assert.equal(now.next?.label, '2개월부터');
   assert.deepEqual(
@@ -47,35 +46,34 @@ test('개월 수에 맞는 루틴 — 속싸개는 2개월 전까지, 이유식 
   assert.ok(titles(6).includes('이유식') && !titles(6).includes('터미타임'));
   assert.deepEqual(homeTemplates(9).find((t) => t.title === '이유식')?.items, ['아침', '점심', '저녁']);
   assert.ok(titles(12).includes('양치') && titles(12).includes('유아식') && !titles(12).includes('이유식'));
-  for (const gone of ['젖병 소독', '분유포트 세척', '쪽쪽이 바꾸기']) assert.ok(!titles(12).includes(gone), gone);
+  for (const gone of ['분유포트 세척', '쪽쪽이 바꾸기']) assert.ok(!titles(12).includes(gone), gone);
   assert.deepEqual(titles(18), titles(12));
   // 놀이는 성장 탭 「오늘의 놀이」에 맡긴다. 루틴은 모두 한 번 누르는 체크이거나 재고 확인
   for (const m of [0, 2, 6, 9, 12]) {
     for (const t of homeTemplates(m)) {
       assert.doesNotMatch(t.title, /체육관|뒤집기|걸음마|책 읽어|컵으로|낮잠/, `${m}개월 ${t.title}`);
+      // 쌓이면 눈에 띄어서 하게 되는 일은 추천하지 않는다
+      assert.doesNotMatch(t.title, /휴지통|아기 빨래|가제수건|젖병/, `${m}개월 ${t.title}`);
       assert.ok(t.kind === 'check' || t.kind === 'stock', t.title);
     }
   }
 });
 
-test('루틴 탭 추천 버튼 — 적을 때는 여덟 개, 세 개부터는 이 시기에 새로 들어온 것 두 개까지, 숨긴 것은 빼고', () => {
-  assert.deepEqual(
-    gridSuggestions(0, []).map((t) => t.title),
-    ['목욕', '밤잠 준비', '손발톱 깎기', '아기 빨래', '가제수건 삶기', '젖병 소독', '터미타임', '재고 확인'],
-  );
-  assert.equal(gridSuggestions(0, ['목욕']).length, 8);
+test('루틴 탭 추천 버튼 — 지금 시기 추천 중 안 넣고 숨기지 않은 것 전부, 루틴 수로 개수가 바뀌지 않는다', () => {
+  const all = titles(0);
+  assert.deepEqual(gridSuggestions(0, []).map((t) => t.title), all);
+  // 하나씩 넣어도 그 버튼만 빠진다 — 세 개째에 나머지가 한꺼번에 사라지지 않는다
+  for (let n = 1; n <= all.length; n++) {
+    assert.deepEqual(gridSuggestions(0, all.slice(0, n)).map((t) => t.title), all.slice(n), `${n}개 넣은 뒤`);
+  }
+  // 이름은 띄어쓰기를 빼고 본다
+  assert.ok(!gridSuggestions(0, ['손발톱깎기']).some((t) => t.title === '손발톱 깎기'));
   // 6개월 — 신생아 때 넣은 루틴만 있으면 이유식이 나타난다
+  assert.ok(gridSuggestions(6, ['목욕', '밤잠 준비', '터미타임']).some((t) => t.title === '이유식'));
+  assert.ok(!gridSuggestions(6, ['목욕'], ['이유식']).some((t) => t.title === '이유식'));
   assert.deepEqual(
-    gridSuggestions(6, ['목욕', '밤잠 준비', '터미타임', '젖병 소독']).map((t) => t.title),
-    ['이유식'],
-  );
-  assert.deepEqual(
-    gridSuggestions(6, ['목욕', '밤잠 준비', '산책'], ['이유식']).map((t) => t.title),
-    [],
-  );
-  assert.deepEqual(
-    gridSuggestions(12, ['목욕', '밤잠 준비', '산책']).map((t) => t.title),
-    ['양치', '유아식'],
+    gridSuggestions(12, ['목욕', '밤잠 준비', '산책']).slice(0, 3).map((t) => t.title),
+    ['양치', '유아식', '간식'],
   );
 });
 

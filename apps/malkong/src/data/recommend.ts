@@ -28,45 +28,45 @@ const T = (...titles: string[]) => titles.map((t) => tpl(t));
 /** 밤잠 준비 — 뒤집기를 시작할 즈음부터는 속싸개 대신 수면 조끼, 돌 무렵부터는 잠옷 · 책 */
 const SLEEP_VEST = tpl('밤잠 준비', { items: ['수면 조끼 입히기', '수유', '트림', '자장가 부르며 재우기'] });
 const SLEEP_TODDLER = tpl('밤잠 준비', { items: ['잠옷 갈아입히기', '책 읽어 주기', '자장가 부르며 재우기'] });
-/** 며칠마다 하는 아기 살림 — 손발톱 · 빨래 · 소독(task today/006). 젖병 소독은 돌 무렵까지 */
-const CARE = T('손발톱 깎기', '아기 빨래', '가제수건 삶기', '젖병 소독');
-const CARE_TODDLER = T('손발톱 깎기', '아기 빨래', '가제수건 삶기');
-/** 집안일 — 기저귀 휴지통 · 침구 · 분유포트 · 가습기. 분유포트는 돌 무렵까지 */
-const CHORES = T('재고 확인', '기저귀 휴지통 비우기', '아기 침구 빨래', '분유포트 세척', '가습기 청소');
-const CHORES_TODDLER = T('재고 확인', '기저귀 휴지통 비우기', '아기 침구 빨래', '가습기 청소', '장난감 소독');
+/**
+ * 집안일 — 침구 · 분유포트 · 가습기. 분유포트는 돌 무렵까지.
+ * 기저귀 휴지통 · 빨래 · 가제수건 · 젖병 소독처럼 쌓이면 눈에 띄어서 하게 되는 일은 넣지 않는다(task today/006)
+ */
+const CHORES = T('재고 확인', '아기 침구 빨래', '분유포트 세척', '가습기 청소');
+const CHORES_TODDLER = T('재고 확인', '아기 침구 빨래', '가습기 청소', '장난감 소독');
 /** 2개월부터 더해지는 것 — 장난감 소독 · 쪽쪽이 바꾸기 */
 const LATER_CHORES = T('장난감 소독', '쪽쪽이 바꾸기');
 
 /**
  * 집에서의 시기 — 시기마다 추천 전체를 따로 둔다(앞 시기에 더하지 않는다). 며칠마다 해서 까먹기 쉬운 일이 중심이고,
  * 놀이(아기체육관 · 뒤집기 연습 · 책 · 걸음마)는 성장 탭 「오늘의 놀이」에 맡긴다(task today/006).
- * 앞쪽 여덟 개가 처음 루틴 탭의 추천 버튼이 된다
+ * 순서대로 루틴 탭의 추천 버튼이 된다
  */
 const HOME_STAGES: { from: number; label: string; templates: RoutineTemplate[] }[] = [
   {
     from: 0,
     label: '생후 0~2개월',
-    templates: [...T('목욕', '밤잠 준비'), ...CARE, tpl('터미타임'), ...CHORES],
+    templates: [...T('목욕', '밤잠 준비', '손발톱 깎기', '터미타임'), ...CHORES],
   },
   {
     from: 2,
     label: '2개월부터',
-    templates: [tpl('목욕'), SLEEP_VEST, ...CARE, ...T('터미타임', '산책'), ...CHORES, ...LATER_CHORES],
+    templates: [tpl('목욕'), SLEEP_VEST, ...T('손발톱 깎기', '터미타임', '산책'), ...CHORES, ...LATER_CHORES],
   },
   {
     from: 6,
     label: '6개월부터',
-    templates: [tpl('목욕'), SLEEP_VEST, tpl('이유식'), ...CARE, tpl('산책'), ...CHORES, ...LATER_CHORES],
+    templates: [tpl('목욕'), SLEEP_VEST, tpl('이유식'), ...T('손발톱 깎기', '산책'), ...CHORES, ...LATER_CHORES],
   },
   {
     from: 9,
     label: '9개월부터',
-    templates: [tpl('목욕'), SLEEP_VEST, tpl('이유식', { time: null, items: ['아침', '점심', '저녁'] }), ...CARE, tpl('산책'), ...CHORES, ...LATER_CHORES],
+    templates: [tpl('목욕'), SLEEP_VEST, tpl('이유식', { time: null, items: ['아침', '점심', '저녁'] }), ...T('손발톱 깎기', '산책'), ...CHORES, ...LATER_CHORES],
   },
   {
     from: 12,
     label: '12개월부터',
-    templates: [tpl('목욕'), SLEEP_TODDLER, ...T('양치', '유아식', '간식'), ...CARE_TODDLER, tpl('산책'), ...CHORES_TODDLER],
+    templates: [tpl('목욕'), SLEEP_TODDLER, ...T('양치', '유아식', '간식', '손발톱 깎기', '산책'), ...CHORES_TODDLER],
   },
 ];
 
@@ -88,9 +88,6 @@ function newSince(i: number, j: number): RoutineTemplate[] {
   const before = new Set((HOME_STAGES[i]?.templates ?? []).map((t) => titleKey(t.title)));
   return HOME_STAGES[j].templates.filter((t) => !before.has(titleKey(t.title)));
 }
-
-/** 이 시기에 새로 들어온 추천 — 앞 시기에 없던 이름만 */
-const newInStage = (i: number) => newSince(i - 1, i);
 
 export type RoutineRecommend = {
   /** 「생후 0~2개월 추천」 · 「산후조리원에서」 */
@@ -124,16 +121,13 @@ export function routineRecommend(month: number, place: Place): RoutineRecommend 
 }
 
 /**
- * 루틴 탭 버튼 뒤에 점선으로 보일 추천(SPEC-MAIN-03) — 아직 안 넣고 숨기지 않은 것만.
- * 루틴이 세 개가 안 되면 지금 시기 추천 전부, 세 개 이상이면 이 시기에 새로 들어온 것 두 개까지
- * (6개월이 되면 이유식 · 낮잠이 나타나게). 길게 눌러 숨긴 이름은 `hidden`.
+ * 루틴 탭 버튼 뒤에 점선으로 보일 추천(SPEC-MAIN-03) — 지금 시기 추천 중 아직 안 넣고 숨기지 않은 것 전부.
+ * 루틴 수로 개수를 바꾸지 않는다 — 하나 넣으면 그 버튼만 빠지고, 루틴을 지우면 그 버튼만 돌아온다(task today/006).
+ * 6개월이 되면 이유식처럼 새 시기 것도 저절로 보인다. 길게 눌러 숨긴 이름은 `hidden`.
  */
 export function gridSuggestions(month: number, routineTitles: string[], hidden: string[] = []): RoutineTemplate[] {
   const skip = new Set([...routineTitles, ...hidden].map(titleKey));
-  const left = (list: RoutineTemplate[]) => list.filter((t) => !skip.has(titleKey(t.title)));
-  // 처음에는 여덟 개까지 — 한 화면에 다 보이게(그 밖은 「추가」 시트와 추천 화면에)
-  if (routineTitles.length < 3) return left(homeTemplates(month)).slice(0, 8);
-  return left(newInStage(stageIndex(month))).slice(0, 2);
+  return homeTemplates(month).filter((t) => !skip.has(titleKey(t.title)));
 }
 
 /**

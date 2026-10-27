@@ -1,5 +1,5 @@
 /**
- * 루틴 (SPEC-MAIN-01~07, task today/001 · 003, decisions/028 · 029) — 목욕 · 터미타임 · 젖병 소독처럼 날마다(또는 N일마다) 챙기는 일.
+ * 루틴 (SPEC-MAIN-01~07, task today/001 · 003, decisions/028 · 029) — 목욕 · 손발톱 깎기 · 가습기 청소처럼 날마다(또는 N일마다) 챙기는 일.
  *
  * 루틴은 정의(`Routine`)와 한 번 할 때마다 한 줄(`RoutineLog`)로 나눠 저장한다. 오늘 했는지, 지난번부터 며칠은
  * 저장하지 않고 볼 때마다 센다(헌장 3). 알림은 알림 시각이 있는 루틴만, 그날 할 차례이고 아직 안 했을 때.
@@ -315,12 +315,8 @@ export const ROUTINE_TEMPLATES: RoutineTemplate[] = [
   { title: '목욕', kind: 'check', everyDays: 2, time: '20:00', items: ['목욕', '보습'] },
   { title: '밤잠 준비', kind: 'check', everyDays: 1, time: '20:30', items: ['스와들 입히기', '수유', '트림', '자장가 부르며 재우기'] },
   { title: '손발톱 깎기', kind: 'check', everyDays: 3, time: null },
-  { title: '아기 빨래', kind: 'check', everyDays: 2, time: null },
-  { title: '가제수건 삶기', kind: 'check', everyDays: 2, time: null },
-  { title: '젖병 소독', kind: 'check', everyDays: 1, time: null },
   { title: '터미타임', kind: 'check', everyDays: 1, time: null },
   { title: '재고 확인', kind: 'stock', everyDays: 7, time: null, items: STOCK_ITEMS, weekdays: [0] },
-  { title: '기저귀 휴지통 비우기', kind: 'check', everyDays: 2, time: null },
   { title: '아기 침구 빨래', kind: 'check', everyDays: 7, time: null },
   { title: '분유포트 세척', kind: 'check', everyDays: 7, time: null },
   { title: '가습기 청소', kind: 'check', everyDays: 7, time: null },

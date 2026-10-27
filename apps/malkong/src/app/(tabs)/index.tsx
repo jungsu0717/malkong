@@ -130,7 +130,7 @@ export default function RoutineScreen() {
   const plan = todayPlan(routines, logs, now);
   const rec = routineRecommend(age.month, 'home');
   const templates = rec.templates;
-  // 그리드 뒤의 점선 추천 — 루틴이 세 개가 안 되면 지금 시기 추천 전부, 그 뒤에는 이 시기에 새로 들어온 것 두 개까지(이유식 · 양치 …)
+  // 그리드 뒤의 점선 추천 — 지금 시기 추천 중 아직 안 넣은 것 전부. 하나 넣으면 그 버튼만 빠진다
   const suggestions = arranging ? [] : gridSuggestions(age.month, routines.map((r) => r.title), hiddenSuggestions);
   const edit = (r: Routine) => router.push({ pathname: '/routine-form', params: { id: r.id } });
   // 단계가 있으면 단계 시트, 재고 확인은 재고 확인 시트, 그 밖의 체크는 바로 완료 ↔ 되돌림
