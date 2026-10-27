@@ -91,7 +91,7 @@ export function ShopContent({ shop }: { shop: Topic }) {
           }}
           style={({ pressed }) => [styles.stock, { backgroundColor: pressed ? c.surfaceStrong : c.surface }]}>
           <View style={[styles.stockIcon, { backgroundColor: c.background }]}>
-            <RoutineIcon title={stock.title} kind={stock.kind} size={20} color={c.text} />
+            <RoutineIcon title={stock.title} size={20} color={c.text} />
           </View>
           <View style={styles.text}>
             <ThemedText type="body" style={{ fontWeight: 600 }}>

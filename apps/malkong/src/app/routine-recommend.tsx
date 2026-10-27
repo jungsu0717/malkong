@@ -57,7 +57,7 @@ export default function RoutineRecommendScreen() {
                 return (
                   <View key={t.title} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider }]}>
                     <View style={[styles.icon, { backgroundColor: c.surface }]}>
-                      <RoutineIcon title={t.title} kind={t.kind} size={20} color={c.text} />
+                      <RoutineIcon title={t.title} size={20} color={c.text} />
                     </View>
                     <View style={styles.flex}>
                       <ThemedText type="body" style={{ fontWeight: 600 }}>

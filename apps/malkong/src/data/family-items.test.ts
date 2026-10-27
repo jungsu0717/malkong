@@ -48,12 +48,10 @@ const routine = (id: string, o: Partial<Routine> = {}): Routine => ({
   kind: 'check',
   everyDays: 1,
   time: '19:00',
-  goalMinutes: null,
   items: null,
   weekdays: null,
   hidden: false,
   sort: 0,
-  runningSince: null,
   createdAt: T(1),
   updatedAt: T(1),
   ...o,
@@ -62,7 +60,6 @@ const log = (id: string, routineId: string, at: string, by: string | null = null
   id,
   routineId,
   at,
-  minutes: null,
   by,
   step: null,
   skip: false,
@@ -152,10 +149,10 @@ test('앱이 채운 할 일은 같은 ref 의 내 줄에 덮어쓴다', () => {
   );
 });
 
-test('루틴과 루틴 기록 — 누가 했는지 함께, 지운 기록은 지운다, 타이머는 내 폰 것', () => {
+test('루틴과 루틴 기록 — 누가 했는지 함께, 지운 기록은 지운다, 옛 타이머 루틴은 체크로', () => {
   const plan = planIncoming({
     items: [
-      { kind: 'routine', id: 'rt-1', updatedAt: T(9), deleted: false, data: { ...routine('rt-1', { runningSince: T(9) }), time: '20:00' } },
+      { kind: 'routine', id: 'rt-1', updatedAt: T(9), deleted: false, data: { ...routine('rt-1'), kind: 'minutes', goalMinutes: 15, time: '20:00' } },
       { kind: 'routineLog', id: 'rl-1', updatedAt: T(8), deleted: false, data: { ...log('rl-1', 'rt-1', T(8), '엄마') } },
       { kind: 'routineLog', id: 'rl-old', updatedAt: T(10), deleted: true, data: {} },
     ],
@@ -166,7 +163,7 @@ test('루틴과 루틴 기록 — 누가 했는지 함께, 지운 기록은 지�
     tombstones: [],
   });
   assert.equal(plan.upsertRoutines[0].time, '20:00');
-  assert.equal(plan.upsertRoutines[0].runningSince, null);
+  assert.equal(plan.upsertRoutines[0].kind, 'check');
   assert.deepEqual(
     plan.insertLogs.map((l) => `${l.id}:${l.by}`),
     ['rl-1:엄마'],

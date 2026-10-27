@@ -100,7 +100,7 @@ export function RoutineAddSheet({
                       style={({ pressed }) => [styles.template, { width, opacity: pressed ? 0.6 : 1 }]}>
                       <View>
                         <View style={[styles.circle, { backgroundColor: on ? c.ink : c.surface }]}>
-                          <RoutineIcon title={t.title} kind={t.kind} size={24} color={on ? c.onInk : c.text} />
+                          <RoutineIcon title={t.title} size={24} color={on ? c.onInk : c.text} />
                         </View>
                         <View style={[styles.badge, { backgroundColor: on ? c.accent : c.ink, borderColor: c.background }]}>
                           <Ionicons name={on ? 'checkmark' : 'add'} size={12} color={c.onInk} />

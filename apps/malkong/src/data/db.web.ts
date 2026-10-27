@@ -8,7 +8,7 @@
 
 import type { Baby } from './baby';
 import type { BabyRecord } from './records';
-import type { Routine, RoutineLog } from './routine';
+import { routineKindOf, type Routine, type RoutineLog } from './routine';
 import type { Memo } from './stage';
 import type { Todo, Topic } from './todos';
 
@@ -167,7 +167,7 @@ const ROUTINE_LOGS_KEY = 'malkong.routineLogs';
 
 export async function readRoutineRows(): Promise<Routine[]> {
   return readList<Routine>(ROUTINES_KEY)
-    .map((r) => ({ ...r, items: r.items ?? null, weekdays: r.weekdays ?? null }))
+    .map((r) => ({ ...r, kind: routineKindOf(r.kind), items: r.items ?? null, weekdays: r.weekdays ?? null }))
     .sort((a, b) => a.sort - b.sort);
 }
 

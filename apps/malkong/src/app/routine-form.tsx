@@ -1,8 +1,8 @@
 /**
  * 루틴 직접 만들기 · 편집 (SPEC-MAIN-03 · 05 · 06, task today/004) — 목록형 한 화면.
  *
- * 이름, 종류(체크 / 타이머 / 재고 확인), 반복(반복 고르기 창), 알림(스위치와 시각 — iOS 는 바퀴를 바로 아래에 펼치고
- * 안드로이드는 시계 창), 하루 목표(타이머), 단계(체크) · 확인할 물건(재고 확인). 편집이면 아래에 「오늘은 건너뛰기」와 「삭제」.
+ * 이름, 종류(체크 / 재고 확인), 반복(반복 고르기 창), 알림(스위치와 시각 — iOS 는 바퀴를 바로 아래에 펼치고
+ * 안드로이드는 시계 창), 단계(체크) · 확인할 물건(재고 확인). 편집이면 아래에 「오늘은 건너뛰기」와 「삭제」.
  * `id` 가 있으면 편집, 없으면 새 루틴이다.
  */
 
@@ -12,7 +12,7 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { RepeatPicker, StepButton, type RepeatValue } from '@/components/routine/repeat-picker';
+import { RepeatPicker, type RepeatValue } from '@/components/routine/repeat-picker';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { INLINE_WHEEL, TimeWheel, pickTime } from '@/components/time-picker';
@@ -24,13 +24,10 @@ import { useTheme } from '@/hooks/use-theme';
 
 const KINDS: { kind: RoutineKind; label: string; hint: string }[] = [
   { kind: 'check', label: '체크', hint: '누르면 완료로 바뀌고, 완료한 시각이 기록돼요' },
-  { kind: 'minutes', label: '타이머', hint: '타이머나 +1분 단추로 오늘 한 시간이 기록돼요' },
   { kind: 'stock', label: '재고 확인', hint: '물건마다 충분 · 부족을 고르면 부족한 것이 장보기에 추가돼요' },
 ];
 /** 단계는 여덟 개, 확인할 물건은 스무 개까지 */
-const MAX_ITEMS: Record<RoutineKind, number> = { check: 8, stock: 20, minutes: 0 };
-const GOAL_STEP = 5;
-const GOAL_MAX = 180;
+const MAX_ITEMS: Record<RoutineKind, number> = { check: 8, stock: 20 };
 
 export default function RoutineFormScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -49,7 +46,6 @@ function RoutineForm({ routine }: { routine: Routine | null }) {
   const [repeat, setRepeat] = useState<RepeatValue>({ everyDays: routine?.everyDays ?? 1, weekdays: routine?.weekdays ?? null });
   const [time, setTime] = useState<string | null>(routine?.time ?? null);
   const [wheelOpen, setWheelOpen] = useState(false);
-  const [goal, setGoal] = useState<number | null>(routine?.goalMinutes ?? null);
   const [items, setItems] = useState<string[]>(routine?.items ?? []);
   const [sheet, setSheet] = useState<'repeat' | 'items' | null>(null);
   const [today] = useState(() => new Date().getDay());
@@ -91,8 +87,7 @@ function RoutineForm({ routine }: { routine: Routine | null }) {
       everyDays: repeat.everyDays,
       weekdays: repeat.weekdays,
       time,
-      goalMinutes: kind === 'minutes' ? goal : null,
-      items: kind === 'minutes' || cleaned.length === 0 ? null : cleaned,
+      items: cleaned.length === 0 ? null : cleaned,
     };
     void (routine ? updateRoutine(routine.id, input) : addRoutine(input));
     router.back();
@@ -175,48 +170,13 @@ function RoutineForm({ routine }: { routine: Routine | null }) {
                   <TimeWheel value={time} onChange={setTime} />
                 </View>
               )}
-              {kind === 'minutes' ? (
-                <>
-                  <Line />
-                  <View style={styles.row}>
-                    <Ionicons name="timer-outline" size={20} color={c.textSecondary} />
-                    <ThemedText type="body" style={styles.flex}>
-                      하루 목표
-                    </ThemedText>
-                    <StepButton
-                      icon="remove"
-                      label="5분 줄이기"
-                      disabled={!goal}
-                      onPress={() => {
-                        tap();
-                        setGoal((g) => (g && g > GOAL_STEP ? g - GOAL_STEP : null));
-                      }}
-                    />
-                    <ThemedText type="body" style={[styles.goal, { color: goal ? c.text : c.textSecondary }]}>
-                      {goal ? `${goal}분` : '없음'}
-                    </ThemedText>
-                    <StepButton
-                      icon="add"
-                      label="5분 늘리기"
-                      disabled={(goal ?? 0) >= GOAL_MAX}
-                      onPress={() => {
-                        tap();
-                        setGoal((g) => Math.min(GOAL_MAX, (g ?? 0) + GOAL_STEP));
-                      }}
-                    />
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Line />
-                  <Row
-                    icon={kind === 'check' ? 'list-outline' : 'cube-outline'}
-                    label={itemsLabel}
-                    value={itemsValue}
-                    onPress={() => setSheet('items')}
-                  />
-                </>
-              )}
+              <Line />
+              <Row
+                icon={kind === 'check' ? 'list-outline' : 'cube-outline'}
+                label={itemsLabel}
+                value={itemsValue}
+                onPress={() => setSheet('items')}
+              />
             </View>
             {kind === 'stock' && cleaned.length === 0 && (
               <ThemedText type="caption" style={[styles.pad, { color: c.accentText }]}>
@@ -428,7 +388,6 @@ const styles = StyleSheet.create({
   line: { height: StyleSheet.hairlineWidth * 2 },
   timePill: { height: 32, paddingHorizontal: 12, borderRadius: 10, justifyContent: 'center' },
   wheel: { paddingHorizontal: 16, alignItems: 'stretch' },
-  goal: { minWidth: 52, textAlign: 'center', fontWeight: 700 },
   bottom: { paddingHorizontal: 20, paddingTop: Spacing.two, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   sheetWrap: { flex: 1, justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 10, gap: 14, maxHeight: '88%' },

@@ -54,7 +54,7 @@ export function RoutineStepsSheet({
             <View style={[styles.grabber, { backgroundColor: c.surfaceStrong }]} />
             <View style={styles.head}>
               <View style={[styles.icon, { backgroundColor: c.surface }]}>
-                <RoutineIcon title={routine.title} kind={routine.kind} size={22} color={c.text} />
+                <RoutineIcon title={routine.title} size={22} color={c.text} />
               </View>
               <View style={styles.flex}>
                 <ThemedText type="title">{routine.title}</ThemedText>

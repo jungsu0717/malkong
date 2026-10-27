@@ -52,10 +52,9 @@ const VIEW_KEY = 'routine_view';
 /** 길게 눌러 숨긴 추천 버튼의 이름(SPEC-MAIN-03) */
 const HIDDEN_SUGGESTIONS_KEY = 'routine.hiddenSuggestions';
 
-/** 큰 단추의 이름표 — 단계 · 재고 확인은 시트를 열고, 타이머는 켜고 끄고, 그 밖에는 바로 완료 */
+/** 큰 단추의 이름표 — 단계 · 재고 확인은 시트를 열고, 그 밖에는 바로 완료 */
 function actionLabel(r: Routine): string {
   if (hasSteps(r) || r.kind === 'stock') return `${r.title} 시작하기`;
-  if (r.kind === 'minutes') return r.runningSince ? `${r.title} 타이머 멈추기` : `${r.title} 타이머 시작`;
   return `${r.title} 완료`;
 }
 
@@ -77,9 +76,6 @@ export default function RoutineScreen() {
     completeAll,
     skipToday,
     completeStock,
-    addMinutes,
-    startTimer,
-    stopTimer,
   } = useRoutines();
   const [adding, setAdding] = useState(false);
   /** 단계 시트 · 재고 확인 시트로 연 루틴 id */
@@ -117,8 +113,8 @@ export default function RoutineScreen() {
     void writeSetting(VIEW_KEY, v).catch(() => undefined);
   };
 
-  // 타이머가 켜져 있으면 1초마다, 아니면 30초마다 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다
-  const now = useNow(routines.some((r) => r.kind === 'minutes' && r.runningSince));
+  // 30초마다 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다
+  const now = useNow(false);
 
   // 좋은 순간 — 이 화면에서 그날 루틴(둘 이상)을 마지막 하나까지 완료한 때. 쌓이면 스토어 별점 창(SPEC-MY-09)
   const leftBefore = useRef<number | null>(null);
@@ -137,7 +133,6 @@ export default function RoutineScreen() {
   // 그리드 뒤의 점선 추천 — 루틴이 세 개가 안 되면 지금 시기 추천 전부, 그 뒤에는 이 시기에 새로 들어온 것 두 개까지(이유식 · 양치 …)
   const suggestions = arranging ? [] : gridSuggestions(age.month, routines.map((r) => r.title), hiddenSuggestions);
   const edit = (r: Routine) => router.push({ pathname: '/routine-form', params: { id: r.id } });
-  const onTimer = (r: Routine) => void (r.runningSince ? stopTimer(r.id) : startTimer(r.id));
   // 단계가 있으면 단계 시트, 재고 확인은 재고 확인 시트, 그 밖의 체크는 바로 완료 ↔ 되돌림
   const onCheck = (id: string) => {
     const r = routines.find((x) => x.id === id);
@@ -145,7 +140,7 @@ export default function RoutineScreen() {
     else if (r?.kind === 'stock') setStockId(id);
     else void check(id);
   };
-  const onAction = (r: Routine) => (r.kind === 'minutes' ? onTimer(r) : onCheck(r.id));
+  const onAction = (r: Routine) => onCheck(r.id);
   const stepsRoutine = routines.find((r) => r.id === stepsId) ?? null;
   const stockRoutine = routines.find((r) => r.id === stockId) ?? null;
   const first = plan.later[0];
@@ -217,10 +212,7 @@ export default function RoutineScreen() {
                 <RoutineTimeline
                   items={plan.today}
                   nextId={plan.next?.r.id ?? null}
-                  now={now}
                   onCheck={onCheck}
-                  onAddMinutes={(id, m) => void addMinutes(id, m)}
-                  onTimer={onTimer}
                   onEdit={edit}
                 />
               )
@@ -228,11 +220,8 @@ export default function RoutineScreen() {
               <RoutineGrid
                 items={plan.today}
                 templates={suggestions}
-                now={now}
                 editing={arranging}
                 onCheck={onCheck}
-                onAddMinutes={(id) => void addMinutes(id, 1)}
-                onTimer={onTimer}
                 onEdit={edit}
                 onAdd={() => setAdding(true)}
                 onQuickAdd={(t) => void addRoutine(templateInput(t))}

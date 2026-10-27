@@ -7,11 +7,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import {
-  countsDone,
   dateLabel,
   everyLabel,
   isDueOn,
   nextDayLabel,
+  routineKindOf,
   routineReminders,
   slotOf,
   statusLine,
@@ -35,22 +35,19 @@ const routine = (o: Partial<Routine> = {}): Routine => ({
   kind: 'check',
   everyDays: 1,
   time: '19:00',
-  goalMinutes: null,
   items: null,
   weekdays: null,
   hidden: false,
   sort: 0,
-  runningSince: null,
   createdAt: iso(10, 1),
   updatedAt: iso(10, 1),
   ...o,
 });
 let n = 0;
-const log = (at: string, minutes: number | null = null, routineId = 'r1', by: string | null = null): RoutineLog => ({
+const log = (at: string, routineId = 'r1', by: string | null = null): RoutineLog => ({
   id: `l${(n += 1)}`,
   routineId,
   at,
-  minutes,
   by,
   step: null,
   skip: false,
@@ -65,12 +62,10 @@ test('체크 루틴 — 오늘 했나, 몇 시에', () => {
   assert.equal(s.firstAt, iso(10, 16, 8, 10));
 });
 
-test('시간 재기 — 오늘 누적, 목표가 있으면 채웠나', () => {
-  const r = routine({ kind: 'minutes', title: '터미타임', time: null });
-  const logs = [log(iso(10, 16, 9), 5), log(iso(10, 16, 11), 10), log(iso(10, 15, 9), 20)];
-  assert.equal(todayState(r, logs, NOW).minutes, 15);
-  assert.equal(todayState(r, logs, NOW).done, false);
-  assert.equal(todayState({ ...r, goalMinutes: 15 }, logs, NOW).done, true);
+test('옛 타이머 루틴은 체크로 읽는다(task today/006)', () => {
+  assert.equal(routineKindOf('minutes'), 'check');
+  assert.equal(routineKindOf('stock'), 'stock');
+  assert.equal(routineKindOf(undefined), 'check');
 });
 
 test('N일마다 — 차례인 날, 지난번부터 며칠', () => {
@@ -125,28 +120,25 @@ test('루틴 알림 — N일마다는 차례인 날만, 지난번 날짜를 글�
   assert.equal(reminders[0].body, '마지막으로 한 지 7일 지났어요');
 });
 
-test('버튼 상태 한 줄 — 완료 시각, 누가, 다음 날, 타이머 누적, 마지막', () => {
+test('버튼 상태 한 줄 — 완료 시각, 누가, 다음 날, 마지막', () => {
   const line = (r: Routine, logs: RoutineLog[]) => statusLine(r, todayState(r, logs, NOW)).text;
   assert.equal(line(routine(), []), '오후 7:00');
   assert.equal(line(routine(), [log(iso(10, 16, 8, 10))]), '08:10 완료');
-  assert.equal(line(routine(), [log(iso(10, 16, 8, 10), null, 'r1', '엄마')]), '엄마 · 08:10');
+  assert.equal(line(routine(), [log(iso(10, 16, 8, 10), 'r1', '엄마')]), '엄마 · 08:10');
   assert.equal(line(routine({ time: null }), []), '매일');
   const nails = routine({ title: '손톱 깎기', everyDays: 7, time: null });
   assert.equal(line(nails, [log(iso(10, 10))]), '내일');
   assert.equal(line(nails, [log(iso(10, 8))]), '마지막 8일 전');
-  const tummy = routine({ kind: 'minutes', title: '터미타임', time: null });
-  assert.equal(line(tummy, []), '오늘 0분');
-  assert.equal(line(tummy, [log(iso(10, 16, 9), 15)]), '오늘 15분');
-  assert.equal(line({ ...tummy, goalMinutes: 30 }, [log(iso(10, 16, 9), 15)]), '15분 / 30분');
+  assert.equal(line(routine({ title: '터미타임', time: null }), [log(iso(10, 16, 9))]), '09:00 완료');
   assert.equal(statusLine(nails, todayState(nails, [log(iso(10, 16, 9))], NOW)).done, true);
 });
 
 test('루틴 탭 — 오늘 할 것과 다른 날, 완료 수, 다음 루틴', () => {
   const vitamin = routine({ id: 'v', title: '비타민D', time: '08:00', sort: 0 });
   const bath = routine({ id: 'b', title: '목욕', everyDays: 2, time: '20:00', sort: 1 });
-  const tummy = routine({ id: 't', title: '터미타임', kind: 'minutes', time: null, sort: 2 });
+  const tummy = routine({ id: 't', title: '터미타임', time: null, sort: 2 });
   const stock = routine({ id: 's', title: '재고 확인', everyDays: 7, time: null, sort: 3 });
-  const logs = [log(iso(10, 16, 8, 10), null, 'v'), log(iso(10, 14, 20), null, 'b'), log(iso(10, 13, 10), null, 's')];
+  const logs = [log(iso(10, 16, 8, 10), 'v'), log(iso(10, 14, 20), 'b'), log(iso(10, 13, 10), 's')];
   const plan = todayPlan([tummy, stock, bath, vitamin], logs, NOW);
   assert.deepEqual(
     plan.today.map((x) => x.r.id),
@@ -163,9 +155,8 @@ test('루틴 탭 — 오늘 할 것과 다른 날, 완료 수, 다음 루틴', (
   assert.equal(todayPlan([tummy, stock, bath, vitamin], logs, new Date(2026, 9, 16, 19, 30)).next?.r.id, 'b');
   // 오전 8시 비타민D를 아직 안 했으면 지난 것이 먼저
   assert.equal(todayPlan([tummy, stock, bath, vitamin], logs.slice(1), NOW).next?.r.id, 'v');
-  // 타이머는 목표가 없으면 조금이라도 하면 완료로 센다
-  assert.equal(countsDone(tummy, todayState(tummy, [log(iso(10, 16, 9), 2, 't')], NOW)), true);
-  assert.equal(countsDone({ ...tummy, goalMinutes: 15 }, todayState({ ...tummy, goalMinutes: 15 }, [log(iso(10, 16, 9), 2, 't')], NOW)), false);
+  // 터미타임도 한 번 누르면 완료
+  assert.equal(todayPlan([tummy, stock, bath, vitamin], [...logs, log(iso(10, 16, 9), 't')], NOW).done, 2);
 });
 
 test('다른 날 이름과 날짜', () => {
@@ -212,7 +203,7 @@ test('재고 확인 — 부족한 것 중 살 것에 없는 것만, 살 곳은 �
 
 test('추천 줄의 설명', () => {
   assert.equal(templateDetail({ title: '목욕', kind: 'check', everyDays: 2, time: '20:00', items: ['목욕', '보습'] }), '2일마다 · 목욕 → 보습');
-  assert.equal(templateDetail({ title: '터미타임', kind: 'minutes', everyDays: 1, time: null }), '매일 · 타이머');
+  assert.equal(templateDetail({ title: '터미타임', kind: 'check', everyDays: 1, time: null }), '매일');
   assert.equal(templateDetail({ title: '재고 확인', kind: 'stock', everyDays: 7, time: null, items: ['분유', '기저귀', '물티슈', '로션'] }), '매주 · 분유 · 기저귀 · 물티슈');
   assert.equal(templateDetail({ title: '책', kind: 'check', everyDays: 1, time: '20:00' }), '매일 · 오후 8:00');
 });
@@ -237,7 +228,7 @@ test('요일 반복 — 그 요일만 할 날, 다음 할 날, 이름', () => {
 
 test('오늘은 건너뛰기 — 진행 · 알림에서 빠지고, 지난번으로 세지 않는다', () => {
   const bath = routine({ id: 'b', title: '목욕', everyDays: 2, time: '20:00' });
-  const skip: RoutineLog = { ...log(iso(10, 16, 9), null, 'b'), skip: true };
+  const skip: RoutineLog = { ...log(iso(10, 16, 9), 'b'), skip: true };
   const s = todayState(bath, [skip], NOW);
   assert.equal(s.skipped, true);
   assert.equal(s.done, false);
@@ -254,6 +245,6 @@ test('같은 루틴인지는 띄어쓰기를 빼고 본다 · 추천은 그대�
   assert.equal(titleKey('밤잠 준비'), titleKey('밤잠준비'));
   assert.notEqual(titleKey('목욕'), titleKey('목욕 준비'));
   const input = templateInput({ title: '재고 확인', kind: 'stock', everyDays: 7, weekdays: [0], time: null, items: ['분유'] });
-  assert.deepEqual(input, { title: '재고 확인', kind: 'stock', everyDays: 7, weekdays: [0], time: null, goalMinutes: null, items: ['분유'] });
+  assert.deepEqual(input, { title: '재고 확인', kind: 'stock', everyDays: 7, weekdays: [0], time: null, items: ['분유'] });
   assert.equal(templateInput({ title: '목욕', kind: 'check', everyDays: 2, time: '20:00' }).weekdays, null);
 });

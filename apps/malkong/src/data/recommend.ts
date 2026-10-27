@@ -28,51 +28,52 @@ const T = (...titles: string[]) => titles.map((t) => tpl(t));
 /** 밤잠 준비 — 뒤집기를 시작할 즈음부터는 속싸개 대신 수면 조끼, 돌 무렵부터는 잠옷 · 책 */
 const SLEEP_VEST = tpl('밤잠 준비', { items: ['수면 조끼 입히기', '수유', '트림', '자장가 부르며 재우기'] });
 const SLEEP_TODDLER = tpl('밤잠 준비', { items: ['잠옷 갈아입히기', '책 읽어 주기', '자장가 부르며 재우기'] });
-/** 집안일 — 시기와 상관없이 늘 들어가는 것 */
-const CHORES = T('손발톱 확인', '재고 확인', '장난감 소독', '가습기 청소', '아기 침구 빨래');
+/** 며칠마다 하는 아기 살림 — 손발톱 · 빨래 · 소독(task today/006). 젖병 소독은 돌 무렵까지 */
+const CARE = T('손발톱 깎기', '아기 빨래', '가제수건 삶기', '젖병 소독');
+const CARE_TODDLER = T('손발톱 깎기', '아기 빨래', '가제수건 삶기');
+/** 집안일 — 기저귀 휴지통 · 침구 · 분유포트 · 가습기. 분유포트는 돌 무렵까지 */
+const CHORES = T('재고 확인', '기저귀 휴지통 비우기', '아기 침구 빨래', '분유포트 세척', '가습기 청소');
+const CHORES_TODDLER = T('재고 확인', '기저귀 휴지통 비우기', '아기 침구 빨래', '가습기 청소', '장난감 소독');
+/** 2개월부터 더해지는 것 — 장난감 소독 · 쪽쪽이 바꾸기 */
+const LATER_CHORES = T('장난감 소독', '쪽쪽이 바꾸기');
 
 /**
- * 집에서의 시기 — 시기마다 추천 전체를 따로 둔다(앞 시기에 더하지 않는다). 뒤집기 연습 · 터미타임 · 속싸개처럼
- * 지난 시기의 것은 빠지고, 이유식 · 낮잠(6개월) · 컵 · 걸음마(9개월) · 양치 · 유아식(12개월)이 새로 들어온다(task today/005)
+ * 집에서의 시기 — 시기마다 추천 전체를 따로 둔다(앞 시기에 더하지 않는다). 며칠마다 해서 까먹기 쉬운 일이 중심이고,
+ * 놀이(아기체육관 · 뒤집기 연습 · 책 · 걸음마)는 성장 탭 「오늘의 놀이」에 맡긴다(task today/006).
+ * 앞쪽 여덟 개가 처음 루틴 탭의 추천 버튼이 된다
  */
 const HOME_STAGES: { from: number; label: string; templates: RoutineTemplate[] }[] = [
   {
     from: 0,
     label: '생후 0~2개월',
-    templates: T('목욕', '밤잠 준비', '터미타임', '손발톱 확인', '젖병 소독', '재고 확인', '가습기 청소', '아기 침구 빨래'),
+    templates: [...T('목욕', '밤잠 준비'), ...CARE, tpl('터미타임'), ...CHORES],
   },
   {
     from: 2,
     label: '2개월부터',
-    templates: [tpl('목욕'), SLEEP_VEST, ...T('터미타임', '아기체육관 놀이', '책 읽어 주기', '뒤집기 연습', '산책', '젖병 소독'), ...CHORES],
+    templates: [tpl('목욕'), SLEEP_VEST, ...CARE, ...T('터미타임', '산책'), ...CHORES, ...LATER_CHORES],
   },
   {
     from: 6,
     label: '6개월부터',
-    templates: [tpl('목욕'), SLEEP_VEST, ...T('이유식', '낮잠', '책 읽어 주기', '산책', '젖병 소독'), ...CHORES],
+    templates: [tpl('목욕'), SLEEP_VEST, tpl('이유식'), ...CARE, tpl('산책'), ...CHORES, ...LATER_CHORES],
   },
   {
     from: 9,
     label: '9개월부터',
-    templates: [
-      tpl('목욕'),
-      SLEEP_VEST,
-      tpl('이유식', { time: null, items: ['아침', '점심', '저녁'] }),
-      ...T('낮잠', '컵으로 마시기 연습', '걸음마 연습', '책 읽어 주기', '산책', '젖병 소독'),
-      ...CHORES,
-    ],
+    templates: [tpl('목욕'), SLEEP_VEST, tpl('이유식', { time: null, items: ['아침', '점심', '저녁'] }), ...CARE, tpl('산책'), ...CHORES, ...LATER_CHORES],
   },
   {
     from: 12,
     label: '12개월부터',
-    templates: [tpl('목욕'), SLEEP_TODDLER, ...T('양치', '유아식', '간식', '낮잠', '책 읽어 주기', '산책'), ...CHORES],
+    templates: [tpl('목욕'), SLEEP_TODDLER, ...T('양치', '유아식', '간식'), ...CARE_TODDLER, tpl('산책'), ...CHORES_TODDLER],
   },
 ];
 
 /** 병원 · 산후조리원에서는 대부분 챙겨 준다 — 그곳에서 쓸 만한 것만 */
 const AWAY: Record<Exclude<Place, 'home'>, string[]> = {
   hospital: [],
-  carecenter: ['모자동실', '손발톱 확인'],
+  carecenter: ['모자동실', '손발톱 깎기'],
 };
 
 const stageIndex = (month: number) => Math.max(0, HOME_STAGES.map((r) => r.from <= month).lastIndexOf(true));
@@ -82,11 +83,14 @@ export function homeTemplates(month: number): RoutineTemplate[] {
   return HOME_STAGES[stageIndex(month)].templates;
 }
 
-/** 이 시기에 새로 들어온 추천 — 앞 시기에 없던 이름만 */
-function newInStage(i: number): RoutineTemplate[] {
-  const before = new Set((HOME_STAGES[i - 1]?.templates ?? []).map((t) => titleKey(t.title)));
-  return HOME_STAGES[i].templates.filter((t) => !before.has(titleKey(t.title)));
+/** `j` 시기에 있고 `i` 시기에는 없던 이름 */
+function newSince(i: number, j: number): RoutineTemplate[] {
+  const before = new Set((HOME_STAGES[i]?.templates ?? []).map((t) => titleKey(t.title)));
+  return HOME_STAGES[j].templates.filter((t) => !before.has(titleKey(t.title)));
 }
+
+/** 이 시기에 새로 들어온 추천 — 앞 시기에 없던 이름만 */
+const newInStage = (i: number) => newSince(i - 1, i);
 
 export type RoutineRecommend = {
   /** 「생후 0~2개월 추천」 · 「산후조리원에서」 */
@@ -94,7 +98,7 @@ export type RoutineRecommend = {
   templates: RoutineTemplate[];
   /** 병원 · 산후조리원일 때의 안내 */
   note: string | null;
-  /** 다음 시기 미리 보기 — 집에서만, 그 시기에 새로 들어오는 것. `fromMonth` 개월이 되는 날부터 */
+  /** 다음 시기 미리 보기 — 집에서만, 새로 들어오는 것이 있는 가장 가까운 시기. `fromMonth` 개월이 되는 날부터 */
   next: { label: string; fromMonth: number; templates: RoutineTemplate[] } | null;
 };
 
@@ -109,12 +113,13 @@ export function routineRecommend(month: number, place: Place): RoutineRecommend 
     };
   }
   const i = stageIndex(month);
-  const following = HOME_STAGES[i + 1];
+  // 이름이 같고 단계만 바뀌는 시기(9개월 이유식)는 건너뛴다
+  const j = HOME_STAGES.findIndex((stage, k) => k > i && newSince(i, k).length > 0);
   return {
     label: `${HOME_STAGES[i].label} 추천`,
     templates: HOME_STAGES[i].templates,
     note: null,
-    next: following ? { label: following.label, fromMonth: following.from, templates: newInStage(i + 1) } : null,
+    next: j > 0 ? { label: HOME_STAGES[j].label, fromMonth: HOME_STAGES[j].from, templates: newSince(i, j) } : null,
   };
 }
 

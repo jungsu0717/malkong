@@ -102,6 +102,8 @@ Julian(2026-10-22): 애플만 먼저 출시한다. 순서 전체는 [common/008]
 1. ~~서버 배포~~ — 2026-10-26 revision 00024-zc4, 공공 지식 판 2026.10.5(236개)
 2. ~~첫 iOS 빌드~~ — 2026-10-26 빌드 1.0.0 (3), `--auto-submit` 으로 App Store Connect 에 올림(TestFlight 만, 심사 제출 아님)
 3. **TestFlight 로 써 보기** — Julian 폰의 TestFlight 앱. 진짜 광고가 나오니 누르지 않는다
+   - 2026-10-27 써 본 뒤 고친 것(task today/006): 루틴 타이머 빼기, 추천을 며칠마다 하는 일 중심으로, iOS 알림 스위치 어긋남.
+     다음 빌드(`npx eas-cli@latest build --platform ios --profile production --auto-submit`)에 들어간다
 4. **출시는 Julian 이 정할 때** — 스토어 정보 붙여 넣기 · 심사 제출은 common/008 「애플 먼저」 8
 
 출시 뒤 첫 업데이트 후보: 키 · 몸무게 · 달마다 카드(시안 「출시 뒤 제안」), 구글 플레이(테스터 12명 · 14일), `app-ads.txt` 용 도메인.

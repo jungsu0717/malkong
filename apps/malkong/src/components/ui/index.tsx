@@ -323,9 +323,21 @@ export function ListRow({
   );
 }
 
-/** 켜고 끄기 — 붉은 말 색 길, 흰 손잡이(웹의 기본 청록 손잡이를 덮는다) */
+/**
+ * 켜고 끄기 — 켜지면 코랄 길. iOS 는 켜진 색만 주고 나머지는 시스템 모양 그대로 둔다:
+ * 꺼진 바탕(`ios_backgroundColor`)을 주면 옛 크기 · 둥근 모서리로 따로 그려져 iOS 26 의 넓은 스위치와 어긋난다(task today/006).
+ * 안드로이드 · 웹은 흰 손잡이와 회색 길(웹의 기본 청록 손잡이를 덮는다)
+ */
 export function Toggle({ value, onChange, label }: { value: boolean; onChange: (on: boolean) => void; label: string }) {
   const c = useTheme();
+  const look =
+    Platform.OS === 'ios'
+      ? { trackColor: { true: c.accent } }
+      : {
+          trackColor: { true: c.accent, false: c.surfaceStrong },
+          thumbColor: '#FFFFFF',
+          ...(Platform.OS === 'web' ? ({ activeThumbColor: '#FFFFFF' } as object) : {}),
+        };
   return (
     <Switch
       accessibilityLabel={label}
@@ -334,10 +346,7 @@ export function Toggle({ value, onChange, label }: { value: boolean; onChange: (
         tap();
         onChange(on);
       }}
-      trackColor={{ true: c.accent, false: c.surfaceStrong }}
-      thumbColor="#FFFFFF"
-      ios_backgroundColor={c.surfaceStrong}
-      {...(Platform.OS === 'web' ? ({ activeThumbColor: '#FFFFFF' } as object) : {})}
+      {...look}
     />
   );
 }

@@ -12,7 +12,7 @@ import * as SQLite from 'expo-sqlite';
 import type { Baby } from './baby';
 import type { BabyRecord } from './records';
 import { repeatFromText, repeatToText } from './repeat';
-import type { Routine, RoutineLog } from './routine';
+import { routineKindOf, type Routine, type RoutineLog } from './routine';
 import type { Memo } from './stage';
 import type { Todo, Topic } from './todos';
 
@@ -363,7 +363,7 @@ export async function deleteTodoRow(id: string): Promise<void> {
 
 // --- 루틴 (SPEC-MAIN-01~07, task today/001 · 003) ---
 
-type RoutineRow = Omit<Routine, 'hidden' | 'items' | 'weekdays'> & { hidden: number; items: string | null; weekdays: string | null };
+type RoutineRow = Omit<Routine, 'kind' | 'hidden' | 'items' | 'weekdays'> & { kind: string; hidden: number; items: string | null; weekdays: string | null };
 
 /** 요일 반복은 JSON 숫자 배열 — 깨졌으면 없는 것으로 */
 function parseWeekdays(text: string | null): number[] | null {
@@ -390,30 +390,34 @@ function parseItems(text: string | null): string[] | null {
 export async function readRoutineRows(): Promise<Routine[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<RoutineRow>(
-    `SELECT id, title, kind, every_days AS everyDays, time, goal_minutes AS goalMinutes, hidden, sort, running_since AS runningSince,
-            items, weekdays, created_at AS createdAt, updated_at AS updatedAt
+    `SELECT id, title, kind, every_days AS everyDays, time, hidden, sort, items, weekdays, created_at AS createdAt, updated_at AS updatedAt
        FROM routine ORDER BY sort`,
   );
-  return rows.map((r) => ({ ...r, hidden: r.hidden === 1, items: parseItems(r.items), weekdays: parseWeekdays(r.weekdays) }));
+  // 옛 타이머 루틴은 체크로 읽는다(task today/006) — goal_minutes · running_since 칸은 더 쓰지 않는다
+  return rows.map((r) => ({
+    ...r,
+    kind: routineKindOf(r.kind),
+    hidden: r.hidden === 1,
+    items: parseItems(r.items),
+    weekdays: parseWeekdays(r.weekdays),
+  }));
 }
 
 export async function upsertRoutineRow(r: Routine): Promise<void> {
   const db = await getDb();
   await db.runAsync(
     `INSERT INTO routine (id, title, kind, every_days, time, goal_minutes, hidden, sort, running_since, items, weekdays, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES (?, ?, ?, ?, ?, NULL, ?, ?, NULL, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET title = excluded.title, kind = excluded.kind, every_days = excluded.every_days, time = excluded.time,
-       goal_minutes = excluded.goal_minutes, hidden = excluded.hidden, sort = excluded.sort, running_since = excluded.running_since,
+       goal_minutes = NULL, hidden = excluded.hidden, sort = excluded.sort, running_since = NULL,
        items = excluded.items, weekdays = excluded.weekdays, updated_at = excluded.updated_at`,
     r.id,
     r.title,
     r.kind,
     r.everyDays,
     r.time,
-    r.goalMinutes,
     r.hidden ? 1 : 0,
     r.sort,
-    r.runningSince,
     r.items && r.items.length > 0 ? JSON.stringify(r.items) : null,
     r.weekdays && r.weekdays.length > 0 ? JSON.stringify(r.weekdays) : null,
     r.createdAt,
@@ -426,7 +430,7 @@ export async function readRoutineLogRows(days = 400): Promise<RoutineLog[]> {
   const db = await getDb();
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const rows = await db.getAllAsync<Omit<RoutineLog, 'skip'> & { skip: number }>(
-    `SELECT id, routine_id AS routineId, at, minutes, by, step, skip, created_at AS createdAt FROM routine_log WHERE at >= ? ORDER BY at`,
+    `SELECT id, routine_id AS routineId, at, by, step, skip, created_at AS createdAt FROM routine_log WHERE at >= ? ORDER BY at`,
     since,
   );
   return rows.map((l) => ({ ...l, skip: l.skip === 1 }));
@@ -435,11 +439,10 @@ export async function readRoutineLogRows(days = 400): Promise<RoutineLog[]> {
 export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, minutes, by, step, skip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, by, step, skip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
     l.id,
     l.routineId,
     l.at,
-    l.minutes,
     l.by,
     l.step,
     l.skip ? 1 : 0,

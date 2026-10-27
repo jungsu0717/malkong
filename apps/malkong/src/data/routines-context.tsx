@@ -41,13 +41,6 @@ type RoutinesValue = {
   skipToday: (id: string) => Promise<void>;
   /** 재고 확인 — 부족한 것을 장보기에 넣고 루틴을 끝낸다. 새로 넣은 수를 돌려준다(SPEC-MAIN-06) */
   completeStock: (id: string, short: string[]) => Promise<number>;
-  /** 타이머 루틴: 분을 더한다 */
-  addMinutes: (id: string, minutes: number) => Promise<void>;
-  /** 타이머 루틴: 오늘 마지막 기록을 지운다 */
-  undoLast: (id: string) => Promise<void>;
-  startTimer: (id: string) => Promise<void>;
-  /** 타이머를 멈추고 걸린 분(1분 이상)을 기록으로 남긴다 */
-  stopTimer: (id: string) => Promise<void>;
 };
 
 const RoutinesContext = createContext<RoutinesValue | null>(null);
@@ -143,7 +136,7 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
   const removeRoutine = useCallback(
     async (id: string) => {
       const before = current.current.all.find((r) => r.id === id);
-      if (before) await save({ ...before, hidden: true, runningSince: null, updatedAt: new Date().toISOString() });
+      if (before) await save({ ...before, hidden: true, updatedAt: new Date().toISOString() });
     },
     [save],
   );
@@ -190,7 +183,7 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
         for (const l of skips) await dropLog(l.id);
         return;
       }
-      await addLog(makeRoutineLog(id, new Date(), null, null, null, true));
+      await addLog(makeRoutineLog(id, new Date(), null, null, true));
     },
     [addLog, dropLog],
   );
@@ -207,7 +200,7 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
         for (const l of [...mine, ...whole]) await dropLog(l.id);
         return;
       }
-      await addLog(makeRoutineLog(id, new Date(), null, null, step));
+      await addLog(makeRoutineLog(id, new Date(), null, step));
       const doneSteps = new Set([...all.filter((l) => l.step != null).map((l) => l.step), step]);
       if (doneSteps.size >= routine.items.length && whole.length === 0) await addLog(makeRoutineLog(id, new Date()));
     },
@@ -241,43 +234,6 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
     [topics, todos, addTodo, completeAll],
   );
 
-  const addMinutes = useCallback(
-    async (id: string, minutes: number) => {
-      await addLog(makeRoutineLog(id, new Date(), minutes));
-    },
-    [addLog],
-  );
-
-  const undoLast = useCallback(
-    async (id: string) => {
-      const last = logsOn(id, current.current.logs, new Date())
-        .filter((l) => l.minutes != null)
-        .pop();
-      if (last) await dropLog(last.id);
-    },
-    [dropLog],
-  );
-
-  const startTimer = useCallback(
-    async (id: string) => {
-      const before = current.current.all.find((r) => r.id === id);
-      // 타이머는 시간 재기 루틴에만
-      if (before?.kind === 'minutes') await save({ ...before, runningSince: new Date().toISOString(), updatedAt: new Date().toISOString() });
-    },
-    [save],
-  );
-
-  const stopTimer = useCallback(
-    async (id: string) => {
-      const before = current.current.all.find((r) => r.id === id);
-      if (!before?.runningSince) return;
-      const minutes = Math.max(1, Math.round((Date.now() - new Date(before.runningSince).getTime()) / 60_000));
-      await save({ ...before, runningSince: null, updatedAt: new Date().toISOString() });
-      await addLog(makeRoutineLog(id, new Date(), minutes));
-    },
-    [save, addLog],
-  );
-
   // 알림 단추 — 「완료」는 오늘 아직 안 했으면 완료로, 「1시간 뒤」는 같은 알림을 한 번 더
   useEffect(() => {
     if (loading) return;
@@ -290,7 +246,7 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
       if (!routine) return;
       const state = todayState(routine, current.current.logs);
       // 단계 · 재고 확인도 알림의 「완료」는 루틴 전체를 끝낸 것으로 본다
-      if (routine.kind !== 'minutes' && !state.firstAt) void addLog(makeRoutineLog(id, new Date()));
+      if (!state.firstAt) void addLog(makeRoutineLog(id, new Date()));
     });
   }, [loading, addLog]);
 
@@ -308,12 +264,8 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
       completeAll,
       skipToday,
       completeStock,
-      addMinutes,
-      undoLast,
-      startTimer,
-      stopTimer,
     }),
-    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, restoreRoutine, check, toggleStep, completeAll, skipToday, completeStock, addMinutes, undoLast, startTimer, stopTimer],
+    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, restoreRoutine, check, toggleStep, completeAll, skipToday, completeStock],
   );
 
   return <RoutinesContext.Provider value={value}>{children}</RoutinesContext.Provider>;

@@ -134,7 +134,7 @@ export function RoutineHero({
               onAction(action.routine);
             }}
             style={({ pressed }) => [styles.button, { backgroundColor: c.onHero, opacity: pressed ? 0.85 : 1 }]}>
-            <RoutineIcon title={action.routine.title} kind={action.routine.kind} size={18} color={c.accent} />
+            <RoutineIcon title={action.routine.title} size={18} color={c.accent} />
             <ThemedText type="body" numberOfLines={1} style={[styles.buttonText, { color: c.hero }]}>
               {action.label}
             </ThemedText>

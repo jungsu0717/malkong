@@ -10,7 +10,7 @@
  * - 메모는 서버가 받는다고 알려 준 뒤에만 올린다(응답의 itemKinds). 옛 서버는 모르는 종류가 섞이면 요청 전체를 거절한다
  */
 
-import type { Routine, RoutineKind, RoutineLog } from './routine.ts';
+import { routineKindOf, type Routine, type RoutineLog } from './routine.ts';
 import type { Memo } from './stage.ts';
 import type { Todo, Topic, TopicKind } from './todos.ts';
 
@@ -202,23 +202,20 @@ export function planIncoming(args: {
     const mine = routines.get(item.id);
     if (mine && mine.updatedAt >= item.updatedAt) continue;
     const d = item.data;
-    const kind = str(d.kind) as RoutineKind;
     const routine: Routine = {
       id: item.id,
       title: str(d.title) ?? '',
-      kind: kind === 'minutes' || kind === 'stock' ? kind : 'check',
+      // 옛 타이머 루틴은 체크로(task today/006)
+      kind: routineKindOf(d.kind),
       everyDays: Math.max(1, num(d.everyDays, 1)),
       weekdays: Array.isArray(d.weekdays)
         ? d.weekdays.filter((x): x is number => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 6)
         : null,
       time: str(d.time),
-      goalMinutes: typeof d.goalMinutes === 'number' ? d.goalMinutes : null,
       // 단계 · 확인할 물건(task today/003) — 글자만, 스무 개까지
       items: Array.isArray(d.items) ? d.items.filter((x): x is string => typeof x === 'string').slice(0, 20) : null,
       hidden: bool(d.hidden),
       sort: num(d.sort, 0),
-      // 타이머는 그 폰의 것 — 다른 폰의 타이머를 이어 받지 않는다
-      runningSince: mine?.runningSince ?? null,
       createdAt: str(d.createdAt) ?? item.updatedAt,
       updatedAt: item.updatedAt,
     };
@@ -244,7 +241,6 @@ export function planIncoming(args: {
       id: item.id,
       routineId,
       at,
-      minutes: typeof d.minutes === 'number' ? d.minutes : null,
       by: str(d.by),
       step: typeof d.step === 'number' && Number.isInteger(d.step) && d.step >= 0 ? d.step : null,
       skip: bool(d.skip),
