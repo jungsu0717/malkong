@@ -23,7 +23,7 @@
 SPEC 번호, 문서 작성 규칙 여덟, 작업 순서는 저장소 공통 규칙 [conventions](../../../docs/governance/conventions.md) 를 따른다.
 육아버디가 더하는 것만 여기 적는다.
 
-- 메뉴 코드는 지금 `MAIN`(루틴 탭) · `TOPIC`(할 일 탭) · `SHOP`(할 일 탭의 장보기 카테고리) · `STAGE`(성장 탭) · `MY`(마이). `LOG` 는 2026-10-19 에 뺐다. `HOME` · `ASK` · `BABY` · `GROW` 는
+- 메뉴 코드는 지금 `MAIN`(홈 탭 · 루틴 화면) · `TOPIC`(할 일 탭) · `SHOP`(할 일 탭의 장보기 카테고리) · `STAGE`(성장 탭) · `MY`(마이). `LOG` 는 2026-10-19 에 뺐다. `HOME` · `ASK` · `BABY` · `GROW` 는
   2026-10-15 방향 전환으로 보관했다(decisions/024) — 문서는 남기고 지금의 SPEC 으로 쓰지 않는다. 홈은 그래서 `HOME` 이 아니라 `MAIN` 이다
 - 작성 규칙 8 「출처를 남긴다」: 접종 · 검진 일정과 위험 신호 안내처럼 의료에 닿는 내용은 출처 화이트리스트의 근거를 적는다([knowledge-layers](architecture/knowledge-layers.md)).
 - 작업 순서 4 「구현」의 품질 검사는 [constitution](constitution.md) 개발 원칙 11 이 정한다.

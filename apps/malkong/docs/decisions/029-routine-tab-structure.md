@@ -1,6 +1,6 @@
 # 029 루틴 중심으로 다시 짜기 — 탭은 루틴 · 할 일 · 장보기 · 마이
 
-> 상태: 확정 (2026-10-16) — 캔버스 시안(https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「제안 1」 「제안 2」)을 Julian 이 확정
+> 상태: 확정 (2026-10-16) · 첫 탭이 루틴인 것은 [034](034-home-tab-app-filled-first.md)로 대체됨(2026-10-28) — 캔버스 시안(https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「제안 1」 「제안 2」)을 Julian 이 확정
 
 ## 맥락
 

@@ -40,7 +40,7 @@ const LATER_CHORES = T('장난감 소독', '쪽쪽이 바꾸기');
 /**
  * 집에서의 시기 — 시기마다 추천 전체를 따로 둔다(앞 시기에 더하지 않는다). 며칠마다 해서 까먹기 쉬운 일이 중심이고,
  * 놀이(아기체육관 · 뒤집기 연습 · 책 · 걸음마)는 성장 탭 「오늘의 놀이」에 맡긴다(task today/006).
- * 순서대로 루틴 탭의 추천 버튼이 된다
+ * 순서대로 루틴 화면의 추천 버튼이 된다
  */
 const HOME_STAGES: { from: number; label: string; templates: RoutineTemplate[] }[] = [
   {
@@ -78,7 +78,7 @@ const AWAY: Record<Exclude<Place, 'home'>, string[]> = {
 
 const stageIndex = (month: number) => Math.max(0, HOME_STAGES.map((r) => r.from <= month).lastIndexOf(true));
 
-/** 집에서 지금 개월의 추천 전체 — 루틴 추가 시트와 루틴 탭의 추천 버튼(SPEC-MAIN-03) */
+/** 집에서 지금 개월의 추천 전체 — 루틴 추가 시트와 루틴 화면의 추천 버튼(SPEC-MAIN-03) */
 export function homeTemplates(month: number): RoutineTemplate[] {
   return HOME_STAGES[stageIndex(month)].templates;
 }
@@ -121,7 +121,7 @@ export function routineRecommend(month: number, place: Place): RoutineRecommend 
 }
 
 /**
- * 루틴 탭 버튼 뒤에 점선으로 보일 추천(SPEC-MAIN-03) — 지금 시기 추천 중 아직 안 넣고 숨기지 않은 것 전부.
+ * 루틴 화면 버튼 뒤에 점선으로 보일 추천(SPEC-MAIN-03) — 지금 시기 추천 중 아직 안 넣고 숨기지 않은 것 전부.
  * 루틴 수로 개수를 바꾸지 않는다 — 하나 넣으면 그 버튼만 빠지고, 루틴을 지우면 그 버튼만 돌아온다(task today/006).
  * 6개월이 되면 이유식처럼 새 시기 것도 저절로 보인다. 길게 눌러 숨긴 이름은 `hidden`.
  */

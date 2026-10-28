@@ -14,7 +14,7 @@ export const Colors = {
     /** 장식·아이콘·자리 표시 글 — 본문 글자에는 쓰지 않는다(대비가 모자람) */
     textTertiary: '#8A8A95',
     background: '#FFFFFF',
-    /** 시작 화면 바탕 — 앱 아이콘 · 루틴 탭 머리와 같은 먹색(decisions/032). app.json 의 expo-splash-screen backgroundColor 와 같아야 한다 */
+    /** 시작 화면 바탕 — 앱 아이콘 · 홈 · 루틴 화면 머리와 같은 먹색(decisions/032). app.json 의 expo-splash-screen backgroundColor 와 같아야 한다 */
     splash: '#16161A',
     /** 옅은 회색 면 — 입력창 · 칩 · 묶음 카드 */
     surface: '#F4F4F6',
@@ -40,7 +40,7 @@ export const Colors = {
     space: '#0B0B10',
     onSpace: '#FFFFFF',
     onSpaceDim: 'rgba(255, 255, 255, 0.68)',
-    /** 루틴 탭 위쪽 먹색 머리(task today/004) — 그 위의 글씨 · 진행 고리 · 고리 바탕 */
+    /** 홈 · 루틴 화면 위쪽 먹색 머리(task today/004 · 007) — 그 위의 글씨 · 진행 고리 · 고리 바탕 */
     hero: '#16161A',
     onHero: '#FFFFFF',
     onHeroDim: 'rgba(255, 255, 255, 0.66)',

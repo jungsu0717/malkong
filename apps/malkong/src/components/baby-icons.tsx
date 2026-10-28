@@ -113,7 +113,7 @@ export function TeddyIcon({ size = 24, color }: IconProps) {
   );
 }
 
-/** 루틴 탭 — 돌아가는 화살표 안의 체크 (반복해서 챙기는 일, decisions/029) */
+/** 루틴 — 돌아가는 화살표 안의 체크 (반복해서 챙기는 일, decisions/029) */
 export function RepeatCheckIcon({ size = 24, color }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">

@@ -75,7 +75,7 @@ export default function GrowthScreen() {
       return;
     }
     // 50일 · 100일 · 돌 — 기념일 할 일(촬영 예약 같은)이 있는 아기 일정으로
-    router.push({ pathname: '/todo', params: { cat: 'baby' } });
+    router.push({ pathname: '/todo', params: { cat: 'baby', at: String(Date.now()) } });
   };
 
   return (

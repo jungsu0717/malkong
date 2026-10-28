@@ -5,6 +5,7 @@
  * 줄은 내 할 일과 같은 모양 — 동그라미 · 이름 · 작은 이름표와 날짜 · 오른쪽 D-day. 아직 목록에 생기지 않은 앞날 일정은 동그라미 대신 달력.
  * 접종 · 검진의 동그라미는 무엇을 했는지 고르는 시트를 연다.
  * 맨 위 「지난 일정」에는 지난달까지 기한이었는데 아직 안 한 앱 할 일(「지남」)을 두고, 놓친 접종 · 검진은 그 아래 「지난 접종 · 검진 N개 보기」로 접어 둔다(task common/026).
+ * 줄을 만드는 일(`useBabyRows`)과 줄 모양(`BabyRow`)은 홈 「다가오는 일」 카드도 같이 쓴다(SPEC-MAIN-08, task today/007).
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -24,14 +25,16 @@ import { useRecords } from '@/data/records-context';
 import type { GapGroup } from '@/data/timeline';
 import type { Todo, TopicKind } from '@/data/todos';
 import { useTodos } from '@/data/todos-context';
+import { ddayText } from '@/data/upcoming';
 import { useMarkDone } from '@/hooks/use-mark-done';
+import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 
 const TAGS: Partial<Record<TopicKind, string>> = { milestone: '기념일', size: '사이즈' };
 /** 「그 뒤」는 이만큼까지 */
 const LATER_LIMIT = 4;
 
-type Row = {
+export type BabyRowData = {
   key: string;
   at: number;
   title: string;
@@ -44,14 +47,6 @@ type Row = {
   group?: GapGroup;
   todo?: Todo;
 };
-
-const DAY = 86_400_000;
-
-function ddayText(at: number, today: number): string | null {
-  const days = Math.round((at - today) / DAY);
-  if (days < 0) return null;
-  return days === 0 ? '오늘' : `D-${days}`;
-}
 
 /** 오늘 챙길 아기 일정 수 — 칸 이름 옆 숫자 */
 export function useBabyScheduleCount(): number {
@@ -67,67 +62,111 @@ export function useBabyScheduleCount(): number {
   return open + due;
 }
 
-export function BabySchedule() {
-  const c = useTheme();
+/**
+ * 아기 일정 줄 — 날짜순 줄(`at` 은 그날 0시, 지금 기간인 접종 · 검진은 어제)과 놓친 접종 · 검진,
+ * 동그라미 · 이름을 누를 때의 흐름, 그때 여는 시트(`sheets` 를 화면에 한 번 둔다).
+ */
+export function useBabyRows(now: Date) {
   const { baby, age } = useBaby();
   const { records } = useRecords();
   const { topics, todos, toggleDone, update, remove, autoRemoved } = useTodos();
   const markDone = useMarkDone();
   const [editing, setEditing] = useState<Todo | null>(null);
-  const [showPast, setShowPast] = useState(false);
-  if (!baby || !age) return null;
 
-  const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  const birth = birthOf(baby.birthDate);
-  const groups = checkupGroups(records, age.month);
+  const groups = age ? checkupGroups(records, age.month) : [];
   const kindOf = new Map(topics.map((t) => [t.id, t.kind]));
   const autoTodos = todos.filter((t) => (kindOf.get(t.topicId) === 'milestone' || kindOf.get(t.topicId) === 'size') && !t.doneAt);
   const have = new Set([...todos.map((t) => t.ref).filter((r): r is string => !!r), ...autoRemoved]);
 
-  const rows: Row[] = [
-    ...groups
-      .filter((g) => g.status === 'open' || g.status === 'soon')
-      .map((g) => {
-        const w = whenText(todoOf(g), baby.birthDate, age.month, now);
-        const at = monthStart(baby.birthDate, g.month).getTime();
-        return {
-          key: g.key,
-          at: Math.max(at, g.status === 'open' ? today - 1 : at),
-          title: g.label,
-          tag: todoOf(g).category,
-          // 지금 기간인 것은 「이번 달」 — 「0개월부터」처럼 읽히지 않게
-          meta: g.status === 'open' && g.month < age.month ? '이번 달' : w.text,
-          right: g.status === 'open' ? '지금' : ddayText(at, today),
-          future: false,
-          group: g,
-        };
-      }),
-    ...autoTodos.map((t) => {
-      const at = t.dueAt ? new Date(t.dueAt).getTime() : today;
-      return {
-        key: t.id,
-        at,
-        title: t.title,
-        tag: TAGS[kindOf.get(t.topicId) as TopicKind] ?? '',
-        meta: t.dueAt ? dueLabel(new Date(t.dueAt), t.hasTime, now) : '',
-        right: t.dueAt ? (ddayText(at, today) ?? '지남') : null,
-        future: false,
-        todo: t,
-      };
-    }),
-    ...(['milestone', 'size'] as const).flatMap((k) =>
-      upcomingAuto(k, birth, now, have).map((u) => ({
-        key: u.rule.ref,
-        at: u.due.getTime(),
-        title: u.rule.title,
-        tag: TAGS[k] ?? '',
-        meta: dueLabel(u.due, false, now),
-        right: ddayText(u.due.getTime(), today),
-        future: true,
-      })),
-    ),
-  ].sort((a, b) => a.at - b.at);
+  const rows: BabyRowData[] =
+    !baby || !age
+      ? []
+      : [
+          ...groups
+            .filter((g) => g.status === 'open' || g.status === 'soon')
+            .map((g) => {
+              const w = whenText(todoOf(g), baby.birthDate, age.month, now);
+              const at = monthStart(baby.birthDate, g.month).getTime();
+              return {
+                key: g.key,
+                at: Math.max(at, g.status === 'open' ? today - 1 : at),
+                title: g.label,
+                tag: todoOf(g).category,
+                // 지금 기간인 것은 「이번 달」 — 「0개월부터」처럼 읽히지 않게
+                meta: g.status === 'open' && g.month < age.month ? '이번 달' : w.text,
+                right: g.status === 'open' ? '지금' : ddayText(at, today),
+                future: false,
+                group: g,
+              };
+            }),
+          ...autoTodos.map((t) => {
+            const at = t.dueAt ? new Date(t.dueAt).getTime() : today;
+            return {
+              key: t.id,
+              at,
+              title: t.title,
+              tag: TAGS[kindOf.get(t.topicId) as TopicKind] ?? '',
+              meta: t.dueAt ? dueLabel(new Date(t.dueAt), t.hasTime, now) : '',
+              right: t.dueAt ? (ddayText(at, today) ?? '지남') : null,
+              future: false,
+              todo: t,
+            };
+          }),
+          ...(['milestone', 'size'] as const).flatMap((k) =>
+            upcomingAuto(k, birthOf(baby.birthDate), now, have).map((u) => ({
+              key: u.rule.ref,
+              at: u.due.getTime(),
+              title: u.rule.title,
+              tag: TAGS[k] ?? '',
+              meta: dueLabel(u.due, false, now),
+              right: ddayText(u.due.getTime(), today),
+              future: true,
+            })),
+          ),
+        ].sort((a, b) => a.at - b.at);
+  const missed = groups.filter((g) => g.status === 'missed');
+
+  const check = (r: BabyRowData) => {
+    if (r.group) markDone.pick(r.group);
+    else if (r.todo) {
+      tap('success');
+      void toggleDone(r.todo.id);
+    }
+  };
+  const open = (r: BabyRowData) => {
+    if (r.group) markDone.pick(r.group);
+    else if (r.todo) setEditing(r.todo);
+  };
+
+  const sheets = (
+    <>
+      {markDone.sheet}
+      <TodoSheet
+        key={editing?.id ?? 'none'}
+        todo={editing}
+        topics={topics.filter((t) => !t.hidden)}
+        onClose={() => setEditing(null)}
+        onSave={(patch) => {
+          if (editing) void update(editing.id, patch);
+          setEditing(null);
+        }}
+        onDelete={() => {
+          if (editing) void remove(editing.id);
+          setEditing(null);
+        }}
+      />
+    </>
+  );
+
+  return { rows, missed, today, check, open, sheets };
+}
+
+export function BabySchedule() {
+  const c = useTheme();
+  const now = useNow(false);
+  const { rows, missed, check, open, sheets } = useBabyRows(now);
+  const [showPast, setShowPast] = useState(false);
 
   const thisStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
   const next1 = new Date(now.getFullYear(), now.getMonth() + 1, 1).getTime();
@@ -137,26 +176,14 @@ export function BabySchedule() {
   const thisMonth = rows.filter((r) => r.at < next1 && !overdue.includes(r));
   const nextMonth = rows.filter((r) => r.at >= next1 && r.at < next2);
   const later = rows.filter((r) => r.at >= next2).slice(0, LATER_LIMIT);
-  const missed = groups.filter((g) => g.status === 'missed');
 
-  const onCheck = (r: Row) => {
-    if (r.group) markDone.pick(r.group);
-    else if (r.todo) {
-      tap('success');
-      void toggleDone(r.todo.id);
-    }
-  };
-  const onOpen = (r: Row) => {
-    if (r.group) markDone.pick(r.group);
-    else if (r.todo) setEditing(r.todo);
-  };
-  const section = (title: string, list: Row[]): ReactNode =>
+  const section = (title: string, list: BabyRowData[]): ReactNode =>
     list.length > 0 && (
       <View style={styles.section}>
         <SectionHeader title={title} />
         <Card style={styles.rows}>
           {list.map((r, i) => (
-            <BabyRow key={r.key} row={r} divider={i > 0} onCheck={() => onCheck(r)} onOpen={() => onOpen(r)} />
+            <BabyRow key={r.key} row={r} divider={i > 0} onCheck={() => check(r)} onOpen={() => open(r)} />
           ))}
         </Card>
       </View>
@@ -197,26 +224,13 @@ export function BabySchedule() {
       {section('다음 달', nextMonth)}
       {section('그 뒤', later)}
 
-      {markDone.sheet}
-      <TodoSheet
-        key={editing?.id ?? 'none'}
-        todo={editing}
-        topics={topics.filter((t) => !t.hidden)}
-        onClose={() => setEditing(null)}
-        onSave={(patch) => {
-          if (editing) void update(editing.id, patch);
-          setEditing(null);
-        }}
-        onDelete={() => {
-          if (editing) void remove(editing.id);
-          setEditing(null);
-        }}
-      />
+      {sheets}
     </>
   );
 }
 
-function BabyRow({ row, divider, onCheck, onOpen }: { row: Row; divider: boolean; onCheck: () => void; onOpen: () => void }) {
+/** 아기 일정 한 줄 — 동그라미(앞날 일정은 달력) · 이름 · 작은 이름표와 날짜 · 오른쪽 D-day */
+export function BabyRow({ row, divider, onCheck, onOpen }: { row: BabyRowData; divider: boolean; onCheck: () => void; onOpen: () => void }) {
   const c = useTheme();
   return (
     <View style={[styles.row, divider && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider }]}>

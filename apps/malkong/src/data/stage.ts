@@ -92,7 +92,7 @@ export function daysSince(birthDate: string, now = new Date()): number {
 
 /**
  * 태어난 지 며칠째 — 태어난 날이 1일째(「D+1」). 화면의 D+ 는 이 셈이다.
- * 50일 · 100일 칸, 루틴 탭의 「태어난 지 N일」과 같아서 100일 되는 날 「D+100」이 된다
+ * 50일 · 100일 칸, 홈의 「태어난 지 N일」과 같아서 100일 되는 날 「D+100」이 된다
  */
 export function dayNumber(birthDate: string, now = new Date()): number {
   return daysSince(birthDate, now) + 1;

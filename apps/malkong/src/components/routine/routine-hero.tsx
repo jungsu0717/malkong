@@ -1,5 +1,5 @@
 /**
- * 루틴 탭 위쪽 먹색 머리 (SPEC-MAIN-01, task today/004 · 시안 C) — 날짜 · 제목 · 보기 전환, 코랄 진행 고리,
+ * 루틴 화면 위쪽 먹색 머리 (SPEC-MAIN-01, task today/004 · 시안 C · today/007) — 뒤로 단추, 날짜 · 제목 · 보기 전환, 코랄 진행 고리,
  * 「3개 남았어요」 「다음 · 목욕 오후 8:00」, 그리고 다음 루틴을 바로 하는 큰 흰 단추 하나.
  */
 
@@ -23,6 +23,7 @@ const LENGTH = 2 * Math.PI * R;
 
 export function RoutineHero({
   topInset,
+  onBack,
   dateText,
   view,
   onView,
@@ -33,6 +34,8 @@ export function RoutineHero({
   onAction,
 }: {
   topInset: number;
+  /** 홈에서 들어온 상세 화면이라 왼쪽 위에 뒤로 단추 */
+  onBack: () => void;
   /** 「10월 20일 화요일 · 태어난 지 31일」 */
   dateText: string;
   view: RoutineView;
@@ -51,6 +54,9 @@ export function RoutineHero({
       {/* 위로 당겨도 흰 바탕이 보이지 않게 */}
       <View style={[styles.overscroll, { backgroundColor: c.hero }]} />
       <View style={styles.inner}>
+        <Pressable accessibilityRole="button" accessibilityLabel="뒤로" hitSlop={10} onPress={onBack} style={styles.back}>
+          <Ionicons name="chevron-back" size={26} color={c.onHero} />
+        </Pressable>
         <View style={styles.top}>
           <View style={styles.flex}>
             <ThemedText type="small" style={{ color: c.onHeroDim }}>
@@ -150,6 +156,7 @@ const styles = StyleSheet.create({
   overscroll: { position: 'absolute', left: 0, right: 0, top: -1000, height: 1000 },
   inner: { gap: 18, width: '100%', maxWidth: MaxContentWidth - Gutter * 2, alignSelf: 'center' },
   flex: { flex: 1 },
+  back: { alignSelf: 'flex-start', marginLeft: -6, marginTop: -6, marginBottom: -10 },
   top: { flexDirection: 'row', alignItems: 'flex-end', gap: 12 },
   title: { fontSize: 30, lineHeight: 38 },
   toggle: { flexDirection: 'row', gap: 2, padding: 3, borderRadius: 12 },

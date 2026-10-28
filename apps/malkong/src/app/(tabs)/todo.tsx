@@ -5,7 +5,7 @@
  * - 내 할 일: 내가 적은 것만 오늘 · 예정 · 날짜 없음. 아래 「준비 목록 · 추천 할 일」. 적는 칸 위 날짜 칩(오늘 · 내일 · 날짜 고르기 · 날짜 없음)
  * - 장보기: 예전 장보기 탭 그대로(ShopContent · ShopInput)
  * - 아기 일정: 앱이 채우는 접종 · 검진 · 기념일 · 사이즈를 날짜순으로(BabySchedule). 적는 칸은 없다
- * 다른 화면에서 `/todo?cat=shop` · `?cat=baby` 로 칸을 골라 열 수 있다.
+ * 다른 화면에서 `/todo?cat=shop` · `?cat=baby` 로 칸을 골라 열 수 있다. `at`(누른 시각)을 함께 주면 다른 칸을 골라 둔 뒤 같은 칸으로 다시 와도 그 칸이 열린다.
  */
 
 import { router, useLocalSearchParams } from 'expo-router';
@@ -39,18 +39,19 @@ const TABS: { id: Tab; label: string }[] = [
 
 export default function TodoScreen() {
   const c = useTheme();
-  const params = useLocalSearchParams<{ cat?: string }>();
+  const params = useLocalSearchParams<{ cat?: string; at?: string }>();
   const { topics, todos, loading, add, update, toggleDone, remove, dismissed } = useTodos();
   const typing = useKeyboardVisible();
   const babyCount = useBabyScheduleCount();
   const [editing, setEditing] = useState<Todo | null>(null);
-  // 고른 칸 — 다른 화면에서 `?cat=` 으로 새로 열면 그것을 따른다(고를 때 그때의 `cat` 을 함께 적어 둔다)
+  // 고른 칸 — 다른 화면에서 `?cat=` 으로 새로 열면 그것을 따른다(고를 때 그때의 `cat` · `at` 을 함께 적어 둔다)
   const [chosen, setChosen] = useState<{ tab: Tab; from?: string }>({ tab: 'mine' });
+  const asked = params.cat ? `${params.cat}:${params.at ?? ''}` : undefined;
   const fromParam: Tab | null = params.cat === 'shop' ? 'shop' : params.cat === 'baby' ? 'baby' : params.cat ? 'mine' : null;
-  const tab: Tab = fromParam && chosen.from !== params.cat ? fromParam : chosen.tab;
+  const tab: Tab = fromParam && chosen.from !== asked ? fromParam : chosen.tab;
   const pick = (next: Tab) => {
     if (next !== tab) tap();
-    setChosen({ tab: next, from: params.cat });
+    setChosen({ tab: next, from: asked });
   };
 
   const general = topics.find((t) => t.kind === 'general');

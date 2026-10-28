@@ -187,7 +187,7 @@ export function clockLabel(iso: string): string {
 }
 
 /**
- * 오늘 탭 루틴 버튼의 상태 한 줄(SPEC-MAIN-02, task today/002) — 완료했으면 「08:10 완료」(가족 이름이 있으면 「엄마 · 08:10」),
+ * 루틴 버튼의 상태 한 줄(SPEC-MAIN-02, task today/002) — 완료했으면 「08:10 완료」(가족 이름이 있으면 「엄마 · 08:10」),
  * 오늘 할 날이 아니면 「내일」 「3일 뒤」, N일마다는 「마지막 7일 전」, 그 밖에는 알림 시각이나 「매일」.
  */
 export function statusLine(routine: Routine, state: TodayState): { text: string; done: boolean } {
@@ -225,7 +225,7 @@ export function dateLabel(now: Date): string {
 export type TodayItem = { r: Routine; s: TodayState };
 
 /**
- * 루틴 탭에 보일 것(SPEC-MAIN-01) — 오늘 할 루틴(알림 시각 순, 시각 없는 것은 뒤에), 다른 날 루틴(가까운 순), 진행(완료 수 · 다음 루틴).
+ * 루틴 화면 · 홈에 보일 것(SPEC-MAIN-01 · 08) — 오늘 할 루틴(알림 시각 순, 시각 없는 것은 뒤에), 다른 날 루틴(가까운 순), 진행(완료 수 · 다음 루틴).
  * 누를 때마다 자리가 바뀌지 않게 완료 여부로는 순서를 바꾸지 않는다.
  * 다음 루틴은 아직 안 한 것 중 시각이 지났거나 한 시간 안에 올 것, 없으면 시각 없는 것, 그것도 없으면 가장 가까운 시각의 것.
  * 오후 3시에 밤 8시 반 루틴보다 아직 안 한 터미타임을 먼저 권한다.
