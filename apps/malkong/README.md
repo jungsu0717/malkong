@@ -3,7 +3,7 @@
 육아의 주제(분유, 기저귀, 접종 · 검진, 외출, 아플 때, 이유식, 장보기)마다 할 일을 적고, 기록과 끝낸 할 일이 쌓여
 다음에 먼저 꺼내 주는 앱. 빠른 기록(수유 · 기저귀 · 잠 · 체온 · 키와 몸무게)이 주제에 숫자를 채운다.
 
-## 지금 상태 (2026-10-28)
+## 지금 상태 (2026-10-29)
 
 - **방향 전환(2026-10-15)**: AI 육아 상담을 빼고 **주제별 육아 할 일과 기록**으로 바꿨다([decisions/024](docs/decisions/024-topic-todo-no-ai-answers.md)).
   헌장 · 제품 브리프 · 메인 설계를 새로 쓰고, 할 일 탭 SPEC([topic](docs/menu-spec/topic.md))을 새로 썼다. 버디 · 우리 아기 · 일정 탭의 SPEC 은 보관.
@@ -53,6 +53,9 @@
   2026-10-28 **첫 화면을 홈 탭으로**([today/007](docs/task/today/007-home-first-screen.md), [decisions/034](docs/decisions/034-home-tab-app-filled-first.md)) —
   기록 앱 옆에 같이 깔아 두는 앱으로 자리를 정하고, 생일로 채운 다가오는 일(접종 · 검진 · 기념일 · 사이즈)을 첫 화면에 올렸다.
   탭은 홈 · 할 일 · 성장 · 마이, 루틴은 홈의 「오늘 할 루틴 · 전체 ›」로 들어가는 화면이다.
+  2026-10-29 **폰 홈 화면 위젯 · 첫 실행의 1년 화면 · 반응하는 버디**([decisions/035](docs/decisions/035-widget-first-year-buddy.md), [today/008](docs/task/today/008-home-widget.md) · [009](docs/task/today/009-buddy-reaction.md), [my/011](docs/task/my/011-first-year-reveal.md)) —
+  위젯은 아이폰 `expo-widgets`(Expo 공식) + 안드로이드 `react-native-android-widget`, 앱 입구가 `index.ts`(안드로이드 위젯 작업 처리기 등록). Expo Go 에는 위젯이 없다.
+  화면 문구는 점검표([korean-copy-check](../../docs/governance/korean-copy-check.md))와 `npm run copy-check` 로 본다([common/027](docs/task/common/027-copy-check.md)).
   아래 「앱」 줄은 방향 전환 전의 기록이다
 - **저장소**: 2026-10-14 에 저장소가 여러 앱을 담는 `julian-studio` 가 되면서 육아버디는 `apps/malkong/` 으로 옮겼다. 모든 앱에 통하는 규칙은 루트 [AGENTS.md](../../AGENTS.md)
 - **앱**: 시안 B 「단정한 비서」([decisions/012](docs/decisions/012-chat-first-three-tabs.md)), 탭 다섯 —
@@ -107,7 +110,9 @@ Julian(2026-10-22): 애플만 먼저 출시한다. 순서 전체는 [common/008]
 2. ~~첫 iOS 빌드~~ — 2026-10-26 빌드 1.0.0 (3), `--auto-submit` 으로 App Store Connect 에 올림(TestFlight 만, 심사 제출 아님)
 3. **TestFlight 로 써 보기** — Julian 폰의 TestFlight 앱. 진짜 광고가 나오니 누르지 않는다
    - 2026-10-27 써 본 뒤 고친 것(task today/006): 루틴 타이머 빼기, 추천을 며칠마다 하는 일 중심으로, iOS 알림 스위치 어긋남.
-     2026-10-28 첫 화면을 홈으로(task today/007). 둘 다 다음 빌드(`npx eas-cli@latest build --platform ios --profile production --auto-submit`)에 들어간다
+     2026-10-28 첫 화면을 홈으로(task today/007). 2026-10-29 위젯 · 첫 실행 1년 화면 · 버디 반응(task today/008 · 009, my/011).
+     모두 다음 빌드(`npx eas-cli@latest build --platform ios --profile production --auto-submit`)에 들어간다. 위젯은 TestFlight 에서 홈 화면에 추가해 보고,
+     위젯에서 루틴을 완료한 뒤 앱을 열었을 때 반영되는지 본다(앱이 꺼진 채로 눌러 보기)
 4. **출시는 Julian 이 정할 때** — 스토어 정보 붙여 넣기 · 심사 제출은 common/008 「애플 먼저」 8.
    그 전에 스토어 스크린샷(store-toon 「01-routine」은 옛 루틴 탭)과 설명 순서를 홈 기준으로 다시 맞춘다
 

@@ -4,19 +4,23 @@ import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BuddyAvatar } from '@/components/brand';
+import { FirstYearList } from '@/components/onboarding/first-year-list';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, Chip } from '@/components/ui';
 import { FontFamily, Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
-import { formatDate, validateBirthDate } from '@/data/baby';
+import { ageFrom, formatDate, validateBirthDate } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
-import { BRIEFING_TIMES, timeLabel } from '@/data/briefing';
+import { BRIEFING_TIMES, monthStart, timeLabel, todoOf } from '@/data/briefing';
+import { checkupGroups } from '@/data/checkup-todos';
+import { FIRST_YEAR_MIN, firstYearPlan, type FirstYearItem } from '@/data/first-year';
 import { askNotifications, notificationsSupported } from '@/data/notifications';
 import { DEFAULT_BRIEFING_TIME, usePreferences } from '@/data/preferences-context';
+import { useRecords } from '@/data/records-context';
 import { useTheme } from '@/hooks/use-theme';
 
 /**
- * 온보딩 — 생일 하나로 시작하고(SPEC-MY-01), 아침 브리핑 알림 시각을 묻는다(SPEC-HOME-06).
+ * 온보딩 — 생일 하나로 시작하고(SPEC-MY-01), 생일로 채워진 1년 치 챙길 일을 보여 준 뒤(SPEC-MY-10), 아침 알림 시각을 묻는다(SPEC-TOPIC-09).
  * 이름은 선택이고, 그 밖의 정보는 요구하지 않는다. 나머지는 대화에서 쌓인다.
  * `?edit=1` 로 들어오면 마이의 프로필 수정으로 쓰인다(SPEC-MY-02) — 그때는 알림을 묻지 않는다.
  * 가족에게 초대받은 사람은 생일 대신 「초대 코드가 있어요」로 바로 참여한다 — 아기는 가족의 아기로 들어온다(task common/026).
@@ -26,12 +30,15 @@ export default function OnboardingScreen() {
   const router = useRouter();
   const { edit } = useLocalSearchParams<{ edit?: string }>();
   const { baby, save } = useBaby();
+  const { records } = useRecords();
   const { setBriefingTime } = usePreferences();
 
   const isEdit = edit === '1';
   const stored = isEdit && baby ? baby.birthDate.split('-') : null;
 
-  const [step, setStep] = useState<'birthday' | 'briefing'>('birthday');
+  const [step, setStep] = useState<'birthday' | 'year' | 'briefing'>('birthday');
+  /** 1년 화면에 보일 것 — 생일을 저장할 때 센다 */
+  const [plan, setPlan] = useState<{ total: number; items: FirstYearItem[] } | null>(null);
   const [year, setYear] = useState(stored?.[0] ?? '');
   const [month, setMonth] = useState(stored?.[1] ?? '');
   const [day, setDay] = useState(stored?.[2] ?? '');
@@ -54,13 +61,41 @@ export default function OnboardingScreen() {
     setSaving(true);
     try {
       await save({ name: name || null, birthDate });
-      if (isEdit) router.back();
-      // 알림이 없는 곳(웹 미리보기)은 묻지 않고 바로 시작한다
-      else if (notificationsSupported()) setStep('briefing');
-      else router.replace('/');
+      if (isEdit) {
+        router.back();
+        return;
+      }
+      // 생일로 채워진 1년 — 셋보다 적으면(생후 23개월처럼) 건너뛴다
+      const filled = firstYearPlan(birthDate, firstYearCheckups(birthDate), new Date());
+      if (filled.total >= FIRST_YEAR_MIN) {
+        setPlan(filled);
+        setStep('year');
+      } else afterYear();
     } finally {
       setSaving(false);
     }
+  };
+
+  /** 지금 기간이거나 다가오는 접종 · 검진 묶음 — 날짜는 그 월령이 시작하는 날, 지금 기간인 것은 오늘 */
+  const firstYearCheckups = (birth: string) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    return checkupGroups(records, ageFrom(birth, now).month)
+      .filter((g) => g.status !== 'missed')
+      .map((g) => ({
+        key: g.key,
+        // 「영유아 건강검진 1차 (생후 14~35일)」의 괄호 풀이는 한 줄에 안 들어가서 뗀다
+        title: g.label.replace(/\s*\([^)]*\)/g, ''),
+        at: g.status === 'open' ? today : monthStart(birth, g.month).getTime(),
+        tag: todoOf(g).category,
+        open: g.status === 'open',
+      }));
+  };
+
+  /** 1년 화면 다음 — 알림이 없는 곳(웹 미리보기)은 묻지 않고 바로 시작한다 */
+  const afterYear = () => {
+    if (notificationsSupported()) setStep('briefing');
+    else router.replace('/');
   };
 
   /** 알림을 받든 안 받든 시각은 남긴다 — 나중에 마이에서 켜면 그 시각으로(SPEC-HOME-06 기본 8시) */
@@ -74,6 +109,28 @@ export default function OnboardingScreen() {
       setSaving(false);
     }
   };
+
+  if (step === 'year' && plan) {
+    return (
+      <ThemedView style={styles.container}>
+        <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
+          <View style={styles.content}>
+            <BuddyAvatar size={64} />
+            <View style={styles.heading}>
+              <ThemedText type="display">앞으로 1년,{'\n'}챙길 일 {plan.total}개를 채웠어요</ThemedText>
+              <ThemedText type="body" style={{ color: c.textSecondary }}>
+                생일 하나로 접종 · 검진 · 기념일 ·{'\n'}사이즈 확인 날짜를 잡았어요
+              </ThemedText>
+            </View>
+            <FirstYearList items={plan.items} total={plan.total} />
+          </View>
+          <View style={styles.footer}>
+            <Button label="다음" size="lg" onPress={afterYear} />
+          </View>
+        </SafeAreaView>
+      </ThemedView>
+    );
+  }
 
   if (step === 'briefing') {
     return (

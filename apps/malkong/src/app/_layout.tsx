@@ -24,6 +24,7 @@ import { noteReviewStart } from '@/data/review';
 import { MemosProvider } from '@/data/memos-context';
 import { RoutinesProvider } from '@/data/routines-context';
 import { TodosProvider } from '@/data/todos-context';
+import { WidgetSync } from '@/data/widget-sync';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -114,6 +115,8 @@ export default function RootLayout() {
                 <RoutinesProvider>
                 <MemosProvider>
                   <OnboardingGate />
+                  {/* 폰 홈 화면 위젯 — 일주일 치 밀어 넣기와 위젯에서 누른 루틴 받기(SPEC-MAIN-09) */}
+                  <WidgetSync />
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="(tabs)" />
                     <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />

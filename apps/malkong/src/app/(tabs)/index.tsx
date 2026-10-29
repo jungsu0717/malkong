@@ -70,7 +70,12 @@ export default function HomeScreen() {
     <ThemedView style={styles.container}>
       {focused && <StatusBar style="light" />}
       <ScrollView style={styles.flex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <HomeHero topInset={insets.top} dateText={`${dateLabel(now)} · 태어난 지 ${age.days + 1}일`} headline={headline} />
+        <HomeHero
+          topInset={insets.top}
+          dateText={`${dateLabel(now)} · 태어난 지 ${age.days + 1}일`}
+          headline={headline}
+          celebrate={plan.total > 0 && plan.done === plan.total}
+        />
 
         <View style={styles.body}>
           {/* 다가오는 일 — 앱이 채운 아기 일정 */}

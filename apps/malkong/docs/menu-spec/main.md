@@ -21,8 +21,23 @@
        오늘 할 루틴이 없으면 「오늘 할 루틴이 없어요」와 「다음 · 일요일 재고 확인」 한 줄, 루틴이 하나도 없으면 점선 「루틴 추가」 한 칸(누르면 루틴 화면).
 평시 ▸ 「장보기」 한 줄은 「살 것 2개 · 배송 중 1개」(없으면 「살 것이 없어요」)이고, 누르면 할 일 탭의 장보기 칸이 열린다.
 평시 ▸ 루틴 · 장보기를 하나도 넣지 않아도 다가오는 일은 생일만으로 채워져 있어야 한다.
+평시 ▸ 먹색 머리 오른쪽에 버디 얼굴이 있다. 오늘 할 루틴을 마지막 하나까지 완료한 순간 버디가 한 번 뛰어오르고, 버디를 누르면 한 번 뛴다.
+       말풍선이나 칭찬 문구는 두지 않는다(task today/009).
 평시 ▸ 배너 광고 1개는 탭 바로 위 화면 바닥에 고정한다(광고 없이 쓰기를 산 폰과 운영자 가족 폰에는 없다).
 ```
+
+### SPEC-MAIN-09 폰 홈 화면 위젯
+```
+평시 ▸ 폰 홈 화면에 둘 수 있는 위젯 「육아버디」가 있어야 한다 — 아이폰은 작은 · 중간 크기와 잠금 화면(네모 · 한 줄), 안드로이드는 4×2 기본 크기에서 늘이고 줄일 수 있다.
+평시 ▸ 위젯에는 버디 얼굴, 「태어난 지 58일」, 「이번 주 챙길 일 3개」(SPEC-MAIN-08 과 같은 셈), 가장 가까운 다가오는 일 한 줄(「D-3 · BCG 접종」)이 보여야 한다.
+       중간 크기와 안드로이드에는 오늘 할 루틴이 세 개까지 보인다(안 한 것 먼저, 건너뛴 것은 뺀다).
+평시 ▸ 위젯의 루틴 줄을 누르면 그 자리에서 완료로 바뀌어야 한다(체크 루틴만, 아이폰은 iOS 17 이상). 단계 · 재고 확인 루틴은 누르면 루틴 화면이 열린다.
+       앱이 꺼져 있을 때 위젯에서 완료한 것은 앱을 다음에 열 때 그날 완료로 기록된다.
+평시 ▸ 자정이 지나면 앱을 열지 않아도 날짜 · 이번 주 수 · 그날 루틴이 바뀌어야 한다(일주일 치를 미리 넣는다). 앱에서 루틴 · 할 일 · 생일이 바뀌면 바로 따라온다.
+평시 ▸ 루틴 줄이 아닌 곳을 누르면 앱의 홈이 열린다. 생일을 아직 넣지 않았으면 「아기 생일을 넣으면 채워져요」.
+금지 ▸ 위젯에 아기 이름 · 기록 내용 · 광고를 두지 않는다. 연속 기록(스트릭)이나 못 한 날을 세는 숫자는 두지 않는다(헌장 4).
+```
+Expo Go 에는 위젯이 없다 — 개발 빌드나 TestFlight 빌드에서만 보인다.
 
 ### SPEC-MAIN-01 루틴 화면
 ```
@@ -129,6 +144,11 @@
   먹색 머리 `src/components/routine/routine-hero.tsx` · 버튼 보기 `routine-grid.tsx` · 시간순 보기 `routine-timeline.tsx` ·
   아이콘 `routine-icon.tsx` · 추가 시트 `routine-add-sheet.tsx` · 직접 만들기 · 편집 화면 `src/app/routine-form.tsx`(반복 고르기 `repeat-picker.tsx`,
   시각 바퀴 `src/components/time-picker.tsx` · `.web.tsx`) · `routine-steps-sheet.tsx`(단계) · `stock-sheet.tsx`(재고 확인) · 추천 화면 `src/app/routine-recommend.tsx`
+- 위젯(SPEC-MAIN-09): 보일 내용은 `src/data/widget-data.ts`(`widget-data.test.ts`)가 날짜마다 계산하고, `src/data/widget-sync.tsx`(루트 레이아웃)가 루틴 · 할 일 · 생일이 바뀔 때마다
+  일주일 치를 밀어 넣는다. 아이폰은 Expo 공식 `expo-widgets`(`src/widgets/buddy-widget.tsx` — `'widget'` 표시 함수는 따로 묶여 위젯 안에서 돌아서 바깥 값을 쓰지 못한다, `ios-widgets.ts`),
+  안드로이드는 Expo 공식 패키지의 안드로이드 쪽이 아직 빈 껍데기라 `react-native-android-widget`(`src/widgets/buddy-android-widget.tsx` · `android-widgets.tsx`, 뿌리 `index.ts` 에서 등록).
+  위젯에서 누른 루틴은 `pending` 으로 남겨 두고(아이폰은 위젯 저장소의 타임라인, 안드로이드는 설정값 `widget_pending`) 앱이 앞으로 올 때 `check` 로 반영한다.
+  Expo Go · 웹에는 위젯 모듈이 없어 `src/data/widgets-native.ts` 가 거른다
 - 보기 전환은 설정값 `routine_view`(`grid` · `timeline`), 있는 곳은 `baby_place`(`hospital` · `carecenter` · `home`)
 - 알림: iOS 는 걸어 두는 알림이 64개라 루틴은 사흘 치, 할 일 알림 20개, 전날 저녁 3일 치(notifications.ts 머리 주석)
 - 「생활 루틴」 주제의 반복 할 일은 처음 열 때 한 번 루틴으로 옮긴다(todos-context, 설정값 `routines_moved_from_topic`)
@@ -153,3 +173,5 @@
   안 넣은 것 전부, iOS 알림 스위치는 시스템 모양 (Julian TestFlight 사용 뒤, task today/006)
 - 2026-10-28 **첫 화면을 홈 탭으로**(SPEC-MAIN-08 — 이번 주 챙길 일 · 다가오는 일 · 오늘 할 루틴 · 장보기 한 줄), 루틴은 홈에서 들어가는
   상세 화면(SPEC-MAIN-01)으로, 루틴 화면의 배너는 뺌 (Julian 「ㅇㅋ」 — 시안 A, decisions/034, task today/007)
+- 2026-10-29 SPEC-MAIN-09 폰 홈 화면 위젯(버디 · 태어난 지 며칠 · 이번 주 챙길 일 · 다가오는 일 · 오늘 할 루틴 체크), SPEC-MAIN-08 머리에 버디 얼굴과
+  루틴을 다 끝내면 뛰어오르기 (Julian 「ㅇㅇ 가자」, decisions/035, task today/008 · 009)
