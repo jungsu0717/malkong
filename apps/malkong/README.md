@@ -114,13 +114,18 @@ Julian(2026-10-22): 애플만 먼저 출시한다. 순서 전체는 [common/008]
      2026-10-28 첫 화면을 홈으로(task today/007). 2026-10-29 위젯 · 첫 실행 1년 화면 · 버디 반응(task today/008 · 009, my/011).
      모두 다음 빌드(`npx eas-cli@latest build --platform ios --profile production --auto-submit`)에 들어간다. 위젯은 TestFlight 에서 홈 화면에 추가해 보고,
      위젯에서 루틴을 완료한 뒤 앱을 열었을 때 반영되는지 본다(앱이 꺼진 채로 눌러 보기)
+   - 2026-10-29 빌드 (7)을 써 본 뒤 고친 것 — **아직 빌드 전**: 위젯 모양(버디 그림이 위젯을 덮던 것, 큰 날수 · 「외 N개」, today/010),
+     홈 칸 나누기(루틴 가로 한 줄 · 「아기 일정」 · 「함께한 지」, today/011), 성장 탭 움직임 · 기념일 장면(growth/008), 성장 탭 카드 둘(growth/009),
+     기념 카드 공유(growth/010, 새 네이티브 모듈 react-native-view-shot · expo-sharing), 아기 일정 앞날 일정 편집 · 접종 · 검진 예약일(topic/010).
+     빌드 명령: `EXPO_NO_CAPABILITY_SYNC=1 npx eas-cli@latest build --platform ios --profile production --auto-submit --non-interactive --no-wait`
    - **위젯이 들어간 첫 빌드**: Apple 개발자 사이트에서 App Groups(`group.com.yugabuddy.app`)를 만들고 앱 · 위젯 App ID 둘 다에 켰다(Julian, 2026-10-29).
      EAS 가 이 권한을 자동으로 켜는 기능이 Apple API 오류로 깨져 있어서(eas-cli issue 3986, 열림) 빌드 명령 앞에 늘 `EXPO_NO_CAPABILITY_SYNC=1` 을 붙인다.
      위젯 쪽 인증서는 처음 한 번 대화형 빌드(`--non-interactive` 없이)로 만들어야 한다 — 그 뒤로는 비대화형으로 된다. 빌드 번호는 원격(remote)이라 CLI 가 올린다
 4. **출시는 Julian 이 정할 때** — 스토어 정보 붙여 넣기 · 심사 제출은 common/008 「애플 먼저」 8.
    스토어 스크린샷 일곱 장과 설명은 2026-10-29 홈 기준으로 다시 만들었다(task common/028, 부제 · 슬로건은 Julian 확인 전). 위젯 장은 폰에서 확인한 뒤 추가
 
-출시 뒤 첫 업데이트 후보: 키 · 몸무게 · 달마다 카드(시안 「출시 뒤 제안」), 구글 플레이(테스터 12명 · 14일), `app-ads.txt` 용 도메인.
+출시 뒤 첫 업데이트 후보: 키 · 몸무게(기록 앱과 경쟁하지 않기 · 숫자로 판정하지 않기와 부딪쳐 Julian 결정 필요), 구글 플레이(테스터 12명 · 14일), `app-ads.txt` 용 도메인.
+달마다 카드는 기념 카드 공유(growth/010)로 들어갔다.
 폰(Expo Go)으로 볼 때는 켜 둔 `npx expo start` 를 한 번 다시 켠다.
 
 ## 다른 PC 에서 시작하기
