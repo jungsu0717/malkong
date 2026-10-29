@@ -5,6 +5,7 @@
  * `at` 은 그날 0시이고, 지금 기간인 접종 · 검진은 어제로 두어 맨 앞에 온다.
  */
 
+import { apptFor, apptLine } from './appointment';
 import { birthOf, upcomingAuto } from './auto-todos';
 import type { Baby, BabyAge } from './baby';
 import { monthStart, todoOf, whenText } from './briefing';
@@ -31,6 +32,10 @@ export type BabyRowData = {
   auto?: { ref: string; kind: 'milestone' | 'size' };
   group?: GapGroup;
   todo?: Todo;
+  /** 접종 · 검진 묶음에 적은 병원 예약 — 있으면 그 날짜로 줄을 놓고 D-day 를 센다(task topic/010) */
+  appt?: Todo | null;
+  /** 접종 · 검진의 공공 일정 시기(예약이 있어도 바뀌지 않는 설명) — 예약 시트 머리에 */
+  when?: string;
 };
 
 export type BabyRowsInput = {
@@ -55,17 +60,20 @@ export function babyRows({ baby, age, records, topics, todos, autoRemoved }: Bab
   const kindOf = new Map(topics.map((t) => [t.id, t.kind]));
   const autoTodos = todos.filter((t) => (kindOf.get(t.topicId) === 'milestone' || kindOf.get(t.topicId) === 'size') && !t.doneAt);
   const have = new Set([...todos.map((t) => t.ref).filter((r): r is string => !!r), ...autoRemoved]);
+  // 놓친 접종 · 검진이라도 병원 예약을 적었으면 접어 두지 않고 날짜순 줄에 둔다
+  const hasAppt = (g: GapGroup) => apptFor(todos, g.month, g.items[0]?.kind ?? '') !== null;
 
   const rows: BabyRowData[] =
     !baby || !age
       ? []
       : [
           ...groups
-            .filter((g) => g.status === 'open' || g.status === 'soon')
+            .filter((g) => g.status === 'open' || g.status === 'soon' || hasAppt(g))
             .map((g) => {
               const w = whenText(todoOf(g), baby.birthDate, age.month, now);
               const at = monthStart(baby.birthDate, g.month).getTime();
-              return {
+              const appt = apptFor(todos, g.month, g.items[0]?.kind ?? '');
+              const base = {
                 key: g.key,
                 at: Math.max(at, g.status === 'open' ? today - 1 : at),
                 title: g.label,
@@ -75,7 +83,10 @@ export function babyRows({ baby, age, records, topics, todos, autoRemoved }: Bab
                 right: g.status === 'open' ? '지금' : ddayText(at, today),
                 future: false,
                 group: g,
+                appt,
+                when: w.text,
               };
+              return appt ? { ...base, ...apptLine(appt, today, now) } : base;
             }),
           ...autoTodos.map((t) => {
             const at = t.dueAt ? new Date(t.dueAt).getTime() : today;
@@ -103,6 +114,6 @@ export function babyRows({ baby, age, records, topics, todos, autoRemoved }: Bab
             })),
           ),
         ].sort((a, b) => a.at - b.at);
-  const missed = groups.filter((g) => g.status === 'missed');
+  const missed = groups.filter((g) => g.status === 'missed' && !hasAppt(g));
   return { rows, missed };
 }

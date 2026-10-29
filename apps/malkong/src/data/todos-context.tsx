@@ -10,6 +10,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
+import { isApptRef } from './appointment';
 import { autoRulesToAdd, birthOf, reconcileAuto } from './auto-todos';
 import { useBaby } from './baby-context';
 import { checkupGroups } from './checkup-todos';
@@ -382,7 +383,8 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       // 가족 폰에서도 지워지게 지운 표시를 남긴다(task my/009)
       await noteDeleted(id);
       requestSync();
-      if (ref) await skipAuto(ref);
+      // 접종 · 검진 예약(appt:)은 앱이 만드는 규칙이 아니라 건너뛸 것이 없다
+      if (ref && !isApptRef(ref)) await skipAuto(ref);
     },
     [skipAuto],
   );

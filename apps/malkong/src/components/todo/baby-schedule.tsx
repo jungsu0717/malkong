@@ -3,7 +3,8 @@
  *
  * 접종 · 검진(공공 일정), 기념일 · 사이즈 바꾸기(생일로 계산)를 날짜순으로 「이번 달 · 다음 달 · 그 뒤」에 나눈다.
  * 줄은 내 할 일과 같은 모양 — 동그라미 · 이름 · 작은 이름표와 날짜 · 오른쪽 D-day. 아직 목록에 생기지 않은 앞날 일정은 동그라미 대신 달력.
- * 접종 · 검진의 동그라미는 무엇을 했는지 고르는 시트를 연다. 앞날 일정(달력 줄)도 이름을 누르면 편집 시트가 열린다 —
+ * 접종 · 검진의 동그라미는 무엇을 했는지 고르는 시트를, 이름은 병원 예약일 시트(appt-sheet)를 연다 — 예약을 적으면 그 날짜로 D-day 를 센다.
+ * 앞날 일정(달력 줄)도 이름을 누르면 편집 시트가 열린다 —
  * 저장하면 그때 할 일로 만들고, 삭제하면 그 일정을 다시 만들지 않는다(task topic/010).
  * 맨 위 「지난 일정」에는 지난달까지 기한이었는데 아직 안 한 앱 할 일(「지남」)을 두고, 놓친 접종 · 검진은 그 아래 「지난 접종 · 검진 N개 보기」로 접어 둔다(task common/026).
  * 줄을 만드는 일(`useBabyRows`, 셈은 `src/data/baby-rows.ts`)과 줄 모양(`BabyRow`)은 홈 「아기 일정」 카드와 위젯도 같이 쓴다(SPEC-MAIN-08 · 09, task today/007 · 008).
@@ -14,10 +15,12 @@ import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { ApptSheet } from '@/components/todo/appt-sheet';
 import { TodoSheet } from '@/components/todo/todo-sheet';
 import { Card, SectionHeader, tap } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
+import { apptRef } from '@/data/appointment';
 import { babyRows, dayStartOf, type BabyRowData } from '@/data/baby-rows';
 import { todoOf } from '@/data/briefing';
 import { checkupGroups } from '@/data/checkup-todos';
@@ -54,8 +57,15 @@ export function useBabyRows(now: Date) {
   const { baby, age } = useBaby();
   const { records } = useRecords();
   const { topics, todos, toggleDone, add, update, remove, autoRemoved, skipAuto } = useTodos();
-  const markDone = useMarkDone();
+  // 완료를 알린 묶음에 병원 예약이 있으면 그 예약도 완료로 — 지난 예약 알림이 남지 않게
+  const markDone = useMarkDone((g) => {
+    const ref = apptRef(g.month, g.items[0]?.kind ?? '');
+    const appt = todos.find((t) => t.ref === ref && !t.doneAt);
+    if (appt) void toggleDone(appt.id);
+  });
   const [editing, setEditing] = useState<Todo | null>(null);
+  /** 병원 예약일을 적는 접종 · 검진 줄 */
+  const [booking, setBooking] = useState<BabyRowData | null>(null);
   /** 편집 중인 것이 아직 만들지 않은 앞날 일정인가 — 저장하면 새로 만들고, 삭제하면 규칙을 건너뛴다 */
   const [draft, setDraft] = useState(false);
 
@@ -70,7 +80,7 @@ export function useBabyRows(now: Date) {
     }
   };
   const open = (r: BabyRowData) => {
-    if (r.group) markDone.pick(r.group);
+    if (r.group) setBooking(r);
     else if (r.todo) {
       setDraft(false);
       setEditing(r.todo);
@@ -83,9 +93,42 @@ export function useBabyRows(now: Date) {
     }
   };
 
+  const saveAppt = (r: BabyRowData, due: { at: Date; hasTime: boolean }) => {
+    const g = r.group;
+    if (!g) return;
+    const patch = { dueAt: due.at.toISOString(), hasTime: due.hasTime };
+    if (r.appt) void update(r.appt.id, patch);
+    else {
+      const topic = topics.find((t) => t.kind === 'checkup') ?? topics.find((t) => t.kind === 'general');
+      if (topic) void add({ ...patch, title: `${r.title} 예약`, topicId: topic.id, ref: apptRef(g.month, g.items[0]?.kind ?? '') });
+    }
+  };
+
   const sheets = (
     <>
       {markDone.sheet}
+      <ApptSheet
+        key={booking?.key ?? 'none'}
+        target={
+          booking
+            ? {
+                title: booking.title,
+                tag: booking.tag,
+                when: booking.when ?? '',
+                current: booking.appt?.dueAt ? { at: new Date(booking.appt.dueAt), hasTime: booking.appt.hasTime } : null,
+              }
+            : null
+        }
+        onClose={() => setBooking(null)}
+        onSave={(due) => {
+          if (booking) saveAppt(booking, due);
+          setBooking(null);
+        }}
+        onClear={() => {
+          if (booking?.appt) void remove(booking.appt.id);
+          setBooking(null);
+        }}
+      />
       <TodoSheet
         key={editing?.id ?? 'none'}
         todo={editing}

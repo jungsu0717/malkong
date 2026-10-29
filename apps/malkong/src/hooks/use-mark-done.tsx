@@ -15,7 +15,8 @@ import { groupLabel, isLifeGroup, type GapGroup, type L1Item } from '@/data/time
 /** 「10월 19일」 */
 const monthDay = (d: Date) => `${d.getMonth() + 1}월 ${d.getDate()}일`;
 
-export function useMarkDone() {
+/** `onConfirmed` — 완료를 알린 묶음을 받는다(아기 일정은 그 묶음의 병원 예약을 완료로, task topic/010) */
+export function useMarkDone(onConfirmed?: (group: GapGroup) => void) {
   const { age } = useBaby();
   const { add, remove } = useRecords();
   /** 완료를 알리려고 연 줄 */
@@ -25,7 +26,8 @@ export function useMarkDone() {
 
   const confirm = async (items: L1Item[]) => {
     if (!age) return;
-    const life = picking ? isLifeGroup(picking) : false;
+    const group = picking;
+    const life = group ? isLifeGroup(group) : false;
     setPicking(null);
     tap('success');
     const record = await add({
@@ -35,6 +37,7 @@ export function useMarkDone() {
       whenLabel: `${monthDay(new Date())} 알림에서`,
     });
     setJustSaved(record);
+    if (group) onConfirmed?.(group);
   };
 
   const undo = async () => {
