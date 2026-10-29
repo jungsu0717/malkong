@@ -113,8 +113,11 @@ Julian(2026-10-22): 애플만 먼저 출시한다. 순서 전체는 [common/008]
      2026-10-28 첫 화면을 홈으로(task today/007). 2026-10-29 위젯 · 첫 실행 1년 화면 · 버디 반응(task today/008 · 009, my/011).
      모두 다음 빌드(`npx eas-cli@latest build --platform ios --profile production --auto-submit`)에 들어간다. 위젯은 TestFlight 에서 홈 화면에 추가해 보고,
      위젯에서 루틴을 완료한 뒤 앱을 열었을 때 반영되는지 본다(앱이 꺼진 채로 눌러 보기)
+   - **빌드 전에 Apple 개발자 사이트에서 App Groups 를 한 번 켠다**(2026-10-29 빌드가 여기서 멈췄다): App Groups 식별자 `group.com.yugabuddy.app` 을 만들고,
+     App ID `com.yugabuddy.app` 과 `com.yugabuddy.app.ExpoWidgetsTarget` 둘 다에서 App Groups 를 켜고 그 그룹을 고른다. EAS 가 이 권한을 자동으로 켜는 기능이
+     Apple API 오류로 깨져 있다(eas-cli issue 3986, 열림). 켠 뒤에는 `EXPO_NO_CAPABILITY_SYNC=1` 을 앞에 붙여 빌드한다. 빌드 번호는 원격(remote)이라 CLI 가 올린다(다음은 5)
 4. **출시는 Julian 이 정할 때** — 스토어 정보 붙여 넣기 · 심사 제출은 common/008 「애플 먼저」 8.
-   그 전에 스토어 스크린샷(store-toon 「01-routine」은 옛 루틴 탭)과 설명 순서를 홈 기준으로 다시 맞춘다
+   스토어 스크린샷 일곱 장과 설명은 2026-10-29 홈 기준으로 다시 만들었다(task common/028, 부제 · 슬로건은 Julian 확인 전). 위젯 장은 폰에서 확인한 뒤 추가
 
 출시 뒤 첫 업데이트 후보: 키 · 몸무게 · 달마다 카드(시안 「출시 뒤 제안」), 구글 플레이(테스터 12명 · 14일), `app-ads.txt` 용 도메인.
 폰(Expo Go)으로 볼 때는 켜 둔 `npx expo start` 를 한 번 다시 켠다.

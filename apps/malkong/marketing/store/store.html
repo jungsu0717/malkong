@@ -9,9 +9,9 @@
     />
     <style>
       /*
-       * 스토어 스크린샷 여섯 장 — 문구 한 줄 + 진짜 앱 화면(docs/product/store-toon.md 「스토어 스크린샷」, task common/024).
+       * 스토어 스크린샷 일곱 장 — 문구 한 줄 + 진짜 앱 화면(docs/product/store-toon.md 「스토어 스크린샷」, task common/024 · 028).
        * 앱 디자인 언어: 밝은 바탕 · 먹색 · 코랄 하나 · IBM Plex Sans KR. 만화 캐릭터는 넣지 않는다(Julian, 2026-10-12).
-       * ?p=routine|todo|shop|baby|growth|family, ?v=ios(1290×2796) | play(1290×2293 을 0.8372 배로 → 1080×1920)
+       * ?p=home|year|routine|todo|shop|growth|family, ?v=ios(1290×2796) | play(1290×2293 을 0.8372 배로 → 1080×1920)
        */
       :root { --ink: #16161a; --sub: #5e5e69; --mute: #8a8a95; --line: #dedee4; --accent: #c64536; --accentSoft: #fcebe8; }
       html, body { margin: 0; background: #f6f5f2; }
@@ -48,19 +48,21 @@
        * ring 은 앱 화면 좌표 [x, y, w, h] 의 코랄 테
        */
       const PAGES = {
-        routine: { title: '매일 챙기는 일,<br>한 번 눌러 <em>완료</em>', shot: 'routine' },
+        home: { title: '앱을 열면<br>이번 주 챙길 일이 <em>먼저</em>', shot: 'home', ring: [52, 585, 1066, 620] },
+        // 슬로건(product-brief 「스토어 문안」) — 긴 줄이라 글자를 조금 줄인다
+        year: { title: '생일만 넣으세요.<br>1년 치 챙길 일은 <em>버디</em>가 채워요', shot: 'year', size: 0.88 },
+        routine: { title: '며칠마다 챙기는 일,<br>한 번 눌러 <em>완료</em>', shot: 'routine' },
         todo: { title: '적으면 <em>날짜</em>를 읽고<br>그때 알려 드려요', shot: 'todo', ring: [40, 1955, 1090, 380] },
         shop: { title: '살 것은 살 곳별로,<br><em>배송 중</em>까지 한눈에', shot: 'shop', ring: [44, 1512, 1082, 338] },
-        baby: { title: '접종 · 검진 · 기념일,<br>생일로 <em>미리</em> 채워요', shot: 'baby', ring: [52, 480, 1066, 632] },
-        growth: { title: '이맘때 우리 아기,<br><em>한눈에</em>', shot: 'growth', ring: [50, 1350, 1070, 486] },
-        family: { title: '누가 했는지<br><em>가족</em>이 함께 봐요', shot: 'family', ring: [248, 1778, 660, 385] },
+        growth: { title: '이맘때 우리 아기,<br><em>한눈에</em>', shot: 'growth', ring: [52, 1322, 1066, 530] },
+        family: { title: '누가 했는지<br><em>가족</em>이 함께 봐요', shot: 'family', ring: [250, 1545, 640, 590] },
       };
       const p = PAGES[key];
       const c = document.getElementById('c');
       c.style.height = H + 'px';
       const add = (html) => c.insertAdjacentHTML('beforeend', html);
 
-      add(`<h1 class="abs" style="top:${L.h1Top}px;font-size:${L.h1}px">${p.title}</h1>`);
+      add(`<h1 class="abs" style="top:${L.h1Top}px;font-size:${Math.round(L.h1 * (p.size ?? 1))}px">${p.title}</h1>`);
 
       // 진짜 앱 화면 — 아래는 화면 밖으로 잘린다(폰이 이어지는 느낌)
       const k = L.screenW / 1170, sx = (1290 - L.screenW) / 2;

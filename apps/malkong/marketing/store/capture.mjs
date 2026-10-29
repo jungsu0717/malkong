@@ -1,6 +1,6 @@
 // 스토어 스크린샷에 넣을 진짜 앱 화면을 찍는다 (docs/product/store-toon.md 「스토어 스크린샷」).
 //   1) npx expo export --platform web        → ../../dist
-//   2) node capture.mjs [이름 …]             → shots/<이름>.png (1170×2532, 아이폰 390×844 @3x)
+//   2) node capture.mjs [이름 …]             → shots/<이름>.png (1170×2532, 아이폰 390×844 @3x) — home · year · routine · todo · shop · growth · family
 // 정적 파일 서버를 스스로 띄우고(8099) 크롬을 원격 조종해 앱을 연다. 서버로 가는 요청은 미리 정한 답으로 바꿔 넣는다 —
 // 자격은 광고 없음(배너 자리가 찍히지 않게), 나머지는 빈 204. 기기 저장소(localStorage)에 아기 · 루틴 · 할 일 · 메모를 미리 넣는다.
 // 크롬은 CHROME=경로 → 맥 크롬 → Playwright 크로미움(~/.cache/ms-playwright) 순서로 찾는다.
@@ -116,19 +116,53 @@ const ENTITLEMENTS = { ads: false, operator: false };
 
 const BASE_DATA = { routines: ROUTINES, logs: routineLogs(), topics: TOPICS, todos: TODOS, memos: MEMOS, records: RECORDS };
 
+/** 글상자에 값을 넣는다(웹의 TextInput 은 input 이나 textarea) — 값을 바꾸고 input 이벤트를 낸다 */
+const fillScript = (selector, value) => `(() => {
+  const box = [...document.querySelectorAll(${JSON.stringify(selector)})].find((el) => el.offsetParent !== null);
+  if (!box) return '입력 칸 없음: ' + ${JSON.stringify(selector)};
+  const proto = box.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(proto, 'value').set.call(box, ${JSON.stringify(value)});
+  box.dispatchEvent(new Event('input', { bubbles: true }));
+  return 'ok';
+})()`;
+/** 글이 꼭 그것인 단추를 누른다 */
+const clickScript = (label) => `(() => {
+  const el = [...document.querySelectorAll('[role="button"]')].find((b) => b.textContent.trim() === ${JSON.stringify(label)} && b.offsetParent !== null);
+  if (!el) return '단추 없음: ' + ${JSON.stringify(label)};
+  el.click();
+  return 'ok';
+})()`;
+
+const [bornY, bornM, bornD] = BORN.split('-');
 const SHOTS = {
-  /** 1장 — 루틴 탭: 먹색 머리, 진행 고리, 버튼 보기 */
-  routine: { ...BASE_DATA, route: '/', wait: '오늘 할 루틴' },
-  /** 2장 — 내 할 일: 「금요일 오전 10시 …」 를 적는 중, 날짜를 읽어 「내일 오전 10:00에 알려 드려요」 */
+  /** 1장 — 홈: 먹색 머리(태어난 지 며칠 · 이번 주 챙길 일 · 버디), 다가오는 일, 오늘 할 루틴 */
+  home: { ...BASE_DATA, route: '/', wait: '다가오는 일' },
+  /** 2장 — 첫 실행의 1년 화면: 생일을 넣고 「다음」 → 「앞으로 1년, 챙길 일 N개를 채웠어요」. 아기를 미리 넣지 않는다 */
+  year: {
+    ...BASE_DATA, noBaby: true, route: '/onboarding', wait: '초대 코드가 있어요', settle: 2500,
+    before: async ({ run, until, text, sleep }) => {
+      for (const [label, value] of [['태어난 해', bornY], ['태어난 달', bornM], ['태어난 날', bornD]]) {
+        const r = await run(fillScript(`[aria-label="${label}"]`, value));
+        if (r !== 'ok') console.log(`year: ${r}`);
+        await sleep(150);
+      }
+      await sleep(400);
+      const clicked = await run(clickScript('다음'));
+      if (clicked !== 'ok') console.log(`year: ${clicked}`);
+      const shown = await until(async () => (await text())?.includes('챙길 일'), 8000);
+      console.log(`year: 1년 화면 ${shown ? '보임' : '안 보임'}`);
+    },
+  },
+  /** 3장 — 루틴 화면: 먹색 머리, 진행 고리, 버튼 보기 */
+  routine: { ...BASE_DATA, route: '/routines', wait: '손발톱 확인' },
+  /** 4장 — 내 할 일: 「금요일 오전 10시 …」 를 적는 중, 날짜를 읽어 「내일 오전 10:00에 알려 드려요」 */
   todo: { ...BASE_DATA, route: '/todo?cat=mine', wait: '아기 사진 정리', type: '금요일 오전 10시 산후 검진 예약', typeWait: '알려 드려요' },
-  /** 3장 — 장보기: 재고 확인 한 줄, 살 곳별, 배송 중 */
+  /** 5장 — 장보기: 재고 확인 한 줄, 살 곳별, 배송 중 */
   shop: { ...BASE_DATA, route: '/todo?cat=shop', wait: '기저귀 정리함' },
-  /** 4장 — 아기 일정: 생일로 앱이 채운 접종 · 검진 · 기념일 */
-  baby: { ...BASE_DATA, route: '/todo?cat=baby', wait: '이번 달' },
-  /** 5장 — 성장 탭: 버디 · 막대 · 발달 체크 2 / 11 · 메모 */
+  /** 6장 — 성장 탭: 버디 · 막대 · 발달 체크 2 / 11 · 메모 */
   growth: { ...BASE_DATA, route: '/growth', wait: '발달 체크', settle: 2500 },
-  /** 6장 — 가족: 시간순 보기에 「엄마 · 08:10 완료」 「아빠 · 09:20 완료」 */
-  family: { ...BASE_DATA, logs: routineLogs('엄마', '아빠'), view: 'timeline', route: '/', wait: '오늘 할 루틴' },
+  /** 7장 — 가족: 루틴 시간순 보기에 「엄마 · 08:10 완료」 「아빠 · 09:20 완료」 */
+  family: { ...BASE_DATA, logs: routineLogs('엄마', '아빠'), view: 'timeline', route: '/routines', wait: '손발톱 확인' },
 };
 
 /* ───────── 정적 파일 서버 — 라우트(/schedule)는 dist/schedule.html 로 ───────── */
@@ -237,7 +271,7 @@ function seedScript(shot) {
     routine_view: shot.view ?? 'grid',
   };
   const lists = {
-    'malkong.baby': baby,
+    ...(shot.noBaby ? {} : { 'malkong.baby': baby }),
     'malkong.routines': shot.routines,
     'malkong.routineLogs': shot.logs,
     'malkong.topics': shot.topics,
@@ -276,17 +310,13 @@ async function capture(name, shot) {
   await send('Page.navigate', { url: `${APP}${shot.route}` });
   const ready = await until(async () => (await text())?.includes(shot.wait));
   if (!ready) console.log(`${name}: 화면이 안 떴어요 — ${(await text())?.slice(0, 200)}`);
+  if (shot.before) {
+    await sleep(800);
+    await shot.before({ run, until, text, sleep });
+  }
   await sleep(shot.settle ?? 1500);
   if (shot.type) {
-    // 웹의 TextInput 은 input 이나 textarea — 값을 바꾸고 input 이벤트를 낸다
-    const typed = await run(`(() => {
-      const box = [...document.querySelectorAll('input, textarea')].find((el) => el.offsetParent !== null);
-      if (!box) return '입력 칸 없음';
-      const proto = box.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-      Object.getOwnPropertyDescriptor(proto, 'value').set.call(box, ${JSON.stringify(shot.type)});
-      box.dispatchEvent(new Event('input', { bubbles: true }));
-      return 'ok';
-    })()`);
+    const typed = await run(fillScript('input, textarea', shot.type));
     const shown = await until(async () => (await text())?.includes(shot.typeWait), 5000);
     console.log(`${name}: 입력 ${typed} · 미리 보기 ${shown ? '보임' : '안 보임'}`);
     await run('document.activeElement && document.activeElement.blur()');
