@@ -32,11 +32,19 @@ test('머리 — 이번 주 수, 없으면 빈 주 글', () => {
   ];
   const p = widgetProps({ birthDate: '2026-09-01', rows, plan: planOf([]), ...urls }, now);
   assert.equal(p.headline, '이번 주 챙길 일 1개');
-  assert.equal(p.days, '태어난 지 59일');
+  assert.equal(p.days, '함께한 지 59일');
+  assert.equal(p.dayCount, 59);
   assert.equal(p.next, 'D-3 · BCG 접종');
+  assert.equal(p.nextWhen, 'D-3');
+  assert.equal(p.nextTitle, 'BCG 접종');
   assert.equal(p.date, '2026-10-29');
   const empty = widgetProps({ birthDate: '2026-09-01', rows: [rows[1]], plan: planOf([]), ...urls }, now);
   assert.equal(empty.headline, '이번 주는 챙길 일이 없어요');
+  // 위젯 이름표는 아기 일정 줄과 같은 말 — 기한이 지난 것만 「지남」
+  const late = widgetProps({ birthDate: '2026-09-01', rows: [{ title: '기저귀 사이즈 확인', at: today - DAY, right: null }], plan: planOf([]), ...urls }, now);
+  assert.equal(late.nextWhen, '지남');
+  const none = widgetProps({ birthDate: '2026-09-01', rows: [], plan: planOf([]), ...urls }, now);
+  assert.deepEqual([none.next, none.nextWhen, none.nextTitle], ['', '', '']);
 });
 
 test('다음 한 줄 — 지금은 「이번 달」, 기한 지남은 「지남」, 없으면 빈 글', () => {
@@ -61,6 +69,7 @@ test('루틴 — 안 한 것 먼저 셋까지, 단계 · 재고 확인은 위젯
     ],
   );
   assert.equal(p.left, 3);
+  assert.equal(p.more, 1);
   assert.equal(widgetRoutines(planOf([vit], [vit.id]))[0].done, true);
 });
 

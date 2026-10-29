@@ -1,14 +1,30 @@
 /**
- * 아이폰 홈 화면 · 잠금 화면 위젯 (SPEC-MAIN-09, task today/008) — Expo 공식 expo-widgets.
+ * 아이폰 홈 화면 · 잠금 화면 위젯 (SPEC-MAIN-09, task today/008 · 010) — Expo 공식 expo-widgets.
  *
  * `'widget'` 표시 함수는 babel 이 글로 바꿔 두고, 위젯 확장 안의 작은 JS 런타임이 그린다. 바깥 변수 · 훅 · 다른 모듈을 쓸 수 없어서
- * 색과 글은 모두 함수 안에 적고 보일 내용은 props(widget-data.ts)로 받는다. 단추의 onPress 가 돌려주는 값이 그 자리에서 위젯의 새 props 가 된다 — 앱이 꺼져 있어도.
+ * 색과 글은 모두 함수 안에 적고 보일 내용은 props(widget-data.ts)로 받는다. `@expo/ui` 의 뷰와 수정자(shapes 포함)는 런타임에 전역으로 있다.
+ * 단추의 onPress 가 돌려주는 값이 그 자리에서 위젯의 새 props 가 된다 — 앱이 꺼져 있어도.
  * 누른 루틴은 `pending` 에 남겨 두고 앱이 앞으로 오면 widget-sync 가 완료로 반영한다.
  * 이 파일은 아이폰 네이티브 빌드에서만 불러온다(ios-widgets.ts ← widgets-native.ts).
+ *
+ * 모양은 디데이 위젯처럼 함께한 날수를 크게, 아래에 다음 아기 일정 이름표와 이름 한 줄. 버디 얼굴은 오른쪽 위에 작게 —
+ * 그림은 `resizable` 이 있어야 틀 크기로 줄어든다(없으면 원본 크기로 위젯을 덮는다, 2026-10-29 TestFlight).
  */
 
 import { Button, HStack, Image, Link, Spacer, Text, VStack } from '@expo/ui/swift-ui';
-import { containerBackground, font, foregroundStyle, frame, lineLimit, widgetURL } from '@expo/ui/swift-ui/modifiers';
+import {
+  background,
+  containerBackground,
+  font,
+  foregroundStyle,
+  frame,
+  lineLimit,
+  minimumScaleFactor,
+  padding,
+  resizable,
+  shapes,
+  widgetURL,
+} from '@expo/ui/swift-ui/modifiers';
 import { createWidget, type WidgetEnvironment } from 'expo-widgets';
 
 import type { WidgetProps } from '@/data/widget-data';
@@ -23,6 +39,9 @@ const BuddyWidget = (props: WidgetProps, environment: WidgetEnvironment) => {
   const ink = dark ? '#F4F4F6' : '#16161A';
   const dim = dark ? '#A0A0AB' : '#5E5E69';
   const accent = dark ? '#E5705E' : '#C64536';
+  const tagBg = dark ? '#3B2623' : '#FCEBE8';
+  const tagInk = dark ? '#F29A8A' : '#8F2E23';
+  const panel = dark ? '#2A2A31' : '#F4F4F6';
   const bg = dark ? '#1C1C22' : '#FFFFFF';
 
   // 잠금 화면 — 시스템이 흑백으로 그리므로 색을 정하지 않는다
@@ -45,30 +64,53 @@ const BuddyWidget = (props: WidgetProps, environment: WidgetEnvironment) => {
     );
   }
 
-  const head = [];
-  if (props.face) head.push(<Image key="face" uiImage={props.face} modifiers={[frame({ width: 26, height: 24 })]} />);
-  head.push(
-    <Text key="days" modifiers={[font({ size: 12 }), foregroundStyle(dim)]}>
-      {props.days || '육아버디'}
-    </Text>,
-  );
-  const body = [
-    <Text key="headline" modifiers={[font({ size: 15, weight: 'bold' }), foregroundStyle(ink), lineLimit(2)]}>
-      {props.headline}
-    </Text>,
-  ];
-  if (props.next) {
-    body.push(
-      <Text key="next" modifiers={[font({ size: 13, weight: 'semibold' }), foregroundStyle(accent), lineLimit(1)]}>
-        {props.next}
-      </Text>,
+  const face = (width: number, height: number) =>
+    props.face ? <Image key="face" uiImage={props.face} modifiers={[resizable(), frame({ width, height })]} /> : null;
+
+  // 생일 전 — 버디와 한 줄
+  if (props.dayCount === 0) {
+    return (
+      <HStack modifiers={[containerBackground(bg, 'widget'), widgetURL(props.home)]}>
+        <VStack alignment="leading">
+          {face(44, 41)}
+          <Spacer />
+          <Text modifiers={[font({ size: 15, weight: 'bold' }), foregroundStyle(ink), lineLimit(2)]}>{props.headline}</Text>
+        </VStack>
+        <Spacer />
+      </HStack>
     );
   }
+
+  // 왼쪽 — 「함께한 지」와 버디, 큰 숫자, 아래에 다음 아기 일정
+  const next = props.nextTitle ? (
+    <VStack alignment="leading" spacing={5}>
+      <Text
+        modifiers={[
+          font({ size: 12, weight: 'bold' }),
+          foregroundStyle(tagInk),
+          padding({ horizontal: 7, vertical: 2 }),
+          background(tagBg, shapes.roundedRectangle({ cornerRadius: 7 })),
+        ]}>
+        {props.nextWhen}
+      </Text>
+      <Text modifiers={[font({ size: 14, weight: 'semibold' }), foregroundStyle(ink), lineLimit(1)]}>{props.nextTitle}</Text>
+    </VStack>
+  ) : null;
   const left = (
-    <VStack alignment="leading" spacing={4}>
-      <HStack spacing={6}>{head}</HStack>
+    <VStack alignment="leading" spacing={2}>
+      <HStack>
+        <Text modifiers={[font({ size: 13, weight: 'semibold' }), foregroundStyle(dim)]}>함께한 지</Text>
+        <Spacer />
+        {face(26, 24)}
+      </HStack>
+      <HStack alignment="firstTextBaseline" spacing={2}>
+        <Text modifiers={[font({ size: 50, weight: 'heavy', design: 'rounded' }), foregroundStyle(ink), lineLimit(1), minimumScaleFactor(0.5)]}>
+          {String(props.dayCount)}
+        </Text>
+        <Text modifiers={[font({ size: 22, weight: 'bold' }), foregroundStyle(ink)]}>일</Text>
+      </HStack>
       <Spacer />
-      {body}
+      {next}
     </VStack>
   );
 
@@ -76,12 +118,18 @@ const BuddyWidget = (props: WidgetProps, environment: WidgetEnvironment) => {
     return <VStack modifiers={[containerBackground(bg, 'widget'), widgetURL(props.home)]}>{left}</VStack>;
   }
 
-  // 중간 — 오른쪽에 오늘 할 루틴. 체크 루틴은 그 자리에서 토글, 단계 · 재고 확인은 루틴 화면으로
+  // 중간 — 오른쪽 회색 칸에 오늘 할 루틴 셋. 체크 루틴은 그 자리에서 토글, 단계 · 재고 확인과 「외 N개」는 루틴 화면으로
   const rows = props.routines.map((r) => {
+    const mark = r.done ? (
+      <Image systemName="checkmark.circle.fill" size={20} color={accent} />
+    ) : (
+      <Image systemName="circle" size={20} color={ink} />
+    );
     const row = (
-      <HStack spacing={8}>
-        <Image systemName={r.done ? 'checkmark.circle.fill' : 'circle'} size={18} color={r.done ? accent : ink} />
-        <Text modifiers={[font({ size: 13 }), foregroundStyle(r.done ? dim : ink), lineLimit(1)]}>{r.title}</Text>
+      <HStack spacing={9} modifiers={[frame({ height: 30 })]}>
+        {mark}
+        <Text modifiers={[font({ size: 14 }), foregroundStyle(r.done ? dim : ink), lineLimit(1)]}>{r.title}</Text>
+        <Spacer />
       </HStack>
     );
     if (!r.tap) {
@@ -112,11 +160,27 @@ const BuddyWidget = (props: WidgetProps, environment: WidgetEnvironment) => {
       </Text>,
     );
   }
+  const head = [
+    <Text key="title" modifiers={[font({ size: 12, weight: 'semibold' }), foregroundStyle(dim)]}>
+      오늘 할 루틴
+    </Text>,
+    <Spacer key="gap" />,
+  ];
+  if (props.more > 0) {
+    head.push(
+      <Link key="more" destination={props.routinesUrl}>
+        <Text modifiers={[font({ size: 12, weight: 'bold' }), foregroundStyle(tagInk)]}>{`외 ${props.more}개`}</Text>
+      </Link>,
+    );
+  }
   return (
     <HStack spacing={14} modifiers={[containerBackground(bg, 'widget'), widgetURL(props.home)]}>
-      {left}
-      <VStack alignment="leading" spacing={6}>
-        <Text modifiers={[font({ size: 11 }), foregroundStyle(dim)]}>오늘 할 루틴</Text>
+      <VStack modifiers={[frame({ width: 132 })]}>{left}</VStack>
+      <VStack
+        alignment="leading"
+        spacing={4}
+        modifiers={[padding({ horizontal: 12, vertical: 10 }), background(panel, shapes.roundedRectangle({ cornerRadius: 14 }))]}>
+        <HStack>{head}</HStack>
         {rows}
         <Spacer />
       </VStack>

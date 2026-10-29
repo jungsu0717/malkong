@@ -29,13 +29,21 @@ export type WidgetRoutine = {
 export type WidgetProps = {
   /** 이 벌이 맞는 날 — YYYY-MM-DD */
   date: string;
-  /** 「태어난 지 58일」 — 생일이 없으면 빈 글 */
+  /** 「함께한 지 58일」 — 잠금 화면. 생일이 없으면 빈 글 */
   days: string;
-  /** 「이번 주 챙길 일 3개」 */
+  /** 함께한 날수 — 홈 화면 위젯에 크게 쓰는 숫자. 생일이 없으면 0 */
+  dayCount: number;
+  /** 「이번 주 챙길 일 3개」 — 잠금 화면 한 줄에서 다음 일이 없을 때와 생일 전 */
   headline: string;
-  /** 「D-3 · BCG 접종」 — 없으면 빈 글 */
+  /** 「D-3 · BCG 접종」 — 잠금 화면. 없으면 빈 글 */
   next: string;
+  /** 다음 아기 일정의 이름표 「D-3」 「지금」 「지남」 — 없으면 빈 글 */
+  nextWhen: string;
+  /** 다음 아기 일정 이름 — 없으면 빈 글 */
+  nextTitle: string;
   routines: WidgetRoutine[];
+  /** 위젯에 다 못 보인 오늘 할 루틴 수 — 「외 2개」 */
+  more: number;
   /** 오늘 남은 루틴 수(건너뛴 것은 뺀다) */
   left: number;
   /** 위젯에서 눌렀지만 앱이 아직 모르는 루틴 id — 앱이 앞으로 오면 토글한다 */
@@ -62,9 +70,11 @@ export function nextLine(row: Row | undefined): string {
   return `${when} · ${row.title}`;
 }
 
+/** 위젯에 보일 오늘 할 루틴 — 건너뛴 것은 빼고 */
+const shownToday = (plan: Plan) => plan.today.filter((x) => !(x.s.skipped && !x.s.done));
+
 export function widgetRoutines(plan: Plan): WidgetRoutine[] {
-  return plan.today
-    .filter((x) => !(x.s.skipped && !x.s.done))
+  return shownToday(plan)
     .sort((a, b) => Number(a.s.done) - Number(b.s.done))
     .slice(0, WIDGET_ROUTINES)
     .map(({ r, s }) => ({ id: r.id, title: r.title, done: s.done, tap: !hasSteps(r) && r.kind !== 'stock' }));
@@ -76,12 +86,18 @@ export function widgetProps(
 ): WidgetProps {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const week = thisWeek(input.rows, today).length;
+  const count = dayNumber(input.birthDate, now);
+  const first = input.rows[0];
   return {
     date: ymd(now),
-    days: `태어난 지 ${dayNumber(input.birthDate, now)}일`,
+    days: `함께한 지 ${count}일`,
+    dayCount: count,
     headline: week > 0 ? `이번 주 챙길 일 ${week}개` : '이번 주는 챙길 일이 없어요',
-    next: nextLine(input.rows[0]),
+    next: nextLine(first),
+    nextWhen: first ? (first.right ?? '지남') : '',
+    nextTitle: first?.title ?? '',
     routines: widgetRoutines(input.plan),
+    more: Math.max(0, shownToday(input.plan).length - WIDGET_ROUTINES),
     left: input.plan.total - input.plan.done,
     pending: [],
     home: input.home,
@@ -92,7 +108,22 @@ export function widgetProps(
 
 /** 생일을 아직 넣지 않았을 때 */
 export function emptyWidgetProps(home: string, face: string, now = new Date()): WidgetProps {
-  return { date: ymd(now), days: '', headline: '아기 생일을 넣으면 채워져요', next: '', routines: [], left: 0, pending: [], home, routinesUrl: home, face };
+  return {
+    date: ymd(now),
+    days: '',
+    dayCount: 0,
+    headline: '아기 생일을 넣으면 채워져요',
+    next: '',
+    nextWhen: '',
+    nextTitle: '',
+    routines: [],
+    more: 0,
+    left: 0,
+    pending: [],
+    home,
+    routinesUrl: home,
+    face,
+  };
 }
 
 /** 오늘(지금)과 다음 날들의 자정 — 타임라인의 날짜 */

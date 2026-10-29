@@ -103,7 +103,7 @@
             {
               "name": "BuddyWidget",
               "displayName": "육아버디",
-              "description": "태어난 지 며칠, 이번 주 챙길 일, 오늘 할 루틴",
+              "description": "함께한 날수, 다음 아기 일정, 오늘 할 루틴",
               "ios": {
                 "supportedFamilies": [
                   "systemSmall",
@@ -123,7 +123,7 @@
             {
               "name": "Buddy",
               "label": "육아버디",
-              "description": "태어난 지 며칠, 이번 주 챙길 일, 오늘 할 루틴",
+              "description": "함께한 날수, 다음 아기 일정, 오늘 할 루틴",
               "minWidth": "250dp",
               "minHeight": "110dp",
               "targetCellWidth": 4,
