@@ -41,7 +41,8 @@ import { useTheme } from '@/hooks/use-theme';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
-const POSES: Record<BuddyPose, { src: number; width: number; height: number }> = {
+/** 버디 자세 그림 — 기념 카드(milestone-card)도 같은 그림을 쓴다 */
+export const POSES: Record<BuddyPose, { src: number; width: number; height: number }> = {
   lie: { src: require('@/assets/images/buddy/lie.webp'), width: 250, height: 148 },
   crawl: { src: require('@/assets/images/buddy/crawl.webp'), width: 206, height: 184 },
   walk: { src: require('@/assets/images/buddy/walk.webp'), width: 112, height: 188 },
@@ -89,6 +90,7 @@ export function GrowthHero({
   pose,
   stage,
   onStop,
+  onShare,
 }: {
   topInset: number;
   days: number;
@@ -96,6 +98,8 @@ export function GrowthHero({
   pose: BuddyPose;
   stage: StageWindow;
   onStop: (stop: StageStop) => void;
+  /** 기념일 당일 「공유하기」 — 기념 카드 시트를 연다(milestone-card) */
+  onShare?: () => void;
 }) {
   const c = useTheme();
   const still = useReducedMotion();
@@ -174,6 +178,20 @@ export function GrowthHero({
               {party.head}
               <ThemedText style={[styles.days, { color: c.heroAccent }]}>{party.tail}</ThemedText>
             </ThemedText>
+            {onShare && (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => {
+                  tap();
+                  onShare();
+                }}
+                style={({ pressed }) => [styles.share, { backgroundColor: c.heroTrack }, pressed && { opacity: 0.6 }]}>
+                <Ionicons name="share-outline" size={15} color={c.onHero} />
+                <ThemedText type="label" style={{ color: c.onHero, fontWeight: 700 }}>
+                  공유하기
+                </ThemedText>
+              </Pressable>
+            )}
           </View>
         ) : (
           <>
@@ -331,7 +349,7 @@ function Twinkle({
 }
 
 /** 기념일 깃발 — 머리 왼쪽 위에 늘어진 줄과 삼각 깃발 아홉 */
-function Bunting() {
+export function Bunting({ scale = 1 }: { scale?: number }) {
   const c = useTheme();
   const colors = [c.heroAccent, c.heroStar, c.heroMoon];
   const flags: ReactNode[] = [];
@@ -343,7 +361,7 @@ function Bunting() {
     flags.push(<Path key={i} d={`M${x - 8} ${y - 1} L${x + 8} ${y - 1} L${x} ${y + 15}Z`} fill={colors[i % 3]} />);
   }
   return (
-    <Svg width={240} height={44} viewBox="0 0 240 44">
+    <Svg width={240 * scale} height={44 * scale} viewBox="0 0 240 44">
       <Path d="M0 6 Q120 44 240 4" fill="none" stroke={c.heroTrack} strokeWidth={1.5} />
       {flags}
     </Svg>
@@ -390,10 +408,10 @@ function Piece({ piece, still }: { piece: (typeof CONFETTI)[number]; still: bool
 }
 
 /** 매트 위 장난감 — 블록 둘과 공 */
-function Toys() {
+export function Toys({ scale = 1 }: { scale?: number }) {
   const c = useTheme();
   return (
-    <Svg width={64} height={48} viewBox="0 0 64 48">
+    <Svg width={64 * scale} height={48 * scale} viewBox="0 0 64 48">
       <Rect x={2} y={20} width={26} height={26} rx={6} fill={c.heroAccent} />
       <Rect x={8} y={1} width={20} height={20} rx={5} fill={c.heroStar} transform="rotate(8 18 11)" />
       <Circle cx={48} cy={34} r={12} fill={c.heroCloud} />
@@ -413,6 +431,18 @@ const styles = StyleSheet.create({
   bunting: { position: 'absolute', left: -20, top: -16 },
   /** 깃발 아래로 큰 글씨를 내린다 */
   party: { marginTop: 28 },
+  share: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 32,
+    paddingLeft: 12,
+    paddingRight: 14,
+    borderRadius: 16,
+    marginTop: 8,
+    marginBottom: 8,
+  },
   dayRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   days: { fontSize: 40, lineHeight: 48, fontWeight: 700, letterSpacing: -1.2 },
   scene: { height: SCENE_HEIGHT, marginTop: -8 },

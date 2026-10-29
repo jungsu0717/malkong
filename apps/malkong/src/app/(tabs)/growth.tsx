@@ -19,6 +19,7 @@ import { AdBanner } from '@/components/ad-banner';
 import { CheckCard, PrepCard } from '@/components/growth/growth-cards';
 import { GrowthHero } from '@/components/growth/growth-hero';
 import { KnowledgeSheet } from '@/components/growth/knowledge-sheet';
+import { MilestoneSheet } from '@/components/growth/milestone-card';
 import { TodayPlay } from '@/components/growth/today-play';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
@@ -61,6 +62,8 @@ export default function GrowthScreen() {
   const now = useNow(false);
   const [place] = usePlace();
   const [detail, setDetail] = useState<{ item: KnowledgeItem; title: string; sub: string | null } | null>(null);
+  /** 기념 카드 시트 — 기념일 당일에만 열린다 */
+  const [sharing, setSharing] = useState(false);
 
   if (!baby || !age) return <ScreenLoading />;
   const days = daysSince(baby.birthDate, now);
@@ -85,7 +88,15 @@ export default function GrowthScreen() {
     <ThemedView style={styles.container}>
       {focused && <StatusBar style="light" />}
       <ScrollView style={styles.flex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <GrowthHero topInset={insets.top} days={dayNumber(baby.birthDate, now)} week={weekOf(days)} pose={poseOf(age.month)} stage={stage} onStop={openStop} />
+        <GrowthHero
+          topInset={insets.top}
+          days={dayNumber(baby.birthDate, now)}
+          week={weekOf(days)}
+          pose={poseOf(age.month)}
+          stage={stage}
+          onStop={openStop}
+          onShare={() => setSharing(true)}
+        />
 
         <View style={styles.body}>
           <TodayPlay birthDate={baby.birthDate} now={now} />
@@ -114,6 +125,7 @@ export default function GrowthScreen() {
       <AdBanner anchored />
 
       <KnowledgeSheet item={detail?.item ?? null} title={detail?.title ?? ''} sub={detail?.sub} onClose={() => setDetail(null)} />
+      <MilestoneSheet stop={sharing ? stage.today : null} pose={poseOf(age.month)} date={now} onClose={() => setSharing(false)} />
     </ThemedView>
   );
 }
