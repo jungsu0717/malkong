@@ -25,7 +25,7 @@ export function thisWeek<T extends { at: number }>(rows: T[], today: number): T[
   return rows.filter((r) => r.at < today + WEEK_DAYS * DAY);
 }
 
-/** 홈 「다가오는 일」 카드에 보일 줄 — 이번 주 것은 모두, 적어도 세 줄, 많아도 여섯 줄 */
+/** 홈 「아기 일정」 카드에 보일 줄 — 이번 주 것은 모두, 적어도 세 줄, 많아도 여섯 줄 */
 export function homeRows<T extends { at: number }>(rows: T[], today: number): T[] {
   const week = thisWeek(rows, today).length;
   return rows.slice(0, Math.min(HOME_MAX, Math.max(HOME_MIN, week)));

@@ -36,7 +36,7 @@ export function RoutineHero({
   topInset: number;
   /** 홈에서 들어온 상세 화면이라 왼쪽 위에 뒤로 단추 */
   onBack: () => void;
-  /** 「10월 20일 화요일 · 태어난 지 31일」 */
+  /** 「10월 20일 화요일 · 함께한 지 31일」 */
   dateText: string;
   view: RoutineView;
   onView: (v: RoutineView) => void;

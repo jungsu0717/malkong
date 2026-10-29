@@ -1,5 +1,6 @@
 /**
- * 홈 위쪽 먹색 머리 (SPEC-MAIN-08, task today/007 · 009) — 날짜 · 태어난 지 며칠, 제목 「홈」, 오른쪽에 버디 얼굴, 큰 글씨로 「이번 주 챙길 일 4개」.
+ * 홈 위쪽 먹색 머리 (SPEC-MAIN-08, task today/007 · 009 · 011) — 날짜 · 함께한 지 며칠, 큰 글씨로 「이번 주 챙길 일 4개」, 오른쪽에 버디 얼굴.
+ * 탭 이름과 같은 제목 「홈」은 두지 않는다(Julian, 2026-10-29).
  * 모양은 루틴 화면 머리(routine-hero)와 같은 결.
  *
  * 버디는 오늘 할 루틴을 마지막 하나까지 완료한 순간 한 번 뛰어오르고(`celebrate` 가 거짓 → 참이 되는 때), 누르면 한 번 뛴다.
@@ -25,7 +26,7 @@ export function HomeHero({
   celebrate = false,
 }: {
   topInset: number;
-  /** 「10월 27일 화요일 · 태어난 지 27일」 */
+  /** 「10월 27일 화요일 · 함께한 지 27일」 */
   dateText: string;
   headline: string;
   /** 오늘 할 루틴을 모두 완료했는가 — 참이 되는 순간 버디가 뛴다 */
@@ -60,12 +61,12 @@ export function HomeHero({
       <View style={[styles.overscroll, { backgroundColor: c.hero }]} />
       <View style={styles.inner}>
         <View style={styles.top}>
-          <View style={styles.flex}>
+          <View style={[styles.flex, styles.text]}>
             <ThemedText type="small" style={{ color: c.onHeroDim }}>
               {dateText}
             </ThemedText>
-            <ThemedText type="display" style={[styles.title, { color: c.onHero }]}>
-              홈
+            <ThemedText type="title" style={[styles.headline, { color: c.onHero }]}>
+              {headline}
             </ThemedText>
           </View>
           <Pressable
@@ -81,9 +82,6 @@ export function HomeHero({
             </Animated.View>
           </Pressable>
         </View>
-        <ThemedText type="title" style={[styles.headline, { color: c.onHero }]}>
-          {headline}
-        </ThemedText>
       </View>
     </View>
   );
@@ -92,9 +90,9 @@ export function HomeHero({
 const styles = StyleSheet.create({
   hero: { borderBottomLeftRadius: 28, borderBottomRightRadius: 28, paddingBottom: 24, paddingHorizontal: Gutter },
   overscroll: { position: 'absolute', left: 0, right: 0, top: -1000, height: 1000 },
-  inner: { gap: 14, width: '100%', maxWidth: MaxContentWidth - Gutter * 2, alignSelf: 'center' },
+  inner: { width: '100%', maxWidth: MaxContentWidth - Gutter * 2, alignSelf: 'center' },
   top: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   flex: { flex: 1 },
-  title: { fontSize: 30, lineHeight: 38 },
+  text: { gap: 6 },
   headline: { fontSize: 24, lineHeight: 30 },
 });

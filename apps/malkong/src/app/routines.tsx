@@ -3,7 +3,7 @@
  *
  * 「했나?」에 바로 답하고 루틴을 고치는 곳이다. 위쪽 먹색 머리(routine-hero)에 뒤로 단추 · 진행 고리 · 남은 개수 · 다음 루틴과 그것을 바로 하는 큰 단추,
  * 그 아래 오늘 할 루틴을 버튼 보기(routine-grid)나 시간순 보기(routine-timeline)로 보인다. 보기는 머리 오른쪽에서 바꾸고 마지막 것을 기억한다.
- * 오늘 할 날이 아닌 루틴은 맨 아래 한 줄로 접는다. 다가오는 일은 홈, 할 일은 할 일 탭에 있다.
+ * 오늘 할 날이 아닌 루틴은 맨 아래 한 줄로 접는다. 아기 일정은 홈, 할 일은 할 일 탭에 있다.
  * 누를 때의 흐름(단계 시트 SPEC-MAIN-05, 재고 확인 시트 SPEC-MAIN-06)은 홈과 같이 쓰는 use-routine-actions 에 있다.
  * 추가는 추천 시트(routine-add-sheet), 직접 만들기 · 편집은 routine-form 화면이다.
  */
@@ -145,7 +145,7 @@ export default function RoutinesScreen() {
         <RoutineHero
           topInset={insets.top}
           onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          dateText={`${dateLabel(now)} · 태어난 지 ${age.days + 1}일`}
+          dateText={`${dateLabel(now)} · 함께한 지 ${age.days + 1}일`}
           view={view}
           onView={setView}
           ring={plan.total > 0 ? { done: plan.done, total: plan.total } : null}

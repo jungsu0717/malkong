@@ -20,6 +20,9 @@ export const Colors = {
     surface: '#F4F4F6',
     /** 눌렀을 때 · 골랐을 때 · 꺼진 단추 */
     surfaceStrong: '#E9E9EE',
+    /** 칸을 흰 카드로 나누는 화면의 바탕과 그 위 카드(홈, task today/011) */
+    page: '#F4F4F6',
+    card: '#FFFFFF',
     border: '#E8E8EC',
     divider: '#F0F0F3',
     /** 주요 단추 바탕 */
@@ -65,6 +68,8 @@ export const Colors = {
     splash: '#16161A',
     surface: '#1A1A1F',
     surfaceStrong: '#26262D',
+    page: '#0E0E11',
+    card: '#16161B',
     border: '#2A2A31',
     divider: '#202026',
     ink: '#F4F4F6',

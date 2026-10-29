@@ -5,7 +5,7 @@
  * 줄은 내 할 일과 같은 모양 — 동그라미 · 이름 · 작은 이름표와 날짜 · 오른쪽 D-day. 아직 목록에 생기지 않은 앞날 일정은 동그라미 대신 달력.
  * 접종 · 검진의 동그라미는 무엇을 했는지 고르는 시트를 연다.
  * 맨 위 「지난 일정」에는 지난달까지 기한이었는데 아직 안 한 앱 할 일(「지남」)을 두고, 놓친 접종 · 검진은 그 아래 「지난 접종 · 검진 N개 보기」로 접어 둔다(task common/026).
- * 줄을 만드는 일(`useBabyRows`, 셈은 `src/data/baby-rows.ts`)과 줄 모양(`BabyRow`)은 홈 「다가오는 일」 카드와 위젯도 같이 쓴다(SPEC-MAIN-08 · 09, task today/007 · 008).
+ * 줄을 만드는 일(`useBabyRows`, 셈은 `src/data/baby-rows.ts`)과 줄 모양(`BabyRow`)은 홈 「아기 일정」 카드와 위젯도 같이 쓴다(SPEC-MAIN-08 · 09, task today/007 · 008).
  */
 
 import { Ionicons } from '@expo/vector-icons';

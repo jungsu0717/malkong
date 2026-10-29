@@ -1,9 +1,10 @@
 /**
- * 홈 — 첫 화면 (SPEC-MAIN-08, task today/007, decisions/034).
+ * 홈 — 첫 화면 (SPEC-MAIN-08, task today/007 · 011, decisions/034).
  *
  * 사용자가 아무것도 넣지 않아도 채워진 것이 먼저 보이는 곳이다. 위쪽 먹색 머리(home-hero)에 「이번 주 챙길 일 N개」,
- * 그 아래 다가오는 일(앱이 생일로 채운 접종 · 검진 · 기념일 · 사이즈 — 할 일 탭 아기 일정 칸과 같은 줄), 오늘 할 루틴 작은 버튼, 장보기 한 줄.
- * 칸마다 「전체 ›」나 줄을 눌러 상세(아기 일정 칸 · 루틴 화면 · 장보기 칸)로 들어간다.
+ * 그 아래 오늘 할 루틴(옆으로 넘기는 작은 버튼 한 줄), 아기 일정(앱이 생일로 채운 접종 · 검진 · 기념일 · 사이즈 — 할 일 탭 아기 일정 칸과 같은 줄),
+ * 장보기(살 것 이름). 회색 바탕에 칸마다 이름과 흰 카드로 나눈다(task today/011).
+ * 칸마다 「전체 ›」나 줄을 눌러 상세(루틴 화면 · 아기 일정 칸 · 장보기 칸)로 들어간다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,8 @@ import { useTheme } from '@/hooks/use-theme';
 
 /** 할 일 탭의 칸을 연다 — `at` 이 바뀌어야 다른 칸을 골라 둔 뒤에도 이 칸이 열린다(todo.tsx) */
 const openTodo = (cat: 'baby' | 'shop') => router.push({ pathname: '/todo', params: { cat, at: String(Date.now()) } });
+/** 장보기 줄에 보일 살 것 이름 수 */
+const SHOP_NAMES = 2;
 
 export default function HomeScreen() {
   const c = useTheme();
@@ -59,56 +62,43 @@ export default function HomeScreen() {
     topics.find((t) => t.kind === 'shopping'),
     todos,
   );
-  const shopText =
-    toBuy.length + shipping.length === 0
+  // 장보기 — 숫자 대신 살 것 이름 둘까지
+  const shopTitle =
+    toBuy.length === 0
       ? '살 것이 없어요'
-      : [toBuy.length > 0 ? `살 것 ${toBuy.length}개` : null, shipping.length > 0 ? `배송 중 ${shipping.length}개` : null]
-          .filter(Boolean)
-          .join(' · ');
+      : toBuy
+          .slice(0, SHOP_NAMES)
+          .map((t) => t.title)
+          .join(', ') + (toBuy.length > SHOP_NAMES ? ` 외 ${toBuy.length - SHOP_NAMES}개` : '');
+  const shopDetail = shipping.length > 0 ? `배송 중 ${shipping.length}개` : null;
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={[styles.container, { backgroundColor: c.page }]}>
       {focused && <StatusBar style="light" />}
       <ScrollView style={styles.flex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <HomeHero
           topInset={insets.top}
-          dateText={`${dateLabel(now)} · 태어난 지 ${age.days + 1}일`}
+          dateText={`${dateLabel(now)} · 함께한 지 ${age.days + 1}일`}
           headline={headline}
           celebrate={plan.total > 0 && plan.done === plan.total}
         />
 
         <View style={styles.body}>
-          {/* 다가오는 일 — 앱이 채운 아기 일정 */}
-          <View style={styles.section}>
-            <Head title="다가오는 일" onMore={() => openTodo('baby')} />
-            <Card style={styles.rows}>
-              {rows.length === 0 ? (
-                <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-                  다가오는 아기 일정이 없어요
-                </ThemedText>
-              ) : (
-                homeRows(rows, today).map((r, i) => (
-                  <BabyRow key={r.key} row={r} divider={i > 0} onCheck={() => schedule.check(r)} onOpen={() => schedule.open(r)} />
-                ))
-              )}
-            </Card>
-          </View>
-
-          {/* 오늘 할 루틴 */}
+          {/* 오늘 할 루틴 — 옆으로 넘기는 한 줄 */}
           <View style={styles.section}>
             <Head title="오늘 할 루틴" onMore={() => router.push('/routines')} />
             {routines.length === 0 ? (
               <Pressable
                 accessibilityRole="button"
                 onPress={() => router.push('/routines')}
-                style={({ pressed }) => [styles.add, { borderColor: c.border, backgroundColor: pressed ? c.surface : 'transparent' }]}>
+                style={({ pressed }) => [styles.add, { borderColor: c.border, backgroundColor: pressed ? c.surfaceStrong : c.card }]}>
                 <Ionicons name="add" size={20} color={c.text} />
                 <ThemedText type="label" style={{ fontWeight: 600 }}>
                   루틴 추가
                 </ThemedText>
               </Pressable>
             ) : plan.today.length === 0 ? (
-              <Card style={styles.rows}>
+              <Card tone="raised" style={styles.rows}>
                 <ListRow
                   icon="calendar-clear-outline"
                   title="오늘 할 루틴이 없어요"
@@ -121,10 +111,29 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* 장보기 한 줄 */}
-          <Card style={styles.rows}>
-            <ListRow icon="cart-outline" title="장보기" detail={shopText} onPress={() => openTodo('shop')} />
-          </Card>
+          {/* 아기 일정 — 앱이 생일로 채운 일 */}
+          <View style={styles.section}>
+            <Head title="아기 일정" onMore={() => openTodo('baby')} />
+            <Card tone="raised" style={styles.rows}>
+              {rows.length === 0 ? (
+                <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
+                  다가오는 아기 일정이 없어요
+                </ThemedText>
+              ) : (
+                homeRows(rows, today).map((r, i) => (
+                  <BabyRow key={r.key} row={r} divider={i > 0} onCheck={() => schedule.check(r)} onOpen={() => schedule.open(r)} />
+                ))
+              )}
+            </Card>
+          </View>
+
+          {/* 장보기 */}
+          <View style={styles.section}>
+            <Head title="장보기" onMore={() => openTodo('shop')} />
+            <Card tone="raised" style={styles.rows}>
+              <ListRow icon="cart-outline" title={shopTitle} detail={shopDetail} right={false} onPress={() => openTodo('shop')} />
+            </Card>
+          </View>
         </View>
       </ScrollView>
       {/* 배너는 바닥에 고정 — 넘겨도 가려지지 않는다 */}

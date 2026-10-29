@@ -40,8 +40,8 @@ export function Card({
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** outline: 흰 바탕 + 선 · filled: 옅은 회색 면 */
-  tone?: 'outline' | 'filled';
+  /** outline: 흰 바탕 + 선 · filled: 옅은 회색 면 · raised: 회색 바탕(page) 위의 흰 카드, 선 없음 */
+  tone?: 'outline' | 'filled' | 'raised';
 }) {
   const c = useTheme();
   return (
@@ -50,7 +50,7 @@ export function Card({
         styles.card,
         tone === 'outline'
           ? { backgroundColor: c.background, borderColor: c.border, borderWidth: 1 }
-          : { backgroundColor: c.surface },
+          : { backgroundColor: tone === 'raised' ? c.card : c.surface },
         style,
       ]}>
       {children}
