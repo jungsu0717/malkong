@@ -22,6 +22,7 @@ import {
   splitTitle,
   stageStops,
   stageWindow,
+  celebrateLabel,
   tipIds,
   weekOf,
 } from './stage.ts';
@@ -66,6 +67,21 @@ test('막대 — D+32 는 1개월 · 50일 · 2개월 · 3개월, 다음은 50�
   assert.equal(w.passed, 1);
   assert.equal(w.next?.label, '50일');
   assert.ok(w.progress > 0.02 && w.progress < 0.05, String(w.progress));
+});
+
+test('막대 — 기념일 당일에는 그 칸이 둘째, 지금 자리는 그 점, 「오늘」 칸이 있다', () => {
+  // 100일 되는 날 = 태어나고 99일 뒤
+  const w = stageWindow(BIRTH, new Date(2026, 8, 20 + 99, 15));
+  assert.equal(w.today?.label, '100일');
+  assert.equal(w.stops[1].label, '100일');
+  assert.ok(Math.abs(w.progress - 1 / 3) < 1e-9, String(w.progress));
+  assert.deepEqual(celebrateLabel(w.today!), { head: '100일', tail: '이에요' });
+  // 1개월 되는 날, 돌
+  assert.equal(stageWindow(BIRTH, new Date(2026, 9, 20)).today?.label, '1개월');
+  assert.equal(stageWindow(BIRTH, new Date(2027, 8, 20)).today?.label, '돌');
+  // 평소 · 태어난 날에는 없다
+  assert.equal(stageWindow(BIRTH, new Date(2026, 9, 22)).today, null);
+  assert.equal(stageWindow(BIRTH, new Date(2026, 8, 20)).today, null);
 });
 
 test('막대 — 두 돌을 지나면 끝까지 차고 다음은 없다', () => {

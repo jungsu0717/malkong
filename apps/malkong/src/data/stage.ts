@@ -117,14 +117,22 @@ export type StageWindow = {
   passed: number;
   /** 다음 칸 — 다 지났으면 null */
   next: StageStop | null;
+  /** 오늘이 그 칸의 날이면 그 칸(달마다 · 50일 · 100일 · 돌) — 성장 탭의 기념일 장면. 태어난 날은 뺀다 */
+  today: StageStop | null;
 };
 
-/** 막대에 보일 네 칸과 지금 자리 — 지난 칸 하나와 앞으로 올 칸 */
+/**
+ * 막대에 보일 네 칸과 지금 자리 — 지난 칸 하나와 앞으로 올 칸.
+ * 칸의 날(기념일) 당일에는 그 칸이 둘째에 오게 지난 칸 하나를 더 앞에 둔다 — 맨 왼쪽 끝에 붙으면 「오늘」이 눈에 덜 띈다
+ */
 export function stageWindow(birthDate: string, now = new Date(), stops = stageStops(birthDate)): StageWindow {
   const today = dayStart(now);
   const at = (s: StageStop) => s.date.getTime();
   const nextIndex = stops.findIndex((s) => at(s) > today);
-  const start = nextIndex < 0 ? stops.length - WINDOW : Math.min(Math.max(0, nextIndex - 1), stops.length - WINDOW);
+  const last = nextIndex < 0 ? stops[stops.length - 1] : stops[nextIndex - 1];
+  const todayStop = last && last.kind !== 'birth' && at(last) === today ? last : null;
+  const back = todayStop ? 2 : 1;
+  const start = nextIndex < 0 ? stops.length - WINDOW : Math.min(Math.max(0, nextIndex - back), stops.length - WINDOW);
   const shown = stops.slice(start, start + WINDOW);
   const passed = shown.filter((s) => at(s) <= today).length;
   let progress = 1;
@@ -135,7 +143,18 @@ export function stageWindow(birthDate: string, now = new Date(), stops = stageSt
     const part = to > from ? Math.min(1, Math.max(0, (today - from) / (to - from))) : 0;
     progress = (local - 1 + part) / (WINDOW - 1);
   }
-  return { stops: shown, progress: Math.min(1, Math.max(0, progress)), passed, next: nextIndex < 0 ? null : stops[nextIndex] };
+  return {
+    stops: shown,
+    progress: Math.min(1, Math.max(0, progress)),
+    passed,
+    next: nextIndex < 0 ? null : stops[nextIndex],
+    today: todayStop,
+  };
+}
+
+/** 기념일 당일 큰 글씨 — 「100일이에요」 「2개월이에요」 「돌이에요」. 칸 이름이 모두 받침으로 끝난다 */
+export function celebrateLabel(stop: StageStop): { head: string; tail: string } {
+  return { head: stop.label, tail: '이에요' };
 }
 
 /** 발달 체크의 단계 — 지금 개월 다음의 CDC 이정표(2 · 4 · 6 · 9 · 12 · 15 · 18 · 24개월) */
