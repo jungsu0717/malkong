@@ -25,8 +25,10 @@ export type BabyRowData = {
   meta: string;
   /** 「D-3」 「지금」 */
   right: string | null;
-  /** 아직 목록에 없는 앞날 일정 — 체크할 수 없다 */
+  /** 아직 목록에 없는 앞날 일정 — 체크할 수 없고, 이름을 누르면 날짜 · 이름을 고치거나 지울 수 있다(`auto`) */
   future: boolean;
+  /** 앞날 일정의 규칙 — 고치면 그때 할 일로 만들고, 지우면 다시 만들지 않는다 */
+  auto?: { ref: string; kind: 'milestone' | 'size' };
   group?: GapGroup;
   todo?: Todo;
 };
@@ -97,6 +99,7 @@ export function babyRows({ baby, age, records, topics, todos, autoRemoved }: Bab
               meta: dueLabel(u.due, false, now),
               right: ddayText(u.due.getTime(), today),
               future: true,
+              auto: { ref: u.rule.ref, kind: k },
             })),
           ),
         ].sort((a, b) => a.at - b.at);

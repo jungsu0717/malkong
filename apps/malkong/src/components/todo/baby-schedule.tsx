@@ -3,7 +3,8 @@
  *
  * 접종 · 검진(공공 일정), 기념일 · 사이즈 바꾸기(생일로 계산)를 날짜순으로 「이번 달 · 다음 달 · 그 뒤」에 나눈다.
  * 줄은 내 할 일과 같은 모양 — 동그라미 · 이름 · 작은 이름표와 날짜 · 오른쪽 D-day. 아직 목록에 생기지 않은 앞날 일정은 동그라미 대신 달력.
- * 접종 · 검진의 동그라미는 무엇을 했는지 고르는 시트를 연다.
+ * 접종 · 검진의 동그라미는 무엇을 했는지 고르는 시트를 연다. 앞날 일정(달력 줄)도 이름을 누르면 편집 시트가 열린다 —
+ * 저장하면 그때 할 일로 만들고, 삭제하면 그 일정을 다시 만들지 않는다(task topic/010).
  * 맨 위 「지난 일정」에는 지난달까지 기한이었는데 아직 안 한 앱 할 일(「지남」)을 두고, 놓친 접종 · 검진은 그 아래 「지난 접종 · 검진 N개 보기」로 접어 둔다(task common/026).
  * 줄을 만드는 일(`useBabyRows`, 셈은 `src/data/baby-rows.ts`)과 줄 모양(`BabyRow`)은 홈 「아기 일정」 카드와 위젯도 같이 쓴다(SPEC-MAIN-08 · 09, task today/007 · 008).
  */
@@ -21,7 +22,7 @@ import { babyRows, dayStartOf, type BabyRowData } from '@/data/baby-rows';
 import { todoOf } from '@/data/briefing';
 import { checkupGroups } from '@/data/checkup-todos';
 import { useRecords } from '@/data/records-context';
-import type { Todo } from '@/data/todos';
+import { makeTodo, type Todo } from '@/data/todos';
 import { useTodos } from '@/data/todos-context';
 import { useMarkDone } from '@/hooks/use-mark-done';
 import { useNow } from '@/hooks/use-now';
@@ -52,9 +53,11 @@ export function useBabyScheduleCount(): number {
 export function useBabyRows(now: Date) {
   const { baby, age } = useBaby();
   const { records } = useRecords();
-  const { topics, todos, toggleDone, update, remove, autoRemoved } = useTodos();
+  const { topics, todos, toggleDone, add, update, remove, autoRemoved, skipAuto } = useTodos();
   const markDone = useMarkDone();
   const [editing, setEditing] = useState<Todo | null>(null);
+  /** 편집 중인 것이 아직 만들지 않은 앞날 일정인가 — 저장하면 새로 만들고, 삭제하면 규칙을 건너뛴다 */
+  const [draft, setDraft] = useState(false);
 
   const today = dayStartOf(now);
   const { rows, missed } = babyRows({ baby, age, records, topics, todos, autoRemoved }, now);
@@ -68,7 +71,16 @@ export function useBabyRows(now: Date) {
   };
   const open = (r: BabyRowData) => {
     if (r.group) markDone.pick(r.group);
-    else if (r.todo) setEditing(r.todo);
+    else if (r.todo) {
+      setDraft(false);
+      setEditing(r.todo);
+    } else if (r.auto) {
+      const kind = r.auto.kind;
+      const topic = topics.find((t) => t.kind === kind && !t.hidden);
+      if (!topic) return;
+      setDraft(true);
+      setEditing(makeTodo({ topicId: topic.id, title: r.title, dueAt: new Date(r.at).toISOString(), source: 'auto', ref: r.auto.ref }));
+    }
   };
 
   const sheets = (
@@ -80,11 +92,13 @@ export function useBabyRows(now: Date) {
         topics={topics.filter((t) => !t.hidden)}
         onClose={() => setEditing(null)}
         onSave={(patch) => {
-          if (editing) void update(editing.id, patch);
+          if (editing && draft) void add({ ...patch, source: 'auto', ref: editing.ref });
+          else if (editing) void update(editing.id, patch);
           setEditing(null);
         }}
         onDelete={() => {
-          if (editing) void remove(editing.id);
+          if (editing && draft && editing.ref) void skipAuto(editing.ref);
+          else if (editing) void remove(editing.id);
           setEditing(null);
         }}
       />
@@ -175,7 +189,7 @@ export function BabyRow({ row, divider, onCheck, onOpen }: { row: BabyRowData; d
           <Ionicons name="ellipse-outline" size={24} color={c.text} />
         </Pressable>
       )}
-      <Pressable accessibilityRole="button" disabled={row.future} onPress={onOpen} style={({ pressed }) => [styles.text, pressed && { opacity: 0.6 }]}>
+      <Pressable accessibilityRole="button" onPress={onOpen} style={({ pressed }) => [styles.text, pressed && { opacity: 0.6 }]}>
         <ThemedText type="body" lineBreakStrategyIOS="hangul-word" style={{ color: row.future ? c.textSecondary : c.text }}>
           {row.title}
         </ThemedText>

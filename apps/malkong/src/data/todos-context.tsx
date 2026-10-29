@@ -101,6 +101,8 @@ type TodosContextValue = {
   dismissRepeat: (key: string) => Promise<void>;
   /** 앱이 만든 할 일 중 사용자가 지운 것의 규칙 열쇠 — 주제 화면 「다가오는 할 일」에서도 뺀다 */
   autoRemoved: string[];
+  /** 아직 만들지 않은 앞날 일정을 지운다 — 그 규칙으로 다시 만들지 않는다(아기 일정의 달력 줄, task topic/010) */
+  skipAuto: (ref: string) => Promise<void>;
 };
 
 const TodosContext = createContext<TodosContextValue | null>(null);
@@ -364,21 +366,26 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
   );
 
   // 앱이 만든 할 일을 지우면 그 규칙을 남겨 다시 만들지 않는다
-  const remove = useCallback(async (id: string) => {
-    const ref = currentTodos.current.find((t) => t.id === id)?.ref;
-    await removeTodo(id);
-    setTodos((prev) => prev.filter((t) => t.id !== id));
-    // 가족 폰에서도 지워지게 지운 표시를 남긴다(task my/009)
-    await noteDeleted(id);
-    requestSync();
-    if (ref) {
-      setAutoRemoved((prev) => {
-        const next = [...prev.filter((r) => r !== ref), ref];
-        void writeSetting(AUTO_REMOVED_KEY, JSON.stringify(next));
-        return next;
-      });
-    }
+  const skipAuto = useCallback(async (ref: string) => {
+    setAutoRemoved((prev) => {
+      const next = [...prev.filter((r) => r !== ref), ref];
+      void writeSetting(AUTO_REMOVED_KEY, JSON.stringify(next));
+      return next;
+    });
   }, []);
+
+  const remove = useCallback(
+    async (id: string) => {
+      const ref = currentTodos.current.find((t) => t.id === id)?.ref;
+      await removeTodo(id);
+      setTodos((prev) => prev.filter((t) => t.id !== id));
+      // 가족 폰에서도 지워지게 지운 표시를 남긴다(task my/009)
+      await noteDeleted(id);
+      requestSync();
+      if (ref) await skipAuto(ref);
+    },
+    [skipAuto],
+  );
 
   // 반복 할 일은 완료하면 다음 차례 줄을 만들고, 되돌리면 그 줄을 지운다(SPEC-TOPIC-06)
   const toggleDone = useCallback(
@@ -504,6 +511,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       acceptRepeat,
       dismissRepeat,
       autoRemoved,
+      skipAuto,
     }),
     [
       topics,
@@ -521,6 +529,7 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
       acceptRepeat,
       dismissRepeat,
       autoRemoved,
+      skipAuto,
     ],
   );
 
