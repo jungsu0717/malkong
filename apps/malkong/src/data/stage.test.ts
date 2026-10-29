@@ -23,6 +23,7 @@ import {
   stageStops,
   stageWindow,
   celebrateLabel,
+  checkPreview,
   tipIds,
   weekOf,
 } from './stage.ts';
@@ -162,4 +163,40 @@ test('12개월 뒤 접종 · 검진 — DTaP 4차, 일본뇌염 · A형간염 �
     assert.ok(item, id);
     assert.ok(item.kind === '접종' || item.kind === '검진', id);
   }
+});
+
+test('발달 체크 카드 — 안 한 것 둘과 최근에 한 것 하나, 모자라면 채운다', () => {
+  const items = ['a', 'b', 'c', 'd'].map((id) => ({ id }));
+  const none = checkPreview(items, new Map());
+  assert.deepEqual(
+    none.map((r) => r.item.id),
+    ['a', 'b', 'c'],
+  );
+  const some = checkPreview(
+    items,
+    new Map([
+      ['a', '2026-10-01T09:00:00Z'],
+      ['c', '2026-10-20T09:00:00Z'],
+    ]),
+  );
+  assert.deepEqual(
+    some.map((r) => [r.item.id, r.at]),
+    [
+      ['b', null],
+      ['d', null],
+      ['c', '2026-10-20T09:00:00Z'],
+    ],
+  );
+  const most = checkPreview(
+    items,
+    new Map([
+      ['a', '2026-10-01T09:00:00Z'],
+      ['b', '2026-10-02T09:00:00Z'],
+      ['c', '2026-10-03T09:00:00Z'],
+    ]),
+  );
+  assert.deepEqual(
+    most.map((r) => r.item.id),
+    ['d', 'c', 'b'],
+  );
 });

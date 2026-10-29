@@ -244,3 +244,17 @@ export function makeMemo(text: string, now = new Date(), ref: string | null = nu
 export function sortMemos(memos: Memo[]): Memo[] {
   return [...memos].sort((a, b) => b.at.localeCompare(a.at));
 }
+
+/**
+ * 성장 탭 발달 체크 카드(SPEC-STAGE-06) — 아직 안 한 것 둘과 가장 최근에 한 것 하나.
+ * 안 한 것이 모자라면 한 것으로 채운다. `doneAt` 은 L1 id → 한 날(ISO)
+ */
+export function checkPreview<T extends { id: string }>(items: T[], doneAt: Map<string, string>, n = 3): { item: T; at: string | null }[] {
+  const open = items.filter((i) => !doneAt.has(i.id)).map((item) => ({ item, at: null }));
+  const done = items
+    .filter((i) => doneAt.has(i.id))
+    .map((item) => ({ item, at: doneAt.get(item.id) as string }))
+    .sort((a, b) => b.at.localeCompare(a.at));
+  const openCount = Math.min(open.length, done.length > 0 ? n - 1 : n);
+  return [...open.slice(0, openCount), ...done].slice(0, n);
+}

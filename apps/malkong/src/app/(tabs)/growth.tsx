@@ -2,7 +2,8 @@
  * 성장 탭 (SPEC-STAGE-01~03, task growth/004 · 005, decisions/031) — 지금 시기의 우리 아기, 한 화면 요약.
  *
  * 위쪽 먹색 그림(growth-hero)에 태어난 지 며칠 · 몇 주차, 시기에 맞는 버디, 달마다 · 50일 · 100일 칸의 막대. 칸의 날 당일에는 기념일 장면.
- * 그 아래 날마다 바뀌는 「오늘의 놀이」(task growth/007), 목록 하나에 세 줄 — 발달 체크 · 성장 일기 · 알아 두면 좋아요.
+ * 그 아래 날마다 바뀌는 「오늘의 놀이」(task growth/007), 탭에서 바로 누르는 카드 둘 — 발달 체크 · 이맘때 챙기면 좋은 일(task growth/009),
+ * 목록 하나에 두 줄 — 성장 일기 · 알아 두면 좋아요.
  * 긴 내용은 줄을 눌러 들어가는 상세 화면에.
  * 내용은 승인된 공공 지식(L1)이고, 출처는 화면 대신 「의학 정보 출처와 한계 고지」에 모은다.
  */
@@ -15,6 +16,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
+import { CheckCard, PrepCard } from '@/components/growth/growth-cards';
 import { GrowthHero } from '@/components/growth/growth-hero';
 import { KnowledgeSheet } from '@/components/growth/knowledge-sheet';
 import { TodayPlay } from '@/components/growth/today-play';
@@ -27,6 +29,7 @@ import { useBaby } from '@/data/baby-context';
 import { itemById, itemsByIds, type KnowledgeItem } from '@/data/l1';
 import { isPlayMemo } from '@/data/growth-plus';
 import { useMemos } from '@/data/memos-context';
+import { todoRecommend } from '@/data/recommend';
 import {
   KNOW_COMMON,
   checklistIds,
@@ -41,6 +44,7 @@ import {
   type StageStop,
 } from '@/data/stage';
 import { useNow } from '@/hooks/use-now';
+import { usePlace } from '@/hooks/use-place';
 import { useTheme } from '@/hooks/use-theme';
 
 const heads = (items: KnowledgeItem[], n = 2) => {
@@ -55,6 +59,7 @@ export default function GrowthScreen() {
   const { baby, age } = useBaby();
   const { memos } = useMemos();
   const now = useNow(false);
+  const [place] = usePlace();
   const [detail, setDetail] = useState<{ item: KnowledgeItem; title: string; sub: string | null } | null>(null);
 
   if (!baby || !age) return <ScreenLoading />;
@@ -62,8 +67,6 @@ export default function GrowthScreen() {
   const stage = stageWindow(baby.birthDate, now);
   const cp = checkpointFor(age.month);
   const checks = itemsByIds(checklistIds(cp));
-  const doneRefs = new Set(memos.map((m) => m.ref).filter(Boolean));
-  const done = checks.filter((i) => doneRefs.has(i.id)).length;
   const common = forMonth(itemsByIds(KNOW_COMMON), age.month);
   // 성장 일기 줄에는 놀이를 뺀 마지막 기록(메모 · 발달 체크)
   const last = memos.find((m) => !isPlayMemo(m));
@@ -86,19 +89,18 @@ export default function GrowthScreen() {
 
         <View style={styles.body}>
           <TodayPlay birthDate={baby.birthDate} now={now} />
+          {checks.length > 0 && <CheckCard birthDate={baby.birthDate} checkpoint={cp} checks={checks} />}
+          <PrepCard rec={todoRecommend(place, age.month)} />
           <View style={[styles.list, { borderColor: c.border }]}>
-            <Row
-              icon="checkbox-outline"
-              title="발달 체크"
-              sub={`${cp}개월까지 대부분 하는 것`}
-              right={checks.length > 0 ? <Progress done={done} total={checks.length} /> : null}
-              onPress={() => router.push('/growth-check')}
-            />
+            {/* 체크 항목이 아직 승인 전이면 카드 대신 단계 요약으로 가는 줄 */}
+            {checks.length === 0 && (
+              <Row icon="checkbox-outline" title="발달 체크" sub={`${cp}개월까지 대부분 하는 것`} onPress={() => router.push('/growth-check')} />
+            )}
             <Row
               icon="book-outline"
               title="성장 일기"
               sub={last ? `D+${dayNumber(baby.birthDate, new Date(last.at))} · ${last.text}` : '처음 웃은 날을 적어 두세요'}
-              divider
+              divider={checks.length === 0}
               onPress={() => router.push('/memos')}
             />
             {common.length > 0 && (
@@ -155,16 +157,6 @@ function Row({
       {right}
       <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
     </Pressable>
-  );
-}
-
-/** 「2 / 11」 — 체크한 수 */
-function Progress({ done, total }: { done: number; total: number }) {
-  const c = useTheme();
-  return (
-    <ThemedText type="label" style={{ color: done > 0 ? c.accentText : c.textSecondary, fontWeight: 700 }}>
-      {done} / {total}
-    </ThemedText>
   );
 }
 

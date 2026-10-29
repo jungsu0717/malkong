@@ -193,17 +193,29 @@ const HOME_TODO_STAGES: { from: number; label: string; groups: TodoGroup[] }[] =
 ];
 
 export type TodoRecommend = {
+  /** 지금 시기 이름 — 「생후 0~3개월」 「4개월부터」, 병원 · 산후조리원은 묶음 이름 */
+  label: string;
   groups: TodoGroup[];
   /** 다음 시기 미리 보기 — 집에서만 */
   next: { label: string; fromMonth: number; groups: TodoGroup[] } | null;
 };
 
 export function todoRecommend(place: Place, month = 0): TodoRecommend {
-  if (place !== 'home') return { groups: [AWAY_TODOS[place]], next: null };
+  if (place !== 'home') return { label: AWAY_TODOS[place].title, groups: [AWAY_TODOS[place]], next: null };
   const i = Math.max(0, HOME_TODO_STAGES.map((r) => r.from <= month).lastIndexOf(true));
   const following = HOME_TODO_STAGES[i + 1];
   return {
+    label: HOME_TODO_STAGES[i].label,
     groups: HOME_TODO_STAGES[i].groups,
     next: following ? { label: following.label, fromMonth: following.from, groups: following.groups } : null,
   };
+}
+
+/**
+ * 성장 탭 「이맘때 챙기면 좋은 일」(SPEC-STAGE-06) — 지금 시기 묶음의 할 일 셋까지. 아직 넣지 않은 것을 먼저,
+ * 다 넣었으면 넣은 것을 보인다. `have` 는 내 할 일 제목의 `titleKey`
+ */
+export function prepPreview(rec: TodoRecommend, have: Set<string>, n = 3): { title: string; added: boolean }[] {
+  const all = rec.groups.flatMap((g) => g.items).map((title) => ({ title, added: have.has(titleKey(title)) }));
+  return [...all.filter((x) => !x.added), ...all.filter((x) => x.added)].slice(0, n);
 }

@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { gridSuggestions, homeTemplates, placeFrom, routineRecommend, stepsDiffer, todoRecommend } from './recommend.ts';
+import { gridSuggestions, homeTemplates, placeFrom, prepPreview, routineRecommend, stepsDiffer, todoRecommend } from './recommend.ts';
 
 const titles = (month: number) => homeTemplates(month).map((t) => t.title);
 const sleepSteps = (month: number) => homeTemplates(month).find((t) => t.title === '밤잠 준비')?.items ?? [];
@@ -130,4 +130,24 @@ test('할 일 추천 — 개월 수에 맞는 묶음, 신청 · 서류와 보행
 
 test('추천에 영양제 · 약은 없다', () => {
   for (const m of [0, 2, 6, 9, 12]) for (const t of homeTemplates(m)) assert.doesNotMatch(t.title, /영양제|비타민|유산균|약/);
+});
+
+test('성장 탭 이맘때 챙기면 좋은 일 — 안 넣은 것 먼저 셋, 시기 이름', () => {
+  const rec = todoRecommend('home', 1);
+  assert.equal(rec.label, '생후 0~3개월');
+  const have = new Set(['아기침대·기저귀갈이대자리정하기']);
+  const rows = prepPreview(rec, have);
+  assert.equal(rows.length, 3);
+  assert.deepEqual(
+    rows.map((r) => r.added),
+    [false, false, false],
+  );
+  assert.ok(!rows.some((r) => r.title.startsWith('아기 침대')));
+  // 다 넣었으면 넣은 것을 보인다
+  const all = new Set(rec.groups.flatMap((g) => g.items).map((t) => t.replace(/\s+/g, '')));
+  assert.deepEqual(
+    prepPreview(rec, all).map((r) => r.added),
+    [true, true, true],
+  );
+  assert.equal(todoRecommend('hospital').label, '퇴원 전에 챙길 일');
 });

@@ -16,11 +16,10 @@ import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { monthStart } from '@/data/briefing';
 import { todoRecommend, type TodoGroup } from '@/data/recommend';
+import { titleKey } from '@/data/routine';
 import { useTodos } from '@/data/todos-context';
 import { usePlace } from '@/hooks/use-place';
 import { useTheme } from '@/hooks/use-theme';
-
-const key = (title: string) => title.replace(/\s+/g, '');
 
 export default function TodoRecommendScreen() {
   const c = useTheme();
@@ -31,12 +30,12 @@ export default function TodoRecommendScreen() {
   const general = topics.find((t) => t.kind === 'general');
   if (loading || !general || !baby || !age) return <ScreenLoading />;
   const rec = todoRecommend(place, age.month);
-  const have = new Set(todos.filter((t) => t.topicId === general.id).map((t) => key(t.title)));
+  const have = new Set(todos.filter((t) => t.topicId === general.id).map((t) => titleKey(t.title)));
   const addOne = (title: string) => add({ title, topicId: general.id });
   const nextDate = rec.next ? monthStart(baby.birthDate, rec.next.fromMonth) : null;
 
   const group = (g: TodoGroup) => {
-    const left = g.items.filter((title) => !have.has(key(title)));
+    const left = g.items.filter((title) => !have.has(titleKey(title)));
     return (
       <View key={g.title} style={styles.section}>
         <View style={styles.head}>
@@ -61,7 +60,7 @@ export default function TodoRecommendScreen() {
         </View>
         <Card style={styles.rows}>
           {g.items.map((title, i) => {
-            const added = have.has(key(title));
+            const added = have.has(titleKey(title));
             return (
               <View key={title} style={[styles.row, i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider }]}>
                 <ThemedText type="body" style={styles.flex}>
