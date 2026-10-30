@@ -127,6 +127,10 @@ Julian(2026-10-22): 애플만 먼저 출시한다. 순서 전체는 [common/008]
      폰에서 볼 것: 위젯 작은 칸 · 중간 칸(밝은 · 어두운 모드), 홈 루틴 가로 넘기기, 성장 탭 움직임, 공유 창에서 사진 저장 · 메신저 보내기, 예약 알림.
      빌드 명령: `EXPO_NO_CAPABILITY_SYNC=1 npx eas-cli@latest build --platform ios --profile production --auto-submit --non-interactive --no-wait`.
      `--non-interactive` 로 자동 제출하려면 eas.json 제출 설정에 App Store 앱 번호(`ascAppId`)가 있어야 한다 — 빌드 8 때 넣었다
+   - **빌드 1.0.0 (9)로 TestFlight 에 올림**(2026-10-30, 커밋 `296eb69`, Julian 이 직접 빌드, 자동 제출 성공): 홈 맨 위 기록 칸,
+     누가 남겼는지, 가족과 기록 맞추기(log/003), 오늘 아기 소식 카드(log/004).
+     폰에서 볼 것: 홈 기록 단추와 잠 · 모유 시계, 「소식 보내기」 공유 창, 두 폰에서 기록이 이름과 함께 맞춰지는지.
+     이름이 다른 폰에 가려면 서버 운영 배포(EventIn.by)가 먼저 필요하다 — Julian 승인 대기
    - **위젯이 들어간 첫 빌드**: Apple 개발자 사이트에서 App Groups(`group.com.yugabuddy.app`)를 만들고 앱 · 위젯 App ID 둘 다에 켰다(Julian, 2026-10-29).
      EAS 가 이 권한을 자동으로 켜는 기능이 Apple API 오류로 깨져 있어서(eas-cli issue 3986, 열림) 빌드 명령 앞에 늘 `EXPO_NO_CAPABILITY_SYNC=1` 을 붙인다.
      위젯 쪽 인증서는 처음 한 번 대화형 빌드(`--non-interactive` 없이)로 만들어야 한다 — 그 뒤로는 비대화형으로 된다. 빌드 번호는 원격(remote)이라 CLI 가 올린다
