@@ -63,6 +63,8 @@ class EventIn(ApiModel):
     # 변 색 — 대변이 있을 때(task log/002)
     color: Literal["yellow", "brown", "green", "black", "red", "white"] | None = None
     note: str | None = Field(default=None, max_length=500)
+    # 남긴 사람의 「가족에게 보일 이름」(엄마 · 할머니) — 옛 앱은 보내지 않는다(task log/003)
+    by: str | None = Field(default=None, max_length=20)
     created_at: NonEmptyStr = Field(max_length=40)
     updated_at: NonEmptyStr = Field(max_length=40)
     deleted: bool = False

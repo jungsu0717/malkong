@@ -18,6 +18,12 @@ export async function scheduleMorningAlerts(_time: string | null, _days: Morning
 
 export async function cancelRecordAlerts(): Promise<void> {}
 
+export async function scheduleFeedReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
+
+export async function scheduleDiaperReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
+
+export async function scheduleSleepReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
+
 export function onTodoAlertOpened(_listener: () => void): () => void {
   return () => undefined;
 }

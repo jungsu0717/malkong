@@ -11,7 +11,9 @@ import { AppState } from 'react-native';
 import { ApiError } from './api';
 import { useBaby } from './baby-context';
 import {
+  consentEvents,
   enterFamily,
+  eventsConsented,
   forgetFamily,
   loadFamilyState,
   quitFamily,
@@ -34,6 +36,9 @@ type FamilyContextValue = {
   join: (code: string) => Promise<void>;
   leave: () => Promise<void>;
   syncNow: () => Promise<void>;
+  /** 이 폰의 빠른 기록도 가족과 함께 보는 데 동의했나 — 2026-10-30 전에 들어간 폰은 따로 묻는다(decisions/036) */
+  eventsOk: boolean;
+  allowEvents: () => Promise<void>;
 };
 
 const FamilyContext = createContext<FamilyContextValue | null>(null);
@@ -42,6 +47,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<FamilyState | null>(null);
   const [status, setStatus] = useState<FamilyContextValue['status']>('loading');
   const [syncing, setSyncing] = useState(false);
+  const [eventsOk, setEventsOk] = useState(false);
   const { reload: reloadRecords } = useRecords();
   const { reload: reloadBaby } = useBaby();
   const stateRef = useRef<FamilyState | null>(null);
@@ -53,6 +59,7 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     stateRef.current = next;
     setState(next);
     setStatus(next ? 'member' : 'none');
+    void eventsConsented().then(setEventsOk);
   }, []);
 
   const run = useCallback(async () => {
@@ -140,9 +147,15 @@ export function FamilyProvider({ children }: { children: React.ReactNode }) {
     apply(null);
   }, [apply]);
 
+  const allowEvents = useCallback(async () => {
+    await consentEvents();
+    setEventsOk(true);
+    await sync();
+  }, [sync]);
+
   const value = useMemo<FamilyContextValue>(
-    () => ({ status, state, syncing, create, join, leave, syncNow: sync }),
-    [status, state, syncing, create, join, leave, sync],
+    () => ({ status, state, syncing, create, join, leave, syncNow: sync, eventsOk, allowEvents }),
+    [status, state, syncing, create, join, leave, sync, eventsOk, allowEvents],
   );
 
   return <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>;

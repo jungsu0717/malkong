@@ -1,21 +1,25 @@
 /**
- * 홈 — 첫 화면 (SPEC-MAIN-08, task today/007 · 011, decisions/034).
+ * 홈 — 첫 화면 (SPEC-MAIN-08, task today/007 · 011 · log/003, decisions/034 · 036).
  *
- * 사용자가 아무것도 넣지 않아도 채워진 것이 먼저 보이는 곳이다. 위쪽 먹색 머리(home-hero)에 「이번 주 챙길 일 N개」,
- * 그 아래 오늘 할 루틴(옆으로 넘기는 작은 버튼 한 줄), 아기 일정(앱이 생일로 채운 접종 · 검진 · 기념일 · 사이즈 — 할 일 탭 아기 일정 칸과 같은 줄),
- * 장보기(살 것 이름). 회색 바탕에 칸마다 이름과 흰 카드로 나눈다(task today/011).
- * 칸마다 「전체 ›」나 줄을 눌러 상세(루틴 화면 · 아기 일정 칸 · 장보기 칸)로 들어간다.
+ * 하루에 여러 번 여는 곳이다. 위쪽 먹색 머리(home-hero)에 「이번 주 챙길 일 N개」, 그 아래 기록(재는 중 · 마지막 수유 · 단추 넷 · 오늘 합계),
+ * 아직 가족이 없으면 가족 초대 카드, 오늘 할 루틴(옆으로 넘기는 작은 버튼 한 줄), 아기 일정(앱이 생일로 채운 접종 · 검진 · 기념일 · 사이즈 —
+ * 할 일 탭 아기 일정 칸과 같은 줄), 장보기(살 것 이름). 회색 바탕에 칸마다 이름과 흰 카드로 나눈다(task today/011).
+ * 칸마다 「전체 ›」나 줄을 눌러 상세(기록 화면 · 루틴 화면 · 아기 일정 칸 · 장보기 칸)로 들어간다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import { router, useIsFocused } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
+import { FamilyInvite } from '@/components/home/family-invite';
 import { HomeHero } from '@/components/home/home-hero';
+import { LogMini } from '@/components/home/log-mini';
 import { RoutineMini } from '@/components/home/routine-mini';
+import { useLogActions } from '@/components/log/use-log-actions';
 import { useRoutineActions } from '@/components/routine/use-routine-actions';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
@@ -24,6 +28,9 @@ import { BabyRow, useBabyRows } from '@/components/todo/baby-schedule';
 import { Card, ListRow } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
+import { readSetting, writeSetting } from '@/data/db';
+import { useEvents } from '@/data/events-context';
+import { useFamily } from '@/data/family-context';
 import { dateLabel, nextDayLabel, todayPlan } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { shopLists } from '@/data/todos';
@@ -36,6 +43,8 @@ import { useTheme } from '@/hooks/use-theme';
 const openTodo = (cat: 'baby' | 'shop') => router.push({ pathname: '/todo', params: { cat, at: String(Date.now()) } });
 /** 장보기 줄에 보일 살 것 이름 수 */
 const SHOP_NAMES = 2;
+/** 가족 초대 카드를 닫았는지 — 'yes' 면 이 폰에서 다시 보이지 않는다 */
+const FAMILY_CARD_HIDDEN_KEY = 'home.familyCardHidden';
 
 export default function HomeScreen() {
   const c = useTheme();
@@ -44,12 +53,23 @@ export default function HomeScreen() {
   const { baby, age } = useBaby();
   const { routines, logs, loading } = useRoutines();
   const { topics, todos, loading: todosLoading } = useTodos();
-  // 30초마다 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다
+  const { events, loading: eventsLoading } = useEvents();
+  const family = useFamily();
+  // 30초마다 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다. 기록 칸의 재는 중 시계는 그 칸이 따로 센다
   const now = useNow(false);
   const routine = useRoutineActions(now);
   const schedule = useBabyRows(now);
+  const log = useLogActions();
+  const [familyCardHidden, setFamilyCardHidden] = useState(true);
+  useEffect(() => {
+    void readSetting(FAMILY_CARD_HIDDEN_KEY).then((v) => setFamilyCardHidden(v === 'yes'));
+  }, []);
+  const hideFamilyCard = () => {
+    setFamilyCardHidden(true);
+    void writeSetting(FAMILY_CARD_HIDDEN_KEY, 'yes');
+  };
 
-  if (!baby || !age || loading || todosLoading) return <ScreenLoading />;
+  if (!baby || !age || loading || todosLoading || eventsLoading) return <ScreenLoading />;
 
   // 머리 — 이번 주 챙길 일 수. 없을 때 그다음 것은 바로 아래 카드가 보인다
   const { rows, today } = schedule;
@@ -84,6 +104,14 @@ export default function HomeScreen() {
         />
 
         <View style={styles.body}>
+          {/* 기록 — 하루에 여러 번 여는 이유(decisions/036) */}
+          <View style={styles.section}>
+            <Head title="기록" onMore={() => router.push('/log')} />
+            <LogMini events={events} onPress={log.press} onStop={(e) => void log.stop(e)} onOpen={() => router.push('/log')} />
+          </View>
+
+          {family.status === 'none' && !familyCardHidden && <FamilyInvite onHide={hideFamilyCard} />}
+
           {/* 오늘 할 루틴 — 옆으로 넘기는 한 줄 */}
           <View style={styles.section}>
             <Head title="오늘 할 루틴" onMore={() => router.push('/routines')} />
@@ -143,6 +171,7 @@ export default function HomeScreen() {
 
       {schedule.sheets}
       {routine.sheets}
+      {log.sheets}
     </ThemedView>
   );
 }

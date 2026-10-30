@@ -14,26 +14,31 @@ import {
   leaveFamily,
   syncFamily,
   type FamilyInfo,
+  type SyncEvent,
   type SyncRecord,
 } from './api';
 import { loadBaby, replaceBaby } from './baby';
 import {
+  deleteEventRow,
   deleteMemoRow,
   deleteRoutineLogRow,
   deleteTodoRow,
   insertRoutineLogRow,
+  readEventRows,
   readMemoRows,
   readRoutineLogRows,
   readRoutineRows,
   readSetting,
   readTodoRows,
   readTopicRows,
+  upsertEventRow,
   upsertMemoRow,
   upsertRoutineRow,
   upsertTodoRow,
   upsertTopicRow,
   writeSetting,
 } from './db';
+import type { CareEvent } from './events';
 import { itemKindOfId, outgoingItems, planIncoming } from './family-items';
 import { loadRecords, removeRecord, upsertRecords, type BabyRecord } from './records';
 import { emitRemoteChange, type RemoteKind } from './sync-events';
@@ -51,6 +56,13 @@ const MEMOS_PUSHED_KEY = 'family.memosPushedAt';
 const MEMO_OK_KEY = 'family.memoOk';
 /** 가족에게 보일 이 폰의 이름(엄마 · 아빠 …) — 누가 했는지 남긴다(task my/009) */
 const ME_KEY = 'family.me';
+/** 빠른 기록을 마지막으로 올린 때 — 옛 서버가 events 를 버릴 때를 생각해 받아 준 서버에서만 넘긴다 */
+const EVENTS_PUSHED_KEY = 'family.eventsPushedAt';
+/**
+ * 빠른 기록도 가족과 함께 보는 데 동의한 때(decisions/036). 2026-10-30 전에 가족에 들어간 폰은 동의 문장에 기록이 없어서
+ * 따로 동의해야 올린다. 가족이 남긴 기록은 동의와 상관없이 받는다
+ */
+const EVENTS_CONSENT_KEY = 'family.eventsConsentedAt';
 /** 지운 표시는 올린 뒤 지우지만, 혹시 남아도 이만큼만 */
 const MAX_TOMBSTONES = 300;
 
@@ -66,7 +78,7 @@ export type FamilyState = {
 
 type Tombstone = { id: string; deletedAt: string };
 
-/** 예전 빠른 기록의 id 는 `ev-` 로 시작한다 — 빠른 기록은 더 맞추지 않으니 그 지운 표시는 올리지 않는다(decisions/030) */
+/** 빠른 기록의 id 는 `ev-` 로 시작한다(events.ts newEventId) — 지운 표시를 기록과 가른다 */
 const isEventId = (id: string) => id.startsWith('ev-');
 
 export async function loadFamilyState(): Promise<FamilyState | null> {
@@ -99,6 +111,8 @@ async function clearState(): Promise<void> {
   await writeSetting(PUSHED_KEY, '');
   await writeSetting(ITEMS_PUSHED_KEY, '');
   await writeSetting(MEMOS_PUSHED_KEY, '');
+  await writeSetting(EVENTS_PUSHED_KEY, '');
+  await writeSetting(EVENTS_CONSENT_KEY, '');
   await writeSetting(SYNCED_KEY, '');
   await writeSetting(TOMBSTONES_KEY, '');
 }
@@ -141,11 +155,23 @@ export async function consentedAt(): Promise<string | null> {
   return (await readSetting(CONSENT_KEY)) || null;
 }
 
+/** 빠른 기록도 가족과 함께 보는 데 동의했나 */
+export async function eventsConsented(): Promise<boolean> {
+  return !!(await readSetting(EVENTS_CONSENT_KEY));
+}
+
+/** 2026-10-30 전에 가족에 들어간 폰의 기록 동의 — 동의하면 이 폰의 기록을 처음부터 올린다 */
+export async function consentEvents(): Promise<void> {
+  await writeSetting(EVENTS_CONSENT_KEY, new Date().toISOString());
+  await writeSetting(EVENTS_PUSHED_KEY, '');
+}
+
 /** 가족 만들기 — 동의한 때를 서버에도 보낸다 */
 export async function startFamily(): Promise<FamilyState> {
   const at = new Date().toISOString();
   const info = await createFamily(at);
   await writeSetting(CONSENT_KEY, at);
+  await writeSetting(EVENTS_CONSENT_KEY, at);
   const state: FamilyState = { info, seq: 0, pushedAt: null, syncedAt: null };
   await saveState(state);
   return state;
@@ -156,6 +182,7 @@ export async function enterFamily(code: string): Promise<FamilyState> {
   const at = new Date().toISOString();
   const info = await joinFamily(code.trim().toUpperCase(), at);
   await writeSetting(CONSENT_KEY, at);
+  await writeSetting(EVENTS_CONSENT_KEY, at);
   const state: FamilyState = { info, seq: 0, pushedAt: null, syncedAt: null };
   await saveState(state);
   return state;
@@ -186,6 +213,24 @@ export async function recoverFamily(): Promise<FamilyState | null> {
 
 export type SyncOutcome = { state: FamilyState; changed: boolean };
 
+function eventTombstone(t: Tombstone): SyncEvent {
+  return {
+    id: t.id,
+    kind: 'diaper',
+    startAt: t.deletedAt,
+    endAt: null,
+    amount: null,
+    side: null,
+    diaper: null,
+    color: null,
+    note: null,
+    by: null,
+    createdAt: t.deletedAt,
+    updatedAt: t.deletedAt,
+    deleted: true,
+  };
+}
+
 function tombstoneOf(record: BabyRecord | Tombstone, deleted: boolean): SyncRecord {
   if (!deleted) return { ...(record as BabyRecord), deleted: false };
   const t = record as Tombstone;
@@ -210,7 +255,7 @@ function tombstoneOf(record: BabyRecord | Tombstone, deleted: boolean): SyncReco
 export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   const now = new Date().toISOString();
   const pushedAt = state.pushedAt ?? '';
-  const [records, baby, tombstones] = await Promise.all([loadRecords(), loadBaby(), loadTombstones()]);
+  const [records, events, baby, tombstones] = await Promise.all([loadRecords(), readEventRows(), loadBaby(), loadTombstones()]);
   const dirty = records.filter((r) => r.updatedAt > pushedAt).map((r) => tombstoneOf(r, false));
   const deleted = tombstones
     .filter((t) => !isEventId(t.id) && !itemKindOfId(t.id) && t.deletedAt > pushedAt)
@@ -228,21 +273,33 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   const memoOk = (await readSetting(MEMO_OK_KEY)) === '1';
   const memoSince = !memoOk ? null : state.pushedAt === null ? '' : ((await readSetting(MEMOS_PUSHED_KEY)) ?? '');
   const items = outgoingItems({ topics, todos, routines, logs, memos, tombstones, since: itemsPushedAt, memoSince });
+  // 빠른 기록(SPEC-LOG-07) — 동의한 폰만, 따로 센 때부터 고친 것과 지운 표시. 들어간 직후(null)면 전부
+  const eventsOk = await eventsConsented();
+  const eventsPushedAt = state.pushedAt === null ? '' : ((await readSetting(EVENTS_PUSHED_KEY)) ?? '');
+  const dirtyEvents: SyncEvent[] = eventsOk
+    ? [
+        ...events.filter((e) => e.updatedAt > eventsPushedAt).map((e) => ({ ...e, deleted: false })),
+        ...tombstones.filter((t) => isEventId(t.id) && t.deletedAt > eventsPushedAt).map(eventTombstone),
+      ]
+    : [];
   const first = state.pushedAt === null;
   const pushBaby = baby && !first && baby.updatedAt > pushedAt;
 
   let res = await syncFamily({
     since: state.seq,
     records: [...dirty, ...deleted],
+    ...(eventsOk ? { events: dirtyEvents } : {}),
     items,
     ...(pushBaby ? { baby } : {}),
   });
   const incoming = [...res.records];
+  const incomingEvents = [...(res.events ?? [])];
   const incomingItems = [...(res.items ?? [])];
   // 들어간 직후 — 가족에 아기가 없을 때만 내 아기를 올린다
   if (first && res.baby === null && baby) {
     res = await syncFamily({ since: res.seq, records: [], baby });
     incoming.push(...res.records);
+    incomingEvents.push(...(res.events ?? []));
     incomingItems.push(...(res.items ?? []));
   }
 
@@ -270,6 +327,33 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
     changed = true;
   }
 
+  // 빠른 기록도 같은 규칙 — 늦게 고친 쪽이 이기고, 여기서 지운 것은 되살리지 않는다
+  const remote: RemoteKind[] = [];
+  const localEvents = new Map(events.map((e) => [e.id, e]));
+  const eventsToUpsert: CareEvent[] = [];
+  let eventsChanged = false;
+  for (const e of incomingEvents) {
+    const deletedHere = byTombstone.get(e.id);
+    if (deletedHere && deletedHere >= e.updatedAt) continue;
+    const mine = localEvents.get(e.id);
+    if (mine && mine.updatedAt >= e.updatedAt) continue;
+    if (e.deleted) {
+      if (mine) {
+        await deleteEventRow(e.id);
+        eventsChanged = true;
+      }
+      continue;
+    }
+    const { deleted: _deleted, ...event } = e;
+    // 옛 서버는 by 를 돌려주지 않는다 — 내가 가진 이름을 지우지 않게
+    eventsToUpsert.push({ ...event, by: event.by ?? mine?.by ?? null });
+  }
+  if (eventsToUpsert.length > 0) {
+    for (const e of eventsToUpsert) await upsertEventRow(e);
+    eventsChanged = true;
+  }
+  if (eventsChanged) remote.push('events');
+
   if (res.baby && (first || !baby || res.baby.updatedAt > baby.updatedAt)) {
     const same =
       baby &&
@@ -284,7 +368,6 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   }
 
   // 할 일 · 루틴(task my/009) — 늦게 고친 쪽이 이기고, 기본 주제는 kind 로, 앱이 채운 할 일은 ref 로 합친다
-  const remote: RemoteKind[] = [];
   if (incomingItems.length > 0) {
     const plan = planIncoming({ items: incomingItems, topics, todos, routines, logs, memos, tombstones });
     for (const t of plan.upsertTopics) await upsertTopicRow(t);
@@ -308,10 +391,13 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   const memosSent = memoSince !== null && itemsAccepted;
   if (memosSent) await writeSetting(MEMOS_PUSHED_KEY, now);
   await writeSetting(MEMO_OK_KEY, res.itemKinds?.includes('memo') ? '1' : '');
+  // 빠른 기록을 서버가 받아 줬는지 — 동의 전이거나 옛 서버면 올린 때와 지운 표시를 남겨 둔다
+  const eventsSent = eventsOk && res.events !== undefined;
+  if (eventsSent) await writeSetting(EVENTS_PUSHED_KEY, now);
   await saveTombstones(
     tombstones.filter((t) => {
-      if (isEventId(t.id)) return false;
       if (t.deletedAt > now) return true;
+      if (isEventId(t.id)) return !eventsSent;
       const kind = itemKindOfId(t.id);
       // 못 올린 지운 표시는 남겨 둔다 — 할 일 · 루틴은 옛 서버일 때, 메모는 이번에 메모를 올리지 않았을 때
       if (kind === 'memo') return !memosSent;

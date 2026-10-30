@@ -15,6 +15,11 @@ import { cancelRecordAlerts } from './notifications';
 const BRIEFING_TIME_KEY = 'briefing_time';
 /** 성장 소식(주차 · 달이 바뀌는 날 아침 알림, SPEC-STAGE-06) — 기본은 켬 */
 const GROWTH_ALERTS_KEY = 'growth_alerts';
+/**
+ * 기록 알림 (SPEC-LOG-05) — 수유 · 기저귀 · 잠을 한 스위치로. 'on' · 'off', 정한 적이 없으면 꺼짐(decisions/027).
+ * 때는 부모가 고르지 않고 월령 기준으로 앱이 정한다(care-reminders.ts). 거는 것은 events-context 가 한다
+ */
+const CARE_REMINDERS_KEY = 'care_reminders';
 export const DEFAULT_BRIEFING_TIME = '08:00';
 
 type PreferencesValue = {
@@ -27,6 +32,9 @@ type PreferencesValue = {
   /** 성장 소식 — 주차 · 달이 바뀌는 날 아침 */
   growthAlerts: boolean;
   setGrowthAlerts: (on: boolean) => Promise<void>;
+  /** 기록 알림 — 수유 · 기저귀 · 잠 */
+  careReminders: boolean;
+  setCareReminders: (on: boolean) => Promise<void>;
 };
 
 const PreferencesContext = createContext<PreferencesValue | null>(null);
@@ -35,16 +43,18 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const [briefingTime, setTime] = useState<string | null>(DEFAULT_BRIEFING_TIME);
   const [loading, setLoading] = useState(true);
   const [growthAlerts, setGrowth] = useState(true);
+  const [careReminders, setCare] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    // 예전 기록 알림을 걸어 둔 폰이 있다 — 기록 기능을 뺐으니 지운다(decisions/030)
+    // 예전 기록 요청 · 체온 알림을 걸어 둔 폰이 있다 — 다시 걸지 않는 알림이라 지운다(decisions/030 · 036)
     void cancelRecordAlerts().catch(() => undefined);
-    Promise.all([readSetting(BRIEFING_TIME_KEY), readSetting(GROWTH_ALERTS_KEY)])
-      .then(([time, growth]) => {
+    Promise.all([readSetting(BRIEFING_TIME_KEY), readSetting(GROWTH_ALERTS_KEY), readSetting(CARE_REMINDERS_KEY)])
+      .then(([time, growth, care]) => {
         if (cancelled) return;
         setTime(time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME));
         setGrowth(growth !== 'off');
+        setCare(care === 'on');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -64,9 +74,14 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     await writeSetting(GROWTH_ALERTS_KEY, on ? 'on' : 'off');
   }, []);
 
+  const setCareReminders = useCallback(async (on: boolean) => {
+    setCare(on);
+    await writeSetting(CARE_REMINDERS_KEY, on ? 'on' : 'off');
+  }, []);
+
   const value = useMemo(
-    () => ({ loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts }),
-    [loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts],
+    () => ({ loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts, careReminders, setCareReminders }),
+    [loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts, careReminders, setCareReminders],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;

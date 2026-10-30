@@ -91,7 +91,7 @@ Neon 에는 질문 답변 시절의 표 `daily_usage` · `counted_message` · `r
 | 지금 | **기기 sqlite** (expo-sqlite) | 아기 프로필 · 할 일 · 루틴 · 우리 아기 메모. 가족 공유를 켜면 이것들을 서버 사본과 맞춘다 |
 | 지금 | **앱 내장 + 원격 갱신** | L1 지식(월령별 표준). 크기가 작아 앱에 실어 나가고 서버에서 판만 갱신 |
 | 지금 | **Neon** (서버리스 Postgres) | 운영 데이터 — 디바이스 키 해시. 아기 데이터는 넣지 않는다 |
-| 지금 — 가족 공유를 켠 기기만 | 같은 **Neon** 에 `family` · `family_member` · `family_baby` · `family_record` | 아기 프로필 + 할 일 · 루틴 · 메모의 동기화 사본(`family_record` 한 표에 표시를 달아 함께). 기기 키로 묶이고 명시 동의와 함께만. 로그인은 나중에 가족을 계정에 묶을 때(task my/007) |
+| 지금 — 가족 공유를 켠 기기만 | 같은 **Neon** 에 `family` · `family_member` · `family_baby` · `family_record` | 아기 프로필 + 빠른 기록 · 할 일 · 루틴 · 메모의 동기화 사본(`family_record` 한 표에 표시를 달아 함께). 기기 키로 묶이고 명시 동의와 함께만. 로그인은 나중에 가족을 계정에 묶을 때(task my/007) |
 
 ```
 평시 ▸ 가족 공유를 켜도 무엇이 올라가는지 사용자에게 보여야 한다(가족 화면의 동의 문장).
@@ -146,7 +146,7 @@ CREATE TABLE record (                      -- L2 — 기록과 요약
   created_at         TEXT NOT NULL,
   updated_at         TEXT NOT NULL
 );
-CREATE TABLE care_event (                  -- 빠른 기록 (SPEC-LOG-01, decisions/023) — 수유 · 기저귀 · 잠 · 체온 · 키와 몸무게
+CREATE TABLE care_event (                  -- 빠른 기록 (SPEC-LOG-01, decisions/023 · 036) — 수유 · 기저귀 · 잠 · 체온 · 키와 몸무게
   id          TEXT PRIMARY KEY,
   kind        TEXT NOT NULL,               -- breast · formula · diaper · sleep · temp · weight · height
   start_at    TEXT NOT NULL,               -- 그 일이 일어난(시작한) 때 ISO
@@ -156,6 +156,7 @@ CREATE TABLE care_event (                  -- 빠른 기록 (SPEC-LOG-01, decisi
   diaper      TEXT,                        -- pee · poo · both
   color       TEXT,                        -- 변 색 yellow · brown · green · black · red · white (대변이 있을 때)
   note        TEXT,
+  by          TEXT,                        -- 누가 남겼나 — 가족 공유 이름(task log/003)
   created_at  TEXT NOT NULL,
   updated_at  TEXT NOT NULL                -- 가족 공유의 「늦게 고친 쪽이 이긴다」 기준
 );
@@ -240,7 +241,8 @@ CREATE INDEX ix_inbox_created ON inbox_card(created_at);
 
 - 월령은 항상 `birth_date` 에서 계산한다 — 저장해 두면 낡는다.
 - 사용량의 정본은 서버다. 기기에는 표시용 잔여 횟수만 캐시한다.
-- 가족 공유(task my/007)에서 `baby`·`record` 만 동기화 대상이다(SPEC-MY-05). `chat_message` 는 올라가지 않는다.
+- 가족 공유(task my/007)에서 `baby` · `care_event` · 할 일 · 루틴 · 메모가 동기화 대상이다(SPEC-MY-05). `chat_message` 는 올라가지 않는다.
+  `care_event` 는 기록도 함께 보는 데 동의한 폰만 올린다(`family.eventsConsentedAt`, decisions/036).
   폰 쪽 상태(가족 정보 · 받은 번호 · 올린 때 · 지운 기록 표시)는 `settings` 의 `family.*` 칸에 둔다.
 
 ## changelog
@@ -266,4 +268,5 @@ CREATE INDEX ix_inbox_created ON inbox_card(created_at);
 - 2026-10-06 운영자 기기의 「일반 사용자로 보기」(`X-As-User`) (task common/015)
 - 2026-10-08 서버가 저장하는 것에 「근거 없음 로그」(분류 × 월령 띠, 원문 없음) 추가 (task common/017)
 - 2026-10-12 가족 공유 — 서버가 아기 · 기록 사본을 갖는다(초대 코드 · 기기 키, 동의 뒤). Neon 에 family 표 넷, 기기 baby 에 updated_at (task my/007)
+- 2026-10-30 빠른 기록(`care_event`)을 다시 쓰고 가족 사본에 다시 올림, `by`(누가 남겼나) 칸 (decisions/036, task log/003)
 - 2026-10-22 서버의 질문 답변 · LLM 파이프라인 · 하루 한도 · 보상 광고 · 피드백 · 코호트 절을 뺌 — 서버는 기기 키 · 자격 · L1 내려받기 · 가족 공유만, 자격은 `{ ads, operator }`, 가족 사본에 메모 (task common/022 · 024)

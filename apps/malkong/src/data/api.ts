@@ -8,6 +8,7 @@
 import { CryptoDigestAlgorithm, digestStringAsync } from 'expo-crypto';
 
 import { readSetting, writeSetting } from './db';
+import type { CareEvent } from './events';
 import type { BabyRecord } from './records';
 
 const API_URL =
@@ -160,16 +161,22 @@ export type SyncBaby = { id: string; name: string | null; birthDate: string; cre
 export type SyncRecord = BabyRecord & { deleted: boolean };
 /** 할 일 · 주제 · 루틴 · 루틴 기록(task my/009) — 옛 서버는 items 를 모른다(응답에 없으면 받아 주지 않은 것) */
 export type { SyncItem } from './family-items';
+/** 빠른 기록 한 줄(SPEC-LOG-07) — 옛 서버는 by 를 모르고 버린다 */
+export type SyncEvent = CareEvent & { deleted: boolean };
+
 export type SyncRequest = {
   since: number;
   baby?: SyncBaby;
   records: SyncRecord[];
+  /** 기록을 가족과 함께 보는 데 동의한 폰만 싣는다(decisions/036) */
+  events?: SyncEvent[];
   items?: import('./family-items').SyncItem[];
 };
 export type SyncResponse = {
   seq: number;
   baby: SyncBaby | null;
   records: SyncRecord[];
+  events?: SyncEvent[];
   items?: import('./family-items').SyncItem[];
   /** 서버가 받는 줄 종류 — 여기에 'memo' 가 있어야 메모를 올린다(task common/024) */
   itemKinds?: string[];

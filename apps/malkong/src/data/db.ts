@@ -10,6 +10,7 @@
 import * as SQLite from 'expo-sqlite';
 
 import type { Baby } from './baby';
+import type { CareEvent } from './events';
 import type { BabyRecord } from './records';
 import { repeatFromText, repeatToText } from './repeat';
 import { routineKindOf, type Routine, type RoutineLog } from './routine';
@@ -112,7 +113,27 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
           created_at  TEXT NOT NULL,
           updated_at  TEXT NOT NULL
         );
+        CREATE TABLE IF NOT EXISTS care_event (
+          id          TEXT PRIMARY KEY,
+          kind        TEXT NOT NULL,
+          start_at    TEXT NOT NULL,
+          end_at      TEXT,
+          amount      REAL,
+          side        TEXT,
+          diaper      TEXT,
+          color       TEXT,
+          note        TEXT,
+          by          TEXT,
+          created_at  TEXT NOT NULL,
+          updated_at  TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS ix_event_start ON care_event(start_at);
       `);
+      // 빠른 기록의 변 색(task log/002) · 누가 남겼는지(task log/003) — 그 전에 만든 기록 표에는 없다
+      const eventColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(care_event)');
+      for (const col of ['color', 'by']) {
+        if (!eventColumns.some((c) => c.name === col)) await db.execAsync(`ALTER TABLE care_event ADD COLUMN ${col} TEXT`);
+      }
       // 메모의 발달 체크 열쇠(task growth/005) — 처음 만든 memo 표에는 없다
       const memoColumns = await db.getAllAsync<{ name: string }>('PRAGMA table_info(memo)');
       if (!memoColumns.some((col) => col.name === 'ref')) {
@@ -282,8 +303,48 @@ export async function deleteRecordRow(id: string): Promise<void> {
   await db.runAsync('DELETE FROM record WHERE id = ?', id);
 }
 
-// 예전 대화 · 알림함 · 빠른 기록 표(chat_message · inbox_card · care_event)는 2026-10-19 에 쓰지 않게 됐다(decisions/030).
+// 예전 대화 · 알림함 표(chat_message · inbox_card)는 2026-10-19 에 쓰지 않게 됐다(decisions/030).
 // 이미 있는 폰의 표와 내용은 지우지 않는다(헌장 2).
+
+// --- 빠른 기록 (SPEC-LOG-01, decisions/023 · 036) ---
+
+export async function readEventRows(): Promise<CareEvent[]> {
+  const db = await getDb();
+  return db.getAllAsync<CareEvent>(
+    `SELECT id, kind, start_at AS startAt, end_at AS endAt, amount, side, diaper, color, note, by,
+            created_at AS createdAt, updated_at AS updatedAt
+       FROM care_event ORDER BY start_at`,
+  );
+}
+
+/** 넣거나 덮어쓴다 — 고치기 · 가족에게서 받은 기록 모두 */
+export async function upsertEventRow(e: CareEvent): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT INTO care_event (id, kind, start_at, end_at, amount, side, diaper, color, note, by, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET kind = excluded.kind, start_at = excluded.start_at, end_at = excluded.end_at,
+       amount = excluded.amount, side = excluded.side, diaper = excluded.diaper, color = excluded.color,
+       note = excluded.note, by = excluded.by, updated_at = excluded.updated_at`,
+    e.id,
+    e.kind,
+    e.startAt,
+    e.endAt,
+    e.amount,
+    e.side,
+    e.diaper,
+    e.color ?? null,
+    e.note,
+    e.by ?? null,
+    e.createdAt,
+    e.updatedAt,
+  );
+}
+
+export async function deleteEventRow(id: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM care_event WHERE id = ?', id);
+}
 
 // --- 주제별 할 일 (SPEC-TOPIC-01~03, decisions/024) ---
 

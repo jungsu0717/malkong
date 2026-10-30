@@ -1,6 +1,6 @@
 /**
  * 기기가 스스로 띄우는 로컬 알림 — 아침 알림(SPEC-TOPIC-09, 일주일 치를 날짜마다), 할 일 알림(SPEC-TOPIC-09), 루틴 알림(SPEC-MAIN-04),
- * 성장 소식(SPEC-STAGE-06, 주차 · 달이 바뀌는 날 아침).
+ * 성장 소식(SPEC-STAGE-06, 주차 · 달이 바뀌는 날 아침), 기록 알림(SPEC-LOG-05 — 수유 · 기저귀 · 잠).
  *
  * 서버 푸시가 아니다 — 기기 토큰을 서버에 두지 않는다. 아침 알림과 할 일 알림을 누르면 할 일 탭으로 연다.
  * 알림 본문에는 아기 이름과 기록 내용을 넣지 않는다 — 잠금 화면에 보이므로. 할 일 알림은 사용자가 적은 할 일 제목만 보인다.
@@ -15,7 +15,7 @@ const BRIEFING_ID = 'morning-briefing';
 /** 날짜마다 따로 거는 아침 알림의 앞머리(task topic/002) */
 const MORNING_PREFIX = 'morning-day-';
 const CHANNEL_ID = 'briefing';
-/** 예전 기록 알림 — 지우기만 한다(decisions/030) */
+/** 예전 기록 요청 알림 — 지우기만 한다(decisions/030) */
 const NUDGE_ID = 'record-nudge';
 const BRIEFING_TYPE = 'briefing';
 const TODO_TYPE = 'todo';
@@ -73,7 +73,11 @@ export type AlertAction = 'done' | 'snooze';
 const FEED_ID = 'feed-reminder';
 const DIAPER_ID = 'diaper-reminder';
 const SLEEP_ID = 'sleep-reminder';
+/** 예전 체온 알림(매일 아침 · 저녁) — 2026-10-30 기록을 되살리면서 다시 걸지 않는다. 지우기만 한다 */
 const TEMP_IDS = ['temp-morning', 'temp-evening'] as const;
+const FEED_CHANNEL_ID = 'feed-reminder';
+/** 기록 알림 묶음의 안드로이드 채널 — 수유 말고는 한 채널에 둔다 */
+const CARE_CHANNEL_ID = 'care-reminder';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -146,13 +150,66 @@ export async function scheduleMorningAlerts(time: string | null, days: MorningDa
 }
 
 /**
- * 예전 기록 알림(기록 요청 · 수유 · 기저귀 · 잠 · 체온)을 지운다 — 기록 기능을 뺐다(decisions/030).
+ * 예전 기록 요청 · 체온 알림을 지운다 — 2026-10-19 에 뺐고, 기록을 되살린 뒤(decisions/036)에도 다시 걸지 않는다.
  * 그 전에 걸어 둔 폰이 있어 앱을 열 때 한 번 부른다
  */
 export async function cancelRecordAlerts(): Promise<void> {
-  for (const id of [NUDGE_ID, FEED_ID, DIAPER_ID, SLEEP_ID, ...TEMP_IDS]) {
+  for (const id of [NUDGE_ID, ...TEMP_IDS]) {
     await Notifications.cancelScheduledNotificationAsync(id).catch(() => undefined);
   }
+}
+
+/**
+ * 수유 알림 (SPEC-LOG-05) — 정한 때 한 번. null 이면 끈다. 허락이 없으면 걸지 않는다.
+ * 글에는 아기 정보 · 기록 내용을 넣지 않는다 — 잠금 화면에 보이므로. `afterLabel` 은 「3시간」 같은 정한 시간뿐이다
+ */
+export async function scheduleFeedReminder(at: Date | null, afterLabel: string): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(FEED_ID).catch(() => undefined);
+  if (!at || !(await notificationsAllowed())) return;
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(FEED_CHANNEL_ID, {
+      name: '수유 알림',
+      importance: Notifications.AndroidImportance.HIGH,
+    });
+  }
+  await Notifications.scheduleNotificationAsync({
+    identifier: FEED_ID,
+    content: {
+      title: `마지막 수유 뒤 ${afterLabel}이 지났어요`,
+      body: '수유할 시간인지 확인해 보세요',
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: FEED_CHANNEL_ID },
+  });
+}
+
+async function careChannel(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  await Notifications.setNotificationChannelAsync(CARE_CHANNEL_ID, {
+    name: '기록 알림',
+    importance: Notifications.AndroidImportance.DEFAULT,
+  });
+}
+
+/** 한 번 거는 기록 알림 — null 이면 끈다. 글에는 아기 정보 · 기록 내용을 넣지 않는다 */
+async function scheduleOnce(id: string, at: Date | null, title: string, body: string): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(id).catch(() => undefined);
+  if (!at || !(await notificationsAllowed())) return;
+  await careChannel();
+  await Notifications.scheduleNotificationAsync({
+    identifier: id,
+    content: { title, body },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: at, channelId: CARE_CHANNEL_ID },
+  });
+}
+
+/** 기저귀 알림 (SPEC-LOG-05) — 마지막 기저귀 뒤 정한 시간 */
+export async function scheduleDiaperReminder(at: Date | null, afterLabel: string): Promise<void> {
+  await scheduleOnce(DIAPER_ID, at, `기저귀를 간 지 ${afterLabel}이 지났어요`, '기저귀를 확인해 보세요');
+}
+
+/** 잠 알림 (SPEC-LOG-05) — 깬 뒤 평소 깨어 있던 시간 */
+export async function scheduleSleepReminder(at: Date | null, afterLabel: string): Promise<void> {
+  await scheduleOnce(SLEEP_ID, at, `잠에서 깬 지 ${afterLabel}이 지났어요`, '졸려하는지 살펴보세요');
 }
 
 /** 아침 알림 · 할 일 알림을 눌러 앱이 열리면 `listener` 를 부른다 — 할 일 탭으로 보내려고. 돌려주는 함수로 그만 듣는다 */

@@ -51,7 +51,8 @@
 `consentedAt` 은 아기 · 건강 기록의 서버 저장 · 가족 공유에 동의한 때(ISO) — 구성원 행에 남는다.
 `baby` 는 기기 DB 의 `baby` 행 그대로(`id` · `name` · `birthDate` · `createdAt` · `updatedAt`), `records[]` 는 `record` 행 그대로에
 `deleted`(지운 기록 표시)를 더한 것. `events[]` 는 기록 탭의 빠른 기록 — `care_event` 행 그대로(`id` · `kind` · `startAt` ·
-`endAt` · `amount` · `side` · `diaper` · `color`(변 색) · `note` · `createdAt` · `updatedAt`)에 `deleted` 를 더한 것이다(SPEC-LOG-07). `kind` 는
+`endAt` · `amount` · `side` · `diaper` · `color`(변 색) · `note` · `by`(남긴 사람의 가족 이름, 20자까지) · `createdAt` · `updatedAt`)에 `deleted` 를 더한 것이다(SPEC-LOG-07).
+옛 서버는 `by` 를 모르고 버린다 — 앱은 받은 줄에 `by` 가 없으면 가진 이름을 지우지 않는다. `kind` 는
 breast · formula · diaper · sleep · temp · weight · height 가운데 하나. 서버는 내용을 읽지 않고 맞추기만 한다 — 빠른 기록도
 기록과 같은 번호로 센다. 응답에 `events` 가 없으면 옛 서버다(앱은 빠른 기록을 올린 때를 넘기지 않는다).
 `items[]` 는 할 일 · 주제 · 루틴 · 루틴 기록(task my/009)과 우리 아기 메모 — `{ kind: topic | todo | routine | routineLog | memo, id, updatedAt, deleted, data }`.
@@ -104,5 +105,6 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 - 2026-10-12 `/v1/family` — 가족 만들기 · 초대 코드로 들어가기 · 나가기 · 아기 · 기록 맞추기(늦게 고친 쪽이 이김, seq) (task my/007)
 - 2026-10-12 `/v1/ask` 요청에 `conversationSummary`, 답 · 되묻기 응답에 `conversationSummary` — 대화 요약은 폰이 들고 다닌다. `baby.records` 는 질문 주제에 닿는 것만 (decisions/022, task ask/013)
 - 2026-10-12 `/v1/family/sync` 에 `events[]` — 기록 탭의 빠른 기록(care_event 모양 + deleted). 서버는 기록과 같은 표 · 같은 번호로 맞추고 돌려줄 때 가른다. 옛 앱은 보내지 않아도 된다 (SPEC-LOG-07, task log/001)
+- 2026-10-30 `events[]` 에 `by`(누가 남겼는지) (SPEC-LOG-07, task log/003)
 - 2026-10-22 질문 답변 · 보상 광고 · 피드백 · 또래 질문을 뺌, 자격은 `{ ads, operator }` 만, 가족 맞추기에 메모(`memo`)와 `itemKinds` (task common/022 · 024)
 - 2026-10-22 `GET /privacy` · `/terms` 웹 페이지 (task common/024)

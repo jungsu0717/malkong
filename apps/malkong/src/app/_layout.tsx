@@ -15,6 +15,7 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Colors, FontFamily } from '@/constants/theme';
 import { BabyProvider, useBaby } from '@/data/baby-context';
 import { EntitlementsProvider } from '@/data/entitlements-context';
+import { EventsProvider } from '@/data/events-context';
 import { FamilyProvider } from '@/data/family-context';
 import { loadStoredKnowledge, refreshKnowledge } from '@/data/knowledge-update';
 import { onTodoAlertOpened } from '@/data/notifications';
@@ -114,6 +115,7 @@ export default function RootLayout() {
                 <TodosProvider>
                 <RoutinesProvider>
                 <MemosProvider>
+                <EventsProvider>
                   <OnboardingGate />
                   {/* 폰 홈 화면 위젯 — 일주일 치 밀어 넣기와 위젯에서 누른 루틴 받기(SPEC-MAIN-09) */}
                   <WidgetSync />
@@ -122,6 +124,8 @@ export default function RootLayout() {
                     <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
                     <Stack.Screen name="topic/[id]" options={{ ...header, title: '준비 목록' }} />
                     <Stack.Screen name="notifications" options={{ ...header, title: '알림' }} />
+                    <Stack.Screen name="log" options={{ ...header, title: '기록' }} />
+                    <Stack.Screen name="log-stats" options={{ ...header, title: '일주일 그래프' }} />
                     <Stack.Screen name="family" options={{ ...header, title: '가족과 함께 보기' }} />
                     <Stack.Screen name="routine-form" options={{ presentation: 'modal' }} />
                     <Stack.Screen name="memos" options={{ ...header, title: '우리 아기 메모' }} />
@@ -133,6 +137,7 @@ export default function RootLayout() {
                     <Stack.Screen name="lists" options={{ ...header, title: '준비 목록' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
+                </EventsProvider>
                 </MemosProvider>
                 </RoutinesProvider>
                 </TodosProvider>

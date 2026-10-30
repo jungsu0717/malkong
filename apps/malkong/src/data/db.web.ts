@@ -7,6 +7,7 @@
  */
 
 import type { Baby } from './baby';
+import type { CareEvent } from './events';
 import type { BabyRecord } from './records';
 import { routineKindOf, type Routine, type RoutineLog } from './routine';
 import type { Memo } from './stage';
@@ -94,7 +95,42 @@ export async function upsertRecordRow(record: BabyRecord): Promise<void> {
   await writeRecordRows(rows);
 }
 
-// 예전 대화 · 알림함 · 빠른 기록은 2026-10-19 에 쓰지 않게 됐다(decisions/030). 저장된 것은 지우지 않는다.
+// 예전 대화 · 알림함은 2026-10-19 에 쓰지 않게 됐다(decisions/030). 저장된 것은 지우지 않는다.
+
+// --- 빠른 기록 (SPEC-LOG-01, decisions/036) ---
+
+const EVENTS_KEY = 'malkong.events';
+
+export async function readEventRows(): Promise<CareEvent[]> {
+  try {
+    const raw = globalThis.localStorage?.getItem(EVENTS_KEY);
+    const rows = raw ? (JSON.parse(raw) as CareEvent[]) : [];
+    // 변 색 · 누가 칸이 생기기 전에 저장한 줄도 읽게 메운다
+    return rows.map((r) => ({ ...r, color: r.color ?? null, by: r.by ?? null })).sort((a, b) => a.startAt.localeCompare(b.startAt));
+  } catch {
+    return [];
+  }
+}
+
+function writeEventRows(rows: CareEvent[]): void {
+  try {
+    globalThis.localStorage?.setItem(EVENTS_KEY, JSON.stringify(rows));
+  } catch {
+    // 저장이 막힌 브라우저에서도 화면은 그대로 동작해야 한다 (이번 실행에만 유지된다)
+  }
+}
+
+export async function upsertEventRow(e: CareEvent): Promise<void> {
+  const rows = await readEventRows();
+  const i = rows.findIndex((r) => r.id === e.id);
+  if (i >= 0) rows[i] = e;
+  else rows.push(e);
+  writeEventRows(rows);
+}
+
+export async function deleteEventRow(id: string): Promise<void> {
+  writeEventRows((await readEventRows()).filter((r) => r.id !== id));
+}
 
 // --- 주제별 할 일 (SPEC-TOPIC-01~03) ---
 
