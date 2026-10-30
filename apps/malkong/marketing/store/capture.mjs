@@ -1,8 +1,8 @@
 // 스토어 스크린샷에 넣을 진짜 앱 화면을 찍는다 (docs/product/store-toon.md 「스토어 스크린샷」).
 //   1) npx expo export --platform web        → ../../dist
-//   2) node capture.mjs [이름 …]             → shots/<이름>.png (1170×2532, 아이폰 390×844 @3x) — home · year · routine · todo · shop · growth · family
+//   2) node capture.mjs [이름 …]             → shots/<이름>.png (1170×2532, 아이폰 390×844 @3x) — home · log · news · year · growth · routine · todo · shop
 // 정적 파일 서버를 스스로 띄우고(8099) 크롬을 원격 조종해 앱을 연다. 서버로 가는 요청은 미리 정한 답으로 바꿔 넣는다 —
-// 자격은 광고 없음(배너 자리가 찍히지 않게), 나머지는 빈 204. 기기 저장소(localStorage)에 아기 · 루틴 · 할 일 · 메모를 미리 넣는다.
+// 자격은 광고 없음(배너 자리가 찍히지 않게), 나머지는 빈 204. 기기 저장소(localStorage)에 아기 · 기록 · 루틴 · 할 일 · 메모를 미리 넣는다.
 // 크롬은 CHROME=경로 → 맥 크롬 → Playwright 크로미움(~/.cache/ms-playwright) 순서로 찾는다.
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -61,7 +61,7 @@ const ROUTINES = [
 ];
 let logN = 0;
 const log = (routineId, iso, o = {}) => ({ id: `rl-${(logN += 1)}`, routineId, at: iso, minutes: null, by: null, step: null, skip: false, createdAt: iso, ...o });
-/** 오늘 한 것 — `by` 를 주면 가족 이름(「엄마 · 08:10」) */
+/** 오늘 한 것 — 기록처럼 가족 이름이 붙는다(「엄마 · 08:10」) */
 const routineLogs = (mom = null, dad = null) => [
   log('rt-bath', at(2, 20, 10)),
   log('rt-nails', at(3, 21, 0)),
@@ -112,9 +112,62 @@ const RECORDS = [
   },
 ];
 
+/*
+ * 기록(수유 · 기저귀 · 잠) — 지난 7일은 3시간쯤마다 수유 → 기저귀 → 잠을 되풀이하고, 오늘은 손으로 적은 줄을 장면 시각까지만 쓴다.
+ * 남긴 사람은 엄마 · 아빠 · 할머니(가족 공유를 켠 집처럼). 장면 시각에 아직 끝나지 않은 잠은 재는 중(endAt null)이 된다
+ */
+let evN = 0;
+const ev = (kind, startAt, o = {}) => ({
+  id: `ev-store-${(evN += 1)}`, kind, startAt, endAt: null, amount: null, side: null, diaper: null, color: null, note: null, by: null,
+  createdAt: startAt, updatedAt: startAt, ...o,
+});
+const plus = (iso, min) => new Date(new Date(iso).getTime() + min * 6e4).toISOString();
+const PAST_EVENTS = [];
+for (let d = 7; d >= 1; d--) {
+  for (let i = 0; i < 8; i++) {
+    const feed = at(d, i * 3, ((d * 7 + i * 13) % 5) * 5);
+    const by = i < 2 || i === 7 ? (i % 2 ? '아빠' : '엄마') : d % 2 && i === 4 ? '할머니' : '엄마';
+    if (i % 2) PAST_EVENTS.push(ev('breast', feed, { endAt: plus(feed, 12 + ((d + i) % 3) * 3), side: d % 2 ? 'left' : 'right', by }));
+    else PAST_EVENTS.push(ev('formula', feed, { amount: 80 + ((d + i) % 3) * 10, by }));
+    PAST_EVENTS.push(ev('diaper', plus(feed, 22), { diaper: i % 3 === 0 ? 'poo' : 'pee', color: i % 3 === 0 ? 'yellow' : null, by }));
+    PAST_EVENTS.push(ev('sleep', plus(feed, 35), { endAt: plus(feed, 35 + 95 + ((d * 3 + i) % 4) * 10), by }));
+  }
+}
+const TODAY_EVENTS = [
+  ev('formula', at(0, 0, 40), { amount: 90, by: '아빠' }),
+  ev('diaper', at(0, 1, 0), { diaper: 'pee', by: '아빠' }),
+  ev('sleep', at(0, 1, 10), { endAt: at(0, 3, 40), by: '아빠' }),
+  ev('breast', at(0, 3, 50), { endAt: at(0, 4, 5), side: 'left', by: '엄마' }),
+  ev('diaper', at(0, 4, 10), { diaper: 'poo', color: 'yellow', by: '엄마' }),
+  ev('sleep', at(0, 4, 20), { endAt: at(0, 6, 50), by: '엄마' }),
+  ev('breast', at(0, 7, 0), { endAt: at(0, 7, 15), side: 'right', by: '엄마' }),
+  ev('sleep', at(0, 7, 30), { endAt: at(0, 8, 40), by: '엄마' }),
+  ev('formula', at(0, 8, 50), { amount: 90, by: '할머니' }),
+  ev('diaper', at(0, 9, 10), { diaper: 'pee', by: '할머니' }),
+  ev('sleep', at(0, 9, 20), { endAt: at(0, 11, 40), by: '할머니' }),
+  ev('breast', at(0, 11, 50), { endAt: at(0, 12, 5), side: 'left', by: '엄마' }),
+  ev('diaper', at(0, 12, 10), { diaper: 'poo', color: 'yellow', by: '엄마' }),
+  ev('sleep', at(0, 12, 20), { endAt: at(0, 14, 30), by: '엄마' }),
+  ev('formula', at(0, 14, 40), { amount: 100, by: '할머니' }),
+  ev('diaper', at(0, 15, 0), { diaper: 'pee', by: '할머니' }),
+  ev('sleep', at(0, 15, 10), { endAt: at(0, 17, 20), by: '할머니' }),
+  ev('breast', at(0, 17, 30), { endAt: at(0, 17, 45), side: 'right', by: '엄마' }),
+  ev('diaper', at(0, 17, 50), { diaper: 'pee', by: '아빠' }),
+  ev('sleep', at(0, 18, 0), { endAt: at(0, 19, 40), by: '아빠' }),
+  ev('formula', at(0, 19, 50), { amount: 100, by: '아빠' }),
+  ev('diaper', at(0, 20, 10), { diaper: 'pee', by: '아빠' }),
+];
+/** 장면 시각(오늘 몇 시)까지의 기록 — 그 뒤에 시작한 줄은 빼고, 그때 아직 자는 중이면 끝을 비운다 */
+const eventsUntil = (hour) => {
+  const cut = at(0, hour);
+  return [...PAST_EVENTS, ...TODAY_EVENTS]
+    .filter((e) => e.startAt < cut)
+    .map((e) => (e.endAt && e.endAt > cut ? { ...e, endAt: null } : e));
+};
+
 const ENTITLEMENTS = { ads: false, operator: false };
 
-const BASE_DATA = { routines: ROUTINES, logs: routineLogs(), topics: TOPICS, todos: TODOS, memos: MEMOS, records: RECORDS };
+const BASE_DATA = { routines: ROUTINES, logs: routineLogs('엄마', '아빠'), topics: TOPICS, todos: TODOS, memos: MEMOS, records: RECORDS, events: eventsUntil(CLOCK) };
 
 /** 글상자에 값을 넣는다(웹의 TextInput 은 input 이나 textarea) — 값을 바꾸고 input 이벤트를 낸다 */
 const fillScript = (selector, value) => `(() => {
@@ -123,6 +176,13 @@ const fillScript = (selector, value) => `(() => {
   const proto = box.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   Object.getOwnPropertyDescriptor(proto, 'value').set.call(box, ${JSON.stringify(value)});
   box.dispatchEvent(new Event('input', { bubbles: true }));
+  return 'ok';
+})()`;
+/** 이름표(aria-label)가 그것인 단추를 누른다 — 아이콘과 글이 함께 있는 단추 */
+const clickLabelScript = (label) => `(() => {
+  const el = [...document.querySelectorAll('[aria-label=${JSON.stringify(label)}]')].find((b) => b.offsetParent !== null);
+  if (!el) return '단추 없음: ' + ${JSON.stringify(label)};
+  el.click();
   return 'ok';
 })()`;
 /** 글이 꼭 그것인 단추를 누른다 */
@@ -135,9 +195,22 @@ const clickScript = (label) => `(() => {
 
 const [bornY, bornM, bornD] = BORN.split('-');
 const SHOTS = {
-  /** 1장 — 홈: 먹색 머리(태어난 지 며칠 · 이번 주 챙길 일 · 버디), 다가오는 일, 오늘 할 루틴 */
-  home: { ...BASE_DATA, route: '/', wait: '다가오는 일' },
-  /** 2장 — 첫 실행의 1년 화면: 생일을 넣고 「다음」 → 「앞으로 1년, 챙길 일 N개를 채웠어요」. 아기를 미리 넣지 않는다 */
+  /** 1장 — 홈: 맨 위 기록 칸(9:20부터 자는 중 · 마지막 수유 · 할머니 · 단추 넷 · 오늘 합계). 가족 초대 카드는 숨긴다 */
+  home: { ...BASE_DATA, settings: { 'home.familyCardHidden': 'yes' }, route: '/', wait: '마지막 수유' },
+  /** 2장 — 기록 화면: 오늘 기록 줄마다 엄마 · 아빠 · 할머니 */
+  log: { ...BASE_DATA, route: '/log', wait: '소식 보내기' },
+  /** 3장 — 오늘 아기 소식: 밤 9시 홈에서 「소식 보내기」 → 카드 시트. 그날 메모 한 줄을 더 넣는다 */
+  news: {
+    ...BASE_DATA, clock: 21, events: eventsUntil(21), memos: [...MEMOS, memo('mm-store-today', '할머니 보고 방긋 웃었어요', 0)],
+    settings: { 'home.familyCardHidden': 'yes' }, route: '/', wait: '마지막 수유',
+    before: async ({ run, until, text }) => {
+      const r = await run(clickLabelScript('오늘 소식 보내기'));
+      if (r !== 'ok') console.log(`news: ${r}`);
+      const shown = await until(async () => (await text())?.includes('공유하기'), 5000);
+      console.log(`news: 소식 카드 ${shown ? '보임' : '안 보임'}`);
+    },
+  },
+  /** 4장 — 첫 실행의 1년 화면: 생일을 넣고 「다음」 → 「앞으로 1년, 챙길 일 N개를 채웠어요」. 아기를 미리 넣지 않는다 */
   year: {
     ...BASE_DATA, noBaby: true, route: '/onboarding', wait: '초대 코드가 있어요', settle: 2500,
     before: async ({ run, until, text, sleep }) => {
@@ -153,16 +226,14 @@ const SHOTS = {
       console.log(`year: 1년 화면 ${shown ? '보임' : '안 보임'}`);
     },
   },
-  /** 3장 — 루틴 화면: 먹색 머리, 진행 고리, 버튼 보기 */
-  routine: { ...BASE_DATA, route: '/routines', wait: '손발톱 확인' },
-  /** 4장 — 내 할 일: 「금요일 오전 10시 …」 를 적는 중, 날짜를 읽어 「내일 오전 10:00에 알려 드려요」 */
-  todo: { ...BASE_DATA, route: '/todo?cat=mine', wait: '아기 사진 정리', type: '금요일 오전 10시 산후 검진 예약', typeWait: '알려 드려요' },
-  /** 5장 — 장보기: 재고 확인 한 줄, 살 곳별, 배송 중 */
-  shop: { ...BASE_DATA, route: '/todo?cat=shop', wait: '기저귀 정리함' },
-  /** 6장 — 성장 탭: 버디 · 막대 · 발달 체크 2 / 11 · 메모 */
+  /** 5장 — 성장 탭: 버디 · 막대 · 발달 체크 2 / 11 · 메모 */
   growth: { ...BASE_DATA, route: '/growth', wait: '발달 체크', settle: 2500 },
-  /** 7장 — 가족: 루틴 시간순 보기에 「엄마 · 08:10 완료」 「아빠 · 09:20 완료」 */
-  family: { ...BASE_DATA, logs: routineLogs('엄마', '아빠'), view: 'timeline', route: '/routines', wait: '손발톱 확인' },
+  /** 6장 — 루틴 화면: 먹색 머리, 진행 고리, 버튼 보기 */
+  routine: { ...BASE_DATA, route: '/routines', wait: '손발톱 확인' },
+  /** 7장 — 내 할 일: 「내일 오전 10시 …」 를 적는 중(요일 이름은 찍는 날에 따라 「오늘」이 되어 쓰지 않는다), 날짜를 읽어 「내일 오전 10:00에 알려 드려요」 */
+  todo: { ...BASE_DATA, route: '/todo?cat=mine', wait: '아기 사진 정리', type: '내일 오전 10시 산후 검진 예약', typeWait: '알려 드려요' },
+  /** 8장 — 장보기: 재고 확인 한 줄, 살 곳별, 배송 중 */
+  shop: { ...BASE_DATA, route: '/todo?cat=shop', wait: '기저귀 정리함' },
 };
 
 /* ───────── 정적 파일 서버 — 라우트(/schedule)는 dist/schedule.html 로 ───────── */
@@ -260,7 +331,7 @@ await send('Fetch.enable', { patterns: [{ urlPattern: '*run.app/*' }, { urlPatte
 await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 3, mobile: true });
 await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
 
-/** 온보딩을 마친 기기처럼 — 아기 · 루틴 · 할 일 · 메모 · 기기 키 · 알림 끔, 시계는 오늘 오전 10시 */
+/** 온보딩을 마친 기기처럼 — 아기 · 기록 · 루틴 · 할 일 · 메모 · 기기 키 · 알림 끔, 시계는 오늘 오전 10시(장면에 clock 이 있으면 그 시각) */
 function seedScript(shot) {
   const baby = { id: 'store', name: '말콩이', birthDate: BORN, createdAt: `${BORN}T00:00:00.000Z`, updatedAt: `${BORN}T00:00:00.000Z` };
   const settings = {
@@ -269,6 +340,7 @@ function seedScript(shot) {
     briefing_time: 'off',
     todo_reminder_asked: 'yes',
     routine_view: shot.view ?? 'grid',
+    ...shot.settings,
   };
   const lists = {
     ...(shot.noBaby ? {} : { 'malkong.baby': baby }),
@@ -278,6 +350,7 @@ function seedScript(shot) {
     'malkong.todos': shot.todos,
     'malkong.memos': shot.memos,
     'malkong.records': shot.records,
+    'malkong.events': shot.events,
   };
   return `try {
     localStorage.clear();
@@ -285,7 +358,7 @@ function seedScript(shot) {
     ${Object.entries(settings).map(([k, v]) => `localStorage.setItem('malkong.setting.${k}', '${v}');`).join('\n    ')}
   } catch {}
   {
-    const offset = ${BASE.getTime()} - Date.now();
+    const offset = ${BASE.getTime() + ((shot.clock ?? CLOCK) - CLOCK) * 36e5} - Date.now();
     const RealDate = Date;
     class FakeDate extends RealDate {
       constructor(...a) { if (a.length === 0) super(RealDate.now() + offset); else super(...a); }

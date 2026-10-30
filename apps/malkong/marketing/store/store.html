@@ -9,9 +9,9 @@
     />
     <style>
       /*
-       * 스토어 스크린샷 일곱 장 — 문구 한 줄 + 진짜 앱 화면(docs/product/store-toon.md 「스토어 스크린샷」, task common/024 · 028).
+       * 스토어 스크린샷 여덟 장 — 문구 한 줄 + 진짜 앱 화면(docs/product/store-toon.md 「스토어 스크린샷」, task common/024 · 028 · 029).
        * 앱 디자인 언어: 밝은 바탕 · 먹색 · 코랄 하나 · IBM Plex Sans KR. 만화 캐릭터는 넣지 않는다(Julian, 2026-10-12).
-       * ?p=home|year|routine|todo|shop|growth|family, ?v=ios(1290×2796) | play(1290×2293 을 0.8372 배로 → 1080×1920)
+       * ?p=home|log|news|year|growth|routine|todo|shop, ?v=ios(1290×2796) | play(1290×2293 을 0.8372 배로 → 1080×1920)
        */
       :root { --ink: #16161a; --sub: #5e5e69; --mute: #8a8a95; --line: #dedee4; --accent: #c64536; --accentSoft: #fcebe8; }
       html, body { margin: 0; background: #f6f5f2; }
@@ -37,7 +37,7 @@
     <script>
       const q = new URLSearchParams(location.search);
       const ios = (q.get('v') ?? 'ios') !== 'play';
-      const key = q.get('p') ?? 'routine';
+      const key = q.get('p') ?? 'home';
       const H = ios ? 2796 : 2293;
       // 자리 — 아이폰(1290×2796)과 구글 플레이(1290×2293, 나중에 0.8372 배)
       const L = ios ? { h1Top: 150, h1: 104, screenTop: 520, screenW: 1060 } : { h1Top: 90, h1: 86, screenTop: 400, screenW: 900 };
@@ -48,14 +48,15 @@
        * ring 은 앱 화면 좌표 [x, y, w, h] 의 코랄 테
        */
       const PAGES = {
-        home: { title: '앱을 열면<br>이번 주 챙길 일이 <em>먼저</em>', shot: 'home', ring: [52, 895, 1066, 623] },
+        home: { title: '수유, 기저귀, 잠을<br>홈에서 <em>바로</em> 기록해요', shot: 'home', ring: [52, 442, 1066, 748] },
+        log: { title: '할머니, 할아버지도<br>같은 기록을 <em>함께</em> 봐요', shot: 'log', ring: [52, 1900, 1066, 620] },
+        news: { title: '오늘 아기 소식을<br>카드 한 장으로 <em>가족</em>에게', shot: 'news' },
         // 슬로건(product-brief 「스토어 문안」) — 긴 줄이라 글자를 조금 줄인다
         year: { title: '생일만 넣으세요.<br>1년 치 챙길 일은 <em>버디</em>가 채워요', shot: 'year', size: 0.88 },
+        growth: { title: '이맘때 우리 아기,<br><em>한눈에</em>', shot: 'growth', ring: [52, 1216, 1066, 537] },
         routine: { title: '며칠마다 챙기는 일,<br>한 번 눌러 <em>완료</em>', shot: 'routine' },
         todo: { title: '적으면 <em>날짜</em>를 읽고<br>그때 알려 드려요', shot: 'todo', ring: [40, 1955, 1090, 380] },
         shop: { title: '살 것은 살 곳별로,<br><em>배송 중</em>까지 한눈에', shot: 'shop', ring: [44, 1512, 1082, 338] },
-        growth: { title: '이맘때 우리 아기,<br><em>한눈에</em>', shot: 'growth', ring: [52, 1216, 1066, 537] },
-        family: { title: '누가 했는지<br><em>가족</em>이 함께 봐요', shot: 'family', ring: [250, 1545, 640, 590] },
       };
       const p = PAGES[key];
       const c = document.getElementById('c');
