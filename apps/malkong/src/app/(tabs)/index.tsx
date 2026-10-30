@@ -18,6 +18,7 @@ import { AdBanner } from '@/components/ad-banner';
 import { FamilyInvite } from '@/components/home/family-invite';
 import { HomeHero } from '@/components/home/home-hero';
 import { LogMini } from '@/components/home/log-mini';
+import { DayNewsSheet } from '@/components/log/day-news-card';
 import { RoutineMini } from '@/components/home/routine-mini';
 import { useLogActions } from '@/components/log/use-log-actions';
 import { useRoutineActions } from '@/components/routine/use-routine-actions';
@@ -28,10 +29,13 @@ import { BabyRow, useBabyRows } from '@/components/todo/baby-schedule';
 import { Card, ListRow } from '@/components/ui';
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
+import { dayNews } from '@/data/day-news';
 import { readSetting, writeSetting } from '@/data/db';
 import { useEvents } from '@/data/events-context';
 import { useFamily } from '@/data/family-context';
+import { useMemos } from '@/data/memos-context';
 import { dateLabel, nextDayLabel, todayPlan } from '@/data/routine';
+import { poseOf } from '@/data/stage';
 import { useRoutines } from '@/data/routines-context';
 import { shopLists } from '@/data/todos';
 import { useTodos } from '@/data/todos-context';
@@ -55,6 +59,8 @@ export default function HomeScreen() {
   const { topics, todos, loading: todosLoading } = useTodos();
   const { events, loading: eventsLoading } = useEvents();
   const family = useFamily();
+  const { memos } = useMemos();
+  const [sharing, setSharing] = useState(false);
   // 30초마다 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다. 기록 칸의 재는 중 시계는 그 칸이 따로 센다
   const now = useNow(false);
   const routine = useRoutineActions(now);
@@ -77,6 +83,8 @@ export default function HomeScreen() {
   const headline = week > 0 ? `이번 주 챙길 일 ${week}개` : '이번 주는 챙길 일이 없어요';
 
   const plan = todayPlan(routines, logs, now);
+  // 오늘 소식 카드(SPEC-LOG-06) — 보낼 것이 있을 때만 「소식 보내기」
+  const news = dayNews(events, memos, baby.birthDate, now, now);
   const first = plan.later[0];
   const { toBuy, shipping } = shopLists(
     topics.find((t) => t.kind === 'shopping'),
@@ -107,7 +115,13 @@ export default function HomeScreen() {
           {/* 기록 — 하루에 여러 번 여는 이유(decisions/036) */}
           <View style={styles.section}>
             <Head title="기록" onMore={() => router.push('/log')} />
-            <LogMini events={events} onPress={log.press} onStop={(e) => void log.stop(e)} onOpen={() => router.push('/log')} />
+            <LogMini
+              events={events}
+              onPress={log.press}
+              onStop={(e) => void log.stop(e)}
+              onOpen={() => router.push('/log')}
+              onShare={news ? () => setSharing(true) : undefined}
+            />
           </View>
 
           {family.status === 'none' && !familyCardHidden && <FamilyInvite onHide={hideFamilyCard} />}
@@ -172,6 +186,7 @@ export default function HomeScreen() {
       {schedule.sheets}
       {routine.sheets}
       {log.sheets}
+      <DayNewsSheet news={sharing ? news : null} title="오늘 소식" pose={poseOf(age.month)} onClose={() => setSharing(false)} />
     </ThemedView>
   );
 }

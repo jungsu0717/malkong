@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
 import { ExternalLink } from '@/components/external-link';
+import { DayNewsSheet } from '@/components/log/day-news-card';
 import { KIND_UI } from '@/components/log/kinds';
 import { useLogActions } from '@/components/log/use-log-actions';
 import { ScreenLoading } from '@/components/screen-loading';
@@ -15,6 +16,7 @@ import { Button, Card, ListRow, SectionHeader, Tag, tap } from '@/components/ui'
 import { Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { useBaby } from '@/data/baby-context';
+import { dayNews } from '@/data/day-news';
 import { reminderPlan } from '@/data/care-reminders';
 import {
   agoLabel,
@@ -35,7 +37,9 @@ import { EVENT_KINDS, runningOf, type CareEvent } from '@/data/events';
 import { useEvents } from '@/data/events-context';
 import { useFamily } from '@/data/family-context';
 import { itemById } from '@/data/l1';
+import { useMemos } from '@/data/memos-context';
 import { usePreferences } from '@/data/preferences-context';
+import { poseOf } from '@/data/stage';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -53,9 +57,9 @@ function stopwatch(from: string, now: Date): string {
 }
 
 /**
- * 기록 — 홈의 빠른 기록 「전체 ›」에서 들어오는 화면 (SPEC-LOG-01~05 · 07, decisions/023 · 036, task log/003).
- * 위에서부터 재는 중 · 마지막 수유와 오늘 합계 · (가족에 먼저 들어간 폰이면) 기록도 함께 보기 동의 · 기록 단추 일곱 · 날짜별 기록(누가 남겼는지) ·
- * 기록 알림 한 줄 · 광고(바닥, 단추와 멀리).
+ * 기록 — 홈의 빠른 기록 「전체 ›」에서 들어오는 화면 (SPEC-LOG-01~07, decisions/023 · 036, task log/003 · 004).
+ * 위에서부터 재는 중 · 마지막 수유와 오늘 합계 · (가족에 먼저 들어간 폰이면) 기록도 함께 보기 동의 · 기록 단추 일곱 · 날짜별 기록(누가 남겼는지)과
+ * 그날 「소식 보내기」(SPEC-LOG-06) · 기록 알림 한 줄 · 광고(바닥, 단추와 멀리).
  */
 export default function LogScreen() {
   const c = useTheme();
@@ -63,7 +67,9 @@ export default function LogScreen() {
   const { events, loading } = useEvents();
   const { careReminders } = usePreferences();
   const family = useFamily();
+  const { memos } = useMemos();
   const actions = useLogActions();
+  const [sharing, setSharing] = useState(false);
   const breast = runningOf(events, 'breast');
   const sleep = runningOf(events, 'sleep');
   const now = useNow(!!breast || !!sleep);
@@ -95,6 +101,7 @@ export default function LogScreen() {
   if (loading || !baby) return <ScreenLoading />;
   const name = baby.name ?? DEFAULT_BABY_NAME;
   const { open, press, start, stop } = actions;
+  const news = dayNews(events, memos, baby.birthDate, dayStart, now);
   const dayTitle = daysBack === 0 ? '오늘' : daysBack === 1 ? '어제' : `${dayStart.getMonth() + 1}월 ${dayStart.getDate()}일`;
 
   return (
@@ -250,6 +257,19 @@ export default function LogScreen() {
                 ))
               )}
             </Card>
+            {/* 그날 소식을 카드로 보내기 (SPEC-LOG-06) — 보낼 것이 있는 날만 */}
+            {news && (
+              <Button
+                label={`${dayTitle} 소식 보내기`}
+                icon="share-outline"
+                variant="secondary"
+                size="md"
+                onPress={() => {
+                  tap();
+                  setSharing(true);
+                }}
+              />
+            )}
             <Pressable accessibilityRole="button" onPress={() => router.push('/notifications')} hitSlop={8}>
               <ThemedText type="caption" style={{ color: c.textSecondary }}>
                 기록 알림 {careReminders ? `켜짐 · 수유는 마지막 수유 ${durationLabel(plan.feed.minutes)} 뒤` : '꺼짐'} · 변경
@@ -263,6 +283,7 @@ export default function LogScreen() {
       </SafeAreaView>
 
       {actions.sheets}
+      <DayNewsSheet news={sharing ? news : null} title={`${dayTitle} 소식`} pose={poseOf(age?.month ?? 0)} onClose={() => setSharing(false)} />
     </ThemedView>
   );
 }

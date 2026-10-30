@@ -2,20 +2,19 @@
  * 기념일 카드 (SPEC-STAGE-07, task growth/010) — 달마다 · 50일 · 100일 · 돌 당일 성장 탭 머리의 「공유하기」에서 연다.
  *
  * 먹색 카드(가로:세로 4:5)에 깃발 · 모빌, 「우리 아기 / 100일 / 2027년 1월 12일」, 매트 위 버디, 오른쪽 아래 「육아버디 ★」.
- * 시트에서 카드를 먼저 보여 주고, 「공유하기」를 누르면 카드를 1080×1350 그림으로 만들어(react-native-view-shot)
- * 폰의 공유 창(expo-sharing)을 연다 — 사진 저장이나 메신저 보내기는 거기서 고른다.
+ * 시트에서 카드를 먼저 보여 주고, 「공유하기」를 누르면 카드를 1080×1350 그림으로 만들어 폰의 공유 창을 연다(share-image.ts —
+ * 오늘 아기 소식 카드와 같은 길). 사진 저장이나 메신저 보내기는 거기서 고른다.
  * 아기 이름은 넣지 않는다(다른 사람에게 보내는 그림이다). 카드 색은 성장 탭 머리와 같아서 다크 모드에서도 같다.
  */
 
 import { Image } from 'expo-image';
-import * as Sharing from 'expo-sharing';
 import { useRef, useState, type RefObject } from 'react';
-import { Modal, PixelRatio, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { captureRef } from 'react-native-view-shot';
+import { Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Bunting, HeroMobile, POSES, Toys } from '@/components/growth/growth-hero';
+import { shareImage } from '@/components/share-image';
 import { ThemedText } from '@/components/themed-text';
 import { Button, tap } from '@/components/ui';
 import { Spacing } from '@/constants/theme';
@@ -106,22 +105,10 @@ export function MilestoneSheet({
   const width = Math.min(window.width - Spacing.four * 2, BASE_W);
 
   const share = async () => {
-    if (!card.current || busy) return;
+    if (busy) return;
     setBusy(true);
-    try {
-      const uri = await captureRef(card, {
-        format: 'png',
-        quality: 1,
-        result: 'tmpfile',
-        width: OUT_W / PixelRatio.get(),
-        height: OUT_H / PixelRatio.get(),
-      });
-      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: 'image/png', UTI: 'public.png' });
-    } catch {
-      // 공유 창을 닫았거나 그림을 못 만들어도 시트는 그대로 둔다
-    } finally {
-      setBusy(false);
-    }
+    await shareImage(card, OUT_W, OUT_H);
+    setBusy(false);
   };
 
   return (

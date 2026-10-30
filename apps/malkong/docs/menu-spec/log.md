@@ -72,6 +72,9 @@
   재는 중은 끝이 비어 있는 행이다(모유 · 잠 각각 하나까지). 코드는 `src/data/events.ts`(저장소를 부르지 않는 모양과 규칙) · `events-context.tsx` · `db.ts`
 - 화면: 홈 기록 칸 `src/components/home/log-mini.tsx` · 기록 화면 `src/app/log.tsx` · 입력 시트 `src/components/log/log-sheet.tsx` ·
   단추를 누를 때의 흐름 `src/components/log/use-log-actions.tsx`(홈과 기록 화면이 같이 쓴다) · 그래프 `src/app/log-stats.tsx`
+- 오늘 아기 소식: 내용 `src/data/day-news.ts`(그날 수유 · 잠 · 기저귀와 마지막 메모, 시험 있음) · 카드와 시트 `src/components/log/day-news-card.tsx` ·
+  그림 만들기와 공유 `src/components/share-image.ts`(기념 카드와 같은 길 — react-native-view-shot · expo-sharing). 기록 화면은 보고 있는 날의 소식
+  (「어제 소식 보내기」), 홈 기록 칸은 오늘 소식
 - 요약과 평소 비교: `src/data/event-summary.ts` — 모델을 부르지 않는다
 - 알림: 기기가 거는 로컬 알림(`src/data/notifications.ts`). 때는 `src/data/care-reminders.ts` `reminderPlan(월령, 기록)` —
   수유는 월령 띠(0~1개월 3시간 · 2~5개월 4시간 · 6개월부터 4시간, 기준 간격의 위쪽 끝)이고 승인 L1(k-feed-0001 · 0201 · 0604)이 있으면
@@ -91,3 +94,4 @@
 - 2026-10-19 보관 — 기록 화면 · 기록 알림을 앱에서 뺐다 (decisions/030)
 - 2026-10-30 되살림 — 홈 맨 위 기록 칸, 누가 남겼는지, 가족과 다시 맞추기와 그 전에 들어간 폰의 동의, 체온 알림 뺌,
   SPEC-LOG-06 을 「오늘 아기 소식」으로 (Julian 「시안 말고 그냥 해봐」, decisions/036, task log/003)
+- 2026-10-30 SPEC-LOG-06 오늘 아기 소식 카드 — 기록 화면의 「오늘 소식 보내기」 · 홈 기록 칸의 「소식 보내기」 (task log/004)

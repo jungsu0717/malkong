@@ -2,7 +2,8 @@
  * 홈 「기록」 칸 (SPEC-MAIN-08 · SPEC-LOG-01~03, task log/003, decisions/036) — 하루에 여러 번 여는 이유.
  *
  * 흰 카드 하나에 위에서부터 재는 중(모유 · 잠, 바로 끝내기) · 마지막 수유가 얼마 전인지와 누가 남겼는지 · 단추 넷(모유 · 분유 · 기저귀 · 잠) ·
- * 오늘 합계 한 줄. 체온 · 키 · 몸무게와 날짜별 기록 · 그래프는 「전체 ›」의 기록 화면에 있다. 시트는 부르는 쪽이 `useLogActions` 로 둔다.
+ * 오늘 합계 한 줄과 (보낼 것이 있으면) 오른쪽 「소식 보내기」(SPEC-LOG-06). 체온 · 키 · 몸무게와 날짜별 기록 · 그래프는 「전체 ›」의 기록 화면에 있다.
+ * 시트는 부르는 쪽이 `useLogActions` · `DayNewsSheet` 로 둔다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -33,6 +34,7 @@ export function LogMini({
   onPress,
   onStop,
   onOpen,
+  onShare,
 }: {
   events: CareEvent[];
   /** 단추 하나 — 잠을 재는 중이면 끝내고, 그 밖에는 시트 */
@@ -40,6 +42,8 @@ export function LogMini({
   onStop: (e: CareEvent) => void;
   /** 기록 화면으로 */
   onOpen: () => void;
+  /** 오늘 소식 카드 — 보낼 것이 없으면 주지 않는다 */
+  onShare?: () => void;
 }) {
   const c = useTheme();
   const running = [runningOf(events, 'breast'), runningOf(events, 'sleep')].filter((e): e is CareEvent => e !== null);
@@ -104,9 +108,19 @@ export function LogMini({
         })}
       </View>
 
-      <ThemedText type="caption" style={[styles.totals, { color: c.textSecondary }]}>
-        오늘 수유 {today.feeds}번 · 기저귀 {today.diapers}번 · 잠 {durationLabel(today.sleepMin)}
-      </ThemedText>
+      <View style={styles.totalsRow}>
+        <ThemedText type="caption" style={[styles.flex, { color: c.textSecondary }]}>
+          오늘 수유 {today.feeds}번 · 기저귀 {today.diapers}번 · 잠 {durationLabel(today.sleepMin)}
+        </ThemedText>
+        {onShare && (
+          <Pressable accessibilityRole="button" accessibilityLabel="오늘 소식 보내기" hitSlop={8} onPress={onShare} style={styles.share}>
+            <Ionicons name="share-outline" size={14} color={c.accentText} />
+            <ThemedText type="caption" style={{ color: c.accentText, fontWeight: 600 }}>
+              소식 보내기
+            </ThemedText>
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -120,5 +134,6 @@ const styles = StyleSheet.create({
   lastTitle: { fontWeight: 700 },
   buttons: { flexDirection: 'row', gap: 8 },
   button: { flex: 1, minHeight: 64, borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 4 },
-  totals: { paddingHorizontal: 4 },
+  totalsRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 4 },
+  share: { flexDirection: 'row', alignItems: 'center', gap: 3 },
 });
