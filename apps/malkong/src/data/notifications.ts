@@ -212,8 +212,11 @@ export async function scheduleSleepReminder(at: Date | null, afterLabel: string)
   await scheduleOnce(SLEEP_ID, at, `잠에서 깬 지 ${afterLabel}이 지났어요`, '졸려하는지 살펴보세요');
 }
 
-/** 아침 알림 · 할 일 알림을 눌러 앱이 열리면 `listener` 를 부른다 — 할 일 탭으로 보내려고. 돌려주는 함수로 그만 듣는다 */
-export function onTodoAlertOpened(listener: () => void): () => void {
+/**
+ * 아침 알림 · 할 일 · 루틴 알림을 눌러 앱이 열리면 `listener` 를 부른다 — 루틴이면 하루 보기, 그 밖(아기 일정)은 1년 보기로 보내려고(decisions/037).
+ * 돌려주는 함수로 그만 듣는다
+ */
+export function onTodoAlertOpened(listener: (kind: 'routine' | 'schedule') => void): () => void {
   const handle = (response: Notifications.NotificationResponse | null) => {
     const type = response?.notification.request.content.data?.type;
     if (
@@ -223,7 +226,7 @@ export function onTodoAlertOpened(listener: () => void): () => void {
       return;
     }
     Notifications.clearLastNotificationResponse();
-    listener();
+    listener(type === ROUTINE_TYPE ? 'routine' : 'schedule');
   };
   handle(Notifications.getLastNotificationResponse());
   const sub = Notifications.addNotificationResponseReceivedListener(handle);

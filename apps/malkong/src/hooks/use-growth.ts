@@ -45,10 +45,8 @@ export function useGrowthAlerts(): void {
           birthDate,
           hour,
           minute,
-          playFor: (day) => {
-            const item = playFor(birthDate, day);
-            return item ? playName(item) : null;
-          },
+          // 오늘의 놀이는 성장 탭과 함께 화면에서 뺐다(decisions/037) — 알림에도 싣지 않는다
+          playFor: () => null,
           checkpointOpens: (month) => {
             const cp = checkpointFor(month);
             return month > 0 && cp !== checkpointFor(month - 1) && checklistIds(cp).length > 0 ? cp : null;
@@ -58,6 +56,6 @@ export function useGrowthAlerts(): void {
     void scheduleGrowthNotices(items).catch(() => undefined);
   }, [loading, birthDate, growthAlerts, briefingTime]);
 
-  // 성장 소식을 누르고 들어오면 성장 탭으로
-  useEffect(() => onGrowthAlertOpened(() => router.navigate('/growth')), []);
+  // 성장 소식을 누르고 들어오면 1년 보기로(SPEC-MAIN-11)
+  useEffect(() => onGrowthAlertOpened(() => router.navigate({ pathname: '/', params: { view: 'year' } })), []);
 }

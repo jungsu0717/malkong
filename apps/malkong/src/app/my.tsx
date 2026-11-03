@@ -26,7 +26,7 @@ const DOCS: { label: string; doc: string }[] = [
   { label: '의학 정보 출처와 한계 고지', doc: 'medical' },
 ];
 
-/** 마이 — 아기 정보, 알림 · 가족, 도움말 · 약관 (task my/005 · common/022). 기록 · 만화는 뺐다(decisions/030) */
+/** 마이 — 아기 정보, 알림 · 가족, 도움말 · 약관 (task my/005 · common/022). 탭이 아니라 하루 흐름에서 들어오는 상세 화면이다(decisions/037) */
 export default function MyScreen() {
   const c = useTheme();
   const { baby, age } = useBaby();
@@ -41,10 +41,9 @@ export default function MyScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.flex} edges={['top']}>
+      {/* 하루 흐름 오른쪽 위 곰돌이에서 들어오는 화면(decisions/037) — 제목은 머리줄에 */}
+      <SafeAreaView style={styles.flex} edges={['bottom']}>
         <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <ThemedText type="display">마이</ThemedText>
-
           {/* 아기 프로필 — 저장된 생일과 거기서 계산한 월령 (SPEC-MY-02) */}
           {baby && age && (
             <Pressable

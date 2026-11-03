@@ -58,6 +58,10 @@ export const Colors = {
     /** 먹색 위의 작은 카드 — 시작 화면의 루틴 · 할 일 · 성장 카드. 테두리는 비치지 않는 색(기울인 카드에 반투명 테두리를 두면 모서리가 깨진다) */
     heroCard: '#29292E',
     heroCardLine: '#3E3E43',
+    /** 하루 흐름의 세로 줄 · 노드 점 테두리 · 점선 노드 테두리(decisions/037) */
+    flowLine: '#C9C9D1',
+    /** 하루 흐름 바탕의 모눈 점 */
+    flowDot: '#DCDCE2',
   },
   dark: {
     text: '#F4F4F6',
@@ -96,6 +100,8 @@ export const Colors = {
     heroMat: 'rgba(255, 255, 255, 0.06)',
     heroCard: '#29292E',
     heroCardLine: '#3E3E43',
+    flowLine: '#3A3A42',
+    flowDot: '#222228',
   },
 } as const;
 

@@ -24,7 +24,7 @@ export async function scheduleDiaperReminder(_at: Date | null, _afterLabel: stri
 
 export async function scheduleSleepReminder(_at: Date | null, _afterLabel: string): Promise<void> {}
 
-export function onTodoAlertOpened(_listener: () => void): () => void {
+export function onTodoAlertOpened(_listener: (kind: 'routine' | 'schedule') => void): () => void {
   return () => undefined;
 }
 

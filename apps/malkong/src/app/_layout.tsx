@@ -48,8 +48,14 @@ function OnboardingGate() {
     if (baby) void noteReviewStart();
   }, [baby, loading, segments, router]);
 
-  // 아침 알림 · 할 일 알림을 누르고 들어오면 할 일 탭으로
-  useEffect(() => onTodoAlertOpened(() => router.navigate('/todo')), [router]);
+  // 알림을 누르고 들어오면 — 루틴은 하루 보기, 아침 알림 · 아기 일정은 1년 보기(decisions/037)
+  useEffect(
+    () =>
+      onTodoAlertOpened((kind) =>
+        router.navigate({ pathname: '/', params: { view: kind === 'routine' ? 'day' : 'year', at: String(Date.now()) } }),
+      ),
+    [router],
+  );
 
   return null;
 }
@@ -120,12 +126,11 @@ export default function RootLayout() {
                   {/* 폰 홈 화면 위젯 — 일주일 치 밀어 넣기와 위젯에서 누른 루틴 받기(SPEC-MAIN-09) */}
                   <WidgetSync />
                   <Stack screenOptions={{ headerShown: false }}>
-                    <Stack.Screen name="(tabs)" />
+                    {/* 탭 없이 하루 흐름 한 판(decisions/037) — 마이 · 루틴 · 성장 상세는 여기서 들어가는 화면 */}
+                    <Stack.Screen name="index" />
                     <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-                    <Stack.Screen name="topic/[id]" options={{ ...header, title: '준비 목록' }} />
+                    <Stack.Screen name="my" options={{ ...header, title: '마이' }} />
                     <Stack.Screen name="notifications" options={{ ...header, title: '알림' }} />
-                    <Stack.Screen name="log" options={{ ...header, title: '기록' }} />
-                    <Stack.Screen name="log-stats" options={{ ...header, title: '일주일 그래프' }} />
                     <Stack.Screen name="family" options={{ ...header, title: '가족과 함께 보기' }} />
                     <Stack.Screen name="routine-form" options={{ presentation: 'modal' }} />
                     <Stack.Screen name="memos" options={{ ...header, title: '우리 아기 메모' }} />
@@ -133,8 +138,6 @@ export default function RootLayout() {
                     <Stack.Screen name="growth-tips" options={{ ...header, title: '해 주면 좋아요' }} />
                     <Stack.Screen name="growth-know" options={{ ...header, title: '알아 두면 좋아요' }} />
                     <Stack.Screen name="routine-recommend" options={{ ...header, title: '루틴 추천' }} />
-                    <Stack.Screen name="todo-recommend" options={{ ...header, title: '할 일 추천' }} />
-                    <Stack.Screen name="lists" options={{ ...header, title: '준비 목록' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
                   </Stack>
                 </EventsProvider>

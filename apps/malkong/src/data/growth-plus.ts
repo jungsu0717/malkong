@@ -185,7 +185,7 @@ const WEEKLY_UNTIL = 26;
 
 /**
  * 앞으로 `days` 일 안의 주차 · 달 · 50일 · 100일 알림(그날 `hour:minute`). 같은 날이면 달 · 기념일이 이긴다.
- * `playFor(day)` — 그날 시기의 놀이 하나(없으면 주차 알림 본문은 성장 탭 안내)
+ * `playFor(day)` — 그날 시기의 놀이 하나(없으면 주차 알림 본문은 발달 체크 안내)
  * `checkpointOpens(month)` — 그 달에 새 발달 체크 목록이 열리면 그 개월(예: 2개월이 되면 4)
  */
 export function growthNotices(args: {
@@ -214,7 +214,7 @@ export function growthNotices(args: {
       id: `week-${week}`,
       at: at(day),
       title: `아기가 ${week}주차가 됐어요`,
-      body: play ? `이번 주에는 「${play}」${objectParticle(play)} 해 볼까요?` : '성장 탭에서 이번 주에 해 줄 수 있는 것을 볼 수 있어요.',
+      body: play ? `이번 주에는 「${play}」${objectParticle(play)} 해 볼까요?` : '발달 체크와 성장 일기를 볼 수 있어요.',
     });
   }
 

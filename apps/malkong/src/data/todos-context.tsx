@@ -18,7 +18,7 @@ import { insertRoutineLogRow, readSetting, upsertRoutineRow, writeSetting } from
 import { memberName, noteDeleted } from './family';
 import { happyMoment } from './review';
 import { onRemoteChange, requestSync } from './sync-events';
-import { EVENING_HOUR, deliveryChecks, eveningPlan, morningPlan, reminderBody } from './alert-plan';
+import { EVENING_HOUR, eveningPlan, morningPlan, reminderBody } from './alert-plan';
 import {
   askNotifications,
   cancelSnooze,
@@ -238,33 +238,37 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  // 알림에 싣는 할 일 — 앱이 채운 아기 일정(접종 · 검진 예약, 기념일 · 사이즈)만. 내 할 일 · 장보기는 화면에서 뺐다(decisions/037)
+  const babyTodos = useMemo(() => {
+    const babyTopics = new Set(topics.filter((t) => t.kind === 'checkup' || t.kind === 'milestone' || t.kind === 'size').map((t) => t.id));
+    return todos.filter((t) => babyTopics.has(t.topicId) || t.ref?.startsWith('appt:'));
+  }, [todos, topics]);
+
   // 할 일 알림 — 시각이 있고, 안 끝냈고, 아직 오지 않은 것만(SPEC-TOPIC-09). 반복 할 일은 「마지막으로 한 지 7일 지났어요」
   useEffect(() => {
     if (loading) return;
     const now = Date.now();
-    const items = todos
+    const items = babyTodos
       .filter((t) => t.hasTime && t.dueAt && !t.doneAt && new Date(t.dueAt).getTime() > now)
       .map((t) => ({ id: t.id, at: new Date(t.dueAt as string), title: t.title, body: reminderBody(t, todos) }));
     enqueue(() => scheduleTodoReminders(items));
-  }, [todos, loading, enqueue]);
+  }, [babyTodos, todos, loading, enqueue]);
 
-  // 아침 알림 · 전날 저녁 · 받으셨나요(SPEC-TOPIC-09 · SPEC-SHOP-04) — 일주일 치를 날짜마다.
-  // 아침에는 지금 기간인 접종 · 검진 이름과 도착 예정도 넣는다. 전날 저녁은 아침 알림을 켰을 때만
+  // 아침 알림 · 전날 저녁(SPEC-TOPIC-09) — 일주일 치를 날짜마다. 아침에는 지금 기간인 접종 · 검진 이름도 넣는다. 전날 저녁은 아침 알림을 켰을 때만.
+  // 장보기의 「받으셨나요」는 장보기를 빼면서 걸지 않는다 — 예전에 걸어 둔 것은 빈 목록으로 지운다(decisions/037)
   const month = age?.month ?? null;
   useEffect(() => {
     if (loading || prefsLoading) return;
     const checkups = month === null ? [] : checkupGroups(records, month).filter((g) => g.status === 'open').map((g) => g.label);
-    const shopIds = new Set(topics.filter((t) => t.kind === 'shopping').map((t) => t.id));
-    const morning = morningPlan(todos, checkups);
+    const morning = morningPlan(babyTodos, checkups);
     // 전날 저녁은 사흘 치만 — iOS 알림 한도 안에 루틴 알림을 넣으려고(task today/001)
-    const evening = eveningPlan(todos, shopIds, new Date(), 3);
-    const checks = deliveryChecks(todos);
+    const evening = eveningPlan(babyTodos, new Set(), new Date(), 3);
     enqueue(async () => {
       await scheduleMorningAlerts(briefingTime, morning);
       await scheduleEveningAlerts(briefingTime !== null, evening, EVENING_HOUR);
-      await scheduleDeliveryChecks(checks);
+      await scheduleDeliveryChecks([]);
     });
-  }, [todos, topics, loading, prefsLoading, briefingTime, records, month, enqueue]);
+  }, [babyTodos, loading, prefsLoading, briefingTime, records, month, enqueue]);
 
   // 앱이 채워 주는 할 일 — 기한 전 보일 날이 되면 그 주제의 할 일로 만든다(SPEC-TOPIC-11). 숨긴 주제에는 만들지 않는다
   const birthDate = baby?.birthDate ?? null;

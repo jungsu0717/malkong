@@ -1,6 +1,6 @@
 /**
  * 재고 확인 시트 (SPEC-MAIN-06, task today/003) — 확인할 물건마다 「충분」 · 「부족」을 고르고,
- * 「부족한 2개 장보기에 추가」(부족한 게 없으면 「모두 충분해요」)를 누르면 루틴이 완료된다. 「확인할 물건 추가」로 물건을 더한다.
+ * 「확인 완료」(부족한 게 없으면 「모두 충분해요」)를 누르면 루틴이 완료된다. 장보기는 앱에서 뺐다(decisions/037). 「확인할 물건 추가」로 물건을 더한다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -67,7 +67,7 @@ export function StockSheet({
               <View style={styles.flex}>
                 <ThemedText type="title">{routine.title}</ThemedText>
                 <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                  {scheduleLabel(routine)} · 부족한 것은 장보기에 추가돼요
+                  {scheduleLabel(routine)}
                 </ThemedText>
               </View>
             </View>
@@ -128,7 +128,7 @@ export function StockSheet({
 
             <Button
               size="lg"
-              label={chosen.length > 0 ? `부족한 ${chosen.length}개 장보기에 추가` : '모두 충분해요'}
+              label={chosen.length > 0 ? '확인 완료' : '모두 충분해요'}
               onPress={() => {
                 tap('success');
                 onDone(chosen);

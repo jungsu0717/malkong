@@ -11,9 +11,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { deleteRoutineLogRow, insertRoutineLogRow, readRoutineLogRows, readRoutineRows, readSetting, upsertRoutineRow, writeSetting } from './db';
 import { memberName, noteDeleted } from './family';
 import { askNotifications, onAlertAction, scheduleRoutineReminders, snoozeTodo } from './notifications';
-import { logsOn, makeRoutine, makeRoutineLog, routineReminders, stockToBuy, titleKey, todayState, type Routine, type RoutineInput, type RoutineLog } from './routine';
+import { logsOn, makeRoutine, makeRoutineLog, routineReminders, titleKey, todayState, type Routine, type RoutineInput, type RoutineLog } from './routine';
 import { onRemoteChange, requestSync } from './sync-events';
-import { placeOf } from './todos';
 import { useTodos } from './todos-context';
 
 /** 알림 허락을 처음 알림 시각을 넣을 때 한 번만 묻는다 — 할 일과 같은 설정값 */
@@ -46,7 +45,7 @@ type RoutinesValue = {
 const RoutinesContext = createContext<RoutinesValue | null>(null);
 
 export function RoutinesProvider({ children }: { children: React.ReactNode }) {
-  const { loading: todosLoading, todos, topics, add: addTodo } = useTodos();
+  const { loading: todosLoading } = useTodos();
   const [all, setAll] = useState<Routine[]>([]);
   const [logs, setLogs] = useState<RoutineLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,23 +214,13 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
     [addLog],
   );
 
+  // 재고 확인은 확인만 남긴다 — 장보기를 앱에서 빼서 부족한 것을 살 것에 넣지 않는다(SPEC-MAIN-06, decisions/037)
   const completeStock = useCallback(
-    async (id: string, short: string[]) => {
-      let added = 0;
-      const shop = topics.find((t) => t.kind === 'shopping');
-      if (shop && short.length > 0) {
-        const items = todos.filter((t) => t.topicId === shop.id);
-        const open = items.filter((t) => !t.doneAt).map((t) => t.title);
-        const bought = items.filter((t) => t.doneAt).map((t) => ({ title: t.title, store: placeOf(t), doneAt: t.doneAt as string }));
-        for (const it of stockToBuy(short, open, bought)) {
-          await addTodo({ title: it.title, topicId: shop.id, store: it.store, source: 'stock' });
-          added += 1;
-        }
-      }
+    async (id: string, _short: string[]) => {
       await completeAll(id);
-      return added;
+      return 0;
     },
-    [topics, todos, addTodo, completeAll],
+    [completeAll],
   );
 
   // 알림 단추 — 「완료」는 오늘 아직 안 했으면 완료로, 「1시간 뒤」는 같은 알림을 한 번 더
