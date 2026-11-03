@@ -5,6 +5,9 @@
 > [029](../decisions/029-routine-tab-structure.md) · [031](../decisions/031-merge-shop-growth-tab.md). 메뉴 코드 `SHOP` — 2026-10-21 부터 탭이 아니라 할 일 탭의 「장보기」 카테고리다
 > (SPEC-TOPIC-02). 준비할 것은 할 일 탭 「준비 목록」
 
+> **2026-11-03 장보기를 앱에서 뺐다**([decisions/037](../decisions/037-day-flow-one-board.md)) — 할 일 앱과 메모 앱이 이미 잘하는 일이다. 아래 문장은 보관한다(지금의 SPEC 이 아니다).
+> 재고 확인 루틴은 확인만 남긴다(SPEC-MAIN-06). 폰에 남은 장보기 데이터는 지우지 않는다.
+
 ## SPEC
 
 ### SPEC-SHOP-01 살 것
@@ -70,3 +73,4 @@
 - 2026-10-21 탭에서 할 일 탭의 「장보기」 카테고리로 옮김 — 내용은 그대로 (Julian, decisions/031, task topic/008)
 - 2026-10-22 재고 확인 줄 — 한 번도 확인하지 않았으면 다음 확인 날만 (사용자 시점 점검, task common/023)
 - 2026-10-23 온라인 쇼핑몰 이름은 온라인 묶음으로, 오늘 산 것은 다시 담기에서 뺌 (페르소나 시험, task common/026)
+- 2026-11-03 **보관** — 장보기를 앱에서 뺌, 받으셨나요 알림도 걸지 않음 (Julian, decisions/037, task common/030)

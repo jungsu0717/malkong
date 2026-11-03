@@ -2,6 +2,8 @@
 
 > 근거: [main-design](../architecture/main-design.md)
 
+> **2026-11-03 마이는 탭이 아니다** — 하루 흐름 오른쪽 위 곰돌이 버튼으로 여는 화면이고 제목은 머리줄에 있다([decisions/037](../decisions/037-day-flow-one-board.md)).
+
 ## SPEC
 
 ### SPEC-MY-08 마이 한눈에
@@ -159,3 +161,4 @@
 - 2026-10-23 온보딩 「초대 코드가 있어요」로 생일 없이 참여, 만들기 · 참여 전에 가족에게 보일 이름 (페르소나 시험, task common/026)
 - 2026-10-28 SPEC-MY-09 좋은 순간의 「루틴 탭」을 「홈이나 루틴 화면」으로 (decisions/034, task today/007)
 - 2026-10-29 SPEC-MY-10 첫 실행에서 생일을 넣으면 1년 치 챙길 일이 채워지는 화면 (Julian 「ㅇㅇ 가자」, decisions/035, task my/011)
+- 2026-11-03 마이를 탭에서 하루 흐름 오른쪽 위 버튼으로 (Julian, decisions/037, task common/030)

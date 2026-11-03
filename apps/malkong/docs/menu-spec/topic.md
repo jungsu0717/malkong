@@ -3,6 +3,10 @@
 > 위에 있는 것: [constitution](../constitution.md) 1~8 · [main-design](../architecture/main-design.md) ·
 > [decisions/024](../decisions/024-topic-todo-no-ai-answers.md) · [025](../decisions/025-app-filled-topics.md) · [026](../decisions/026-everyday-shopping-home-tab.md)
 
+> **2026-11-03 할 일 탭을 없앴다**([decisions/037](../decisions/037-day-flow-one-board.md)). 아기 일정(SPEC-TOPIC-02 의 아기 일정 칸 · 07 · 11)은 1년 보기(SPEC-MAIN-11)와
+> 하루 흐름의 그날 노드(SPEC-MAIN-08)로 옮겼고, 내 할 일 · 준비 목록 · 할 일 추천 · 주제 직접 만들기는 화면에서 뺐다. 그 문장들은 보관한다(지금의 SPEC 이 아니다).
+> 아침 · 저녁 알림(SPEC-TOPIC-09)은 앱이 채운 아기 일정만 싣는다.
+
 ## SPEC
 
 ### SPEC-TOPIC-01 주제
@@ -227,3 +231,4 @@
 - 2026-10-28 아기 일정의 가까운 것이 홈 「다가오는 일」에도 보임, 생활 루틴은 「루틴 화면」으로 (Julian, decisions/034, task today/007)
 - 2026-10-29 아기 일정의 앞날 일정(달력 줄)도 이름을 눌러 고치거나 지우기 (Julian 「아기 일정은 수정 못하나?」, task topic/010)
 - 2026-10-29 접종 · 검진 이름을 누르면 병원 예약일 — 예약한 날로 D-day · 알림, 완료를 알리면 예약도 완료 (Julian 「좋게 바뀐 거면 적용해 줘」 — 시안, task topic/010)
+- 2026-11-03 **할 일 탭을 없앰** — 아기 일정은 1년 보기 · 하루 흐름으로, 내 할 일 · 준비 목록 · 추천 · 주제 만들기는 뺌, 알림은 아기 일정만 (Julian, decisions/037, task common/030)
