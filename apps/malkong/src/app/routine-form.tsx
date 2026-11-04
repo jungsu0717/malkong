@@ -24,7 +24,7 @@ import { useTheme } from '@/hooks/use-theme';
 
 const KINDS: { kind: RoutineKind; label: string; hint: string }[] = [
   { kind: 'check', label: '체크', hint: '누르면 완료로 바뀌고, 완료한 시각이 기록돼요' },
-  { kind: 'stock', label: '재고 확인', hint: '물건마다 충분 · 부족을 고르면 부족한 것이 장보기에 추가돼요' },
+  { kind: 'stock', label: '재고 확인', hint: '확인할 물건을 적어 두고 한 번에 확인해요' },
 ];
 /** 단계는 여덟 개, 확인할 물건은 스무 개까지 */
 const MAX_ITEMS: Record<RoutineKind, number> = { check: 8, stock: 20 };
@@ -295,7 +295,7 @@ function ItemsSheet({
           <View style={styles.pad}>
             <ThemedText type="title">{isStep ? '단계' : '확인할 물건'}</ThemedText>
             <ThemedText type="caption" style={{ color: c.textSecondary }}>
-              {isStep ? '밤잠 준비처럼 순서대로 하는 일이면 단계를 나눠 체크할 수 있어요' : '부족을 고른 물건은 장보기에 추가돼요'}
+              {isStep ? '밤잠 준비처럼 순서대로 하는 일이면 단계를 나눠 체크할 수 있어요' : '기저귀, 분유처럼 떨어지면 안 되는 것을 적어 두세요'}
             </ThemedText>
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.itemsList}>
