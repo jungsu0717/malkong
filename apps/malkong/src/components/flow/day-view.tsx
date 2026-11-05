@@ -132,7 +132,7 @@ export function DayView({
   }, []);
   const breast = runningOf(events, 'breast');
   // 모유를 재는 중이면 1초마다 — 지금 노드의 시계만
-  const tick = useNow(!!breast || !!runningOf(events, 'sleep'));
+  const tick = useNow(!!breast || !!runningOf(events, 'sleep'), events);
 
   const dayStart = startOfDay(date).getTime();
   const isToday = dayStart === startOfDay(now).getTime();

@@ -9,7 +9,7 @@
 
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -56,14 +56,15 @@ export default function FlowScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ view?: string; at?: string }>();
   const { baby, age } = useBaby();
-  const { loading } = useRoutines();
-  const { loading: todosLoading } = useTodos();
+  const { loading, logs } = useRoutines();
+  const { loading: todosLoading, todos } = useTodos();
   const { events, loading: eventsLoading } = useEvents();
   const log = useLogActions();
   const [adding, setAdding] = useState(false);
   const [finding, setFinding] = useState(false);
-  // 30초마다 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다. 재는 중 시계는 지금 노드가 따로 센다
-  const now = useNow(false);
+  // 30초마다, 그리고 기록 · 루틴 완료 · 할 일이 바뀌면 바로 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다. 재는 중 시계는 지금 노드가 따로 센다
+  const changed = useMemo(() => ({ events, logs, todos }), [events, logs, todos]);
+  const now = useNow(false, changed);
   const [view, setView] = useState<View3>(isView(params.view) ? params.view : 'day');
   /** 하루 보기의 날 — null 이면 오늘 */
   const [picked, setPicked] = useState<Date | null>(null);
