@@ -66,3 +66,39 @@ export function DateWheel({ value, onChange }: { value: Date; onChange: (date: D
 }
 
 export function pickDate(_value: Date, _onChange: (date: Date) => void) {}
+
+export const RECORD_BACK_DAYS = 60;
+const local = (d: Date) => `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+
+/** 기록의 때 — 브라우저 날짜 · 시각 칸. 60일 전부터 지금까지 */
+export function DateTimeWheel({ value, onChange }: { value: Date; onChange: (at: Date) => void }) {
+  const c = useTheme();
+  const now = new Date();
+  return (
+    <input
+      type="datetime-local"
+      aria-label="날짜와 시간"
+      value={local(value)}
+      max={local(now)}
+      min={local(new Date(now.getTime() - RECORD_BACK_DAYS * 24 * 60 * 60 * 1000))}
+      onChange={(e) => {
+        const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(e.target.value);
+        if (!m) return;
+        const at = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+        onChange(at.getTime() > Date.now() ? new Date() : at);
+      }}
+      style={{
+        margin: '4px 0 4px',
+        padding: '12px 14px',
+        border: 0,
+        borderRadius: 12,
+        background: c.surface,
+        color: c.text,
+        fontFamily: FontFamily.semibold,
+        fontSize: 18,
+      }}
+    />
+  );
+}
+
+export function pickDateTime(_value: Date, _onChange: (at: Date) => void) {}

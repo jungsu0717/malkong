@@ -1,9 +1,7 @@
 /**
- * 하루 흐름의 노드 (SPEC-MAIN-08 · 11, task today/012 · 013) — 왼쪽 세로 줄과 점, 오른쪽 카드.
+ * 1년 보기의 줄 (SPEC-MAIN-11, task today/013) — 왼쪽 세로 줄과 점, 오른쪽 카드. 하루 보기는 2026-11-05 에 n8n 식 노드(flow-graph.tsx)로 바꿨다.
  *
- * 지난 쪽은 실선, 지금 뒤는 점선이다. 점 모양이 노드 종류를 말한다 — 수유는 코랄 테, 잠은 먹색, 지금은 코랄,
- * 예정은 빈 점, 기저귀 · 체온 같은 작은 기록은 점 대신 옆으로 뻗은 가지 끝의 알약.
- * 카드 모양은 시안 「하루 흐름 (2026-11-02)」을 따른다. 시각은 「11:30」처럼 24시간.
+ * 지난 쪽은 실선, 지금 뒤는 점선이다. 시각은 「11:30」처럼 24시간.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -11,12 +9,8 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Line } from 'react-native-svg';
 
-import { KIND_UI } from '@/components/log/kinds';
 import { ThemedText } from '@/components/themed-text';
 import { tap, type IconName } from '@/components/ui';
-import { feedTitle, hhmm, type FeedSession } from '@/data/day-flow';
-import { durationLabel, eventTitle, minutesOf } from '@/data/event-summary';
-import type { CareEvent } from '@/data/events';
 import { useTheme } from '@/hooks/use-theme';
 
 export const SPINE = 40;
@@ -94,117 +88,6 @@ export function FlowRow({
       </View>
       <View style={styles.content}>{children}</View>
     </View>
-  );
-}
-
-/** 수유 노드 — 흰 카드, 코랄 아이콘 */
-export function FeedCard({ session, now, onPress }: { session: FeedSession; now: Date; onPress: () => void }) {
-  const c = useTheme();
-  const icon = KIND_UI[session.kind].icon;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${hhmm(session.startAt)} ${feedTitle(session, now)}`}
-      onPress={() => {
-        tap();
-        onPress();
-      }}
-      style={({ pressed }) => [styles.card, { backgroundColor: pressed ? c.surface : c.card, borderColor: c.border }]}>
-      <View style={[styles.tile, { backgroundColor: c.accentSoft }]}>
-        <Ionicons name={icon} size={18} color={c.accent} />
-      </View>
-      <View style={styles.text}>
-        <ThemedText type="body" style={styles.title}>
-          {feedTitle(session, now)}
-        </ThemedText>
-        <ThemedText type="caption" style={{ color: c.textSecondary }}>
-          {[hhmm(session.startAt), session.by].filter(Boolean).join(' · ')}
-        </ThemedText>
-      </View>
-    </Pressable>
-  );
-}
-
-/** 잠 노드 — 먹색 카드 */
-export function SleepCard({ event, now, dayStart, onPress }: { event: CareEvent; now: Date; dayStart: number; onPress: () => void }) {
-  const c = useTheme();
-  const fromYesterday = new Date(event.startAt).getTime() < dayStart;
-  const range = `${fromYesterday ? '어제 ' : ''}${hhmm(event.startAt)}~${event.endAt ? hhmm(event.endAt) : ''}`;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${range} 잠 ${durationLabel(minutesOf(event, now))}`}
-      onPress={() => {
-        tap();
-        onPress();
-      }}
-      style={({ pressed }) => [styles.card, { backgroundColor: c.hero, borderColor: c.hero, opacity: pressed ? 0.85 : 1 }]}>
-      <View style={[styles.tile, { backgroundColor: c.heroCard }]}>
-        <Ionicons name="moon-outline" size={18} color={c.onHero} />
-      </View>
-      <View style={styles.text}>
-        <ThemedText type="body" style={[styles.title, { color: c.onHero }]}>
-          잠 {durationLabel(minutesOf(event, now))}
-        </ThemedText>
-        <ThemedText type="caption" style={{ color: c.onHeroDim }}>
-          {[range, event.by].filter(Boolean).join(' · ')}
-        </ThemedText>
-      </View>
-    </Pressable>
-  );
-}
-
-/** 옆 가지의 작은 알약 — 기저귀 · 체온 · 키 · 몸무게 */
-export function SidePill({ event, now, onPress }: { event: CareEvent; now: Date; onPress: () => void }) {
-  const c = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() => {
-        tap();
-        onPress();
-      }}
-      style={({ pressed }) => [styles.pill, { backgroundColor: pressed ? c.surface : c.card, borderColor: c.border }]}>
-      <View style={[styles.pillIcon, { backgroundColor: c.surface }]}>
-        <Ionicons name={KIND_UI[event.kind].icon} size={12} color={c.textSecondary} />
-      </View>
-      <ThemedText type="caption" numberOfLines={1} style={styles.pillText}>
-        <ThemedText type="caption" style={{ fontWeight: 600 }}>
-          {eventTitle(event, now)}
-        </ThemedText>
-        <ThemedText type="caption" style={{ color: c.textSecondary }}>
-          {` ${[hhmm(event.startAt), event.by].filter(Boolean).join(' · ')}`}
-        </ThemedText>
-      </ThemedText>
-    </Pressable>
-  );
-}
-
-/** 오늘 완료한 루틴 — 작은 알약 */
-export function RoutinePill({ title, at, by, icon }: { title: string; at: number; by: string | null; icon: ReactNode }) {
-  const c = useTheme();
-  return (
-    <View style={[styles.pill, { backgroundColor: c.card, borderColor: c.border }]}>
-      <View style={[styles.pillIcon, { backgroundColor: c.surface }]}>{icon}</View>
-      <ThemedText type="caption" numberOfLines={1} style={styles.pillText}>
-        <ThemedText type="caption" style={{ fontWeight: 600 }}>
-          {title} 완료
-        </ThemedText>
-        <ThemedText type="caption" style={{ color: c.textSecondary }}>
-          {` ${[hhmm(at), by].filter(Boolean).join(' · ')}`}
-        </ThemedText>
-      </ThemedText>
-    </View>
-  );
-}
-
-/** 노드 사이의 작은 글 — 「깨어 있음 1시간 40분」 */
-export function GapLabel({ text }: { text: string }) {
-  const c = useTheme();
-  return (
-    <ThemedText type="caption" style={[styles.gap, { color: c.textTertiary }]}>
-      {text}
-    </ThemedText>
   );
 }
 

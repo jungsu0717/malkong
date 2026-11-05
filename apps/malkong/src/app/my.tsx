@@ -75,6 +75,7 @@ export default function MyScreen() {
               detail={`아침 알림 ${briefingTime ? timeLabel(briefingTime) : '꺼짐'}`}
               onPress={() => router.push('/notifications')}
             />
+            <ListRow divider icon="repeat-outline" title="루틴" detail="목욕처럼 날마다 챙기는 일" onPress={() => router.push('/routines')} />
             <ListRow
               divider
               icon="people-outline"

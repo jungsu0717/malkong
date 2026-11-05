@@ -11,11 +11,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { KIND_UI, STOOL_SWATCH } from '@/components/log/kinds';
 import { ThemedText } from '@/components/themed-text';
+import { DateTimeWheel, INLINE_WHEEL, pickDateTime } from '@/components/time-picker';
 import { Button, Chip, Segmented, tap } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
-import { STOOL_COLOR_LABEL, clockLabel, durationLabel, minutesOf } from '@/data/event-summary';
+import { whenLabel } from '@/data/add-parse';
+import { STOOL_COLOR_LABEL, durationLabel, minutesOf } from '@/data/event-summary';
 import {
   AMOUNT_RANGE,
   cleanNumber,
@@ -26,6 +30,7 @@ import {
   type Side,
   type StoolColor,
 } from '@/data/events';
+import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 
 /** 열 시트 — 새로 적기(editing 없음) · 고치기(editing 있음) */
@@ -37,9 +42,10 @@ const STOOL_COLORS: StoolColor[] = ['yellow', 'brown', 'green', 'black', 'red', 
 /**
  * 기록 하나를 적거나 고치는 시트 (SPEC-LOG-01 · 02 · 03).
  *
- * 때는 「지금」이 기본이고, 칩으로 크게 옮기고 ±1분으로 맞춘다(꾹 누르면 빨라진다). 기저귀 소변은 고르면 바로 저장,
- * 대변 · 둘 다는 변 색을 고르면 저장(색 없이도). 모유 · 잠은 「시작」으로 재기 시작하거나 걸린 시간만 적는다.
- * 분유는 5ml 단위. 숫자는 범위 밖이면 저장 단추가 꺼진다. 부르는 쪽에서 `key` 를 열 때마다 바꿔 처음부터 시작하게 한다.
+ * 때는 「지금」이 기본이고, 칩으로 크게 옮기고 시각 칸을 누르면 날짜와 시간 바퀴로 고른다(task log/005). 기저귀 소변은 고르면 바로 저장,
+ * 대변 · 둘 다는 변 색을 고르면 저장(색 없이도). 모유는 「시작」으로 재기 시작하거나 먹인 시간만, 잠은 「지금 잠들었어요」나 잠든 때와 깬 때를 적는다.
+ * 분유 양과 모유 먹인 시간은 숫자를 눌러 바로 적고, −/+ 는 한 번에 한 칸이다. 숫자는 범위 밖이면 저장 단추가 꺼진다.
+ * 부르는 쪽에서 `key` 를 열 때마다 바꿔 처음부터 시작하게 한다.
  */
 export function LogSheet({
   target,
@@ -64,11 +70,11 @@ export function LogSheet({
   const editing = target?.editing ?? null;
   const kind = target?.kind ?? 'formula';
 
-  const [at, setAt] = useState<Date>(() => (editing ? new Date(editing.startAt) : new Date()));
+  const [at, setAt] = useState<Date>(() => (editing ? new Date(editing.startAt) : kind === 'sleep' ? new Date(Date.now() - 60 * MIN) : new Date()));
   const [side, setSide] = useState<Side>(editing?.side ?? 'left');
-  const [minutes, setMinutes] = useState<number>(() =>
-    editing?.endAt ? Math.round(minutesOf(editing)) : kind === 'sleep' ? 60 : 15,
-  );
+  const [minutes, setMinutes] = useState<number>(() => (editing?.endAt ? Math.round(minutesOf(editing)) : 15));
+  // 잠 — 깬 때. 새로 적을 때는 지금(잠든 때는 한 시간 전)
+  const [woke, setWoke] = useState<Date>(() => (editing?.endAt ? new Date(editing.endAt) : new Date()));
   const [ml, setMl] = useState<number>(() => editing?.amount ?? lastAmount ?? 120);
   const [text, setText] = useState<string>(() =>
     editing?.amount != null ? String(editing.amount) : kind !== 'temp' && lastAmount != null ? String(lastAmount) : '',
@@ -129,6 +135,7 @@ export function LogSheet({
                     min={1}
                     max={120}
                     format={(m) => durationLabel(m)}
+                    unit="분"
                     onChange={setMinutes}
                     chips={[5, 10, 15, 20, 30]}
                   />
@@ -152,8 +159,9 @@ export function LogSheet({
                   min={5}
                   max={400}
                   format={(v) => `${v}ml`}
+                  unit="ml"
                   onChange={setMl}
-                  chips={[60, 90, 120, 150, 180, 200]}
+                  chips={[60, 90, 120, 150, 180]}
                 />
                 <TimeRow label="수유 시간" value={at} onChange={setAt} />
                 <Button size="lg" label="저장" onPress={() => save({ amount: ml, startAt: at.toISOString() })} />
@@ -235,22 +243,17 @@ export function LogSheet({
                 {!editing && <Button label="지금 잠들었어요" icon="moon" size="lg" onPress={() => onStart('sleep', null)} />}
                 {!editing && <Divider label="또는 지난 잠 적기" />}
                 <TimeRow label="잠든 때" value={at} onChange={setAt} />
+                {!running && <TimeRow label="깬 때" value={woke} onChange={setWoke} />}
                 {!running && (
-                  <Stepper
-                    label="잔 시간"
-                    value={minutes}
-                    step={1}
-                    min={1}
-                    max={16 * 60}
-                    format={(m) => durationLabel(m)}
-                    onChange={setMinutes}
-                    chips={[30, 60, 90, 120, 180]}
-                  />
+                  <ThemedText type="small" style={{ color: woke > at ? c.textSecondary : c.danger, textAlign: 'right' }}>
+                    {woke > at ? `${durationLabel(Math.round((woke.getTime() - at.getTime()) / MIN))} 잤어요` : '깬 때가 잠든 때보다 뒤여야 해요'}
+                  </ThemedText>
                 )}
                 <Button
                   size="lg"
                   label="저장"
-                  onPress={() => save(running ? { startAt: at.toISOString(), endAt: null } : timed(at, minutes))}
+                  disabled={!running && woke <= at}
+                  onPress={() => save(running ? { startAt: at.toISOString(), endAt: null } : { startAt: at.toISOString(), endAt: woke.toISOString() })}
                 />
               </>
             )}
@@ -326,34 +329,19 @@ function Divider({ label }: { label: string }) {
 }
 
 /**
- * 때 고르기 — 지금 · 몇 분 전 칩으로 크게, ±1분으로 맞춘다(꾹 누르면 빨라진다). 앞으로의 때는 고를 수 없다.
- * `days` 면 「어제」 칩도 — 몸무게 · 키처럼 지난날을 적을 때
+ * 때 고르기 — 지금 · 몇 분 전 칩으로 크게, 시각 칸을 누르면 날짜와 시간 바퀴(task log/005). 앞으로의 때는 고를 수 없다.
+ * iOS · 웹은 칸 아래에 바퀴를 펼치고, 안드로이드는 날짜 창 뒤에 시각 창을 띄운다.
  */
-function TimeRow({
-  label,
-  value,
-  onChange,
-  days = false,
-}: {
-  label: string;
-  value: Date;
-  onChange: Dispatch<SetStateAction<Date>>;
-  days?: boolean;
-}) {
+function TimeRow({ label, value, onChange }: { label: string; value: Date; onChange: Dispatch<SetStateAction<Date>>; days?: boolean }) {
   const c = useTheme();
-  const now = Date.now();
-  const ago = Math.round((now - value.getTime()) / MIN);
-  const set = (minutesAgo: number) => onChange(new Date(Date.now() - minutesAgo * MIN));
-  const shift = (delta: number) => onChange((prev) => new Date(Math.min(Date.now(), prev.getTime() + delta * MIN)));
-  const dayDiff = Math.floor((new Date(now).setHours(0, 0, 0, 0) - new Date(value).setHours(0, 0, 0, 0)) / (24 * 60 * MIN));
-  const dayWord = dayDiff === 0 ? '' : dayDiff === 1 ? '어제 ' : `${value.getMonth() + 1}월 ${value.getDate()}일 `;
+  const [open, setOpen] = useState(false);
+  const now = useNow(false);
+  const ago = Math.round((now.getTime() - value.getTime()) / MIN);
   const chips: [number, string][] = [
     [0, '지금'],
     [10, '10분 전'],
     [30, '30분 전'],
     [60, '1시간 전'],
-    [180, '3시간 전'],
-    ...(days ? ([[24 * 60, '어제']] as [number, string][]) : []),
   ];
   return (
     <View style={styles.group}>
@@ -361,20 +349,36 @@ function TimeRow({
         <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
           {label}
         </ThemedText>
-        <View style={styles.stepper}>
-          <StepButton icon="remove" label="1분 이르게" onStep={() => shift(-1)} />
-          <ThemedText type="heading" style={styles.stepValue}>
-            {dayWord}
-            {clockLabel(value)}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${label} 고르기, 지금 ${whenLabel(value)}`}
+          accessibilityState={{ expanded: open }}
+          onPress={() => {
+            tap();
+            if (INLINE_WHEEL) setOpen((o) => !o);
+            else pickDateTime(value, (d) => onChange(d));
+          }}
+          style={({ pressed }) => [styles.timeField, { borderColor: open ? c.accent : c.border, borderWidth: open ? 2 : 1, backgroundColor: pressed ? c.surface : c.card }]}>
+          <ThemedText type="heading" style={styles.timeText}>
+            {whenLabel(value)}
           </ThemedText>
-          <StepButton icon="add" label="1분 늦게" onStep={() => shift(1)} disabled={ago <= 0} />
-        </View>
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={open ? c.accent : c.textSecondary} />
+        </Pressable>
       </View>
       <View style={styles.chips}>
         {chips.map(([m, l]) => (
-          <Chip key={l} label={l} selected={Math.abs(ago - m) < 1} onPress={() => set(m)} />
+          <Chip
+            key={l}
+            label={l}
+            selected={Math.abs(ago - m) < 1}
+            onPress={() => {
+              onChange(new Date(Date.now() - m * MIN));
+              setOpen(false);
+            }}
+          />
         ))}
       </View>
+      {open && <DateTimeWheel value={value} onChange={(d) => onChange(d)} />}
     </View>
   );
 }
@@ -386,6 +390,7 @@ function Stepper({
   min,
   max,
   format,
+  unit,
   onChange,
   chips,
 }: {
@@ -395,10 +400,14 @@ function Stepper({
   min: number;
   max: number;
   format: (v: number) => string;
+  /** 숫자 칸 옆 단위 — 「ml」 「분」 */
+  unit: string;
   onChange: Dispatch<SetStateAction<number>>;
   chips: number[];
 }) {
   const c = useTheme();
+  // 적는 동안은 친 글자 그대로 — 범위 안이 되면 값에 넣는다
+  const [text, setText] = useState<string | null>(null);
   return (
     <View style={styles.group}>
       <View style={styles.groupHead}>
@@ -406,21 +415,29 @@ function Stepper({
           {label}
         </ThemedText>
         <View style={styles.stepper}>
-          <StepButton
-            icon="remove"
-            label={`${label} 줄이기`}
-            onStep={() => onChange((v) => Math.max(min, v - step))}
-            disabled={value <= min}
-          />
-          <ThemedText type="title" style={styles.stepValue}>
-            {format(value)}
-          </ThemedText>
-          <StepButton
-            icon="add"
-            label={`${label} 늘리기`}
-            onStep={() => onChange((v) => Math.min(max, v + step))}
-            disabled={value >= max}
-          />
+          <StepButton icon="remove" label={`${label} 줄이기`} onStep={() => onChange((v) => Math.max(min, v - step))} disabled={value <= min} />
+          <View style={[styles.numberField, { borderColor: c.border, backgroundColor: c.card }]}>
+            <TextInput
+              value={text ?? String(value)}
+              onFocus={() => setText(String(value))}
+              onChangeText={(t) => {
+                const clean = t.replace(/[^\d]/g, '').slice(0, 3);
+                setText(clean);
+                const n = Number(clean);
+                if (clean && n >= min && n <= max) onChange(n);
+              }}
+              onBlur={() => setText(null)}
+              keyboardType="number-pad"
+              returnKeyType="done"
+              maxLength={3}
+              accessibilityLabel={label}
+              style={[styles.numberInput, { color: c.text }]}
+            />
+            <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
+              {unit}
+            </ThemedText>
+          </View>
+          <StepButton icon="add" label={`${label} 늘리기`} onStep={() => onChange((v) => Math.min(max, v + step))} disabled={value >= max} />
         </View>
       </View>
       <View style={styles.chips}>
@@ -511,6 +528,10 @@ const styles = StyleSheet.create({
   groupHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   stepValue: { minWidth: 92, textAlign: 'center' },
+  timeField: { height: 40, borderRadius: 12, paddingLeft: 14, paddingRight: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  timeText: { fontWeight: 700, fontVariant: ['tabular-nums'] },
+  numberField: { height: 44, width: 96, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
+  numberInput: { width: 48, fontFamily: FontFamily.semibold, fontSize: 20, textAlign: 'right', paddingVertical: 0 },
   stepButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

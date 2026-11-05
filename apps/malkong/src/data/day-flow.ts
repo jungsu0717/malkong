@@ -1,5 +1,5 @@
 /**
- * 하루 흐름의 셈 (SPEC-MAIN-08 · 10, task today/012 · 013, decisions/037) — 기록을 시간순 노드 · 하루 시계 · 일주일 막대로 바꾼다.
+ * 하루 흐름의 셈 (SPEC-MAIN-08 · 10, task today/012 · 013 · 014, decisions/037 · 038) — 기록을 잠과 잠 사이로 나눈 줄 · 합계 · 일주일 막대로 바꾼다.
  *
  * 모두 기기 안에서 규칙으로 센다(모델을 부르지 않는다). 다음 수유 예상과 밤잠 드는 시간은 우리 아기의 지난 기록에서 나온 값일 뿐이고,
  * 정상 · 이상을 판정하지 않는다(헌장 5). 화면 코드를 가져오지 않는 순수 함수만 둔다(`node --test src/data/day-flow.test.ts`).
@@ -94,60 +94,7 @@ export function sidesLine(s: FeedSession, now = new Date()): string | null {
   return parts.length > 0 ? parts.join(', ') : null;
 }
 
-/** 시간순 노드 하나 */
-export type FlowItem =
-  | { type: 'feed'; key: string; at: number; session: FeedSession }
-  /** awakeBefore — 이 잠 앞에 깨어 있던 분(앞 잠이 없거나 너무 길면 null) */
-  | { type: 'sleep'; key: string; at: number; event: CareEvent; awakeBefore: number | null }
-  /** 기저귀 · 체온 · 키 · 몸무게 — 옆 가지의 작은 알약 */
-  | { type: 'side'; key: string; at: number; event: CareEvent }
-  /** 오늘 완료한 루틴 */
-  | { type: 'routine'; key: string; at: number; routineId: string; title: string; by: string | null };
-
-export type RoutineDone = { routineId: string; title: string; at: string; by: string | null };
-
-/**
- * 그날의 노드 — 그날 시작한 기록과, 그날로 넘어온 잠(어제 밤에 시작한 잠도). 시작 순서.
- * 재는 중인 모유 · 잠은 지금 노드가 보여 주므로 넣지 않는다.
- */
-export function dayItems(events: CareEvent[], routines: RoutineDone[], day: Date, now = new Date()): FlowItem[] {
-  const from = startOfDay(day).getTime();
-  const to = from + DAY;
-  const inDay = (at: number) => at >= from && at < to;
-  const items: FlowItem[] = [];
-
-  for (const s of feedSessions(events)) {
-    if (s.endAt === null) continue;
-    const at = t(s.startAt);
-    if (inDay(at)) items.push({ type: 'feed', key: s.id, at, session: s });
-  }
-
-  const sleeps = events.filter((e) => e.kind === 'sleep');
-  sleeps.forEach((e, i) => {
-    if (e.endAt === null) return;
-    const start = t(e.startAt);
-    const end = endOf(e, now);
-    if (end <= from || start >= to) return;
-    const prev = sleeps[i - 1];
-    const gap = prev?.endAt ? start - t(prev.endAt) : null;
-    const awakeBefore = gap !== null && gap > 0 && gap <= AWAKE_LIMIT ? gap / MIN : null;
-    items.push({ type: 'sleep', key: e.id, at: Math.max(start, from), event: e, awakeBefore });
-  });
-
-  for (const e of events) {
-    if (e.kind === 'diaper' || e.kind === 'temp' || e.kind === 'weight' || e.kind === 'height') {
-      const at = t(e.startAt);
-      if (inDay(at)) items.push({ type: 'side', key: e.id, at, event: e });
-    }
-  }
-
-  for (const r of routines) {
-    const at = t(r.at);
-    if (inDay(at)) items.push({ type: 'routine', key: `routine-${r.routineId}`, at, routineId: r.routineId, title: r.title, by: r.by });
-  }
-
-  return items.sort((a, b) => a.at - b.at);
-}
+export type RoutineDone = { routineId: string; title: string; at: string; by: string | null; logId?: string | null };
 
 /** 지금 깨어 있는 분 — 마지막 잠이 끝난 뒤. 자는 중이거나 잠 기록이 없거나 너무 오래됐으면 null */
 export function awakeMinutes(events: CareEvent[], now = new Date()): number | null {
@@ -330,4 +277,177 @@ export function weekLines(days: WeekDay[], events: CareEvent[], now = new Date()
     lines.push(`가장 길게 잔 잠은 ${when} ${p.period} ${p.clock}부터 ${durationLabel(minutesOf(longest, now))}이에요`);
   }
   return lines;
+}
+
+// ---------- 3판 — 잠과 잠 사이로 나눈 줄 (SPEC-MAIN-08, task today/014) ----------
+
+/** 흐름에서 넓은 노드 아래로 갈라지는 기록 하나(잠 말고) */
+export type SubItem =
+  | { type: 'feed'; key: string; at: number; session: FeedSession }
+  /** 기저귀 · 체온 · 키 · 몸무게 */
+  | { type: 'side'; key: string; at: number; event: CareEvent }
+  | { type: 'routine'; key: string; at: number; routineId: string; logId: string | null; title: string; by: string | null }
+  | { type: 'todo'; key: string; at: number; todoId: string; title: string; by: string | null };
+
+/** 그날 완료한 할 일(내 할 일) */
+export type TodoDone = { todoId: string; title: string; at: string; by: string | null };
+
+/** 잠 — from 은 시작(어제 시작했으면 어제 시각), to 는 끝(재는 중이면 null) */
+export type SleepSpan = { event: CareEvent; from: number; to: number | null; night: boolean };
+/** 잠과 잠 사이 — to 가 null 이면 지금까지 이어지는 중 */
+export type WakeSpan = { from: number; to: number | null; items: SubItem[] };
+/** 흐름의 한 줄 — 잠 하나와 그 뒤 시간 하나(어느 한쪽이 없을 수 있다) */
+export type DayRow = { key: string; sleep: SleepSpan | null; wake: WakeSpan | null };
+
+/** 밤잠 — 저녁 6시부터 새벽 6시 사이에 시작한 잠 */
+export function isNightStart(at: number): boolean {
+  const h = new Date(at).getHours();
+  return h >= NIGHT_FROM_HOUR || h < 6;
+}
+
+/** [from, to) 의 기록(잠 말고) — 재는 중인 모유는 지금 노드가 보여 주므로 뺀다. 그 시간의 기록 화면도 쓴다 */
+export function itemsBetween(events: CareEvent[], routines: RoutineDone[], todos: TodoDone[], from: number, to: number): SubItem[] {
+  const inDay = (at: number) => at >= from && at < to;
+  const items: SubItem[] = [];
+  for (const s of feedSessions(events)) {
+    if (s.endAt === null) continue;
+    const at = t(s.startAt);
+    if (inDay(at)) items.push({ type: 'feed', key: s.id, at, session: s });
+  }
+  for (const e of events) {
+    if (e.kind === 'diaper' || e.kind === 'temp' || e.kind === 'weight' || e.kind === 'height') {
+      const at = t(e.startAt);
+      if (inDay(at)) items.push({ type: 'side', key: e.id, at, event: e });
+    }
+  }
+  for (const r of routines) {
+    const at = t(r.at);
+    if (inDay(at)) items.push({ type: 'routine', key: `routine-${r.logId ?? r.routineId}`, at, routineId: r.routineId, logId: r.logId ?? null, title: r.title, by: r.by });
+  }
+  for (const d of todos) {
+    const at = t(d.at);
+    if (inDay(at)) items.push({ type: 'todo', key: `todo-${d.todoId}`, at, todoId: d.todoId, title: d.title, by: d.by });
+  }
+  return items.sort((a, b) => a.at - b.at);
+}
+
+/**
+ * 그날을 잠과 잠 사이로 나눈 줄 — 시간 순서. 잠 중간에 남긴 기록은 앞뒤 시간 가운데 가까운 쪽에 붙인다.
+ * 오늘이면 마지막 줄이 지금이다(자는 중이면 그 잠의 to 가 null, 깨어 있으면 마지막 시간의 to 가 null).
+ */
+export function dayRows(events: CareEvent[], routines: RoutineDone[], todos: TodoDone[], day: Date, now = new Date()): DayRow[] {
+  const D0 = startOfDay(day).getTime();
+  const D1 = D0 + DAY;
+  const isToday = now.getTime() >= D0 && now.getTime() < D1;
+  const until = isToday ? now.getTime() : D1;
+  const allSleeps = events.filter((e) => e.kind === 'sleep').sort((a, b) => t(a.startAt) - t(b.startAt));
+  const sleeps = allSleeps.filter((e) => t(e.startAt) < until && endOf(e, now) > D0);
+  const items = itemsBetween(events, routines, todos, D0, until);
+
+  type Seg = { sleep: SleepSpan } | { wake: WakeSpan };
+  const segs: Seg[] = [];
+  let cursor = D0;
+  // 하루를 깨어 있는 채로 시작했으면 — 그 전에 끝난 잠부터(12시간 안)
+  const before = allSleeps.filter((e) => e.endAt !== null && t(e.endAt) <= D0).pop();
+  const firstFrom = before?.endAt && D0 - t(before.endAt) <= AWAKE_LIMIT ? t(before.endAt) : D0;
+  for (const e of sleeps) {
+    const a = t(e.startAt);
+    const b = e.endAt ? t(e.endAt) : null;
+    if (a > cursor) segs.push({ wake: { from: cursor === D0 ? firstFrom : cursor, to: a, items: [] } });
+    segs.push({ sleep: { event: e, from: a, to: b, night: isNightStart(a) } });
+    cursor = b === null ? Number.POSITIVE_INFINITY : Math.max(cursor, b);
+  }
+  if (cursor < until) {
+    // 지난날의 마지막 시간은 다음 잠이 시작한 때까지(다음 날이어도)
+    const next = allSleeps.find((e) => t(e.startAt) >= until);
+    segs.push({ wake: { from: cursor === D0 ? firstFrom : cursor, to: isToday ? null : next ? t(next.startAt) : D1, items: [] } });
+  }
+
+  const wakes = segs.filter((s): s is { wake: WakeSpan } => 'wake' in s).map((s) => s.wake);
+  for (const it of items) {
+    // 잠 중간에 남긴 기록은 앞뒤 시간 가운데 가까운 쪽에(잠들기 바로 전에 한 루틴을 늦게 누른 것 같은)
+    const inside = wakes.find((w) => it.at >= w.from && it.at < (w.to ?? Number.POSITIVE_INFINITY));
+    const before = [...wakes].reverse().find((w) => w.to !== null && w.to <= it.at);
+    const after = wakes.find((w) => w.from > it.at);
+    const nearer = before && after ? (it.at - before.to! <= after.from - it.at ? before : after) : (after ?? before);
+    const home = inside ?? nearer ?? wakes[wakes.length - 1];
+    if (home) home.items.push(it);
+    else {
+      const w: WakeSpan = { from: it.at, to: isToday ? null : D1, items: [it] };
+      wakes.push(w);
+      segs.push({ wake: w });
+    }
+  }
+
+  const rows: DayRow[] = [];
+  for (const s of segs) {
+    if ('sleep' in s) rows.push({ key: s.sleep.event.id, sleep: s.sleep, wake: null });
+    else {
+      const last = rows[rows.length - 1];
+      if (last && last.sleep && last.wake === null) last.wake = s.wake;
+      else rows.push({ key: `wake-${s.wake.from}`, sleep: null, wake: s.wake });
+    }
+  }
+  // 오늘인데 아무 기록이 없으면 — 지금 노드 하나
+  if (isToday && rows.length === 0) rows.push({ key: 'wake-now', sleep: null, wake: { from: firstFrom, to: null, items: [] } });
+  return rows;
+}
+
+/** 잠 노드의 이름 — 「낮잠 1시간 10분」 「밤잠 4시간 50분」, 재는 중이면 「잠든 지 30분」 */
+export function sleepTitle(s: SleepSpan, now = new Date()): string {
+  const min = ((s.to ?? now.getTime()) - s.from) / MIN;
+  if (s.to === null) return `잠든 지 ${durationLabel(Math.max(1, min))}`;
+  return `${s.night ? '밤잠' : '낮잠'} ${durationLabel(min)}`;
+}
+
+/** 「09:50~11:00」 · 어제 시작했으면 「어제 21:10~02:00」 · 재는 중이면 「13:40부터」 */
+export function spanRange(from: number, to: number | null, dayStart: number): string {
+  const head = from < dayStart ? `어제 ${hhmm(from)}` : hhmm(from);
+  if (to === null) return `${head}부터`;
+  const tail = to >= dayStart + DAY ? `다음 날 ${hhmm(to)}` : hhmm(to);
+  return `${head}~${tail}`;
+}
+
+/** 그날 합계 칸 넷 (SPEC-MAIN-08) */
+export type DayTotals = {
+  formulaMl: number;
+  formulaCount: number;
+  breastMin: number;
+  breastCount: number;
+  diapers: number;
+  poo: number;
+  sleepMin: number;
+  naps: number;
+};
+
+export function dayTotals(events: CareEvent[], day: Date, now = new Date()): DayTotals {
+  const D0 = startOfDay(day).getTime();
+  const D1 = D0 + DAY;
+  const inDay = (iso: string) => t(iso) >= D0 && t(iso) < D1;
+  const out: DayTotals = { formulaMl: 0, formulaCount: 0, breastMin: 0, breastCount: 0, diapers: 0, poo: 0, sleepMin: 0, naps: 0 };
+  for (const s of feedSessions(events)) {
+    if (!inDay(s.startAt)) continue;
+    if (s.kind === 'formula') {
+      out.formulaCount += 1;
+      out.formulaMl += s.parts[0].amount ?? 0;
+    } else {
+      out.breastCount += 1;
+      out.breastMin += s.parts.reduce((sum, p) => sum + minutesOf(p, now), 0);
+    }
+  }
+  for (const e of events) {
+    if (e.kind === 'diaper' && inDay(e.startAt)) {
+      out.diapers += 1;
+      if (e.diaper === 'poo' || e.diaper === 'both') out.poo += 1;
+    }
+    if (e.kind === 'sleep') {
+      const a = Math.max(t(e.startAt), D0);
+      const b = Math.min(endOf(e, now), D1);
+      if (b > a) out.sleepMin += (b - a) / MIN;
+      if (inDay(e.startAt) && !isNightStart(t(e.startAt))) out.naps += 1;
+    }
+  }
+  out.breastMin = Math.round(out.breastMin);
+  out.sleepMin = Math.round(out.sleepMin);
+  return out;
 }

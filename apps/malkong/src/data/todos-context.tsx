@@ -240,7 +240,8 @@ export function TodosProvider({ children }: { children: React.ReactNode }) {
 
   // 알림에 싣는 할 일 — 앱이 채운 아기 일정(접종 · 검진 예약, 기념일 · 사이즈)만. 내 할 일 · 장보기는 화면에서 뺐다(decisions/037)
   const babyTodos = useMemo(() => {
-    const babyTopics = new Set(topics.filter((t) => t.kind === 'checkup' || t.kind === 'milestone' || t.kind === 'size').map((t) => t.id));
+    // 아기 일정과 내 할 일 — 「추가」에서 시각을 적은 할 일도 알린다(SPEC-MAIN-12, task today/015)
+    const babyTopics = new Set(topics.filter((t) => t.kind === 'checkup' || t.kind === 'milestone' || t.kind === 'size' || t.kind === 'general').map((t) => t.id));
     return todos.filter((t) => babyTopics.has(t.topicId) || t.ref?.startsWith('appt:'));
   }, [todos, topics]);
 

@@ -1,38 +1,34 @@
 /**
- * 하루 보기 (SPEC-MAIN-08, task today/012, decisions/037) — 하루 시계 아래로 그날 기록이 시간순 노드로 이어지고,
- * 오늘이면 「지금」 노드와 예정 노드(다음 수유 예상 · 오늘 할 루틴 · 그날 아기 일정 · 오늘 소식 · 가족과 함께 보기)가 뒤따른다.
+ * 하루 보기 (SPEC-MAIN-08, task today/014, decisions/038) — 맨 위 합계 칸 넷, 그 아래 하루가 n8n 처럼 노드와 선으로 이어진다.
  *
- * 기록 노드를 누르면 그 자리에서 펼쳐지고(event-detail), 다른 노드는 흐려지며 하루 시계도 그 기록만 또렷하다.
- * 지난날(일주일 보기에서 고른 날)은 지금 노드와 예정 노드 없이 그날 기록 전부를 보인다.
- * 입력 · 루틴 · 아기 일정 시트는 이 보기가 한 번씩 둔다.
+ * 잠은 먹색 네모, 잠과 잠 사이는 넓은 노드이고 그 사이 기록이 아래로 갈라진다. 오늘이면 마지막이 지금 노드이고,
+ * 그 뒤로 흐린 점선 네모(다음 수유 예상 · 오늘 할 루틴과 할 일 · 그날 아기 일정 · 오늘 소식 · 가족과 함께 보기)가 이어진다.
+ * 노드를 누르면 그 시간의 기록 화면(`/records`)이 열린다. 자리와 선은 flow-layout.ts 가 계산한다.
+ * 기록 단추는 화면 바닥의 기록 줄(index.tsx)에 있다 — 지금 노드에는 모유를 재는 중일 때의 종료 · 반대쪽만 둔다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Defs, Pattern, Rect } from 'react-native-svg';
 
-import { careWarnings, WarnCard } from '@/components/flow/care-warn';
-import { DayClock } from '@/components/flow/day-clock';
-import { EventDetail } from '@/components/flow/event-detail';
-import {
-  ChipButton,
-  FeedCard,
-  FlowRow,
-  FutureCard,
-  GapLabel,
-  RoutinePill,
-  SidePill,
-  SleepCard,
-  type Port,
-  type Segment,
-} from '@/components/flow/flow-node';
-import { MoreSheet } from '@/components/flow/more-sheet';
-import { NowNode } from '@/components/flow/now-node';
 import { BottleIcon } from '@/components/baby-icons';
+import { careWarnings, WarnCard } from '@/components/flow/care-warn';
+import { DayTotalsCard } from '@/components/flow/day-totals';
+import {
+  ChipNode,
+  FlowCanvas,
+  FutureSquare,
+  NodeLabel,
+  NowNode,
+  Port,
+  SleepSquare,
+  SubNode,
+  WakeNode,
+  type SubKind,
+} from '@/components/flow/flow-graph';
 import { DayNewsSheet } from '@/components/log/day-news-card';
-import { useLogActions } from '@/components/log/use-log-actions';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { useRoutineActions } from '@/components/routine/use-routine-actions';
 import { ThemedText } from '@/components/themed-text';
@@ -40,201 +36,208 @@ import { useBabyRows } from '@/components/todo/baby-schedule';
 import { Button, Card, tap } from '@/components/ui';
 import { useBaby } from '@/data/baby-context';
 import { dayNews } from '@/data/day-news';
-import { dayItems, dayMarks, hhmm, nextFeedGuess, type FlowItem, type RoutineDone } from '@/data/day-flow';
+import {
+  awakeMinutes,
+  dayRows,
+  dayTotals,
+  feedTitle,
+  hhmm,
+  nextFeedGuess,
+  sleepTitle,
+  spanRange,
+  type DayRow,
+  type RoutineDone,
+  type SubItem,
+  type TodoDone,
+} from '@/data/day-flow';
 import { readSetting, writeSetting } from '@/data/db';
-import { durationLabel, startOfDay, statsBetween } from '@/data/event-summary';
+import { agoLabel, durationLabel, lastFeedStart, startOfDay } from '@/data/event-summary';
+import { runningOf, type CareEvent, type EventKind, type Side } from '@/data/events';
 import { useEvents } from '@/data/events-context';
 import { useFamily } from '@/data/family-context';
+import { flowLayout, SQ, type LayoutRow } from '@/data/flow-layout';
 import { useMemos } from '@/data/memos-context';
 import { logsOn, todayPlan } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { poseOf } from '@/data/stage';
+import { useTodos } from '@/data/todos-context';
+import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
-/** 지금 앞에 보이는 노드 수 — 그 앞은 「이전 기록 N개」로 접는다 */
-const RECENT = 3;
-/** 가족 노드를 닫았는지 — 'yes' 면 이 폰에서 다시 보이지 않는다(예전 홈 가족 초대 카드와 같은 설정값) */
+/** 가족 노드를 숨겼는지 — 'yes' 면 이 폰에서 다시 보이지 않는다(예전 홈 가족 초대 카드와 같은 설정값) */
 const FAMILY_HIDDEN_KEY = 'home.familyCardHidden';
 
-type Row = { key: string; port: Port; node: ReactNode; portTop?: number; dimmable: boolean };
+/** 갈라진 기록의 묶음 — 포트 하나씩: 수유, 기저귀와 그 밖, 루틴과 할 일 */
+const groupOf = (it: SubItem) => (it.type === 'feed' ? 0 : it.type === 'side' ? 1 : 2);
 
-export function DayView({ date, now }: { date: Date; now: Date }) {
+function subKind(it: SubItem): SubKind {
+  if (it.type === 'feed') return it.session.kind;
+  if (it.type === 'routine') return 'routine';
+  if (it.type === 'todo') return 'todo';
+  const e = it.event;
+  if (e.kind === 'diaper') return e.diaper === 'pee' ? 'pee' : 'poo';
+  return e.kind as SubKind;
+}
+
+function subTitle(it: SubItem, now: Date): string {
+  if (it.type === 'feed') return feedTitle(it.session, now);
+  if (it.type === 'routine' || it.type === 'todo') return it.title;
+  const e = it.event;
+  if (e.kind === 'diaper') return e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '소변, 대변';
+  if (e.kind === 'temp') return e.amount !== null ? `${e.amount}℃` : '체온';
+  if (e.kind === 'weight') return e.amount !== null ? `${e.amount}kg` : '몸무게';
+  return e.amount !== null ? `${e.amount}cm` : '키';
+}
+
+/** 재는 중 시계 — 「12:05」 · 「1:02:05」 */
+function stopwatch(from: string, now: Date): string {
+  const s = Math.max(0, Math.floor((now.getTime() - new Date(from).getTime()) / 1000));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const r = String(s % 60).padStart(2, '0');
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${r}` : `${m}:${r}`;
+}
+
+type Future = { key: string; at: number; icon: React.ReactNode; accent?: boolean; title: string; sub: string; aria: string; onPress?: () => void; onLongPress?: () => void };
+
+export function DayView({
+  date,
+  now,
+  onStart,
+  onStop,
+}: {
+  date: Date;
+  now: Date;
+  /** 모유 재기 시작(반대쪽) */
+  onStart: (kind: EventKind, side: Side | null) => void;
+  onStop: (e: CareEvent) => void;
+}) {
   const c = useTheme();
   const { baby, age } = useBaby();
-  const { events, remove } = useEvents();
+  const { events } = useEvents();
   const { routines, logs } = useRoutines();
+  const { todos, topics, toggleDone } = useTodos();
   const family = useFamily();
   const { memos } = useMemos();
-  const log = useLogActions();
   const routine = useRoutineActions(now);
   const schedule = useBabyRows(now);
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [width, setWidth] = useState(0);
   const [showAll, setShowAll] = useState(false);
-  const [more, setMore] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [familyHidden, setFamilyHidden] = useState(true);
   useEffect(() => {
     void readSetting(FAMILY_HIDDEN_KEY).then((v) => setFamilyHidden(v === 'yes'));
   }, []);
+  const breast = runningOf(events, 'breast');
+  // 모유를 재는 중이면 1초마다 — 지금 노드의 시계만
+  const tick = useNow(!!breast || !!runningOf(events, 'sleep'));
 
   const dayStart = startOfDay(date).getTime();
   const isToday = dayStart === startOfDay(now).getTime();
+  const generalTopic = topics.find((t) => t.kind === 'general')?.id ?? null;
 
-  // 그날 완료한 루틴 — 단계 줄과 건너뛴 줄은 빼고 첫 완료만
+  // 그날 완료한 루틴 — 단계 줄과 건너뛴 줄은 빼고 루틴 전체를 끝낸 줄
   const dones = useMemo<RoutineDone[]>(
     () =>
       routines.flatMap((r) => {
         const first = logsOn(r.id, logs, date).find((l) => l.step == null && !l.skip);
-        return first ? [{ routineId: r.id, title: r.title, at: first.at, by: first.by }] : [];
+        return first ? [{ routineId: r.id, logId: first.id, title: r.title, at: first.at, by: first.by }] : [];
       }),
     [routines, logs, date],
   );
-  const items = useMemo(() => dayItems(events, dones, date, now), [events, dones, date, now]);
-  const marks = useMemo(() => dayMarks(events, date, now), [events, date, now]);
-  const stats = statsBetween(events, new Date(dayStart), new Date(dayStart + DAY), now);
+  const doneTodos = useMemo<TodoDone[]>(
+    () => todos.filter((t) => t.topicId === generalTopic && t.doneAt).map((t) => ({ todoId: t.id, title: t.title, at: t.doneAt as string, by: t.doneBy })),
+    [todos, generalTopic],
+  );
+  const rows = useMemo(() => dayRows(events, dones, doneTodos, date, now), [events, dones, doneTodos, date, now]);
+  const totals = useMemo(() => dayTotals(events, date, now), [events, date, now]);
   const news = baby ? dayNews(events, memos, baby.birthDate, date, now) : null;
 
   if (!baby || !age) return null;
 
-  const open = items.find((i) => i.key === openKey) ?? null;
-  const pick = open ? (open.type === 'feed' ? open.session.id : open.type === 'routine' ? null : open.event.id) : null;
-  const dimOthers = open !== null;
+  // 오늘은 지금 앞의 한 줄과 지금만 — 그 앞은 접는다
+  const hiddenRows = isToday && !showAll && rows.length > 2 ? rows.slice(0, rows.length - 2) : [];
+  const shown = rows.slice(hiddenRows.length);
+  const hiddenCount = hiddenRows.reduce((n, r) => n + (r.sleep ? 1 : 0) + (r.wake?.items.length ?? 0), 0);
+  const lastRow = shown[shown.length - 1];
+  const sleepingNow = isToday && lastRow?.sleep?.to === null;
+  const awakeNow = isToday && !sleepingNow && lastRow?.wake?.to === null;
 
-  // 지난 쪽 노드
-  const hidden = isToday && !showAll && items.length > RECENT + 1 ? items.length - RECENT : 0;
-  const shown = items.slice(hidden);
-  const past: Row[] = [];
-  if (hidden > 0) {
-    past.push({
-      key: 'more',
-      port: 'start',
-      dimmable: true,
-      node: <ChipButton label={`이전 기록 ${hidden}개`} icon="chevron-up" onPress={() => setShowAll(true)} />,
-    });
-  }
-  for (const it of shown) {
-    if (it.type === 'sleep' && it.awakeBefore !== null) {
-      past.push({ key: `gap-${it.key}`, port: 'none', dimmable: true, node: <GapLabel text={`깨어 있음 ${durationLabel(it.awakeBefore)}`} /> });
-    }
-    if (openKey === it.key && it.type !== 'routine') {
-      past.push({
-        key: it.key,
-        port: it.type === 'sleep' ? 'sleep' : it.type === 'feed' ? 'feed' : 'side',
-        portTop: 28,
-        dimmable: false,
-        node: (
-          <EventDetail
-            item={it}
-            events={events}
-            now={now}
-            onClose={() => setOpenKey(null)}
-            onEdit={(e) => log.open(e.kind, e)}
-            onDelete={(ids) => {
-              setOpenKey(null);
-              for (const id of ids) void remove(id);
-            }}
-          />
-        ),
-      });
-      continue;
-    }
-    past.push(pastRow(it));
-  }
+  const sortedItems = (r: DayRow) => [...(r.wake?.items ?? [])].sort((a, b) => groupOf(a) - groupOf(b) || a.at - b.at);
+  const layoutRows: LayoutRow[] = shown.map((r, i) => {
+    const isLast = i === shown.length - 1;
+    const items = sortedItems(r);
+    const groups = [0, 1, 2].map((g) => items.filter((it) => groupOf(it) === g).length).filter((n) => n > 0);
+    return {
+      sleep: r.sleep ? (isLast && sleepingNow ? 'now' : 'past') : null,
+      wake: r.wake ? (isLast && awakeNow ? 'now' : 'past') : null,
+      tall: isLast && awakeNow && !!breast,
+      groups,
+    };
+  });
 
-  function pastRow(it: FlowItem): Row {
-    const toggle = () => setOpenKey((k) => (k === it.key ? null : it.key));
-    switch (it.type) {
-      case 'feed':
-        return { key: it.key, port: 'feed', dimmable: true, node: <FeedCard session={it.session} now={now} onPress={toggle} /> };
-      case 'sleep':
-        return { key: it.key, port: 'sleep', dimmable: true, node: <SleepCard event={it.event} now={now} dayStart={dayStart} onPress={toggle} /> };
-      case 'side':
-        return { key: it.key, port: 'side', dimmable: true, node: <SidePill event={it.event} now={now} onPress={toggle} /> };
-      case 'routine':
-        return {
-          key: it.key,
-          port: 'routine',
-          dimmable: true,
-          node: <RoutinePill title={it.title} at={it.at} by={it.by} icon={<RoutineIcon title={it.title} size={12} color={c.textSecondary} />} />,
-        };
-    }
-  }
-
-  // 지금 뒤 — 시각이 있는 것끼리 시간순, 그다음 시각이 없는 것
-  const future: (Row & { at: number })[] = [];
+  // 앞으로 올 것 — 오늘만. 시각이 있는 것끼리 시간순, 그다음 시각 없는 것
+  const future: Future[] = [];
   if (isToday) {
-    const guess = nextFeedGuess(events, now);
+    const guess = breast ? null : nextFeedGuess(events, now);
     if (guess) {
       future.push({
         key: 'next-feed',
         at: guess.at.getTime(),
-        port: 'futureFeed',
-        dimmable: true,
-        node: (
-          <FutureCard
-            icon={<BottleIcon size={18} color={c.accent} />}
-            tone="accent"
-            title={`다음 수유 ${hhmm(guess.at)}쯤`}
-            sub={`평소 간격 ${durationLabel(guess.gap)}`}
-            right={
-              <Pressable accessibilityRole="button" accessibilityLabel="기록 알림" hitSlop={8} onPress={() => router.push('/notifications')} style={styles.endButton}>
-                <Ionicons name="notifications-outline" size={20} color={c.text} />
-              </Pressable>
-            }
-          />
-        ),
+        icon: <BottleIcon size={24} color={c.accent} />,
+        accent: true,
+        title: '다음 수유',
+        sub: `${hhmm(guess.at)}쯤`,
+        aria: `다음 수유 ${hhmm(guess.at)}쯤, 기록 알림`,
+        onPress: () => router.push('/notifications'),
       });
     }
     const plan = todayPlan(routines, logs, now);
-    for (const x of plan.today.filter((y) => !y.s.done)) {
+    for (const x of plan.today.filter((y) => !y.s.done && !y.s.skipped)) {
       const [h, m] = (x.r.time ?? '').split(':').map(Number);
-      const at = x.r.time ? dayStart + (h * 60 + m) * 60 * 1000 : Number.MAX_SAFE_INTEGER - 4;
       future.push({
-        key: `todo-${x.r.id}`,
-        at,
-        port: 'future',
-        dimmable: true,
-        node: (
-          <FutureCard
-            icon={<RoutineIcon title={x.r.title} size={18} color={c.textSecondary} />}
-            title={x.r.title}
-            sub={[x.r.time ?? '하루 중', '루틴', x.s.skipped ? '오늘은 건너뜀' : null].filter(Boolean).join(' · ')}
-            label={`${x.r.title} 완료`}
-            onPress={() => {
-              tap();
-              routine.onCheck(x.r.id);
-            }}
-            onLongPress={() => routine.edit(x.r)}
-            right={<Ionicons name="ellipse-outline" size={26} color={c.text} />}
-          />
-        ),
+        key: `routine-${x.r.id}`,
+        at: x.r.time ? dayStart + (h * 60 + m) * 60 * 1000 : Number.MAX_SAFE_INTEGER - 4,
+        icon: <RoutineIcon title={x.r.title} size={24} color={c.text} />,
+        title: x.r.title,
+        sub: x.r.time ?? '하루 중',
+        aria: `${x.r.title}${x.r.time ? ` ${x.r.time}` : ''}, 누르면 완료`,
+        onPress: () => {
+          tap();
+          routine.onCheck(x.r.id);
+        },
+        onLongPress: () => routine.edit(x.r),
+      });
+    }
+    for (const t of todos) {
+      if (t.topicId !== generalTopic || t.doneAt || !t.dueAt) continue;
+      const due = new Date(t.dueAt).getTime();
+      if (due < dayStart || due >= dayStart + DAY) continue;
+      future.push({
+        key: `todo-${t.id}`,
+        at: t.hasTime ? due : Number.MAX_SAFE_INTEGER - 4,
+        icon: <RoutineIcon title={t.title} size={24} color={c.text} />,
+        title: t.title,
+        sub: t.hasTime ? hhmm(t.dueAt) : '오늘',
+        aria: `${t.title}${t.hasTime ? ` ${hhmm(t.dueAt)}` : ''}, 누르면 완료`,
+        onPress: () => {
+          tap('success');
+          void toggleDone(t.id);
+        },
       });
     }
     for (const r of schedule.rows.filter((row) => row.at >= dayStart && row.at < dayStart + DAY)) {
-      // 병원 예약 · 할 일에 시각을 적었으면 그 시각에, 아니면 시각 없는 루틴 뒤에
       const timed = r.appt?.hasTime ? r.appt.dueAt : r.todo?.hasTime ? r.todo.dueAt : null;
       future.push({
         key: `baby-${r.key}`,
         at: timed ? new Date(timed).getTime() : Number.MAX_SAFE_INTEGER - 3,
-        port: 'future',
-        dimmable: true,
-        node: (
-          <FutureCard
-            icon="calendar-clear-outline"
-            title={r.title}
-            sub={[r.tag, r.meta].filter(Boolean).join(' · ')}
-            onPress={() => schedule.open(r)}
-            right={
-              r.future ? undefined : (
-                <Pressable accessibilityRole="checkbox" accessibilityLabel={`${r.title} 완료`} hitSlop={8} onPress={() => schedule.check(r)}>
-                  <Ionicons name="ellipse-outline" size={26} color={c.text} />
-                </Pressable>
-              )
-            }
-          />
-        ),
+        icon: <Ionicons name="calendar-clear-outline" size={24} color={c.text} />,
+        title: r.title,
+        sub: timed ? hhmm(timed) : (r.tag ?? '오늘'),
+        aria: r.title,
+        onPress: () => schedule.open(r),
       });
     }
     future.sort((a, b) => a.at - b.at);
@@ -243,90 +246,58 @@ export function DayView({ date, now }: { date: Date; now: Date }) {
     future.push({
       key: 'news',
       at: Number.MAX_SAFE_INTEGER - 1,
-      port: 'future',
-      dimmable: true,
-      node: (
-        <FutureCard
-          icon="share-outline"
-          title={isToday ? '오늘 소식 보내기' : '이날 소식 보내기'}
-          sub="기록을 카드 한 장으로 가족에게 보내요"
-          onPress={() => {
-            tap();
-            setSharing(true);
-          }}
-        />
-      ),
+      icon: <Ionicons name="share-outline" size={24} color={c.text} />,
+      title: isToday ? '오늘 소식 보내기' : '이날 소식 보내기',
+      sub: '',
+      aria: isToday ? '오늘 소식 보내기' : '이날 소식 보내기',
+      onPress: () => {
+        tap();
+        setSharing(true);
+      },
     });
   }
   if (isToday && family.status === 'none' && !familyHidden) {
     future.push({
       key: 'family',
       at: Number.MAX_SAFE_INTEGER,
-      port: 'future',
-      dimmable: true,
-      node: (
-        <FutureCard
-          icon="people-outline"
-          title="가족과 함께 보기"
-          sub="할머니, 할아버지도 함께 봐요"
-          onPress={() => router.push('/family')}
-          right={
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="가족과 함께 보기 닫기"
-              hitSlop={10}
-              onPress={() => {
-                setFamilyHidden(true);
-                void writeSetting(FAMILY_HIDDEN_KEY, 'yes');
-              }}
-              style={styles.endButton}>
-              <Ionicons name="close" size={18} color={c.textTertiary} />
-            </Pressable>
-          }
-        />
-      ),
+      icon: <Ionicons name="people-outline" size={24} color={c.text} />,
+      title: '가족과 함께 보기',
+      sub: '',
+      aria: '가족과 함께 보기, 길게 누르면 숨김',
+      onPress: () => router.push('/family'),
+      onLongPress: () => {
+        tap();
+        setFamilyHidden(true);
+        void writeSetting(FAMILY_HIDDEN_KEY, 'yes');
+      },
     });
   }
 
-  // 줄 잇기 — 지난 쪽은 실선, 지금 뒤는 점선
-  const nowRow: Row | null = isToday
-    ? {
-        key: 'now',
-        port: 'now',
-        portTop: 22,
-        dimmable: true,
-        node: (
-          <NowNode
-            events={events}
-            onPress={log.press}
-            onStop={(e) => void log.stop(e)}
-            onStart={(kind, side) => void log.start(kind, side)}
-            onMore={() => setMore(true)}
-          />
-        ),
-      }
-    : null;
-  const rows: { row: Row; above: Segment; below: Segment }[] = [];
-  const all = [...past, ...(nowRow ? [nowRow] : []), ...future];
-  const nowIndex = nowRow ? past.length : -1;
-  all.forEach((row, i) => {
-    const after = nowIndex >= 0 && i > nowIndex;
-    const above: Segment = i === 0 ? 'none' : after ? 'dashed' : 'solid';
-    const below: Segment = i === all.length - 1 ? 'none' : nowIndex >= 0 && i >= nowIndex ? 'dashed' : 'solid';
-    rows.push({ row, above, below });
-  });
+  const geo = width > 0 ? flowLayout({ width, chip: hiddenRows.length > 0, rows: layoutRows, future: future.length }) : null;
+  const openRecords = (params: Record<string, string>) => {
+    tap();
+    router.push({ pathname: '/records', params });
+  };
+  const wakeParams = (r: DayRow, open?: string) => ({ from: String(r.wake!.from), to: r.wake!.to === null ? '' : String(r.wake!.to), ...(open ? { open } : {}) });
+
+  // 지금 노드의 글
+  const lastStart = lastFeedStart(events);
+  const feedAgo = lastStart ? `마지막 수유 ${agoLabel(lastStart, now)}` : null;
+  const nowSleepTitle = sleepingNow && lastRow?.sleep ? sleepTitle(lastRow.sleep, tick) : '';
+  const awake = awakeMinutes(events, now);
+  const awakeTitle = breast
+    ? `모유 ${breast.side === 'right' ? '오른쪽' : '왼쪽'} ${stopwatch(breast.startAt, tick)}`
+    : awake !== null
+      ? `일어난 지 ${durationLabel(Math.max(1, awake))}`
+      : (feedAgo ?? '첫 기록을 남겨 보세요');
+  const awakeSub = breast ? `${hhmm(breast.startAt)}부터` : awakeTitle === feedAgo ? null : feedAgo;
 
   const warns = isToday ? careWarnings(events, age.month, now) : [];
   const weekday = WEEKDAYS[date.getDay()];
 
   return (
     <View style={styles.wrap}>
-      <DayClock
-        marks={marks}
-        pick={pick}
-        center={isToday ? { small: '지금', big: hhmm(now) } : { small: weekday, big: `${date.getMonth() + 1}월 ${date.getDate()}일` }}
-        stats={{ sleepMin: stats.sleepMin, feeds: stats.feeds, diapers: stats.diapers }}
-      />
+      <DayTotalsCard totals={totals} date={date} />
 
       {warns.map((id) => (
         <WarnCard key={id} id={id} />
@@ -343,33 +314,88 @@ export function DayView({ date, now }: { date: Date; now: Date }) {
         </Card>
       )}
 
-      <View style={styles.flow}>
+      <View style={styles.canvas} onLayout={(e: LayoutChangeEvent) => setWidth(Math.round(e.nativeEvent.layout.width))}>
         <DotGrid />
-        {rows.length === 0 ? (
+        {!isToday && rows.length === 0 && (
           <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-            이날은 남긴 기록이 없어요
+            {`${date.getMonth() + 1}월 ${date.getDate()}일 ${weekday}에는 남긴 기록이 없어요`}
           </ThemedText>
-        ) : (
-          rows.map(({ row, above, below }) => (
-            <FlowRow key={row.key} port={row.port} above={above} below={below} portTop={row.portTop} dim={dimOthers && row.dimmable}>
-              {row.node}
-            </FlowRow>
-          ))
+        )}
+        {geo && (
+          <FlowCanvas geo={geo} width={width}>
+            {geo.chip && <ChipNode rect={geo.chip} label={`이전 기록 ${hiddenCount}개`} onPress={() => setShowAll(true)} />}
+            {geo.chip && <Port x={geo.chip.x} y={geo.chip.y + 16} />}
+            {shown.map((r, i) => {
+              const g = geo.rows[i];
+              const layout = layoutRows[i];
+              const items = sortedItems(r);
+              const nowRow = layout.sleep === 'now' || layout.wake === 'now';
+              return (
+                <View key={r.key} style={StyleSheet.absoluteFill} pointerEvents="box-none">
+                  {r.sleep && g.sleep && layout.sleep === 'past' && (
+                    <>
+                      <SleepSquare rect={g.sleep} label={sleepTitle(r.sleep, now)} onPress={() => openRecords({ sleep: r.sleep!.event.id })} />
+                      <NodeLabel cx={g.sleep.x + SQ / 2} top={g.sleep.y + SQ + 6} title={sleepTitle(r.sleep, now)} sub={spanRange(r.sleep.from, r.sleep.to, dayStart)} width={128} />
+                    </>
+                  )}
+                  {r.sleep && g.sleep && layout.sleep === 'now' && (
+                    <NowNode rect={g.sleep} sleeping title={nowSleepTitle} sub={`${hhmm(r.sleep.from)}부터`} onPress={() => openRecords({ sleep: r.sleep!.event.id })} />
+                  )}
+                  {r.wake && g.wake && layout.wake === 'past' && (
+                    <WakeNode rect={g.wake} title={spanRange(r.wake.from, r.wake.to, dayStart)} sub={durationLabel(((r.wake.to ?? now.getTime()) - r.wake.from) / 60000)} onPress={() => openRecords(wakeParams(r))} />
+                  )}
+                  {r.wake && g.wake && layout.wake === 'now' && (
+                    <NowNode rect={g.wake} sleeping={false} title={awakeTitle} sub={awakeSub} onPress={() => openRecords(wakeParams(r))}>
+                      {breast && (
+                        <View style={styles.runRow}>
+                          <Button label="종료" variant="accent" size="sm" style={styles.flex} onPress={() => onStop(breast)} />
+                          <Button label="반대쪽" variant="secondary" size="sm" style={styles.flex} onPress={() => onStart('breast', breast.side === 'right' ? 'left' : 'right')} />
+                        </View>
+                      )}
+                    </NowNode>
+                  )}
+                  {g.sleep && <Port x={g.sleep.x} y={g.sleep.y + Math.min(g.sleep.h, 64) / 2} accent={layout.sleep === 'now'} />}
+                  {g.sleep && <Port x={g.sleep.x + g.sleep.w} y={g.sleep.y + Math.min(g.sleep.h, 64) / 2} />}
+                  {g.wake && <Port x={g.wake.x} y={g.sleep ? g.sleep.y + 28 : g.wake.y + Math.min(g.wake.h, 64) / 2} accent={layout.wake === 'now'} />}
+                  {g.wake && <Port x={g.wake.x + g.wake.w} y={g.sleep ? g.sleep.y + 28 : g.wake.y + Math.min(g.wake.h, 64) / 2} accent={layout.wake === 'now'} />}
+                  {g.ports.map((p, k) => (
+                    <Port key={`p${k}`} x={p.x} y={p.y} accent={nowRow} />
+                  ))}
+                  {items.map((it, k) => {
+                    const s = g.subs[k];
+                    if (!s) return null;
+                    const title = subTitle(it, now);
+                    return (
+                      <SubNode
+                        key={it.key}
+                        cx={s.cx}
+                        cy={s.cy}
+                        kind={subKind(it)}
+                        title={title}
+                        sub={hhmm(it.at)}
+                        aria={`${hhmm(it.at)} ${title}${'by' in it && it.by ? `, ${it.by}` : it.type === 'feed' && it.session.by ? `, ${it.session.by}` : it.type === 'side' && it.event.by ? `, ${it.event.by}` : ''}`}
+                        onPress={() => openRecords(wakeParams(r, it.key))}
+                      />
+                    );
+                  })}
+                </View>
+              );
+            })}
+            {future.map((f, k) => {
+              const rect = geo.future[k];
+              return (
+                <View key={f.key} style={StyleSheet.absoluteFill} pointerEvents="box-none">
+                  <FutureSquare rect={rect} icon={f.icon} accent={f.accent} aria={f.aria} onPress={f.onPress} onLongPress={f.onLongPress} />
+                  <NodeLabel cx={rect.x + SQ / 2} top={rect.y + SQ + 6} title={f.title} sub={f.sub} width={104} dim />
+                </View>
+              );
+            })}
+          </FlowCanvas>
         )}
       </View>
 
-      {log.sheets}
       {routine.sheets}
       {schedule.sheets}
-      <MoreSheet
-        open={more}
-        onClose={() => setMore(false)}
-        onPick={(a) => {
-          setMore(false);
-          if ('kind' in a) log.open(a.kind);
-          else router.push(a.go === 'routines' ? '/routines' : '/notifications');
-        }}
-      />
       <DayNewsSheet
         news={sharing ? news : null}
         title={isToday ? '오늘 소식' : `${date.getMonth() + 1}월 ${date.getDate()}일 소식`}
@@ -380,7 +406,7 @@ export function DayView({ date, now }: { date: Date; now: Date }) {
   );
 }
 
-/** 흐름 바탕의 모눈 점 — n8n 캔버스처럼 */
+/** 흐름 바탕의 점 모눈 — n8n 캔버스처럼 */
 function DotGrid() {
   const c = useTheme();
   return (
@@ -400,8 +426,9 @@ function DotGrid() {
 
 const styles = StyleSheet.create({
   wrap: { gap: 12 },
+  flex: { flex: 1 },
   consent: { gap: 8 },
-  flow: { paddingTop: 2, paddingBottom: 8, marginHorizontal: -4, paddingHorizontal: 4 },
+  canvas: { marginHorizontal: -16, paddingBottom: 8, minHeight: 120 },
   empty: { paddingVertical: 24, textAlign: 'center' },
-  endButton: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  runRow: { flexDirection: 'row', gap: 8 },
 });

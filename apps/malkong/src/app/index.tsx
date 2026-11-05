@@ -1,10 +1,10 @@
 /**
- * 하루 흐름 — 탭 없는 첫 화면 (SPEC-MAIN-08 · 10 · 11, task today/012 · 013, decisions/037).
+ * 하루 흐름 — 탭 없는 첫 화면 (SPEC-MAIN-08 · 10 · 11 · 12 · 13, task today/012 · 013 · 014, decisions/037 · 038).
  *
- * 위쪽에 날짜 · 함께한 지 며칠 · 마이 버튼(곰돌이), 그 아래 「하루 · 일주일 · 1년」 바꾸기. 화면을 두 손가락으로 오므리면 한 단계 물러나고
+ * 위쪽에 날짜 · 함께한 지 며칠 · 돋보기(기록 찾기) · 마이 버튼(곰돌이), 그 아래 「하루 · 일주일 · 1년」 바꾸기. 화면을 두 손가락으로 오므리면 한 단계 물러나고
  * (하루 → 일주일 → 1년), 벌리면 다가간다. 일주일 보기에서 막대를 누르면 그날 하루 보기, 「오늘 보기」를 누르면 돌아온다.
  * 알림을 누르고 들어오면 `view` 로 보기를 고른다(성장 소식 · 아기 일정 알림은 1년).
- * 배너 광고는 화면 바닥에 고정한다 — 기록 버튼과 멀리(app-design 「광고 자리」).
+ * 바닥에는 기록 줄(모유 · 분유 · 기저귀 · 잠 · 추가)이 늘 보이고, 그 아래 배너 광고를 고정한다(app-design 「광고 자리」).
  */
 
 import { router, useLocalSearchParams } from 'expo-router';
@@ -14,19 +14,26 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Ionicons } from '@expo/vector-icons';
+
 import { AdBanner } from '@/components/ad-banner';
 import { TeddyIcon } from '@/components/baby-icons';
+import { AddSheet } from '@/components/flow/add-sheet';
 import { DayView } from '@/components/flow/day-view';
+import { FindSheet } from '@/components/flow/find-sheet';
+import { RecordDock } from '@/components/flow/record-dock';
 import { WeekView } from '@/components/flow/week-view';
 import { YearView } from '@/components/flow/year-view';
 import { ScreenLoading } from '@/components/screen-loading';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { useLogActions } from '@/components/log/use-log-actions';
 import { tap } from '@/components/ui';
 import { MaxContentWidth } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { birthOf } from '@/data/auto-todos';
 import { startOfDay } from '@/data/event-summary';
+import { runningOf } from '@/data/events';
 import { useEvents } from '@/data/events-context';
 import { dateLabel } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
@@ -51,7 +58,10 @@ export default function FlowScreen() {
   const { baby, age } = useBaby();
   const { loading } = useRoutines();
   const { loading: todosLoading } = useTodos();
-  const { loading: eventsLoading } = useEvents();
+  const { events, loading: eventsLoading } = useEvents();
+  const log = useLogActions();
+  const [adding, setAdding] = useState(false);
+  const [finding, setFinding] = useState(false);
   // 30초마다 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다. 재는 중 시계는 지금 노드가 따로 센다
   const now = useNow(false);
   const [view, setView] = useState<View3>(isView(params.view) ? params.view : 'day');
@@ -132,6 +142,17 @@ export default function FlowScreen() {
           </View>
           <Pressable
             accessibilityRole="button"
+            accessibilityLabel="기록 찾기"
+            hitSlop={6}
+            onPress={() => {
+              tap();
+              setFinding(true);
+            }}
+            style={({ pressed }) => [styles.my, { borderColor: c.border, backgroundColor: pressed ? c.surfaceStrong : c.card }]}>
+            <Ionicons name="search" size={20} color={c.text} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
             accessibilityLabel="마이"
             hitSlop={6}
             onPress={() => {
@@ -165,13 +186,19 @@ export default function FlowScreen() {
       <GestureDetector gesture={gesture}>
         <ScrollView ref={scroll} style={styles.flex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.body}>
-            {view === 'day' && <DayView key={(day ?? now).toDateString()} date={day ?? now} now={now} />}
+            {view === 'day' && (
+              <DayView key={(day ?? now).toDateString()} date={day ?? now} now={now} onStart={(kind, side) => void log.start(kind, side)} onStop={(e) => void log.stop(e)} />
+            )}
             {view === 'week' && <WeekView now={now} onPickDay={(d) => go('day', d)} />}
             {view === 'year' && <YearView now={now} />}
           </View>
         </ScrollView>
       </GestureDetector>
+      <RecordDock sleeping={!!runningOf(events, 'sleep')} onRecord={log.press} onAdd={() => setAdding(true)} />
       <AdBanner anchored />
+      {log.sheets}
+      <AddSheet open={adding} onClose={() => setAdding(false)} onOpenKind={(kind) => log.open(kind)} />
+      <FindSheet open={finding} onClose={() => setFinding(false)} />
     </ThemedView>
   );
 }
@@ -180,7 +207,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1, minWidth: 0 },
   top: { paddingHorizontal: 16, paddingBottom: 12, gap: 12, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
-  headRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontSize: 20, lineHeight: 26, letterSpacing: -0.5 },
   today: { height: 26, borderRadius: 13, borderWidth: 1, paddingHorizontal: 10, justifyContent: 'center' },

@@ -8,7 +8,6 @@ import { test } from 'node:test';
 
 import {
   awakeMinutes,
-  dayItems,
   dayMarks,
   feedNeighbors,
   feedSessions,
@@ -53,24 +52,6 @@ test('쪽을 바꾼 모유는 수유 한 번 — 이름은 합친 시간, 쪽마
   assert.equal(sidesLine(last, NOW), '왼쪽 10분, 오른쪽 8분');
   assert.equal(feedTitle(sessions[1], NOW), '모유 15분');
   assert.equal(feedTitle(sessions[2], NOW), '분유 140ml');
-});
-
-test('그날의 노드 — 어젯밤 시작한 잠도 넣고, 잠 앞에 깨어 있던 시간을 붙인다', () => {
-  const items = dayItems(today(), [{ routineId: 'r1', title: '비타민D', at: at(9), by: null }], NOW, NOW);
-  const types = items.map((i) => i.type);
-  assert.equal(types[0], 'sleep');
-  assert.equal(types.filter((x) => x === 'feed').length, 4);
-  assert.equal(types.filter((x) => x === 'side').length, 3);
-  assert.ok(types.includes('routine'));
-  const last = items[items.length - 1];
-  assert.equal(last.type, 'sleep');
-  if (last.type === 'sleep') assert.equal(last.awakeBefore, 100);
-});
-
-test('재는 중인 모유 · 잠은 노드에 넣지 않는다', () => {
-  const events = [...today(), ev({ kind: 'breast', side: 'left', startAt: at(14, 10), endAt: null })];
-  const items = dayItems(events, [], NOW, NOW);
-  assert.equal(items.filter((i) => i.type === 'feed').length, 4);
 });
 
 test('깨어 있는 시간 — 마지막 잠이 끝난 뒤, 자는 중이면 없다', () => {
@@ -149,4 +130,46 @@ test('「밤 9시 10분」 「새벽 2시」 「밤 12시」', () => {
   assert.deepEqual(periodClock(2), { period: '새벽', clock: '2시' });
   assert.deepEqual(periodClock(0), { period: '밤', clock: '12시' });
   assert.deepEqual(periodClock(13.5), { period: '오후', clock: '1시 30분' });
+});
+
+test('3판 줄 — 잠 하나와 그 뒤 시간 하나, 잠 사이 기록은 그 시간 아래', async () => {
+  const { dayRows, dayTotals, sleepTitle, spanRange } = await import('./day-flow.ts');
+  const rows = dayRows(today(), [{ routineId: 'r1', logId: 'l1', title: '산책', at: at(11, 20), by: '할머니' }], [], NOW, NOW);
+  // 어젯밤 잠부터 — 잠 다섯, 마지막 줄은 지금(깨어 있는 중)
+  assert.equal(rows.length, 5);
+  assert.equal(rows[0].sleep?.night, true);
+  assert.equal(spanRange(rows[0].sleep!.from, rows[0].sleep!.to, new Date(2026, 10, 2).getTime()), '어제 21:10~00:30');
+  const last = rows[4];
+  assert.equal(last.wake?.to, null);
+  assert.equal(sleepTitle(last.sleep!, NOW), '낮잠 50분');
+  // 11:10~12:50 사이 — 산책, 모유(쪽 바꿈 한 번), 소변
+  const mid = rows[3].wake!;
+  assert.deepEqual(
+    mid.items.map((i) => i.type),
+    ['routine', 'feed', 'side'],
+  );
+  const t = dayTotals(today(), NOW, NOW);
+  assert.equal(t.formulaMl, 260);
+  assert.equal(t.formulaCount, 2);
+  assert.equal(t.breastCount, 2);
+  assert.equal(t.breastMin, 33);
+  assert.equal(t.diapers, 3);
+  assert.equal(t.poo, 1);
+  // 새벽 5시 반 잠은 밤잠 — 낮잠은 09:40 · 12:50 둘
+  assert.equal(t.naps, 2);
+});
+
+test('3판 줄 — 자는 중이면 마지막 잠이 열려 있고, 잠을 안 적은 날은 넓은 노드 하나', async () => {
+  const { dayRows, sleepTitle } = await import('./day-flow.ts');
+  const sleeping = [...today(), ev({ kind: 'sleep', startAt: at(13, 50), endAt: null })];
+  const rows = dayRows(sleeping, [], [], NOW, NOW);
+  const last = rows[rows.length - 1];
+  assert.equal(last.sleep?.to, null);
+  assert.equal(last.wake, null);
+  assert.equal(sleepTitle(last.sleep!, NOW), '잠든 지 30분');
+  const noSleep = today().filter((e) => e.kind !== 'sleep');
+  const one = dayRows(noSleep, [], [], NOW, NOW);
+  assert.equal(one.length, 1);
+  assert.equal(one[0].sleep, null);
+  assert.equal(one[0].wake?.items.length, 7);
 });

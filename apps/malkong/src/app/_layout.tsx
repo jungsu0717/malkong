@@ -139,6 +139,8 @@ export default function RootLayout() {
                     <Stack.Screen name="growth-know" options={{ ...header, title: '알아 두면 좋아요' }} />
                     <Stack.Screen name="routine-recommend" options={{ ...header, title: '루틴 추천' }} />
                     <Stack.Screen name="legal/[doc]" options={header} />
+                    <Stack.Screen name="records" />
+                    <Stack.Screen name="graphs" />
                   </Stack>
                 </EventsProvider>
                 </MemosProvider>

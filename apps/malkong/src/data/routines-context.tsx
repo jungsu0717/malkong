@@ -38,6 +38,10 @@ type RoutinesValue = {
   completeAll: (id: string) => Promise<void>;
   /** 「오늘은 건너뛰기」 ↔ 취소 — 그날 알림과 진행에서 빠진다(task common/022) */
   skipToday: (id: string) => Promise<void>;
+  /** 완료한 한 줄의 때 바꾸기 — 하루 흐름의 기록 화면에서(task today/014) */
+  moveLog: (logId: string, at: Date) => Promise<void>;
+  /** 완료한 한 줄 지우기 — 「완료 취소」 */
+  removeLog: (logId: string) => Promise<void>;
   /** 재고 확인 — 부족한 것을 장보기에 넣고 루틴을 끝낸다. 새로 넣은 수를 돌려준다(SPEC-MAIN-06) */
   completeStock: (id: string, short: string[]) => Promise<number>;
 };
@@ -214,6 +218,18 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
     [addLog],
   );
 
+  // 때를 바꾸면 그 줄을 지우고 같은 내용으로 새 줄을 넣는다 — 가족 폰에서도 지운 줄과 새 줄로 맞춰진다
+  const moveLog = useCallback(
+    async (logId: string, at: Date) => {
+      const before = current.current.logs.find((l) => l.id === logId);
+      if (!before) return;
+      await dropLog(logId);
+      await addLog({ ...makeRoutineLog(before.routineId, at, before.by, before.step, before.skip) });
+    },
+    [addLog, dropLog],
+  );
+  const removeLog = useCallback(async (logId: string) => dropLog(logId), [dropLog]);
+
   // 재고 확인은 확인만 남긴다 — 장보기를 앱에서 빼서 부족한 것을 살 것에 넣지 않는다(SPEC-MAIN-06, decisions/037)
   const completeStock = useCallback(
     async (id: string, _short: string[]) => {
@@ -252,9 +268,11 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
       toggleStep,
       completeAll,
       skipToday,
+      moveLog,
+      removeLog,
       completeStock,
     }),
-    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, restoreRoutine, check, toggleStep, completeAll, skipToday, completeStock],
+    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, restoreRoutine, check, toggleStep, completeAll, skipToday, moveLog, removeLog, completeStock],
   );
 
   return <RoutinesContext.Provider value={value}>{children}</RoutinesContext.Provider>;
