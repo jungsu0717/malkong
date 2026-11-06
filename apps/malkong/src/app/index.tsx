@@ -1,10 +1,10 @@
 /**
- * 하루 흐름 — 탭 없는 첫 화면 (SPEC-MAIN-08 · 10 · 11 · 12 · 13, task today/012 · 013 · 014, decisions/037 · 038).
+ * 하루 흐름 — 탭 없는 첫 화면 (SPEC-MAIN-08 · 10 · 11 · 12 · 13, task today/012 · 013 · 014 · 017, decisions/037 · 038).
  *
  * 위쪽에 날짜 · 함께한 지 며칠 · 돋보기(기록 찾기) · 마이 버튼(곰돌이), 그 아래 「하루 · 일주일 · 1년」 바꾸기. 화면을 두 손가락으로 오므리면 한 단계 물러나고
  * (하루 → 일주일 → 1년), 벌리면 다가간다. 일주일 보기에서 막대를 누르면 그날 하루 보기, 「오늘 보기」를 누르면 돌아온다.
  * 알림을 누르고 들어오면 `view` 로 보기를 고른다(성장 소식 · 아기 일정 알림은 1년).
- * 바닥에는 기록 줄(모유 · 분유 · 기저귀 · 잠 · 추가)이 늘 보이고, 그 아래 배너 광고를 고정한다(app-design 「광고 자리」).
+ * 그 아래 기록 칸(모유 · 분유 · 기저귀 · 잠 단추와 합계, 「추가」 줄)이 위쪽에 고정되고 아래 흐름만 스크롤된다. 바닥에는 배너 광고만 고정한다(app-design 「광고 자리」).
  */
 
 import { router, useLocalSearchParams } from 'expo-router';
@@ -21,7 +21,7 @@ import { TeddyIcon } from '@/components/baby-icons';
 import { AddSheet } from '@/components/flow/add-sheet';
 import { DayView } from '@/components/flow/day-view';
 import { FindSheet } from '@/components/flow/find-sheet';
-import { RecordDock } from '@/components/flow/record-dock';
+import { RecordPanel } from '@/components/flow/record-panel';
 import { WeekView } from '@/components/flow/week-view';
 import { YearView } from '@/components/flow/year-view';
 import { ScreenLoading } from '@/components/screen-loading';
@@ -32,6 +32,7 @@ import { tap } from '@/components/ui';
 import { MaxContentWidth } from '@/constants/theme';
 import { useBaby } from '@/data/baby-context';
 import { birthOf } from '@/data/auto-todos';
+import { dayTotals } from '@/data/day-flow';
 import { startOfDay } from '@/data/event-summary';
 import { runningOf } from '@/data/events';
 import { useEvents } from '@/data/events-context';
@@ -113,74 +114,86 @@ export default function FlowScreen() {
         ? '첫 1년'
         : dateLabel(day ?? now);
   const sub = view === 'year' ? `${birth.getMonth() + 1}월 ${birth.getDate()}일에 태어났어요` : `함께한 지 ${age.days + 1}일`;
+  // 기록 칸의 합계 — 하루 보기에서 지난날을 보면 그날, 아니면 오늘
+  const totalsDay = view === 'day' && day ? day : now;
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: c.page }]}>
       <StatusBar style="auto" />
-      <View style={[styles.top, { paddingTop: insets.top + 12 }]}>
-        <View style={styles.headRow}>
-          <View style={styles.flex}>
-            <View style={styles.titleRow}>
-              <ThemedText type="title" style={styles.title}>
-                {title}
+      <View style={[styles.topBand, { borderBottomColor: c.border }]}>
+        <View style={[styles.top, { paddingTop: insets.top + 12 }]}>
+          <View style={styles.headRow}>
+            <View style={styles.flex}>
+              <View style={styles.titleRow}>
+                <ThemedText type="title" style={styles.title}>
+                  {title}
+                </ThemedText>
+                {day && (
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="오늘로 돌아가기"
+                    hitSlop={8}
+                    onPress={() => go('day')}
+                    style={[styles.today, { borderColor: c.border, backgroundColor: c.card }]}>
+                    <ThemedText type="caption" style={{ fontWeight: 700 }}>
+                      오늘 보기
+                    </ThemedText>
+                  </Pressable>
+                )}
+              </View>
+              <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 400 }}>
+                {sub}
               </ThemedText>
-              {day && (
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="기록 찾기"
+              hitSlop={6}
+              onPress={() => {
+                tap();
+                setFinding(true);
+              }}
+              style={({ pressed }) => [styles.my, { borderColor: c.border, backgroundColor: pressed ? c.surfaceStrong : c.card }]}>
+              <Ionicons name="search" size={20} color={c.text} />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="마이"
+              hitSlop={6}
+              onPress={() => {
+                tap();
+                router.push('/my');
+              }}
+              style={({ pressed }) => [styles.my, { borderColor: c.border, backgroundColor: pressed ? c.surfaceStrong : c.card }]}>
+              <TeddyIcon size={22} color={c.text} />
+            </Pressable>
+          </View>
+
+          <View accessibilityRole="tablist" style={[styles.segment, { backgroundColor: c.surfaceStrong }]}>
+            {ORDER.map((v) => {
+              const on = v === view;
+              return (
                 <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="오늘로 돌아가기"
-                  hitSlop={8}
-                  onPress={() => go('day')}
-                  style={[styles.today, { borderColor: c.border, backgroundColor: c.card }]}>
-                  <ThemedText type="caption" style={{ fontWeight: 700 }}>
-                    오늘 보기
+                  key={v}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: on }}
+                  onPress={() => go(v)}
+                  style={[styles.seg, on && { backgroundColor: c.card }]}>
+                  <ThemedText type="label" style={{ fontWeight: on ? 700 : 500, color: on ? c.text : c.textSecondary, fontSize: 14 }}>
+                    {LABELS[v]}
                   </ThemedText>
                 </Pressable>
-              )}
-            </View>
-            <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 400 }}>
-              {sub}
-            </ThemedText>
+              );
+            })}
           </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="기록 찾기"
-            hitSlop={6}
-            onPress={() => {
-              tap();
-              setFinding(true);
-            }}
-            style={({ pressed }) => [styles.my, { borderColor: c.border, backgroundColor: pressed ? c.surfaceStrong : c.card }]}>
-            <Ionicons name="search" size={20} color={c.text} />
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="마이"
-            hitSlop={6}
-            onPress={() => {
-              tap();
-              router.push('/my');
-            }}
-            style={({ pressed }) => [styles.my, { borderColor: c.border, backgroundColor: pressed ? c.surfaceStrong : c.card }]}>
-            <TeddyIcon size={22} color={c.text} />
-          </Pressable>
-        </View>
 
-        <View accessibilityRole="tablist" style={[styles.segment, { backgroundColor: c.surfaceStrong }]}>
-          {ORDER.map((v) => {
-            const on = v === view;
-            return (
-              <Pressable
-                key={v}
-                accessibilityRole="tab"
-                accessibilityState={{ selected: on }}
-                onPress={() => go(v)}
-                style={[styles.seg, on && { backgroundColor: c.card }]}>
-                <ThemedText type="label" style={{ fontWeight: on ? 700 : 500, color: on ? c.text : c.textSecondary, fontSize: 14 }}>
-                  {LABELS[v]}
-                </ThemedText>
-              </Pressable>
-            );
-          })}
+          <RecordPanel
+            totals={dayTotals(events, totalsDay, now)}
+            date={totalsDay}
+            sleeping={!!runningOf(events, 'sleep')}
+            onRecord={log.press}
+            onAdd={() => setAdding(true)}
+          />
         </View>
       </View>
 
@@ -195,7 +208,6 @@ export default function FlowScreen() {
           </View>
         </ScrollView>
       </GestureDetector>
-      <RecordDock sleeping={!!runningOf(events, 'sleep')} onRecord={log.press} onAdd={() => setAdding(true)} />
       <AdBanner anchored />
       {log.sheets}
       <AddSheet open={adding} onClose={() => setAdding(false)} onOpenKind={(kind) => log.open(kind)} />
@@ -207,6 +219,7 @@ export default function FlowScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1, minWidth: 0 },
+  topBand: { borderBottomWidth: 1 },
   top: { paddingHorizontal: 16, paddingBottom: 12, gap: 12, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

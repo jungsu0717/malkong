@@ -1,8 +1,8 @@
 /**
- * 하루 흐름 그림 (SPEC-MAIN-08, task today/014) — 자리와 선은 `flow-layout.ts` 가 계산하고, 여기서는 노드와 선을 그린다.
+ * 하루 흐름 그림 (SPEC-MAIN-08, task today/017) — 자리와 선은 `flow-layout.ts` 가 계산하고, 여기서는 틀 · 노드 · 선을 그린다.
  *
- * 잠은 먹색 네모, 잠과 잠 사이는 넓은 노드, 그 사이 기록은 아래로 점선이 갈라진 동그라미. 이름과 시각은 노드 아래에 둔다(n8n 처럼).
- * 지난 선 위로는 작은 점이 시간 방향으로 흐르고, 지금으로 들어오는 선은 코랄이다. 움직임 줄이기를 켜거나 화면이 안 보이면 멈춘다.
+ * 묶음은 둥근 틀, 수유는 코랄 네모, 기저귀는 동그라미, 완료한 루틴과 할 일은 흰 네모에 체크, 잠은 먹색 네모. 이름과 시각은 노드 아래에 둔다(n8n 처럼).
+ * 지난 선 위로는 작은 점이 시간 방향으로 흐르고, 지금 묶음 안의 선은 코랄이다. 움직임 줄이기를 켜거나 화면이 안 보이면 멈춘다.
  * 새로 남긴 기록은 그 자리에 튀어나온다 — 처음 그릴 때는 튀어나오지 않는다(LayoutAnimationConfig skipEntering).
  */
 
@@ -28,13 +28,13 @@ import { BottleIcon } from '@/components/baby-icons';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import type { IconName } from '@/components/ui';
-import { SQ, SUB, type FlowGeo, type Rect } from '@/data/flow-layout';
+import { DOT, HEAD, ITEM, SLEEP_NOW_H, type FlowGeo, type Rect } from '@/data/flow-layout';
 import { useTheme } from '@/hooks/use-theme';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 const DOT_GAP = 13;
 
-/** 선 — 갈라지는 점선, 앞으로의 점선, 지난 선과 흐르는 점, 지금으로 들어오는 코랄 선 */
+/** 선 — 지난 선과 흐르는 점, 지금 묶음 안의 코랄 선, 앞으로의 점선 */
 export function FlowEdges({ geo, width }: { geo: FlowGeo; width: number }) {
   const c = useTheme();
   const reduce = useReducedMotion();
@@ -49,10 +49,9 @@ export function FlowEdges({ geo, width }: { geo: FlowGeo; width: number }) {
   }, [moving, offset]);
   const pastDots = useAnimatedProps(() => ({ strokeDashoffset: offset.get() }));
   const nowDots = useAnimatedProps(() => ({ strokeDashoffset: offset.get() * 1.6 }));
-  const { past, now, fans, future } = geo.edges;
+  const { past, now, future } = geo.edges;
   return (
     <Svg width={width} height={geo.height} style={StyleSheet.absoluteFill} pointerEvents="none">
-      {fans ? <Path d={fans} fill="none" stroke={c.flowLine} strokeWidth={1.6} strokeDasharray="5 4" /> : null}
       {future ? <Path d={future} fill="none" stroke={c.flowLine} strokeWidth={2} strokeDasharray="4 5" /> : null}
       {past ? <Path d={past} fill="none" stroke={c.flowLine} strokeWidth={2} strokeLinecap="round" /> : null}
       {past ? (
@@ -67,11 +66,27 @@ export function FlowEdges({ geo, width }: { geo: FlowGeo; width: number }) {
 }
 
 /** 노드 아래 두 줄 — 이름과 시각 */
-export function NodeLabel({ cx, top, title, sub, width = 116, dim = false }: { cx: number; top: number; title: string; sub?: string | null; width?: number; dim?: boolean }) {
+export function NodeLabel({
+  cx,
+  top,
+  title,
+  sub,
+  width = 70,
+  dim = false,
+  accent = false,
+}: {
+  cx: number;
+  top: number;
+  title: string;
+  sub?: string | null;
+  width?: number;
+  dim?: boolean;
+  accent?: boolean;
+}) {
   const c = useTheme();
   return (
     <View pointerEvents="none" style={[styles.label, { left: cx - width / 2, top, width, opacity: dim ? 0.55 : 1 }]}>
-      <ThemedText type="caption" numberOfLines={1} style={styles.labelTitle}>
+      <ThemedText type="caption" numberOfLines={1} style={[styles.labelTitle, accent && { color: c.accentText }]}>
         {title}
       </ThemedText>
       {sub ? (
@@ -83,55 +98,123 @@ export function NodeLabel({ cx, top, title, sub, width = 116, dim = false }: { c
   );
 }
 
-/** 노드 옆의 작은 포트 동그라미 */
-export function Port({ x, y, accent = false }: { x: number; y: number; accent?: boolean }) {
-  const c = useTheme();
-  return <View pointerEvents="none" style={[styles.port, { left: x - 4.5, top: y - 4.5, borderColor: accent ? c.accent : c.flowLine, backgroundColor: c.card }]} />;
-}
-
-/** 잠 네모 — 먹색, 달 아이콘 */
-export function SleepSquare({ rect, label, onPress }: { rect: Rect; label: string; onPress: () => void }) {
-  const c = useTheme();
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${label} 자세히`}
-      onPress={onPress}
-      style={({ pressed }) => [styles.square, styles.shadow, { left: rect.x, top: rect.y, backgroundColor: c.ink, opacity: pressed ? 0.85 : 1 }]}>
-      <Ionicons name="moon" size={24} color={c.onInk} />
-    </Pressable>
-  );
-}
-
-/** 잠과 잠 사이 — 넓은 노드. 해 아이콘, 시각, 그 아래 걸린 시간 */
-export function WakeNode({ rect, title, sub, onPress }: { rect: Rect; title: string; sub: string; onPress: () => void }) {
+/** 묶음 틀 — 위에 「07:10~08:30」과 오른쪽 「1시간 20분」. 지금 묶음은 코랄 테두리 */
+export function BlockFrame({
+  rect,
+  title,
+  right,
+  now = false,
+  aria,
+  onPress,
+  children,
+}: {
+  rect: Rect;
+  title: string;
+  right?: string | null;
+  now?: boolean;
+  aria: string;
+  onPress?: () => void;
+  children?: ReactNode;
+}) {
   const c = useTheme();
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={`${title}, ${sub} 자세히`}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={aria}
+      disabled={!onPress}
       onPress={onPress}
       style={({ pressed }) => [
-        styles.wide,
-        styles.shadow,
-        { left: rect.x, top: rect.y, width: rect.w, height: rect.h, backgroundColor: pressed ? c.surface : c.card, borderColor: c.border },
+        styles.frame,
+        now && styles.nowShadow,
+        {
+          left: rect.x,
+          top: rect.y,
+          width: rect.w,
+          height: rect.h,
+          backgroundColor: pressed ? c.surface : c.card,
+          borderColor: now ? c.accent : c.border,
+          borderWidth: now ? 2 : 1,
+          shadowColor: c.accent,
+        },
       ]}>
-      <View style={[styles.tile, { backgroundColor: c.surface }]}>
-        <Ionicons name="sunny-outline" size={19} color={c.text} />
-      </View>
-      <View style={styles.flex}>
-        <ThemedText type="heading" numberOfLines={1} style={styles.wideTitle}>
+      <View style={[styles.frameHead, { height: HEAD - (now ? 1 : 0) }]}>
+        <ThemedText type="caption" numberOfLines={1} style={[styles.frameTitle, now && styles.frameTitleNow]}>
           {title}
         </ThemedText>
-        <ThemedText type="caption" numberOfLines={1} style={{ color: c.textSecondary }}>
-          {sub}
-        </ThemedText>
+        {right ? (
+          <ThemedText type="caption" numberOfLines={1} style={{ color: c.textSecondary, fontSize: 12 }}>
+            {right}
+          </ThemedText>
+        ) : null}
       </View>
+      {children}
     </Pressable>
   );
 }
 
-/** 지금 노드의 코랄 점 — 천천히 숨 쉬듯 퍼진다 */
+export type ItemKind = 'breast' | 'formula' | 'pee' | 'poo' | 'temp' | 'weight' | 'height' | 'routine' | 'todo';
+
+/** 묶음 안 기록 하나 — 수유는 코랄 네모, 기저귀는 동그라미, 루틴과 할 일은 흰 네모에 체크 */
+export function ItemNode({
+  cx,
+  cy,
+  kind,
+  title,
+  sub,
+  aria,
+  onPress,
+}: {
+  cx: number;
+  cy: number;
+  kind: ItemKind;
+  title: string;
+  sub: string;
+  aria: string;
+  onPress: () => void;
+}) {
+  const c = useTheme();
+  const feed = kind === 'breast' || kind === 'formula';
+  const diaper = kind === 'pee' || kind === 'poo';
+  const done = kind === 'routine' || kind === 'todo';
+  const ion: Partial<Record<ItemKind, IconName>> = { breast: 'heart-outline', pee: 'water-outline', poo: 'water', temp: 'thermometer-outline', weight: 'scale-outline', height: 'resize-outline' };
+  const size = diaper ? 42 : ITEM;
+  const icon =
+    kind === 'formula' ? (
+      <BottleIcon size={21} color="#FFFFFF" />
+    ) : done ? (
+      <RoutineIcon title={title} size={21} color={c.text} />
+    ) : (
+      <Ionicons name={ion[kind] ?? 'ellipse-outline'} size={kind === 'poo' ? 18 : 21} color={feed ? '#FFFFFF' : kind === 'poo' ? c.textSecondary : c.text} />
+    );
+  return (
+    <>
+      <Animated.View entering={ZoomIn.springify().damping(13)} style={[styles.itemWrap, { left: cx - size / 2, top: cy - size / 2, width: size, height: size }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={aria}
+          hitSlop={6}
+          onPress={onPress}
+          style={({ pressed }) => [
+            styles.item,
+            styles.shadow,
+            { width: size, height: size, borderRadius: diaper ? size / 2 : 12 },
+            feed ? { backgroundColor: c.accent } : { backgroundColor: c.card, borderWidth: 1.5, borderColor: c.flowLine },
+            pressed && { opacity: 0.8 },
+          ]}>
+          {icon}
+        </Pressable>
+        {done && (
+          <View pointerEvents="none" style={[styles.badge, { backgroundColor: c.ink, borderColor: c.card }]}>
+            <Ionicons name="checkmark" size={10} color={c.onInk} />
+          </View>
+        )}
+      </Animated.View>
+      <NodeLabel cx={cx} top={cy + ITEM / 2 + 8} title={title} sub={sub} />
+    </>
+  );
+}
+
+/** 숨 쉬듯 퍼지는 코랄 점 */
 export function PulseDot({ color }: { color: string }) {
   const reduce = useReducedMotion();
   const t = useSharedValue(0);
@@ -149,108 +232,93 @@ export function PulseDot({ color }: { color: string }) {
   );
 }
 
-/** 지금 노드 — 코랄 테두리. 자는 중이면 먹색 바탕 */
-export function NowNode({ rect, sleeping, title, sub, children, onPress }: { rect: Rect; sleeping: boolean; title: string; sub: string | null; children?: ReactNode; onPress?: () => void }) {
+/** 지금 묶음 끝의 「지금」 점 */
+export function NowDot({ cx, cy, time }: { cx: number; cy: number; time: string }) {
   const c = useTheme();
-  const bg = sleeping ? c.ink : c.card;
-  const fg = sleeping ? c.onInk : c.text;
-  return (
-    <Pressable
-      accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityLabel={[title, sub].filter(Boolean).join(', ')}
-      disabled={!onPress}
-      onPress={onPress}
-      style={[styles.now, styles.shadow, { left: rect.x, top: rect.y, width: rect.w, minHeight: rect.h, backgroundColor: bg, borderColor: c.accent }]}>
-      <View style={styles.nowHead}>
-        <View style={[styles.tile, { backgroundColor: sleeping ? 'rgba(255,255,255,0.12)' : c.accentSoft }]}>
-          {sleeping ? <Ionicons name="moon" size={18} color={c.onInk} /> : <PulseDot color={c.accent} />}
-        </View>
-        <View style={styles.flex}>
-          <ThemedText type="heading" numberOfLines={1} style={[styles.nowTitle, { color: fg }]}>
-            {title}
-          </ThemedText>
-          {sub ? (
-            <ThemedText type="caption" numberOfLines={1} style={{ color: sleeping ? 'rgba(255,255,255,0.72)' : c.textSecondary }}>
-              {sub}
-            </ThemedText>
-          ) : null}
-        </View>
-      </View>
-      {children}
-    </Pressable>
-  );
-}
-
-export type SubKind = 'breast' | 'formula' | 'pee' | 'poo' | 'temp' | 'weight' | 'height' | 'routine' | 'todo';
-
-/** 갈라진 기록 — 동그라미 아이콘. 완료한 루틴과 할 일은 체크 표시 */
-export function SubNode({
-  cx,
-  cy,
-  kind,
-  title,
-  sub,
-  aria,
-  onPress,
-}: {
-  cx: number;
-  cy: number;
-  kind: SubKind;
-  title: string;
-  sub: string;
-  aria: string;
-  onPress: () => void;
-}) {
-  const c = useTheme();
-  const feed = kind === 'breast' || kind === 'formula';
-  const done = kind === 'routine' || kind === 'todo';
-  const ion: Partial<Record<SubKind, IconName>> = { breast: 'heart', pee: 'water-outline', poo: 'water', temp: 'thermometer-outline', weight: 'scale-outline', height: 'resize-outline' };
-  const icon =
-    kind === 'formula' ? (
-      <BottleIcon size={19} color="#FFFFFF" />
-    ) : done ? (
-      <RoutineIcon title={title} size={19} color={c.text} />
-    ) : (
-      <Ionicons name={ion[kind] ?? 'ellipse-outline'} size={kind === 'breast' ? 18 : 19} color={feed ? '#FFFFFF' : kind === 'poo' ? c.textSecondary : c.text} />
-    );
   return (
     <>
-      <Animated.View entering={ZoomIn.springify().damping(13)} style={[styles.subWrap, { left: cx - SUB / 2, top: cy - SUB / 2 }]}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={aria}
-          hitSlop={6}
-          onPress={onPress}
-          style={({ pressed }) => [
-            styles.sub,
-            styles.shadow,
-            feed ? { backgroundColor: c.accent } : done ? { backgroundColor: c.surfaceStrong } : { backgroundColor: c.card, borderWidth: 1.5, borderColor: c.flowLine },
-            pressed && { opacity: 0.8 },
-          ]}>
-          {icon}
-        </Pressable>
-        {done && (
-          <View pointerEvents="none" style={[styles.badge, { backgroundColor: c.ink, borderColor: c.card }]}>
-            <Ionicons name="checkmark" size={10} color={c.onInk} />
-          </View>
-        )}
-      </Animated.View>
-      <NodeLabel cx={cx} top={cy + 24} title={title} sub={sub} width={72} />
+      <View accessible accessibilityLabel={`지금 ${time}`} style={[styles.nowDot, { left: cx - DOT / 2, top: cy - DOT / 2, backgroundColor: c.accentSoft }]}>
+        <PulseDot color={c.accent} />
+      </View>
+      <NodeLabel cx={cx} top={cy + ITEM / 2 + 8} title="지금" sub={time} accent />
     </>
   );
 }
 
+/** 묶음 사이 — 기록이 없던 시간 */
+export function GapPill({ cx, cy, label }: { cx: number; cy: number; label: string }) {
+  const c = useTheme();
+  return (
+    <View pointerEvents="none" style={[styles.pill, { left: cx - 48, top: cy - 11, backgroundColor: c.page, borderColor: c.border }]}>
+      <ThemedText type="caption" numberOfLines={1} style={{ color: c.textSecondary, fontSize: 11.5, lineHeight: 15, fontVariant: ['tabular-nums'] }}>
+        {label}
+      </ThemedText>
+    </View>
+  );
+}
+
+/** 잠 — 먹색 네모, 아래에 「낮잠 1시간 10분」 「12:00~13:10」. 묶음 사이 선 위에서는 조금 작게 */
+export function SleepNode({ cx, cy, small = false, title, sub, onPress }: { cx: number; cy: number; small?: boolean; title: string; sub: string; onPress: () => void }) {
+  const c = useTheme();
+  const size = small ? 40 : ITEM;
+  return (
+    <>
+      <Animated.View entering={ZoomIn.springify().damping(13)} style={[styles.itemWrap, { left: cx - size / 2, top: cy - size / 2, width: size, height: size }]}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${sub} ${title} 자세히`}
+          hitSlop={6}
+          onPress={onPress}
+          style={({ pressed }) => [styles.item, styles.shadow, { width: size, height: size, borderRadius: 12, backgroundColor: c.ink, opacity: pressed ? 0.85 : 1 }]}>
+          <Ionicons name="moon" size={small ? 19 : 21} color={c.onInk} />
+        </Pressable>
+      </Animated.View>
+      <NodeLabel cx={cx} top={cy + size / 2 + 4} title={title} sub={sub} width={120} />
+    </>
+  );
+}
+
+/** 지금 자는 중 — 먹색 넓은 노드, 코랄 테두리 */
+export function SleepNowNode({ rect, title, sub, onPress }: { rect: Rect; title: string; sub: string; onPress: () => void }) {
+  const c = useTheme();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title}, ${sub}`}
+      onPress={onPress}
+      style={[styles.sleepNow, styles.shadow, { left: rect.x, top: rect.y, width: rect.w, height: SLEEP_NOW_H, backgroundColor: c.ink, borderColor: c.accent }]}>
+      <View style={[styles.tile, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
+        <Ionicons name="moon" size={18} color={c.onInk} />
+      </View>
+      <View style={styles.flex}>
+        <ThemedText type="heading" numberOfLines={1} style={[styles.sleepNowTitle, { color: c.onInk }]}>
+          {title}
+        </ThemedText>
+        <ThemedText type="caption" numberOfLines={1} style={{ color: c.onInk, opacity: 0.72 }}>
+          {sub}
+        </ThemedText>
+      </View>
+    </Pressable>
+  );
+}
+
 /** 앞으로 올 것 — 흐린 점선 네모 */
-export function FutureSquare({
-  rect,
+export function GhostNode({
+  cx,
+  cy,
   icon,
+  title,
+  sub,
   accent = false,
   aria,
   onPress,
   onLongPress,
 }: {
-  rect: Rect;
+  cx: number;
+  cy: number;
   icon: ReactNode;
+  title: string;
+  sub: string;
   accent?: boolean;
   aria: string;
   onPress?: () => void;
@@ -258,18 +326,28 @@ export function FutureSquare({
 }) {
   const c = useTheme();
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={aria}
-      onPress={onPress}
-      onLongPress={onLongPress}
-      delayLongPress={450}
-      style={({ pressed }) => [
-        styles.square,
-        { left: rect.x, top: rect.y, borderWidth: 1.5, borderStyle: 'dashed', borderColor: accent ? c.accent : c.flowLine, backgroundColor: pressed ? c.surface : c.card, opacity: 0.6 },
-      ]}>
-      {icon}
-    </Pressable>
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={aria}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        delayLongPress={450}
+        style={({ pressed }) => [
+          styles.item,
+          styles.ghost,
+          {
+            left: cx - ITEM / 2,
+            top: cy - ITEM / 2,
+            borderColor: accent ? c.accent : c.flowLine,
+            backgroundColor: pressed ? c.surface : c.card,
+            opacity: accent ? 0.85 : 0.6,
+          },
+        ]}>
+        {icon}
+      </Pressable>
+      <NodeLabel cx={cx} top={cy + ITEM / 2 + 8} title={title} sub={sub} width={92} dim={!accent} accent={accent} />
+    </>
   );
 }
 
@@ -279,9 +357,9 @@ export function ChipNode({ rect, label, onPress }: { rect: Rect; label: string; 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${label} 펼치기`}
+      accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [styles.chip, styles.shadow, { left: rect.x, top: rect.y, width: rect.w, height: rect.h, borderColor: c.border, backgroundColor: pressed ? c.surface : c.card }]}>
+      style={({ pressed }) => [styles.chip, styles.shadow, { left: rect.x, top: rect.y, width: rect.w, height: rect.h, borderColor: c.flowLine, backgroundColor: pressed ? c.surface : c.card }]}>
       <ThemedText type="caption" style={{ fontWeight: 700 }}>
         {label}
       </ThemedText>
@@ -290,19 +368,18 @@ export function ChipNode({ rect, label, onPress }: { rect: Rect; label: string; 
   );
 }
 
-/** 흐름 전체의 틀 — 선 위에 노드를 얹는다. 처음 그릴 때는 튀어나오지 않는다 */
-export function FlowCanvas({ geo, width, children }: { geo: FlowGeo; width: number; children: ReactNode }) {
+/** 흐름 전체의 틀 — 묶음 틀 위에 선, 그 위에 노드를 얹는다. 처음 그릴 때는 튀어나오지 않는다 */
+export function FlowCanvas({ geo, width, frames, children }: { geo: FlowGeo; width: number; frames: ReactNode; children: ReactNode }) {
   return (
     <LayoutAnimationConfig skipEntering>
       <View style={{ width, height: geo.height }}>
+        {frames}
         <FlowEdges geo={geo} width={width} />
         {children}
       </View>
     </LayoutAnimationConfig>
   );
 }
-
-export const NODE = SQ;
 
 const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
@@ -313,22 +390,25 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 3 },
     elevation: 2,
   },
+  nowShadow: { shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 3 },
   label: { position: 'absolute', alignItems: 'center' },
   labelTitle: { fontWeight: 700, fontSize: 12.5, lineHeight: 17 },
   labelSub: { fontSize: 11, lineHeight: 15, fontVariant: ['tabular-nums'] },
-  port: { position: 'absolute', width: 9, height: 9, borderRadius: 5, borderWidth: 1.8 },
-  square: { position: 'absolute', width: SQ, height: SQ, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  wide: { position: 'absolute', borderRadius: 14, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12 },
-  tile: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  wideTitle: { fontWeight: 700, fontSize: 14, lineHeight: 19 },
-  now: { position: 'absolute', borderRadius: 16, borderWidth: 2, paddingHorizontal: 12, paddingVertical: 12, gap: 10 },
-  nowHead: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  nowTitle: { fontWeight: 700, fontSize: 16, lineHeight: 21 },
+  frame: { position: 'absolute', borderRadius: 18 },
+  frameHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 14 },
+  frameTitle: { fontWeight: 700, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'], flexShrink: 1 },
+  frameTitleNow: { fontSize: 15, lineHeight: 20 },
+  itemWrap: { position: 'absolute' },
+  item: { alignItems: 'center', justifyContent: 'center' },
+  ghost: { position: 'absolute', width: ITEM, height: ITEM, borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed' },
+  badge: { position: 'absolute', right: -4, bottom: -4, width: 19, height: 19, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  nowDot: { position: 'absolute', width: DOT, height: DOT, borderRadius: DOT / 2, alignItems: 'center', justifyContent: 'center' },
   pulse: { width: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
   pulseRing: { position: 'absolute', width: 12, height: 12, borderRadius: 6 },
   pulseDot: { width: 12, height: 12, borderRadius: 6 },
-  subWrap: { position: 'absolute', width: SUB, height: SUB },
-  sub: { width: SUB, height: SUB, borderRadius: SUB / 2, alignItems: 'center', justifyContent: 'center' },
-  badge: { position: 'absolute', right: -5, bottom: -5, width: 18, height: 18, borderRadius: 9, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  pill: { position: 'absolute', width: 96, height: 22, borderRadius: 11, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  sleepNow: { position: 'absolute', borderRadius: 16, borderWidth: 2, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sleepNowTitle: { fontWeight: 700, fontSize: 16, lineHeight: 21 },
+  tile: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   chip: { position: 'absolute', borderRadius: 16, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
 });

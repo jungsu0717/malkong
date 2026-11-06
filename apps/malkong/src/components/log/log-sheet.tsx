@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -11,14 +11,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Ionicons } from '@expo/vector-icons';
-
 import { KIND_UI, STOOL_SWATCH } from '@/components/log/kinds';
+import { TimeRuler, ValueRuler } from '@/components/log/ruler';
 import { ThemedText } from '@/components/themed-text';
-import { DateTimeWheel, INLINE_WHEEL, pickDateTime } from '@/components/time-picker';
 import { Button, Chip, Segmented, tap } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
-import { whenLabel } from '@/data/add-parse';
+import { hhmm } from '@/data/day-flow';
 import { STOOL_COLOR_LABEL, durationLabel, minutesOf } from '@/data/event-summary';
 import {
   AMOUNT_RANGE,
@@ -38,13 +36,17 @@ export type SheetTarget = { kind: EventKind; editing: CareEvent | null };
 
 const MIN = 60 * 1000;
 const STOOL_COLORS: StoolColor[] = ['yellow', 'brown', 'green', 'black', 'red', 'white'];
+/** 눈금 숫자 — 함수가 매번 새로 생기지 않게 밖에 둔다 */
+const mlText = (v: number) => String(v);
+const minText = (v: number) => String(v);
+const hourText = (v: number) => `${v / 60}시간`;
 
 /**
  * 기록 하나를 적거나 고치는 시트 (SPEC-LOG-01 · 02 · 03).
  *
- * 때는 「지금」이 기본이고, 칩으로 크게 옮기고 시각 칸을 누르면 날짜와 시간 바퀴로 고른다(task log/005). 기저귀 소변은 고르면 바로 저장,
- * 대변 · 둘 다는 변 색을 고르면 저장(색 없이도). 모유는 「시작」으로 재기 시작하거나 먹인 시간만, 잠은 「지금 잠들었어요」나 잠든 때와 깬 때를 적는다.
- * 분유 양과 모유 먹인 시간은 숫자를 눌러 바로 적고, −/+ 는 한 번에 한 칸이다. 숫자는 범위 밖이면 저장 단추가 꺼진다.
+ * 분유 양, 모유 먹인 시간, 기록의 때, 잔 시간은 눈금을 좌우로 끌어 고른다(task log/007). 때는 「지금」이 기본이고, 때 글자를 누르면 날짜와 시간 바퀴.
+ * 기저귀 소변은 고르면 바로 저장, 대변 · 둘 다는 변 색을 고르면 저장(색 없이도). 모유는 「시작」으로 재기 시작하거나 먹인 시간만,
+ * 잠은 「지금 잠들었어요」나 잠든 때와 잔 시간을 적는다. 체온 · 몸무게 · 키는 숫자를 적고, 범위 밖이면 저장 단추가 꺼진다.
  * 부르는 쪽에서 `key` 를 열 때마다 바꿔 처음부터 시작하게 한다.
  */
 export function LogSheet({
@@ -73,8 +75,9 @@ export function LogSheet({
   const [at, setAt] = useState<Date>(() => (editing ? new Date(editing.startAt) : kind === 'sleep' ? new Date(Date.now() - 60 * MIN) : new Date()));
   const [side, setSide] = useState<Side>(editing?.side ?? 'left');
   const [minutes, setMinutes] = useState<number>(() => (editing?.endAt ? Math.round(minutesOf(editing)) : 15));
-  // 잠 — 깬 때. 새로 적을 때는 지금(잠든 때는 한 시간 전)
-  const [woke, setWoke] = useState<Date>(() => (editing?.endAt ? new Date(editing.endAt) : new Date()));
+  // 잠 — 잔 시간(분). 새로 적을 때는 한 시간 전에 잠들어 지금 깬 것으로
+  const [slept, setSlept] = useState<number>(() => (editing?.endAt ? Math.max(5, Math.round(minutesOf(editing) / 5) * 5) : 60));
+  const now = useNow(false);
   const [ml, setMl] = useState<number>(() => editing?.amount ?? lastAmount ?? 120);
   const [text, setText] = useState<string>(() =>
     editing?.amount != null ? String(editing.amount) : kind !== 'temp' && lastAmount != null ? String(lastAmount) : '',
@@ -91,6 +94,12 @@ export function LogSheet({
     tap('success');
     onSave({ kind, ...input }, editing?.id ?? null);
   };
+
+  // 잔 시간은 5분 단위, 잠든 때부터 지금까지(16시간까지)
+  const sleepMax = Math.max(5, Math.min(16 * 60, Math.floor((now.getTime() - at.getTime()) / MIN / 5) * 5));
+  const sleptMin = Math.min(slept, sleepMax);
+  const woke = new Date(at.getTime() + sleptMin * MIN);
+  const wokeOk = woke.getTime() <= now.getTime() + MIN && woke > at;
 
   const timed = (start: Date, mins: number) => ({
     startAt: start.toISOString(),
@@ -128,19 +137,22 @@ export function LogSheet({
                   onChange={(v) => setSide(v as Side)}
                 />
                 {!running && (
-                  <Stepper
+                  <ValueRuler
                     label="먹인 시간"
                     value={minutes}
-                    step={1}
+                    onChange={setMinutes}
+                    big={durationLabel(minutes)}
                     min={1}
                     max={120}
-                    format={(m) => durationLabel(m)}
-                    unit="분"
-                    onChange={setMinutes}
-                    chips={[5, 10, 15, 20, 30]}
+                    step={1}
+                    px={10}
+                    tick={1}
+                    mid={5}
+                    every={10}
+                    text={minText}
                   />
                 )}
-                <TimeRow label="수유 시간" value={at} onChange={setAt} />
+                <TimeRuler label="수유 시간" value={at} onChange={setAt} />
                 <Button
                   size="lg"
                   label="저장"
@@ -152,18 +164,22 @@ export function LogSheet({
             {/* 분유 — 5ml 단위 */}
             {kind === 'formula' && (
               <>
-                <Stepper
+                <ValueRuler
                   label="수유량"
                   value={ml}
-                  step={5}
+                  onChange={setMl}
+                  big={String(ml)}
+                  unit="ml"
                   min={5}
                   max={400}
-                  format={(v) => `${v}ml`}
-                  unit="ml"
-                  onChange={setMl}
-                  chips={[60, 90, 120, 150, 180]}
+                  step={5}
+                  px={1.4}
+                  tick={5}
+                  mid={25}
+                  every={50}
+                  text={mlText}
                 />
-                <TimeRow label="수유 시간" value={at} onChange={setAt} />
+                <TimeRuler label="수유 시간" value={at} onChange={setAt} />
                 <Button size="lg" label="저장" onPress={() => save({ amount: ml, startAt: at.toISOString() })} />
               </>
             )}
@@ -171,7 +187,7 @@ export function LogSheet({
             {/* 기저귀 — 소변은 바로 저장, 대변 · 둘 다는 변 색까지 */}
             {kind === 'diaper' && (
               <>
-                <TimeRow label="갈아 준 때" value={at} onChange={setAt} />
+                <TimeRuler label="갈아 준 때" value={at} onChange={setAt} />
                 <View style={styles.row}>
                   {(
                     [
@@ -242,17 +258,30 @@ export function LogSheet({
               <>
                 {!editing && <Button label="지금 잠들었어요" icon="moon" size="lg" onPress={() => onStart('sleep', null)} />}
                 {!editing && <Divider label="또는 지난 잠 적기" />}
-                <TimeRow label="잠든 때" value={at} onChange={setAt} />
-                {!running && <TimeRow label="깬 때" value={woke} onChange={setWoke} />}
+                <TimeRuler label="잠든 때" value={at} onChange={setAt} caption={null} />
                 {!running && (
-                  <ThemedText type="small" style={{ color: woke > at ? c.textSecondary : c.danger, textAlign: 'right' }}>
-                    {woke > at ? `${durationLabel(Math.round((woke.getTime() - at.getTime()) / MIN))} 잤어요` : '깬 때가 잠든 때보다 뒤여야 해요'}
-                  </ThemedText>
+                  <ValueRuler
+                    label="잔 시간"
+                    value={sleptMin}
+                    onChange={setSlept}
+                    big={durationLabel(sleptMin)}
+                    min={5}
+                    max={sleepMax}
+                    step={5}
+                    px={1.6}
+                    tick={5}
+                    mid={30}
+                    every={60}
+                    text={hourText}
+                    skipZero
+                    caption={wokeOk ? `${hhmm(woke)}에 깼어요` : '깬 때가 지금보다 뒤예요'}
+                    danger={!wokeOk}
+                  />
                 )}
                 <Button
                   size="lg"
                   label="저장"
-                  disabled={!running && woke <= at}
+                  disabled={!running && !wokeOk}
                   onPress={() => save(running ? { startAt: at.toISOString(), endAt: null } : { startAt: at.toISOString(), endAt: woke.toISOString() })}
                 />
               </>
@@ -285,7 +314,7 @@ export function LogSheet({
                     ))}
                   </View>
                 )}
-                <TimeRow label={kind === 'temp' ? '잰 때' : '잰 날'} value={at} onChange={setAt} days />
+                <TimeRuler label={kind === 'temp' ? '잰 때' : '잰 날'} value={at} onChange={setAt} />
                 <Button
                   size="lg"
                   label="저장"
@@ -328,184 +357,6 @@ function Divider({ label }: { label: string }) {
   );
 }
 
-/**
- * 때 고르기 — 지금 · 몇 분 전 칩으로 크게, 시각 칸을 누르면 날짜와 시간 바퀴(task log/005). 앞으로의 때는 고를 수 없다.
- * iOS · 웹은 칸 아래에 바퀴를 펼치고, 안드로이드는 날짜 창 뒤에 시각 창을 띄운다.
- */
-function TimeRow({ label, value, onChange }: { label: string; value: Date; onChange: Dispatch<SetStateAction<Date>>; days?: boolean }) {
-  const c = useTheme();
-  const [open, setOpen] = useState(false);
-  const now = useNow(false);
-  const ago = Math.round((now.getTime() - value.getTime()) / MIN);
-  const chips: [number, string][] = [
-    [0, '지금'],
-    [10, '10분 전'],
-    [30, '30분 전'],
-    [60, '1시간 전'],
-  ];
-  return (
-    <View style={styles.group}>
-      <View style={styles.groupHead}>
-        <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
-          {label}
-        </ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${label} 고르기, 지금 ${whenLabel(value)}`}
-          accessibilityState={{ expanded: open }}
-          onPress={() => {
-            tap();
-            if (INLINE_WHEEL) setOpen((o) => !o);
-            else pickDateTime(value, (d) => onChange(d));
-          }}
-          style={({ pressed }) => [styles.timeField, { borderColor: open ? c.accent : c.border, borderWidth: open ? 2 : 1, backgroundColor: pressed ? c.surface : c.card }]}>
-          <ThemedText type="heading" style={styles.timeText}>
-            {whenLabel(value)}
-          </ThemedText>
-          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={open ? c.accent : c.textSecondary} />
-        </Pressable>
-      </View>
-      <View style={styles.chips}>
-        {chips.map(([m, l]) => (
-          <Chip
-            key={l}
-            label={l}
-            selected={Math.abs(ago - m) < 1}
-            onPress={() => {
-              onChange(new Date(Date.now() - m * MIN));
-              setOpen(false);
-            }}
-          />
-        ))}
-      </View>
-      {open && <DateTimeWheel value={value} onChange={(d) => onChange(d)} />}
-    </View>
-  );
-}
-
-function Stepper({
-  label,
-  value,
-  step,
-  min,
-  max,
-  format,
-  unit,
-  onChange,
-  chips,
-}: {
-  label: string;
-  value: number;
-  step: number;
-  min: number;
-  max: number;
-  format: (v: number) => string;
-  /** 숫자 칸 옆 단위 — 「ml」 「분」 */
-  unit: string;
-  onChange: Dispatch<SetStateAction<number>>;
-  chips: number[];
-}) {
-  const c = useTheme();
-  // 적는 동안은 친 글자 그대로 — 범위 안이 되면 값에 넣는다
-  const [text, setText] = useState<string | null>(null);
-  return (
-    <View style={styles.group}>
-      <View style={styles.groupHead}>
-        <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
-          {label}
-        </ThemedText>
-        <View style={styles.stepper}>
-          <StepButton icon="remove" label={`${label} 줄이기`} onStep={() => onChange((v) => Math.max(min, v - step))} disabled={value <= min} />
-          <View style={[styles.numberField, { borderColor: c.border, backgroundColor: c.card }]}>
-            <TextInput
-              value={text ?? String(value)}
-              onFocus={() => setText(String(value))}
-              onChangeText={(t) => {
-                const clean = t.replace(/[^\d]/g, '').slice(0, 3);
-                setText(clean);
-                const n = Number(clean);
-                if (clean && n >= min && n <= max) onChange(n);
-              }}
-              onBlur={() => setText(null)}
-              keyboardType="number-pad"
-              returnKeyType="done"
-              maxLength={3}
-              accessibilityLabel={label}
-              style={[styles.numberInput, { color: c.text }]}
-            />
-            <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
-              {unit}
-            </ThemedText>
-          </View>
-          <StepButton icon="add" label={`${label} 늘리기`} onStep={() => onChange((v) => Math.min(max, v + step))} disabled={value >= max} />
-        </View>
-      </View>
-      <View style={styles.chips}>
-        {chips.map((v) => (
-          <Chip key={v} label={format(v)} selected={value === v} onPress={() => onChange(v)} />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-/** −/+ 단추 — 한 번 누르면 한 칸, 꾹 누르고 있으면 점점 빨리 움직인다 */
-function StepButton({
-  icon,
-  label,
-  onStep,
-  disabled = false,
-}: {
-  icon: 'add' | 'remove';
-  label: string;
-  onStep: () => void;
-  disabled?: boolean;
-}) {
-  const c = useTheme();
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const step = useRef(onStep);
-  useEffect(() => {
-    step.current = onStep;
-  }, [onStep]);
-  const stop = () => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-  };
-  useEffect(() => stop, []);
-  const repeat = (count: number) => {
-    timer.current = setTimeout(
-      () => {
-        step.current();
-        repeat(count + 1);
-      },
-      count < 8 ? 120 : count < 30 ? 60 : 25,
-    );
-  };
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      disabled={disabled}
-      hitSlop={6}
-      // 한 번 누르면 한 칸(화면 읽기 프로그램의 두 번 탭도 이 길), 꾹 누르면 손을 뗄 때까지 이어서
-      onPress={() => {
-        tap();
-        onStep();
-      }}
-      delayLongPress={380}
-      onLongPress={() => {
-        stop();
-        repeat(0);
-      }}
-      onPressOut={stop}
-      style={({ pressed }) => [styles.stepButton, { backgroundColor: pressed ? c.surfaceStrong : c.surface, opacity: disabled ? 0.4 : 1 }]}>
-      <ThemedText type="heading" style={{ color: c.text, fontSize: 20, lineHeight: 22 }}>
-        {icon === 'add' ? '+' : '−'}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   wrap: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
@@ -525,14 +376,6 @@ const styles = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   line: { flex: 1, height: 1 },
   group: { gap: Spacing.two },
-  groupHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  stepValue: { minWidth: 92, textAlign: 'center' },
-  timeField: { height: 40, borderRadius: 12, paddingLeft: 14, paddingRight: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  timeText: { fontWeight: 700, fontVariant: ['tabular-nums'] },
-  numberField: { height: 44, width: 96, borderRadius: 12, borderWidth: 1, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 2 },
-  numberInput: { width: 48, fontFamily: FontFamily.semibold, fontSize: 20, textAlign: 'right', paddingVertical: 0 },
-  stepButton: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   swatch: {

@@ -80,7 +80,7 @@ export function useBabyRows(now: Date) {
     <>
       {markDone.sheet}
       <ApptSheet
-        key={booking?.key ?? 'none'}
+        key={booking?.key ?? 'appt-none'}
         target={
           booking
             ? {
@@ -102,7 +102,7 @@ export function useBabyRows(now: Date) {
         }}
       />
       <TodoSheet
-        key={editing?.id ?? 'none'}
+        key={editing?.id ?? 'todo-none'}
         todo={editing}
         topics={topics.filter((t) => !t.hidden)}
         onClose={() => setEditing(null)}

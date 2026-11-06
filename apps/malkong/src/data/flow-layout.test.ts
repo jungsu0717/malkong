@@ -1,6 +1,6 @@
 /// <reference types="node" />
 /**
- * 하루 흐름 자리 시험 — `node --test src/data/flow-layout.test.ts`.
+ * 하루 흐름 자리 시험 — `node --test src/data/flow-layout.test.ts`. 시안(390 너비)의 숫자와 맞춘다.
  */
 
 import assert from 'node:assert/strict';
@@ -8,38 +8,64 @@ import { test } from 'node:test';
 
 import { flowLayout } from './flow-layout.ts';
 
-test('한 줄 — 잠 네모 오른쪽에 넓은 노드, 그 아래로 기록이 갈라진다', () => {
-  const g = flowLayout({ width: 390, chip: true, rows: [{ sleep: 'past', wake: 'past', groups: [2, 2, 1] }, { sleep: 'past', wake: 'now', groups: [] }], future: 4 });
-  const [a, b] = g.rows;
-  assert.deepEqual(a.sleep, { x: 28, y: 64, w: 56, h: 56 });
-  assert.equal(a.wake?.x, 124);
-  assert.equal(a.wake?.w, 222);
-  assert.equal(a.subs.length, 5);
-  assert.equal(a.ports.length, 3);
-  // 동그라미가 화면 밖으로 나가지 않는다
-  for (const s of a.subs) assert.ok(s.cx + 20 <= 390 - 16);
-  // 지금 노드는 더 높고, 앞 줄 아래에 온다
-  assert.equal(b.wake?.h, 64);
-  assert.ok(b.wake!.y > a.subs[0].cy + 40);
+test('묶음 틀 — 시안처럼 틀 위 44, 노드는 52 부터 70 간격, 틀 높이 142', () => {
+  const g = flowLayout({
+    width: 390,
+    chip: true,
+    parts: [
+      { type: 'box', shapes: ['square', 'circle', 'square', 'square'] },
+      { type: 'box', shapes: ['circle', 'square', 'square'] },
+      { type: 'box', shapes: ['circle', 'square', 'dot'], now: true },
+    ],
+    links: ['pill', 'sleep'],
+    future: 3,
+  });
+  assert.deepEqual(g.chip, { x: 30, y: 12, w: 132, h: 32 });
+  assert.deepEqual(g.parts[0].frame, { x: 16, y: 64, w: 358, h: 142 });
+  assert.deepEqual(
+    g.parts[0].nodes.map((n) => n.cx),
+    [52, 122, 192, 262],
+  );
+  assert.equal(g.parts[0].nodes[0].cy, 64 + 44 + 22);
+  // 알약 56, 잠 120 — 가운데 가로선 높이에 놓인다
+  assert.deepEqual(g.links[0], { kind: 'pill', cx: 195, cy: 64 + 142 + 28 });
+  assert.equal(g.parts[1].frame.y, 64 + 142 + 56);
+  assert.equal(g.links[1].cy, g.parts[1].frame.y + 142 + 60);
+  assert.equal(g.parts[2].frame.y, g.parts[1].frame.y + 142 + 120);
+  // 지금 묶음 안 선은 코랄, 앞으로 올 것은 점선
   assert.ok(g.edges.now.length > 0);
-  // 앞으로 올 것 넷 — 한 줄에 셋, 넷째는 다음 줄
-  assert.equal(g.future.length, 4);
-  assert.equal(g.future[3].x, 28);
-  assert.ok(g.future[3].y > g.future[0].y);
-  assert.ok(g.height > g.future[3].y + 56);
+  assert.ok(g.edges.future.length > 0);
+  assert.equal(g.future.length, 3);
+  assert.equal(g.future[0].cy, g.parts[2].frame.y + 142 + 34 + 22);
+  assert.ok(g.height > g.future[0].cy);
 });
 
-test('잠을 안 적은 날 — 넓은 노드가 왼쪽부터, 기록이 많으면 여러 줄', () => {
-  const g = flowLayout({ width: 390, chip: false, rows: [{ sleep: null, wake: 'now', groups: [8, 6] }], future: 0 });
-  const row = g.rows[0];
-  assert.equal(row.wake?.x, 28);
-  assert.equal(row.subs.length, 14);
-  const lines = new Set(row.subs.map((s) => s.cy));
-  assert.ok(lines.size >= 3);
+test('한 줄에 다 안 들어가면 틀 안에서 다음 줄로', () => {
+  const g = flowLayout({ width: 390, chip: false, parts: [{ type: 'box', shapes: Array(7).fill('square') }], links: [], future: 0 });
+  const nodes = g.parts[0].nodes;
+  assert.equal(nodes[4].cx, 332);
+  assert.equal(nodes[5].cx, 52);
+  assert.equal(nodes[5].cy - nodes[0].cy, 98);
+  assert.equal(g.parts[0].frame.h, 142 + 98);
+  // 좁은 화면은 한 줄에 넷
+  const narrow = flowLayout({ width: 375, chip: false, parts: [{ type: 'box', shapes: Array(5).fill('square') }], links: [], future: 0 });
+  assert.equal(narrow.parts[0].nodes[4].cx, 52);
 });
 
-test('자는 중 — 지금 잠 노드가 넓게, 앞 줄에서 코랄 선으로 들어온다', () => {
-  const g = flowLayout({ width: 390, chip: false, rows: [{ sleep: 'past', wake: 'past', groups: [1] }, { sleep: 'now', wake: null, groups: [] }], future: 0 });
-  assert.equal(g.rows[1].sleep?.w, 390 - 28 - 44);
-  assert.ok(g.edges.now.startsWith('M'));
+test('첫머리 잠 줄, 자는 중인 지금 노드, 모유 재는 중 단추 줄', () => {
+  const g = flowLayout({
+    width: 390,
+    chip: false,
+    parts: [{ type: 'sleeps', count: 1 }, { type: 'box', shapes: ['circle'], buttons: true, now: true }, { type: 'sleepNow' }],
+    links: ['plain', 'plain'],
+    future: 0,
+  });
+  assert.deepEqual(g.parts[0].nodes, [{ cx: 76, cy: 12 + 22 }]);
+  assert.equal(g.parts[0].frame.h, 84);
+  assert.equal(g.parts[1].frame.h, 142 + 52);
+  assert.equal(g.parts[2].frame.h, 64);
+  assert.equal(g.parts[2].nodes.length, 0);
+  // 잠 줄에서 내려와 동그라미(왼쪽 끝 31)로 들어가고, 자는 중 노드는 틀 왼쪽 끝(16)으로
+  assert.ok(g.edges.past.includes('H31M'));
+  assert.ok(g.edges.past.endsWith('H16'));
 });

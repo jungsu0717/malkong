@@ -1,10 +1,10 @@
 /**
- * 하루 보기 (SPEC-MAIN-08, task today/014, decisions/038) — 맨 위 합계 칸 넷, 그 아래 하루가 n8n 처럼 노드와 선으로 이어진다.
+ * 하루 보기 (SPEC-MAIN-08, task today/017, decisions/038) — 하루가 n8n 처럼 노드와 선으로 이어진다.
  *
- * 잠은 먹색 네모, 잠과 잠 사이는 넓은 노드이고 그 사이 기록이 아래로 갈라진다. 오늘이면 마지막이 지금 노드이고,
- * 그 뒤로 흐린 점선 네모(다음 수유 예상 · 오늘 할 루틴과 할 일 · 그날 아기 일정 · 오늘 소식 · 가족과 함께 보기)가 이어진다.
- * 노드를 누르면 그 시간의 기록 화면(`/records`)이 열린다. 자리와 선은 flow-layout.ts 가 계산한다.
- * 기록 단추는 화면 바닥의 기록 줄(index.tsx)에 있다 — 지금 노드에는 모유를 재는 중일 때의 종료 · 반대쪽만 둔다.
+ * 잇달아 남긴 기록은 한 묶음 틀 안에 시간순으로 놓이고, 1시간 넘게 기록이 없으면 새 묶음이다. 묶음 사이 선에는 기록이 없던 시간이나 그 사이에 적은 잠이 놓인다.
+ * 오늘이면 마지막이 지금 묶음(코랄 틀)이고, 그 뒤로 흐린 점선 네모(다음 수유 예상 · 오늘 할 루틴과 할 일 · 그날 아기 일정 · 오늘 소식 · 가족과 함께 보기)가 이어진다.
+ * 틀이나 노드를 누르면 그 시간의 기록 화면(`/records`)이 열린다. 자리와 선은 flow-layout.ts 가 계산한다.
+ * 기록 단추와 합계는 위쪽 기록 칸(index.tsx)에 있다 — 지금 묶음에는 모유를 재는 중일 때의 종료 · 반대쪽만 둔다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -15,18 +15,17 @@ import Svg, { Circle, Defs, Pattern, Rect } from 'react-native-svg';
 
 import { BottleIcon } from '@/components/baby-icons';
 import { careWarnings, WarnCard } from '@/components/flow/care-warn';
-import { DayTotalsCard } from '@/components/flow/day-totals';
 import {
+  BlockFrame,
   ChipNode,
   FlowCanvas,
-  FutureSquare,
-  NodeLabel,
-  NowNode,
-  Port,
-  SleepSquare,
-  SubNode,
-  WakeNode,
-  type SubKind,
+  GapPill,
+  GhostNode,
+  ItemNode,
+  NowDot,
+  SleepNode,
+  SleepNowNode,
+  type ItemKind,
 } from '@/components/flow/flow-graph';
 import { DayNewsSheet } from '@/components/log/day-news-card';
 import { RoutineIcon } from '@/components/routine/routine-icon';
@@ -38,24 +37,24 @@ import { useBaby } from '@/data/baby-context';
 import { dayNews } from '@/data/day-news';
 import {
   awakeMinutes,
-  dayRows,
-  dayTotals,
+  dayFlow,
   feedTitle,
   hhmm,
   nextFeedGuess,
   sleepTitle,
   spanRange,
-  type DayRow,
+  type Block,
   type RoutineDone,
+  type SleepSpan,
   type SubItem,
   type TodoDone,
 } from '@/data/day-flow';
 import { readSetting, writeSetting } from '@/data/db';
-import { agoLabel, durationLabel, lastFeedStart, startOfDay } from '@/data/event-summary';
+import { durationLabel, lastFeedStart, startOfDay } from '@/data/event-summary';
 import { runningOf, type CareEvent, type EventKind, type Side } from '@/data/events';
 import { useEvents } from '@/data/events-context';
 import { useFamily } from '@/data/family-context';
-import { flowLayout, SQ, type LayoutRow } from '@/data/flow-layout';
+import { flowLayout, type LinkSpec, type PartSpec, type Shape } from '@/data/flow-layout';
 import { useMemos } from '@/data/memos-context';
 import { logsOn, todayPlan } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
@@ -69,17 +68,18 @@ const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일
 /** 가족 노드를 숨겼는지 — 'yes' 면 이 폰에서 다시 보이지 않는다(예전 홈 가족 초대 카드와 같은 설정값) */
 const FAMILY_HIDDEN_KEY = 'home.familyCardHidden';
 
-/** 갈라진 기록의 묶음 — 포트 하나씩: 수유, 기저귀와 그 밖, 루틴과 할 일 */
-const groupOf = (it: SubItem) => (it.type === 'feed' ? 0 : it.type === 'side' ? 1 : 2);
+const MIN = 60 * 1000;
 
-function subKind(it: SubItem): SubKind {
+function subKind(it: SubItem): ItemKind {
   if (it.type === 'feed') return it.session.kind;
   if (it.type === 'routine') return 'routine';
   if (it.type === 'todo') return 'todo';
   const e = it.event;
   if (e.kind === 'diaper') return e.diaper === 'pee' ? 'pee' : 'poo';
-  return e.kind as SubKind;
+  return e.kind as ItemKind;
 }
+
+const shapeOf = (it: SubItem): Shape => (it.type === 'side' && it.event.kind === 'diaper' ? 'circle' : 'square');
 
 function subTitle(it: SubItem, now: Date): string {
   if (it.type === 'feed') return feedTitle(it.session, now);
@@ -101,6 +101,55 @@ function stopwatch(from: string, now: Date): string {
 }
 
 type Future = { key: string; at: number; icon: React.ReactNode; accent?: boolean; title: string; sub: string; aria: string; onPress?: () => void; onLongPress?: () => void };
+
+/** 화면에 놓는 토막 — 묶음(지금 묶음 포함), 틀 없는 잠 줄, 기록 없이 지금만 있는 묶음, 자는 중 */
+type Disp =
+  | { type: 'block'; key: string; block: Block; now: boolean }
+  | { type: 'nowEmpty'; key: string }
+  | { type: 'sleeps'; key: string; sleeps: SleepSpan[] }
+  | { type: 'sleepNow'; key: string; sleep: SleepSpan };
+/** 토막 사이 — 기록 없던 시간 알약이나 잠 하나 */
+type Link = { kind: LinkSpec; label?: string; sleep?: SleepSpan };
+
+/** 묶음과 잠을 화면 토막으로 — 묶음 사이 잠 하나는 선 위로, 첫머리나 잇달은 잠은 한 줄로 */
+function displayParts(flow: ReturnType<typeof dayFlow>, isToday: boolean, now: Date): { parts: Disp[]; links: Link[] } {
+  const raw: Disp[] = [];
+  for (const p of flow.parts) {
+    if (p.type === 'block') raw.push({ type: 'block', key: p.block.key, block: p.block, now: p.block === flow.live });
+    else {
+      const last = raw[raw.length - 1];
+      if (last?.type === 'sleeps') last.sleeps.push(p.sleep);
+      else raw.push({ type: 'sleeps', key: `sleeps-${p.sleep.event.id}`, sleeps: [p.sleep] });
+    }
+  }
+  if (isToday) {
+    if (flow.sleeping) raw.push({ type: 'sleepNow', key: `sleep-now-${flow.sleeping.event.id}`, sleep: flow.sleeping });
+    else if (!flow.live) raw.push({ type: 'nowEmpty', key: 'now' });
+  }
+  const blockish = (d: Disp | undefined) => d?.type === 'block' || d?.type === 'nowEmpty';
+  const parts: Disp[] = [];
+  const links: Link[] = [];
+  const endOf = (d: Disp) => (d.type === 'block' ? d.block.to : null);
+  const startOf = (d: Disp) => (d.type === 'block' ? d.block.from : d.type === 'nowEmpty' ? now.getTime() : null);
+  raw.forEach((d, i) => {
+    const prev = parts[parts.length - 1];
+    // 묶음과 묶음 사이 잠 하나 — 선 위의 잠 노드
+    if (d.type === 'sleeps' && d.sleeps.length === 1 && blockish(prev) && blockish(raw[i + 1])) {
+      links.push({ kind: 'sleep', sleep: d.sleeps[0] });
+      return;
+    }
+    if (prev) {
+      const linked = links.length === parts.length;
+      if (!linked) {
+        const a = endOf(prev);
+        const b = startOf(d);
+        links.push(a !== null && b !== null ? { kind: 'pill', label: durationLabel(Math.max(1, (b - a) / MIN)) } : { kind: 'plain' });
+      }
+    }
+    parts.push(d);
+  });
+  return { parts, links };
+}
 
 export function DayView({
   date,
@@ -151,32 +200,17 @@ export function DayView({
     () => todos.filter((t) => t.topicId === generalTopic && t.doneAt).map((t) => ({ todoId: t.id, title: t.title, at: t.doneAt as string, by: t.doneBy })),
     [todos, generalTopic],
   );
-  const rows = useMemo(() => dayRows(events, dones, doneTodos, date, now), [events, dones, doneTodos, date, now]);
-  const totals = useMemo(() => dayTotals(events, date, now), [events, date, now]);
+  const flow = useMemo(() => dayFlow(events, dones, doneTodos, date, now), [events, dones, doneTodos, date, now]);
   const news = baby ? dayNews(events, memos, baby.birthDate, date, now) : null;
 
   if (!baby || !age) return null;
 
-  // 오늘은 지금 앞의 한 줄과 지금만 — 그 앞은 접는다
-  const hiddenRows = isToday && !showAll && rows.length > 2 ? rows.slice(0, rows.length - 2) : [];
-  const shown = rows.slice(hiddenRows.length);
-  const hiddenCount = hiddenRows.reduce((n, r) => n + (r.sleep ? 1 : 0) + (r.wake?.items.length ?? 0), 0);
-  const lastRow = shown[shown.length - 1];
-  const sleepingNow = isToday && lastRow?.sleep?.to === null;
-  const awakeNow = isToday && !sleepingNow && lastRow?.wake?.to === null;
-
-  const sortedItems = (r: DayRow) => [...(r.wake?.items ?? [])].sort((a, b) => groupOf(a) - groupOf(b) || a.at - b.at);
-  const layoutRows: LayoutRow[] = shown.map((r, i) => {
-    const isLast = i === shown.length - 1;
-    const items = sortedItems(r);
-    const groups = [0, 1, 2].map((g) => items.filter((it) => groupOf(it) === g).length).filter((n) => n > 0);
-    return {
-      sleep: r.sleep ? (isLast && sleepingNow ? 'now' : 'past') : null,
-      wake: r.wake ? (isLast && awakeNow ? 'now' : 'past') : null,
-      tall: isLast && awakeNow && !!breast,
-      groups,
-    };
-  });
+  const all = displayParts(flow, isToday, now);
+  // 오늘은 지난 묶음 둘과 지금만 — 그 앞은 접는다
+  const pastBlocks = all.parts.flatMap((d, i) => (d.type === 'block' && !d.now ? [i] : []));
+  const cut = isToday && !showAll && pastBlocks.length > 2 ? pastBlocks[pastBlocks.length - 2] : 0;
+  const shown = all.parts.slice(cut);
+  const shownLinks = all.links.slice(cut);
 
   // 앞으로 올 것 — 오늘만. 시각이 있는 것끼리 시간순, 그다음 시각 없는 것
   const future: Future[] = [];
@@ -186,7 +220,7 @@ export function DayView({
       future.push({
         key: 'next-feed',
         at: guess.at.getTime(),
-        icon: <BottleIcon size={24} color={c.accent} />,
+        icon: <BottleIcon size={20} color={c.accent} />,
         accent: true,
         title: '다음 수유',
         sub: `${hhmm(guess.at)}쯤`,
@@ -200,7 +234,7 @@ export function DayView({
       future.push({
         key: `routine-${x.r.id}`,
         at: x.r.time ? dayStart + (h * 60 + m) * 60 * 1000 : Number.MAX_SAFE_INTEGER - 4,
-        icon: <RoutineIcon title={x.r.title} size={24} color={c.text} />,
+        icon: <RoutineIcon title={x.r.title} size={20} color={c.text} />,
         title: x.r.title,
         sub: x.r.time ?? '하루 중',
         aria: `${x.r.title}${x.r.time ? ` ${x.r.time}` : ''}, 누르면 완료`,
@@ -218,7 +252,7 @@ export function DayView({
       future.push({
         key: `todo-${t.id}`,
         at: t.hasTime ? due : Number.MAX_SAFE_INTEGER - 4,
-        icon: <RoutineIcon title={t.title} size={24} color={c.text} />,
+        icon: <RoutineIcon title={t.title} size={20} color={c.text} />,
         title: t.title,
         sub: t.hasTime ? hhmm(t.dueAt) : '오늘',
         aria: `${t.title}${t.hasTime ? ` ${hhmm(t.dueAt)}` : ''}, 누르면 완료`,
@@ -233,7 +267,7 @@ export function DayView({
       future.push({
         key: `baby-${r.key}`,
         at: timed ? new Date(timed).getTime() : Number.MAX_SAFE_INTEGER - 3,
-        icon: <Ionicons name="calendar-clear-outline" size={24} color={c.text} />,
+        icon: <Ionicons name="calendar-clear-outline" size={20} color={c.text} />,
         title: r.title,
         sub: timed ? hhmm(timed) : (r.tag ?? '오늘'),
         aria: r.title,
@@ -246,7 +280,7 @@ export function DayView({
     future.push({
       key: 'news',
       at: Number.MAX_SAFE_INTEGER - 1,
-      icon: <Ionicons name="share-outline" size={24} color={c.text} />,
+      icon: <Ionicons name="share-outline" size={20} color={c.text} />,
       title: isToday ? '오늘 소식 보내기' : '이날 소식 보내기',
       sub: '',
       aria: isToday ? '오늘 소식 보내기' : '이날 소식 보내기',
@@ -260,7 +294,7 @@ export function DayView({
     future.push({
       key: 'family',
       at: Number.MAX_SAFE_INTEGER,
-      icon: <Ionicons name="people-outline" size={24} color={c.text} />,
+      icon: <Ionicons name="people-outline" size={20} color={c.text} />,
       title: '가족과 함께 보기',
       sub: '',
       aria: '가족과 함께 보기, 길게 누르면 숨김',
@@ -273,32 +307,49 @@ export function DayView({
     });
   }
 
-  const geo = width > 0 ? flowLayout({ width, chip: hiddenRows.length > 0, rows: layoutRows, future: future.length }) : null;
+  const specs: PartSpec[] = shown.map((d) =>
+    d.type === 'block'
+      ? { type: 'box', shapes: [...d.block.items.map(shapeOf), ...(d.now ? (['dot'] as Shape[]) : [])], now: d.now, buttons: d.now && !!breast }
+      : d.type === 'nowEmpty'
+        ? { type: 'box', shapes: ['dot'], now: true, buttons: !!breast }
+        : d.type === 'sleeps'
+          ? { type: 'sleeps', count: d.sleeps.length }
+          : { type: 'sleepNow' },
+  );
+  const geo = width > 0 ? flowLayout({ width, chip: cut > 0, parts: specs, links: shownLinks.map((l) => l.kind), future: future.length }) : null;
   const openRecords = (params: Record<string, string>) => {
     tap();
     router.push({ pathname: '/records', params });
   };
-  const wakeParams = (r: DayRow, open?: string) => ({ from: String(r.wake!.from), to: r.wake!.to === null ? '' : String(r.wake!.to), ...(open ? { open } : {}) });
+  const blockParams = (b: Block, live: boolean, open?: string) => ({ from: String(b.from), to: live ? '' : String(b.to), ...(open ? { open } : {}) });
+  const openSleep = (s: SleepSpan) => openRecords({ sleep: s.event.id });
 
-  // 지금 노드의 글
+  // 지금 묶음 위의 글 — 모유를 재는 중이면 시계, 아니면 먹은 지(하루 안), 일어난 지
   const lastStart = lastFeedStart(events);
-  const feedAgo = lastStart ? `마지막 수유 ${agoLabel(lastStart, now)}` : null;
-  const nowSleepTitle = sleepingNow && lastRow?.sleep ? sleepTitle(lastRow.sleep, tick) : '';
+  const feedMin = lastStart ? (now.getTime() - new Date(lastStart).getTime()) / MIN : null;
   const awake = awakeMinutes(events, now);
-  const awakeTitle = breast
+  const nowTitle = breast
     ? `모유 ${breast.side === 'right' ? '오른쪽' : '왼쪽'} ${stopwatch(breast.startAt, tick)}`
-    : awake !== null
-      ? `일어난 지 ${durationLabel(Math.max(1, awake))}`
-      : (feedAgo ?? '첫 기록을 남겨 보세요');
-  const awakeSub = breast ? `${hhmm(breast.startAt)}부터` : awakeTitle === feedAgo ? null : feedAgo;
+    : feedMin !== null && feedMin >= 0 && feedMin < 24 * 60
+      ? `먹은 지 ${durationLabel(Math.max(1, feedMin))}`
+      : awake !== null
+        ? `일어난 지 ${durationLabel(Math.max(1, awake))}`
+        : events.length === 0
+          ? '첫 기록을 남겨 보세요'
+          : '지금';
+  const nowRight = breast ? `${hhmm(breast.startAt)}부터` : null;
+  const runButtons = breast ? (
+    <View style={styles.runRow}>
+      <Button label="종료" variant="accent" size="sm" style={styles.flex} onPress={() => onStop(breast)} />
+      <Button label="반대쪽" variant="secondary" size="sm" style={styles.flex} onPress={() => onStart('breast', breast.side === 'right' ? 'left' : 'right')} />
+    </View>
+  ) : null;
 
   const warns = isToday ? careWarnings(events, age.month, now) : [];
   const weekday = WEEKDAYS[date.getDay()];
 
   return (
     <View style={styles.wrap}>
-      <DayTotalsCard totals={totals} date={date} />
-
       {warns.map((id) => (
         <WarnCard key={id} id={id} />
       ))}
@@ -316,78 +367,109 @@ export function DayView({
 
       <View style={styles.canvas} onLayout={(e: LayoutChangeEvent) => setWidth(Math.round(e.nativeEvent.layout.width))}>
         <DotGrid />
-        {!isToday && rows.length === 0 && (
+        {!isToday && shown.length === 0 && (
           <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
             {`${date.getMonth() + 1}월 ${date.getDate()}일 ${weekday}에는 남긴 기록이 없어요`}
           </ThemedText>
         )}
         {geo && (
-          <FlowCanvas geo={geo} width={width}>
-            {geo.chip && <ChipNode rect={geo.chip} label={`이전 기록 ${hiddenCount}개`} onPress={() => setShowAll(true)} />}
-            {geo.chip && <Port x={geo.chip.x} y={geo.chip.y + 16} />}
-            {shown.map((r, i) => {
-              const g = geo.rows[i];
-              const layout = layoutRows[i];
-              const items = sortedItems(r);
-              const nowRow = layout.sleep === 'now' || layout.wake === 'now';
+          <FlowCanvas
+            geo={geo}
+            width={width}
+            frames={shown.map((d, i) => {
+              const rect = geo.parts[i].frame;
+              if (d.type === 'block') {
+                const b = d.block;
+                const range = spanRange(b.from, b.to, dayStart);
+                const right = b.to > b.from ? durationLabel((b.to - b.from) / MIN) : null;
+                return (
+                  <BlockFrame
+                    key={d.key}
+                    rect={rect}
+                    now={d.now}
+                    title={d.now ? nowTitle : range}
+                    right={d.now ? nowRight : right}
+                    aria={d.now ? `${nowTitle}, ${range}부터 기록 자세히` : `${range}${right ? `, ${right}` : ''} 자세히`}
+                    onPress={() => openRecords(blockParams(b, d.now))}>
+                    {d.now && runButtons}
+                  </BlockFrame>
+                );
+              }
+              if (d.type === 'nowEmpty') {
+                return (
+                  <BlockFrame key={d.key} rect={rect} now title={nowTitle} right={nowRight} aria={nowTitle}>
+                    {runButtons}
+                  </BlockFrame>
+                );
+              }
+              return null;
+            })}>
+            {geo.chip && <ChipNode rect={geo.chip} label="이전 기록 보기" onPress={() => setShowAll(true)} />}
+            {shown.map((d, i) => {
+              const g = geo.parts[i];
+              if (d.type === 'sleepNow') {
+                return <SleepNowNode key={d.key} rect={g.frame} title={sleepTitle(d.sleep, tick)} sub={`${hhmm(d.sleep.from)}부터`} onPress={() => openSleep(d.sleep)} />;
+              }
+              if (d.type === 'sleeps') {
+                return (
+                  <View key={d.key} style={StyleSheet.absoluteFill} pointerEvents="box-none">
+                    {d.sleeps.map((s, k) => (
+                      <SleepNode key={s.event.id} cx={g.nodes[k].cx} cy={g.nodes[k].cy} title={sleepTitle(s, now)} sub={spanRange(s.from, s.to, dayStart)} onPress={() => openSleep(s)} />
+                    ))}
+                  </View>
+                );
+              }
+              const items = d.type === 'block' ? d.block.items : [];
+              const dot = g.nodes[g.nodes.length - 1];
+              const live = d.type === 'nowEmpty' || d.now;
               return (
-                <View key={r.key} style={StyleSheet.absoluteFill} pointerEvents="box-none">
-                  {r.sleep && g.sleep && layout.sleep === 'past' && (
-                    <>
-                      <SleepSquare rect={g.sleep} label={sleepTitle(r.sleep, now)} onPress={() => openRecords({ sleep: r.sleep!.event.id })} />
-                      <NodeLabel cx={g.sleep.x + SQ / 2} top={g.sleep.y + SQ + 6} title={sleepTitle(r.sleep, now)} sub={spanRange(r.sleep.from, r.sleep.to, dayStart)} width={128} />
-                    </>
-                  )}
-                  {r.sleep && g.sleep && layout.sleep === 'now' && (
-                    <NowNode rect={g.sleep} sleeping title={nowSleepTitle} sub={`${hhmm(r.sleep.from)}부터`} onPress={() => openRecords({ sleep: r.sleep!.event.id })} />
-                  )}
-                  {r.wake && g.wake && layout.wake === 'past' && (
-                    <WakeNode rect={g.wake} title={spanRange(r.wake.from, r.wake.to, dayStart)} sub={durationLabel(((r.wake.to ?? now.getTime()) - r.wake.from) / 60000)} onPress={() => openRecords(wakeParams(r))} />
-                  )}
-                  {r.wake && g.wake && layout.wake === 'now' && (
-                    <NowNode rect={g.wake} sleeping={false} title={awakeTitle} sub={awakeSub} onPress={() => openRecords(wakeParams(r))}>
-                      {breast && (
-                        <View style={styles.runRow}>
-                          <Button label="종료" variant="accent" size="sm" style={styles.flex} onPress={() => onStop(breast)} />
-                          <Button label="반대쪽" variant="secondary" size="sm" style={styles.flex} onPress={() => onStart('breast', breast.side === 'right' ? 'left' : 'right')} />
-                        </View>
-                      )}
-                    </NowNode>
-                  )}
-                  {g.sleep && <Port x={g.sleep.x} y={g.sleep.y + Math.min(g.sleep.h, 64) / 2} accent={layout.sleep === 'now'} />}
-                  {g.sleep && <Port x={g.sleep.x + g.sleep.w} y={g.sleep.y + Math.min(g.sleep.h, 64) / 2} />}
-                  {g.wake && <Port x={g.wake.x} y={g.sleep ? g.sleep.y + 28 : g.wake.y + Math.min(g.wake.h, 64) / 2} accent={layout.wake === 'now'} />}
-                  {g.wake && <Port x={g.wake.x + g.wake.w} y={g.sleep ? g.sleep.y + 28 : g.wake.y + Math.min(g.wake.h, 64) / 2} accent={layout.wake === 'now'} />}
-                  {g.ports.map((p, k) => (
-                    <Port key={`p${k}`} x={p.x} y={p.y} accent={nowRow} />
-                  ))}
+                <View key={d.key} style={StyleSheet.absoluteFill} pointerEvents="box-none">
                   {items.map((it, k) => {
-                    const s = g.subs[k];
-                    if (!s) return null;
+                    const n = g.nodes[k];
                     const title = subTitle(it, now);
+                    const by = it.type === 'feed' ? it.session.by : it.type === 'side' ? it.event.by : it.by;
                     return (
-                      <SubNode
+                      <ItemNode
                         key={it.key}
-                        cx={s.cx}
-                        cy={s.cy}
+                        cx={n.cx}
+                        cy={n.cy}
                         kind={subKind(it)}
                         title={title}
                         sub={hhmm(it.at)}
-                        aria={`${hhmm(it.at)} ${title}${'by' in it && it.by ? `, ${it.by}` : it.type === 'feed' && it.session.by ? `, ${it.session.by}` : it.type === 'side' && it.event.by ? `, ${it.event.by}` : ''}`}
-                        onPress={() => openRecords(wakeParams(r, it.key))}
+                        aria={`${hhmm(it.at)} ${title}${by ? `, ${by}` : ''}`}
+                        onPress={() => d.type === 'block' && openRecords(blockParams(d.block, d.now, it.key))}
                       />
                     );
                   })}
+                  {live && dot && <NowDot cx={dot.cx} cy={dot.cy} time={hhmm(now)} />}
                 </View>
               );
             })}
+            {shownLinks.map((l, i) => {
+              const at = geo.links[i];
+              if (!at) return null;
+              if (l.kind === 'pill' && l.label) return <GapPill key={`gap-${i}`} cx={at.cx} cy={at.cy} label={l.label} />;
+              if (l.kind === 'sleep' && l.sleep) {
+                const s = l.sleep;
+                return <SleepNode key={`link-${s.event.id}`} small cx={at.cx} cy={at.cy} title={sleepTitle(s, now)} sub={spanRange(s.from, s.to, dayStart)} onPress={() => openSleep(s)} />;
+              }
+              return null;
+            })}
             {future.map((f, k) => {
-              const rect = geo.future[k];
+              const n = geo.future[k];
               return (
-                <View key={f.key} style={StyleSheet.absoluteFill} pointerEvents="box-none">
-                  <FutureSquare rect={rect} icon={f.icon} accent={f.accent} aria={f.aria} onPress={f.onPress} onLongPress={f.onLongPress} />
-                  <NodeLabel cx={rect.x + SQ / 2} top={rect.y + SQ + 6} title={f.title} sub={f.sub} width={104} dim />
-                </View>
+                <GhostNode
+                  key={f.key}
+                  cx={n.cx}
+                  cy={n.cy}
+                  icon={f.icon}
+                  accent={f.accent}
+                  title={f.title}
+                  sub={f.sub}
+                  aria={f.aria}
+                  onPress={f.onPress}
+                  onLongPress={f.onLongPress}
+                />
               );
             })}
           </FlowCanvas>
@@ -430,5 +512,5 @@ const styles = StyleSheet.create({
   consent: { gap: 8 },
   canvas: { marginHorizontal: -16, paddingBottom: 8, minHeight: 120 },
   empty: { paddingVertical: 24, textAlign: 'center' },
-  runRow: { flexDirection: 'row', gap: 8 },
+  runRow: { position: 'absolute', left: 14, right: 14, bottom: 12, flexDirection: 'row', gap: 8 },
 });

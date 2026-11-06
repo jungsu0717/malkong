@@ -1,5 +1,5 @@
 /**
- * 하루 흐름의 셈 (SPEC-MAIN-08 · 10, task today/012 · 013 · 014, decisions/037 · 038) — 기록을 잠과 잠 사이로 나눈 줄 · 합계 · 일주일 막대로 바꾼다.
+ * 하루 흐름의 셈 (SPEC-MAIN-08 · 10, task today/012 · 013 · 014 · 017, decisions/037 · 038) — 기록을 묶음 · 합계 · 일주일 막대로 바꾼다.
  *
  * 모두 기기 안에서 규칙으로 센다(모델을 부르지 않는다). 다음 수유 예상과 밤잠 드는 시간은 우리 아기의 지난 기록에서 나온 값일 뿐이고,
  * 정상 · 이상을 판정하지 않는다(헌장 5). 화면 코드를 가져오지 않는 순수 함수만 둔다(`node --test src/data/day-flow.test.ts`).
@@ -15,7 +15,9 @@ const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 /** 쪽을 바꾼 모유 — 앞 모유가 끝난 뒤 이 안에 다시 시작하면 같은 수유 한 번(event-summary 와 같은 규칙) */
 const SESSION_GAP = 10 * MIN;
-/** 잠 앞의 「깨어 있음」과 지금 노드의 「깨어 있어요」 — 이보다 길면 잠 기록이 빠진 것으로 보고 쓰지 않는다 */
+/** 앞 기록이 끝난 뒤 이만큼 기록이 없으면 묶음을 끊는다 (SPEC-MAIN-08) */
+export const BLOCK_GAP = 60 * MIN;
+/** 지금 묶음의 「일어난 지」 — 이보다 길면 잠 기록이 빠진 것으로 보고 쓰지 않는다 */
 const AWAKE_LIMIT = 12 * HOUR;
 /** 다음 수유 예상에 쓰는 수유 간격 — 최근 사흘, 이 범위 밖(쪽 바꾸기 · 기록이 빠진 밤)은 뺀다 */
 const FEED_GAP_MIN = 30 * MIN;
@@ -279,9 +281,9 @@ export function weekLines(days: WeekDay[], events: CareEvent[], now = new Date()
   return lines;
 }
 
-// ---------- 3판 — 잠과 잠 사이로 나눈 줄 (SPEC-MAIN-08, task today/014) ----------
+// ---------- 4판 — 잇달아 남긴 기록끼리 묶음 (SPEC-MAIN-08, task today/017) ----------
 
-/** 흐름에서 넓은 노드 아래로 갈라지는 기록 하나(잠 말고) */
+/** 흐름의 기록 하나(잠 말고) */
 export type SubItem =
   | { type: 'feed'; key: string; at: number; session: FeedSession }
   /** 기저귀 · 체온 · 키 · 몸무게 */
@@ -294,10 +296,18 @@ export type TodoDone = { todoId: string; title: string; at: string; by: string |
 
 /** 잠 — from 은 시작(어제 시작했으면 어제 시각), to 는 끝(재는 중이면 null) */
 export type SleepSpan = { event: CareEvent; from: number; to: number | null; night: boolean };
-/** 잠과 잠 사이 — to 가 null 이면 지금까지 이어지는 중 */
-export type WakeSpan = { from: number; to: number | null; items: SubItem[] };
-/** 흐름의 한 줄 — 잠 하나와 그 뒤 시간 하나(어느 한쪽이 없을 수 있다) */
-export type DayRow = { key: string; sleep: SleepSpan | null; wake: WakeSpan | null };
+/** 잇달아 남긴 기록 한 묶음 — from 은 첫 기록, to 는 마지막 기록이 끝난 때 */
+export type Block = { key: string; from: number; to: number; items: SubItem[] };
+/** 흐름의 한 토막 — 묶음이거나 잠 */
+export type FlowPart = { type: 'block'; block: Block } | { type: 'sleep'; sleep: SleepSpan };
+export type DayFlow = {
+  /** 시간 순서. 지금 자는 잠은 빼고 `sleeping` 에 둔다 */
+  parts: FlowPart[];
+  /** 오늘이고 마지막 묶음이 지금까지 이어지면 그 묶음(parts 의 마지막) */
+  live: Block | null;
+  /** 오늘 지금 자는 중이면 그 잠 */
+  sleeping: SleepSpan | null;
+};
 
 /** 밤잠 — 저녁 6시부터 새벽 6시 사이에 시작한 잠 */
 export function isNightStart(at: number): boolean {
@@ -305,7 +315,7 @@ export function isNightStart(at: number): boolean {
   return h >= NIGHT_FROM_HOUR || h < 6;
 }
 
-/** [from, to) 의 기록(잠 말고) — 재는 중인 모유는 지금 노드가 보여 주므로 뺀다. 그 시간의 기록 화면도 쓴다 */
+/** [from, to) 의 기록(잠 말고) — 재는 중인 모유는 지금 묶음이 보여 주므로 뺀다. 그 시간의 기록 화면도 쓴다 */
 export function itemsBetween(events: CareEvent[], routines: RoutineDone[], todos: TodoDone[], from: number, to: number): SubItem[] {
   const inDay = (at: number) => at >= from && at < to;
   const items: SubItem[] = [];
@@ -331,66 +341,70 @@ export function itemsBetween(events: CareEvent[], routines: RoutineDone[], todos
   return items.sort((a, b) => a.at - b.at);
 }
 
+/** 기록이 끝난 때 — 수유는 마지막 쪽이 끝난 때, 나머지는 남긴 때 */
+function itemEnd(it: SubItem): number {
+  return it.type === 'feed' && it.session.endAt ? Math.max(it.at, t(it.session.endAt)) : it.at;
+}
+
 /**
- * 그날을 잠과 잠 사이로 나눈 줄 — 시간 순서. 잠 중간에 남긴 기록은 앞뒤 시간 가운데 가까운 쪽에 붙인다.
- * 오늘이면 마지막 줄이 지금이다(자는 중이면 그 잠의 to 가 null, 깨어 있으면 마지막 시간의 to 가 null).
+ * 그날을 묶음과 잠으로 나눈다 — 시간 순서. 잇달아 남긴 기록은 순서와 상관없이 한 묶음이고,
+ * 앞 기록이 끝난 뒤 `BLOCK_GAP` 넘게 기록이 없거나 그 사이에 잠을 적었으면 새 묶음이 시작된다.
+ * 오늘이면 마지막 묶음이 지금(모유를 재는 중이면 시작한 때)에서 `BLOCK_GAP` 안일 때 지금 묶음(live)이 된다.
  */
-export function dayRows(events: CareEvent[], routines: RoutineDone[], todos: TodoDone[], day: Date, now = new Date()): DayRow[] {
+export function dayFlow(events: CareEvent[], routines: RoutineDone[], todos: TodoDone[], day: Date, now = new Date()): DayFlow {
   const D0 = startOfDay(day).getTime();
   const D1 = D0 + DAY;
   const isToday = now.getTime() >= D0 && now.getTime() < D1;
   const until = isToday ? now.getTime() : D1;
-  const allSleeps = events.filter((e) => e.kind === 'sleep').sort((a, b) => t(a.startAt) - t(b.startAt));
-  const sleeps = allSleeps.filter((e) => t(e.startAt) < until && endOf(e, now) > D0);
+  const sleeps = events
+    .filter((e) => e.kind === 'sleep' && t(e.startAt) < until && endOf(e, now) > D0)
+    .map((e): SleepSpan => ({ event: e, from: t(e.startAt), to: e.endAt ? t(e.endAt) : null, night: isNightStart(t(e.startAt)) }));
   const items = itemsBetween(events, routines, todos, D0, until);
 
-  type Seg = { sleep: SleepSpan } | { wake: WakeSpan };
-  const segs: Seg[] = [];
-  let cursor = D0;
-  // 하루를 깨어 있는 채로 시작했으면 — 그 전에 끝난 잠부터(12시간 안)
-  const before = allSleeps.filter((e) => e.endAt !== null && t(e.endAt) <= D0).pop();
-  const firstFrom = before?.endAt && D0 - t(before.endAt) <= AWAKE_LIMIT ? t(before.endAt) : D0;
-  for (const e of sleeps) {
-    const a = t(e.startAt);
-    const b = e.endAt ? t(e.endAt) : null;
-    if (a > cursor) segs.push({ wake: { from: cursor === D0 ? firstFrom : cursor, to: a, items: [] } });
-    segs.push({ sleep: { event: e, from: a, to: b, night: isNightStart(a) } });
-    cursor = b === null ? Number.POSITIVE_INFINITY : Math.max(cursor, b);
-  }
-  if (cursor < until) {
-    // 지난날의 마지막 시간은 다음 잠이 시작한 때까지(다음 날이어도)
-    const next = allSleeps.find((e) => t(e.startAt) >= until);
-    segs.push({ wake: { from: cursor === D0 ? firstFrom : cursor, to: isToday ? null : next ? t(next.startAt) : D1, items: [] } });
-  }
+  // 잠과 기록을 시간순으로 — 같은 때면 잠 먼저
+  type Entry = { at: number; sleep?: SleepSpan; item?: SubItem };
+  const entries: Entry[] = [...sleeps.map((sleep): Entry => ({ at: sleep.from, sleep })), ...items.map((item): Entry => ({ at: item.at, item }))];
+  entries.sort((a, b) => a.at - b.at || (a.sleep ? -1 : 1));
 
-  const wakes = segs.filter((s): s is { wake: WakeSpan } => 'wake' in s).map((s) => s.wake);
-  for (const it of items) {
-    // 잠 중간에 남긴 기록은 앞뒤 시간 가운데 가까운 쪽에(잠들기 바로 전에 한 루틴을 늦게 누른 것 같은)
-    const inside = wakes.find((w) => it.at >= w.from && it.at < (w.to ?? Number.POSITIVE_INFINITY));
-    const before = [...wakes].reverse().find((w) => w.to !== null && w.to <= it.at);
-    const after = wakes.find((w) => w.from > it.at);
-    const nearer = before && after ? (it.at - before.to! <= after.from - it.at ? before : after) : (after ?? before);
-    const home = inside ?? nearer ?? wakes[wakes.length - 1];
-    if (home) home.items.push(it);
-    else {
-      const w: WakeSpan = { from: it.at, to: isToday ? null : D1, items: [it] };
-      wakes.push(w);
-      segs.push({ wake: w });
+  const parts: FlowPart[] = [];
+  let open: Block | null = null;
+  const close = () => {
+    if (open) parts.push({ type: 'block', block: open });
+    open = null;
+  };
+  for (const en of entries) {
+    if (en.sleep) {
+      close();
+      parts.push({ type: 'sleep', sleep: en.sleep });
+      continue;
+    }
+    const it = en.item!;
+    const cur: Block | null = open;
+    if (cur && it.at - cur.to <= BLOCK_GAP) {
+      cur.items.push(it);
+      cur.to = Math.max(cur.to, itemEnd(it));
+    } else {
+      close();
+      open = { key: `block-${it.key}`, from: it.at, to: itemEnd(it), items: [it] };
     }
   }
+  close();
 
-  const rows: DayRow[] = [];
-  for (const s of segs) {
-    if ('sleep' in s) rows.push({ key: s.sleep.event.id, sleep: s.sleep, wake: null });
-    else {
-      const last = rows[rows.length - 1];
-      if (last && last.sleep && last.wake === null) last.wake = s.wake;
-      else rows.push({ key: `wake-${s.wake.from}`, sleep: null, wake: s.wake });
+  let sleeping: SleepSpan | null = null;
+  let live: Block | null = null;
+  if (isToday) {
+    const i = parts.findIndex((p) => p.type === 'sleep' && p.sleep.to === null);
+    if (i >= 0) {
+      sleeping = (parts[i] as { type: 'sleep'; sleep: SleepSpan }).sleep;
+      parts.splice(i, 1);
+    } else {
+      const last = parts[parts.length - 1];
+      const breast = events.find((e) => e.kind === 'breast' && e.endAt === null);
+      const ref = breast ? t(breast.startAt) : now.getTime();
+      if (last?.type === 'block' && ref - last.block.to <= BLOCK_GAP) live = last.block;
     }
   }
-  // 오늘인데 아무 기록이 없으면 — 지금 노드 하나
-  if (isToday && rows.length === 0) rows.push({ key: 'wake-now', sleep: null, wake: { from: firstFrom, to: null, items: [] } });
-  return rows;
+  return { parts, live, sleeping };
 }
 
 /** 잠 노드의 이름 — 「낮잠 1시간 10분」 「밤잠 4시간 50분」, 재는 중이면 「잠든 지 30분」 */
@@ -400,10 +414,11 @@ export function sleepTitle(s: SleepSpan, now = new Date()): string {
   return `${s.night ? '밤잠' : '낮잠'} ${durationLabel(min)}`;
 }
 
-/** 「09:50~11:00」 · 어제 시작했으면 「어제 21:10~02:00」 · 재는 중이면 「13:40부터」 */
+/** 「09:50~11:00」 · 어제 시작했으면 「어제 21:10~02:00」 · 재는 중이면 「13:40부터」 · 처음과 끝이 같으면 「09:50」 */
 export function spanRange(from: number, to: number | null, dayStart: number): string {
   const head = from < dayStart ? `어제 ${hhmm(from)}` : hhmm(from);
   if (to === null) return `${head}부터`;
+  if (to === from) return head;
   const tail = to >= dayStart + DAY ? `다음 날 ${hhmm(to)}` : hhmm(to);
   return `${head}~${tail}`;
 }
