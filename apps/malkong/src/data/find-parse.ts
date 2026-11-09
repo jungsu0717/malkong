@@ -133,7 +133,16 @@ export function parseFind(raw: string, now = new Date()): FindQuery | null {
 }
 
 /** 찾은 기록 한 줄 */
-export type FindRow = { key: string; at: number; kind: CareEvent['kind']; title: string; by: string | null };
+export type FindRow = {
+  key: string;
+  at: number;
+  kind: CareEvent['kind'];
+  title: string;
+  by: string | null;
+  /** 기저귀면 소변 · 대변 · 둘 다와 변 색 — 아이콘을 나눠 그린다 */
+  diaper?: CareEvent['diaper'];
+  color?: CareEvent['color'];
+};
 export type FindAnswer = { big: string; line: string | null; rows: FindRow[] };
 
 const whenOf = (at: number, now: Date) => {
@@ -182,7 +191,7 @@ export function runFind(q: FindQuery, events: CareEvent[], now = new Date()): Fi
         inRange(t(e.startAt)) &&
         (q.what === 'diaper' || (q.what === 'pee' ? e.diaper === 'pee' || e.diaper === 'both' : e.diaper === 'poo' || e.diaper === 'both')),
     );
-    rows.push(...list.map((e) => ({ key: e.id, at: t(e.startAt), kind: e.kind, title: e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '대소변', by: e.by })));
+    rows.push(...list.map((e) => ({ key: e.id, at: t(e.startAt), kind: e.kind, title: e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '소변, 대변', by: e.by, diaper: e.diaper, color: e.color })));
     const pee = list.filter((e) => e.diaper === 'pee' || e.diaper === 'both').length;
     const poo = list.filter((e) => e.diaper === 'poo' || e.diaper === 'both').length;
     if (q.measure === 'last') {

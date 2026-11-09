@@ -43,7 +43,7 @@ test('기록 — 「대소변」은 소변과 대변 둘 다(「대변」 글자
     const r = parseAdd(text, NOW);
     if (r?.type !== 'record') throw new Error(`기록이 아님: ${text}`);
     assert.equal(r.input.diaper, 'both', text);
-    assert.equal(r.title, '대소변');
+    assert.equal(r.title, '소변, 대변');
   }
   const pee = parseAdd('소변', NOW);
   assert.equal(pee?.type === 'record' && pee.input.diaper, 'pee');

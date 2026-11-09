@@ -142,7 +142,7 @@ function readRecord(raw: string, now: Date): AddResult | null {
     const poo = both || /대변|응가|똥/.test(rest);
     const pee = both || /소변|쉬|오줌/.test(rest);
     const diaper: DiaperKind | null = poo && pee ? 'both' : poo ? 'poo' : pee ? 'pee' : null;
-    const title = diaper === 'both' ? '대소변' : diaper === 'poo' ? '대변' : diaper === 'pee' ? '소변' : '기저귀';
+    const title = diaper === 'both' ? '소변, 대변' : diaper === 'poo' ? '대변' : diaper === 'pee' ? '소변' : '기저귀';
     return { type: 'record', kind, input: { kind, diaper, startAt }, complete: diaper !== null, title, when };
   }
   if (kind === 'sleep') {

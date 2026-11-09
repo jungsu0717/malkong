@@ -25,9 +25,11 @@ import Animated, {
 import Svg, { Path } from 'react-native-svg';
 
 import { BottleIcon } from '@/components/baby-icons';
+import { DiaperGlyph } from '@/components/log/diaper-glyph';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import type { IconName } from '@/components/ui';
+import type { StoolColor } from '@/data/events';
 import { DOT, HEAD, ITEM, SLEEP_NOW_H, type FlowGeo, type Rect } from '@/data/flow-layout';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -152,7 +154,7 @@ export function BlockFrame({
   );
 }
 
-export type ItemKind = 'breast' | 'formula' | 'pee' | 'poo' | 'temp' | 'weight' | 'height' | 'routine' | 'todo';
+export type ItemKind = 'breast' | 'formula' | 'pee' | 'poo' | 'both' | 'temp' | 'weight' | 'height' | 'routine' | 'todo';
 
 /** 묶음 안 기록 하나 — 수유는 코랄 네모, 기저귀는 동그라미, 루틴과 할 일은 흰 네모에 체크 */
 export function ItemNode({
@@ -162,7 +164,7 @@ export function ItemNode({
   title,
   sub,
   aria,
-  tint,
+  stool,
   onPress,
 }: {
   cx: number;
@@ -171,27 +173,25 @@ export function ItemNode({
   title: string;
   sub: string;
   aria: string;
-  /** 대변 색을 적었으면 그 색으로 아이콘을 칠한다 */
-  tint?: string | null;
+  /** 대변 색을 적었으면 대변 아이콘을 그 색으로 채운다 */
+  stool?: StoolColor | null;
   onPress: () => void;
 }) {
   const c = useTheme();
   const feed = kind === 'breast' || kind === 'formula';
-  const diaper = kind === 'pee' || kind === 'poo';
+  const diaper = kind === 'pee' || kind === 'poo' || kind === 'both';
   const done = kind === 'routine' || kind === 'todo';
-  const ion: Partial<Record<ItemKind, IconName>> = { breast: 'heart-outline', pee: 'water-outline', poo: 'water', temp: 'thermometer-outline', weight: 'scale-outline', height: 'resize-outline' };
+  const ion: Partial<Record<ItemKind, IconName>> = { breast: 'heart-outline', pee: 'water-outline', temp: 'thermometer-outline', weight: 'scale-outline', height: 'resize-outline' };
   const size = diaper ? 42 : ITEM;
   const icon =
     kind === 'formula' ? (
       <BottleIcon size={21} color="#FFFFFF" />
     ) : done ? (
       <RoutineIcon title={title} size={21} color={c.text} />
+    ) : kind === 'poo' || kind === 'both' ? (
+      <DiaperGlyph diaper={kind} color={stool ?? null} size={21} />
     ) : (
-      <Ionicons
-        name={ion[kind] ?? 'ellipse-outline'}
-        size={kind === 'poo' ? (tint ? 22 : 18) : 21}
-        color={feed ? '#FFFFFF' : tint ? tint : kind === 'poo' ? c.textSecondary : c.text}
-      />
+      <Ionicons name={ion[kind] ?? 'ellipse-outline'} size={21} color={feed ? '#FFFFFF' : c.text} />
     );
   return (
     <>

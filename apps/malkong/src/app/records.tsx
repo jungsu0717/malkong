@@ -14,14 +14,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
 import { BottleIcon } from '@/components/baby-icons';
+import { DiaperGlyph } from '@/components/log/diaper-glyph';
 import { useLogActions } from '@/components/log/use-log-actions';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { DateTimeWheel, INLINE_WHEEL, pickDateTime } from '@/components/time-picker';
+import { TimeRuler } from '@/components/log/ruler';
 import { Button, tap } from '@/components/ui';
 import { MaxContentWidth } from '@/constants/theme';
-import { whenLabel } from '@/data/add-parse';
 import {
   feedNeighbors,
   feedSessions,
@@ -207,7 +207,11 @@ function RecordRow({
     const k = it.event.kind;
     return (
       <Tile bg={c.surfaceStrong}>
-        <Ionicons name={k === 'diaper' ? (it.event.diaper === 'pee' ? 'water-outline' : 'water') : k === 'temp' ? 'thermometer-outline' : k === 'weight' ? 'scale-outline' : 'resize-outline'} size={16} color={c.text} />
+        {k === 'diaper' && it.event.diaper && it.event.diaper !== 'pee' ? (
+          <DiaperGlyph diaper={it.event.diaper} color={it.event.color} size={16} />
+        ) : (
+          <Ionicons name={k === 'diaper' ? 'water-outline' : k === 'temp' ? 'thermometer-outline' : k === 'weight' ? 'scale-outline' : 'resize-outline'} size={16} color={c.text} />
+        )}
       </Tile>
     );
   })();
@@ -223,7 +227,7 @@ function RecordRow({
               ? '소변'
               : it.event.diaper === 'poo'
                 ? '대변'
-                : '대소변'
+                : '소변, 대변'
             : eventTitle(it.event, now);
   const by = it.type === 'feed' ? it.session.by : it.type === 'routine' || it.type === 'todo' ? it.by : it.event.by;
   const extra = it.type === 'side' && it.event.kind === 'diaper' && it.event.color && it.event.diaper !== 'pee' ? STOOL_COLOR_LABEL[it.event.color] : null;
@@ -386,43 +390,19 @@ function PlainBody({ event, now, onEdit, onDelete }: { event: CareEvent; now: Da
   );
 }
 
-/** 루틴과 할 일 — 완료한 시간을 바퀴로 바꾸고, 완료를 취소한다 */
+/** 루틴과 할 일 — 완료한 시간을 기록 시트와 같은 눈금으로 바꾸고(날짜는 시각 글자를 눌러), 완료를 취소한다 */
 function DoneBody({ at, onMove, actions }: { at: Date; onMove: (at: Date) => void; actions: ReactNode }) {
-  const c = useTheme();
-  const [wheel, setWheel] = useState(false);
   const [value, setValue] = useState(at);
+  const changed = Math.abs(value.getTime() - at.getTime()) >= 60 * 1000;
   return (
     <>
-      <View style={styles.doneRow}>
-        <ThemedText type="small" style={{ color: c.textSecondary }}>
-          완료한 시간
-        </ThemedText>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`완료한 시간 고르기, 지금 ${whenLabel(value)}`}
-          onPress={() => {
-            tap();
-            if (INLINE_WHEEL) setWheel((w) => !w);
-            else
-              pickDateTime(value, (d) => {
-                setValue(d);
-                onMove(d);
-              });
-          }}
-          style={[styles.timeField, { borderColor: wheel ? c.accent : c.border, borderWidth: wheel ? 2 : 1 }]}>
-          <ThemedText type="heading" style={{ fontWeight: 700 }}>
-            {whenLabel(value)}
-          </ThemedText>
-          <Ionicons name={wheel ? 'chevron-up' : 'chevron-down'} size={16} color={wheel ? c.accent : c.textSecondary} />
-        </Pressable>
-      </View>
-      {wheel && <DateTimeWheel value={value} onChange={setValue} />}
-      {wheel && (
+      <TimeRuler label="완료한 시간" value={value} onChange={setValue} caption={null} />
+      {changed && (
         <Button
           label="이 시간으로 바꾸기"
           size="sm"
           onPress={() => {
-            setWheel(false);
+            tap('success');
             onMove(value);
           }}
         />
@@ -455,6 +435,4 @@ const styles = StyleSheet.create({
   stripLine: { position: 'absolute', left: 0, right: 0, top: 8, height: 2 },
   stripMark: { position: 'absolute', borderRadius: 2, marginLeft: -2 },
   stripHours: { position: 'absolute', left: 0, right: 0, top: 20, flexDirection: 'row', justifyContent: 'space-between' },
-  doneRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  timeField: { height: 40, borderRadius: 12, paddingLeft: 14, paddingRight: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

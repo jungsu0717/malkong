@@ -9,6 +9,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleShee
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottleIcon } from '@/components/baby-icons';
+import { DiaperGlyph } from '@/components/log/diaper-glyph';
 import { ThemedText } from '@/components/themed-text';
 import { Chip, tap } from '@/components/ui';
 import { FontFamily, Spacing } from '@/constants/theme';
@@ -137,6 +138,8 @@ export function FindSheet({ open, onClose }: { open: boolean; onClose: () => voi
                     <View style={[styles.dot, { backgroundColor: r.kind === 'breast' || r.kind === 'formula' ? c.accent : r.kind === 'sleep' ? c.ink : c.surfaceStrong }]}>
                       {r.kind === 'formula' ? (
                         <BottleIcon size={14} color="#FFFFFF" />
+                      ) : r.kind === 'diaper' && r.diaper && r.diaper !== 'pee' ? (
+                        <DiaperGlyph diaper={r.diaper} color={r.color ?? null} size={14} />
                       ) : (
                         <Ionicons
                           name={r.kind === 'breast' ? 'heart' : r.kind === 'sleep' ? 'moon' : r.kind === 'diaper' ? 'water-outline' : r.kind === 'temp' ? 'thermometer-outline' : r.kind === 'weight' ? 'scale-outline' : 'resize-outline'}

@@ -85,6 +85,18 @@ export function BottleIcon({ size = 24, color }: IconProps) {
   );
 }
 
+/** 대변 — 세 층으로 쌓인 모양. fill 에 적은 변 색을 넣으면 그 색으로 채운다(소변은 물방울이라 대변은 물방울로 그리지 않는다) */
+export function PooIcon({ size = 24, color, fill = 'none' }: IconProps & { fill?: ColorValue }) {
+  const s = { stroke: color, fill, strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4 18.2c0-1.6 1.2-2.7 2.8-2.7h10.4c1.6 0 2.8 1.1 2.8 2.7 0 1.1-.9 1.8-2 1.8H6c-1.1 0-2-.7-2-1.8Z" {...s} />
+      <Path d="M6.6 15.5c-.4-1.7.9-3.1 2.5-3.1h5.8c1.6 0 2.9 1.4 2.5 3.1Z" {...s} />
+      <Path d="M9.2 12.4c-.5-1.5.4-2.8 1.9-3.2 1.3-.3 1.9-1.3 1.6-2.7 2 .5 3 2.2 2.2 3.9-.2.6-.2 1.3.2 2Z" {...s} />
+    </Svg>
+  );
+}
+
 /** 딸랑이 */
 export function RattleIcon({ size = 24, color }: IconProps) {
   return (

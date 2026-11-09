@@ -28,7 +28,6 @@ import {
   type ItemKind,
 } from '@/components/flow/flow-graph';
 import { DayNewsSheet } from '@/components/log/day-news-card';
-import { STOOL_SWATCH } from '@/components/log/kinds';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { useRoutineActions } from '@/components/routine/use-routine-actions';
 import { ThemedText } from '@/components/themed-text';
@@ -76,7 +75,7 @@ function subKind(it: SubItem): ItemKind {
   if (it.type === 'routine') return 'routine';
   if (it.type === 'todo') return 'todo';
   const e = it.event;
-  if (e.kind === 'diaper') return e.diaper === 'pee' ? 'pee' : 'poo';
+  if (e.kind === 'diaper') return e.diaper === 'pee' ? 'pee' : e.diaper === 'both' ? 'both' : 'poo';
   return e.kind as ItemKind;
 }
 
@@ -86,7 +85,7 @@ function subTitle(it: SubItem, now: Date): string {
   if (it.type === 'feed') return feedTitle(it.session, now);
   if (it.type === 'routine' || it.type === 'todo') return it.title;
   const e = it.event;
-  if (e.kind === 'diaper') return e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '대소변';
+  if (e.kind === 'diaper') return e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '소변, 대변';
   if (e.kind === 'temp') return e.amount !== null ? `${e.amount}℃` : '체온';
   if (e.kind === 'weight') return e.amount !== null ? `${e.amount}kg` : '몸무게';
   return e.amount !== null ? `${e.amount}cm` : '키';
@@ -439,7 +438,7 @@ export function DayView({
                         title={title}
                         sub={hhmm(it.at)}
                         aria={`${hhmm(it.at)} ${title}${stool ? ` ${STOOL_COLOR_LABEL[stool]}` : ''}${by ? `, ${by}` : ''}`}
-                        tint={stool ? STOOL_SWATCH[stool] : null}
+                        stool={stool}
                         onPress={() => d.type === 'block' && openRecords(blockParams(d.block, d.now, it.key))}
                       />
                     );
