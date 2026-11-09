@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.common.core.exception import register_exception_handlers
+from app.domain.agent.router import router as agent_router
 from app.domain.devices.router import router as devices_router
 from app.domain.entitlements.router import router as entitlements_router
 from app.domain.family.router import router as family_router
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(family_router, prefix="/v1")
     app.include_router(knowledge_router, prefix="/v1")
     app.include_router(parse_router, prefix="/v1")
+    app.include_router(agent_router, prefix="/v1")
     # 스토어에 넣을 공개 주소라 /v1 을 붙이지 않는다
     app.include_router(legal_router)
 

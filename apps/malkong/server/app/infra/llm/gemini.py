@@ -24,9 +24,17 @@ class GeminiModel:
         model: str,
         *,
         timeout_s: float,
+        thinking_level: str = "minimal",
+        max_output_tokens: int = 2000,
         transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         self.model = model
+        # 문장 읽기(/v1/parse)는 문장을 나누기만 해서 가장 짧게(minimal) 생각한다.
+        # 물어보기(/v1/agent)는 가리키는 기록을 찾고 하루 안에서 비교해야 해서
+        # 한 단계 위(low)로 부른다
+        self._thinking_level = thinking_level
+        # 생각에 쓴 토큰도 이 수에 들어간다. 넘으면 답이 비어 오고(incomplete) unknown 이 된다
+        self._max_output_tokens = max_output_tokens
         self._client = httpx2.AsyncClient(
             timeout=timeout_s,
             transport=transport,
@@ -43,8 +51,10 @@ class GeminiModel:
             "system_instruction": system,
             "input": user,
             "response_format": {"type": "text", "mime_type": "application/json", "schema": schema},
-            # 문장을 나누는 일이라 길게 생각할 필요가 없다 — 가장 짧게 생각해 빨리 답하게 한다
-            "generation_config": {"max_output_tokens": 2000, "thinking_level": "minimal"},
+            "generation_config": {
+                "max_output_tokens": self._max_output_tokens,
+                "thinking_level": self._thinking_level,
+            },
             "store": False,
         }
         try:

@@ -1,6 +1,6 @@
 # 육아버디 서버(코드명 malkong) — 코드 작업 규칙
 
-이 폴더는 육아버디 서버(FastAPI)다. 지금 하는 일은 기기 키, 가족 공유, 공공 지식(L1) 내려받기, 문장 읽기(Gemini) 넷이다. 서버가 무엇을 하고 무엇을 저장하는지는
+이 폴더는 육아버디 서버(FastAPI)다. 지금 하는 일은 기기 키, 가족 공유, 공공 지식(L1) 내려받기, 문장 읽기와 물어보기(Gemini) 다섯이다. 서버가 무엇을 하고 무엇을 저장하는지는
 [backend](../docs/architecture/backend.md) 서버 절이, API 모양은 [api-contract](../docs/architecture/api-contract.md)가
 정본이다. 이 파일은 코드를 어떻게 쓰는지만 다룬다.
 
@@ -33,7 +33,8 @@ uv run python -m scripts.sync_l1
 - 로컬에서 쓰는 비밀값(Neon 주소 같은 것)은 `server/.env` 에 둔다. 이 파일은 git, Docker 빌드, gcloud 업로드에서
   모두 빠진다. 값을 출력하거나 로그·커밋에 남기지 않는다
 - 질문 답변(`/v1/ask`) · 피드백 · 보상 광고 · 모델 비교 도구(eval)는 2026-10-22 에 뺐다(task common/022). 옛 코드는 git 기록에 있다.
-  모델 어댑터는 2026-11-09 에 문장 읽기(`/v1/parse`)에 필요한 만큼만 다시 두었다(`app/infra/llm/`, task common/031)
+  모델 어댑터는 2026-11-09 에 문장 읽기(`/v1/parse`)에 필요한 만큼만 다시 두었다(`app/infra/llm/`, task common/031).
+  같은 날 물어보기(`/v1/agent`, task common/032)도 이 어댑터를 생각 수준만 바꿔(low) 쓴다
 
 ## 배포 (Cloud Run)
 
@@ -65,7 +66,7 @@ gcloud run deploy malkong-server --source . --region asia-northeast3 \
 # --no-traffic 을 한 번 쓰면 트래픽이 그 판에 고정되므로 --to-latest 로 풀어 줘야 다음 배포가 자동으로 넘어간다
 
 # 문장 읽기(/v1/parse)는 Secret Manager 의 malkong-gemini-key 를 MALKONG_GEMINI_API_KEY 로 읽는다(2026-11-09, task common/031).
-# 이 키가 빠지면 /v1/parse 만 503 이 되고 나머지는 그대로 돈다. 모델을 바꿀 때는 --update-env-vars MALKONG_GEMINI_MODEL=<모델 id> 를 더한다.
+# 물어보기(/v1/agent)도 같은 키를 쓴다. 이 키가 빠지면 /v1/parse 와 /v1/agent 만 503 이 되고 나머지는 그대로 돈다. 모델을 바꿀 때는 --update-env-vars MALKONG_GEMINI_MODEL=<모델 id> 를 더한다.
 # 배포가 비밀값을 읽을 권한이 없다고 멈추면 Julian 이 서비스 계정(481623022922-compute@…)에
 # malkong-gemini-key 의 roles/secretmanager.secretAccessor 를 준다
 
@@ -101,6 +102,7 @@ app/
   domain/family/       /family — 가족 만들기 · 참여 · 나가기 · 맞추기(아기 · 할 일 · 루틴 · 메모)
   domain/knowledge/    /knowledge/version · bundle — 승인된 L1 만 읽는 저장소(repository.py)
   domain/parse/        POST /parse — 문장 읽기. 지시문(system_prompt.txt) · 답 모양(prompt.py) · 모델 답 검사와 하루 상한(service.py)
+  domain/agent/        POST /agent — 물어보기. parse 의 기록 칸과 찾을 조건을 가져다 쓰고, 바꿀 것 줄마다 검사한다(service.py)
   data/l1/             L1 사본 — scripts/sync_l1.py 가 만든다. 손으로 고치지 않는다
   infra/db/            바깥 저장소 — Neon(Postgres)과 메모리 판. 주소가 없으면 메모리
     usage_store.py     기기 키 해시
@@ -110,7 +112,7 @@ scripts/               손으로 돌리는 도구(sync_l1). 서버 이미지에�
 tests/
 ```
 
-도메인 이름은 api-contract 경로의 첫 토막을 쓴다 — `devices`, `entitlements`, `family`, `knowledge`, `parse`.
+도메인 이름은 api-contract 경로의 첫 토막을 쓴다 — `devices`, `entitlements`, `family`, `knowledge`, `parse`, `agent`.
 
 ## 계층 규칙 — Router → Service → Repository
 
@@ -147,5 +149,5 @@ tests/
 
 - 새 엔드포인트를 만들면 `tests/` 에 테스트를 하나 이상 둔다
 - 저장소 같은 바깥 의존은 `app.dependency_overrides` 로 메모리 판이나 가짜를 끼워 시험한다
-- 모델도 가짜(`tests/test_parse.py` 의 FakeModel)로 시험한다. 실제 Gemini 호출은 pytest 에 넣지 않고, 손으로 돌릴 때는
+- 모델도 가짜(`tests/test_parse.py` · `tests/test_agent.py` 의 FakeModel)로 시험한다. 실제 Gemini 호출은 pytest 에 넣지 않고, 손으로 돌릴 때는
   몇 번 부를지 먼저 말한다(루트 AGENTS.md 「AI 모델 실제 호출은 최소로」)

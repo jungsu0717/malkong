@@ -7,7 +7,7 @@
 운영자(가족) 기기는 헤더 `X-As-User: 1` 을 더해 `/v1/entitlements` 를 일반 기기처럼 받을 수 있다
 (일반 사용자로 보기 — [backend](backend.md) 운영자 절). 일반 기기의 이 헤더는 무시한다.
 
-지금 서버가 하는 일은 기기 키 · 기기 자격 · 공공 지식(L1) 내려받기 · 가족 공유 · 문장 읽기 다섯이다. 질문 답변(`/v1/ask`) ·
+지금 서버가 하는 일은 기기 키, 기기 자격, 공공 지식(L1) 내려받기, 가족 공유, 문장 읽기, 물어보기 여섯이다. 질문 답변(`/v1/ask`) ·
 보상형 광고 적립(`/v1/reward/ssv`) · 답변 피드백(`/v1/feedback`)은 2026-10-22 에 뺐다(아래 「뺀 것」).
 
 ## POST /v1/devices — 디바이스 키 발급
@@ -135,6 +135,105 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
            앱은 규칙으로 읽은 만큼만 쓴다.
 ```
 
+## POST /v1/agent — 물어보기 (SPEC-MAIN-12 · 13)
+
+물어보기 창에서 「이거」, 「옮겨 줘」, 「지워 줘」처럼 화면을 가리키거나 기록을 고치는 말과 앱 규칙으로 못 읽은 말을 받아
+답 글이나 바꿀 것 목록으로 돌려준다([decisions/040](../decisions/040-ask-agent-reads-the-day.md), task common/032). 요청 머리 `X-Device-Key` 필수.
+한 번 묻는 데 모델은 한 번 부른다. 서버는 기록을 바꾸지도 저장하지도 않고, 반영은 앱이 사람 확인을 받아서 한다.
+무엇을 보내고 무엇을 저장하지 않는지는 [backend](backend.md) 「물어보기」. 빌드 13 이 쓰는 `/v1/parse` 는 그대로 둔다.
+
+요청:
+
+```json
+{
+  "text": "이거 10분 앞으로 옮기고, 내일 아침 9시에 2개월 접종 일정 넣어 줘",
+  "now": "2026-11-06T14:20:00+09:00",
+  "history": [
+    { "role": "user", "text": "이전 수유 언제 했어?" },
+    { "role": "app", "text": "13:50에 분유 120ml 먹었어요." }
+  ],
+  "day": "2026-11-06",
+  "records": [
+    { "ref": "r7", "kind": "formula", "startAt": "2026-11-06T10:50:00+09:00", "amount": 140 },
+    { "ref": "r9", "kind": "formula", "startAt": "2026-11-06T13:50:00+09:00", "amount": 120, "by": "엄마" }
+  ],
+  "selected": "r9"
+}
+```
+
+| 칸 | 뜻 |
+|---|---|
+| `text` | 이번에 쓴 문장. 앞뒤 공백을 빼고 1~300자 |
+| `now` | 기기의 지금 시각(시간대가 붙은 ISO). 시간대가 없으면 422 |
+| `history[]` | 바로 앞 대화, 오래된 것부터 6개까지. `role` 은 `user`(사람이 쓴 말)나 `app`(앱이 보인 답), `text` 는 1~600자. 없으면 `[]` |
+| `day` | 보고 있는 날(`YYYY-MM-DD`). 기록을 보낼 때만 채우고, 아니면 null |
+| `records[]` | 그날 기록, 150개까지. 처음 한 번 동의하지 않았으면 `[]` |
+| `selected` | 흐름에서 누른 기록의 `ref`, 없으면 null. `records` 에 없는 ref 이면 null 로 본다 |
+
+기록 한 줄(`records[]`)의 칸은 다음과 같다. `ref` 와 `kind`, `startAt` 은 꼭 있어야 하고, 나머지는 비워도 되며 기본이 null 이다.
+
+| 칸 | 뜻 |
+|---|---|
+| `ref` | 앱이 붙인 기록 이름. `r` 뒤에 숫자 1~3자리(`r12`). 한 요청 안에서 겹치면 422 |
+| `kind` | parse 와 같은 9가지 |
+| `startAt` · `endAt` | 시간대가 붙은 ISO. 서버가 `now` 의 시간대로 맞춰 모델에 보낸다 |
+| `amount` · `side` · `diaper` · `color` | parse 기록 한 줄과 같은 뜻과 값 |
+| `title` | 루틴 이름이나 메모 글, 300자까지 |
+| `note` | 기록에 붙인 메모, 300자까지 |
+| `by` | 남긴 사람의 가족 이름, 20자까지 |
+
+걸린 시간(`minutes`)은 받지 않는다 — 시작과 끝 때로 보낸다. 계약에 없는 칸은 무시한다.
+
+응답:
+
+```json
+{
+  "type": "changes",
+  "reply": null,
+  "question": null,
+  "actions": [
+    { "op": "update", "ref": "r9", "kind": "formula", "startAt": "2026-11-06T13:40:00+09:00", "endAt": null,
+      "minutes": null, "amount": null, "side": null, "diaper": null, "color": null, "title": null, "note": null,
+      "hasTime": null },
+    { "op": "plan", "ref": null, "kind": null, "startAt": "2026-11-07T09:00:00+09:00", "endAt": null,
+      "minutes": null, "amount": null, "side": null, "diaper": null, "color": null, "title": "2개월 접종", "note": null,
+      "hasTime": true }
+  ],
+  "highlight": ["r9"]
+}
+```
+
+| 칸 | 뜻 |
+|---|---|
+| `type` | `answer`(보는 날 기록으로 답한 물음), `changes`(더하기, 고치기, 지우기, 일정), `question`(며칠에 걸친 숫자를 묻는 말), `health`(의료 판단을 묻는 말), `unknown`(그 밖이나 읽지 못한 말) |
+| `reply` | answer 의 답 글(늘 있다), changes 의 짧은 설명(없을 수 있다). 앞뒤 공백을 빼고 300자까지 |
+| `question` | `type` 이 question 일 때만 parse 와 같은 `{ what, range, measure }`, 그 밖에는 null. 앱이 기기 안 기록에서 센다 |
+| `actions[]` | `type` 이 changes 일 때만 채운다(10줄까지). 그 밖에는 `[]` |
+| `highlight[]` | 답이 가리키는 기록의 `ref`, 10개까지. 요청에 보낸 ref 만 온다 |
+
+바꿀 것 한 줄(`actions[]`)은 칸이 평평하다. 칸은 늘 모두 오고, `op` 마다 아래 칸만 채워지며 나머지는 null 이다.
+
+| `op` | 채워지는 칸 |
+|---|---|
+| `add` | 새 기록. `kind` 와 parse 기록 한 줄의 칸(`startAt`, `endAt`, `minutes`, `amount`, `side`, `diaper`, `color`, `title`). 다듬는 규칙도 parse 와 같다 — 종류에 없는 칸은 비우고, routine 과 memo 에는 `title` 이 늘 있다. 때를 말하지 않았으면 `startAt` 은 null(지금) |
+| `update` | 보낸 기록 고치기. `ref`, 그 기록의 `kind`, 바뀌는 칸만. 바뀌는 칸은 그 종류에 있는 칸 가운데 보낸 값과 다른 것이다. 종류마다 parse 의 칸을 쓰고, breast, formula, diaper, sleep, temp, weight, height 에는 `note` 를 더한다. routine 과 memo 는 `title` 이 글이고 `note` 가 없다. `minutes` 가 오면 걸린 시간을 그만큼으로 바꾸라는 뜻이다 |
+| `delete` | 보낸 기록 지우기. `ref` 와 그 기록의 `kind` 만 |
+| `plan` | 할 일이나 일정. `title`, `startAt`, `hasTime`(시각을 말했으면 true, 날만 말했으면 false) |
+
+```
+평시     ▸ 서버는 모델 답을 칸마다 검사한다. 겉모양이 틀리면(JSON 이 아님, 목록 밖의 type) unknown 을 준다.
+평시     ▸ 맞지 않는 줄은 버린다 — 보내지 않은 ref 를 가리키는 update 와 delete, 바뀌는 칸이 없는 update,
+           title 이나 startAt 이 없는 plan, 종류가 없거나 이름 없는 routine · memo 인 add, 값이 목록 밖인 줄.
+           때는 모두 `now` 의 시간대로 맞춘다.
+평시     ▸ changes 인데 남은 줄이 없으면 reply 가 있을 때 answer, 없으면 unknown 이다.
+           reply 가 빈 answer 와 조건이 맞지 않는 question 도 unknown 이다.
+평시     ▸ health 와 unknown 은 reply, actions, highlight 를 비워 보낸다. 앱이 정해 둔 글을 보인다(헌장 5).
+평시     ▸ question 이면 actions 를 비운다.
+조건 위반 ▸ 키가 없거나 모르는 키면 401 DEVICE_KEY_INVALID. 형식이 틀린 요청(겹친 ref 포함)은 422 INVALID_REQUEST.
+조건 위반 ▸ 기기마다 하루(한국 시간 0시에 바뀐다) 200번을 넘으면 429 LIMIT_EXCEEDED. 문장 읽기의 300번과 따로 센다.
+조건 위반 ▸ 서버에 모델 키가 없거나 모델에 닿지 못하면(네트워크, 15초 시간 초과, 모델 회사의 4xx · 5xx) 503 MODEL_UNAVAILABLE.
+```
+
 ## 뺀 것 (2026-10-22, task common/022)
 
 앱이 AI 상담을 뺀 뒤([decisions/024](../decisions/024-topic-todo-no-ai-answers.md)) 부르지 않게 된 것을 서버에서도 지웠다.
@@ -164,3 +263,4 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 - 2026-10-22 질문 답변 · 보상 광고 · 피드백 · 또래 질문을 뺌, 자격은 `{ ads, operator }` 만, 가족 맞추기에 메모(`memo`)와 `itemKinds` (task common/022 · 024)
 - 2026-10-22 `GET /privacy` · `/terms` 웹 페이지 (task common/024)
 - 2026-11-09 `POST /v1/parse` — 물어보기 창의 문장 읽기(한 문장의 기록 여럿, 찾을 조건, health, unknown), 기기마다 하루 300번, 503 MODEL_UNAVAILABLE (decisions/039, task common/031)
+- 2026-11-09 `POST /v1/agent` — 물어보기. 문장, 앞 대화, 동의했을 때 보고 있는 날의 기록과 선택한 기록을 받아 답 글(answer)이나 바꿀 것(add, update, delete, plan), 찾을 조건, health, unknown 을 돌려준다. 기기마다 하루 200번 (decisions/040, task common/032)

@@ -23,9 +23,33 @@ from app.domain.parse.schema import (
 MAX_RECORDS = 10
 
 
-def _enum(literal: Any) -> dict[str, Any]:
+def enum_schema(literal: Any) -> dict[str, Any]:
     return {"type": "string", "enum": list(get_args(literal))}
 
+
+# 기록 한 줄의 칸 — 물어보기(/v1/agent)의 바꿀 것 한 줄도 이 칸을 그대로 쓴다
+RECORD_PROPERTIES: dict[str, Any] = {
+    "kind": enum_schema(RecordKind),
+    "startAt": {"type": "string", "format": "date-time"},
+    "endAt": {"type": "string", "format": "date-time"},
+    "minutes": {"type": "integer", "minimum": 1, "maximum": 1440},
+    "amount": {"type": "number"},
+    "side": enum_schema(Side),
+    "diaper": enum_schema(Diaper),
+    "color": enum_schema(PooColor),
+    "title": {"type": "string"},
+}
+
+# 찾을 조건 — 물어보기(/v1/agent)도 같은 모양을 쓴다
+QUESTION_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        "what": enum_schema(FindWhat),
+        "range": enum_schema(FindRangeKey),
+        "measure": enum_schema(FindMeasure),
+    },
+    "required": ["what", "range", "measure"],
+}
 
 # Gemini 가 받는 JSON 스키마(일부 문법만 된다).
 # 비어도 되는 칸은 required 에서 빼서 모델이 아예 쓰지 않게 한다
@@ -36,31 +60,9 @@ MODEL_SCHEMA: dict[str, Any] = {
         "records": {
             "type": "array",
             "maxItems": MAX_RECORDS,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "kind": _enum(RecordKind),
-                    "startAt": {"type": "string", "format": "date-time"},
-                    "endAt": {"type": "string", "format": "date-time"},
-                    "minutes": {"type": "integer", "minimum": 1, "maximum": 1440},
-                    "amount": {"type": "number"},
-                    "side": _enum(Side),
-                    "diaper": _enum(Diaper),
-                    "color": _enum(PooColor),
-                    "title": {"type": "string"},
-                },
-                "required": ["kind"],
-            },
+            "items": {"type": "object", "properties": RECORD_PROPERTIES, "required": ["kind"]},
         },
-        "question": {
-            "type": "object",
-            "properties": {
-                "what": _enum(FindWhat),
-                "range": _enum(FindRangeKey),
-                "measure": _enum(FindMeasure),
-            },
-            "required": ["what", "range", "measure"],
-        },
+        "question": QUESTION_SCHEMA,
     },
     "required": ["type"],
 }

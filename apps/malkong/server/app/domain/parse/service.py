@@ -90,7 +90,7 @@ def read_answer(text: str, now: datetime) -> ParseResponse:
         logger.warning("parse: 모델 답의 형식이 맞지 않음 (길이 %d)", len(text))
         return UNKNOWN
     if answer.type == "records":
-        records = [r for r in (_clean(r, now) for r in answer.records) if r][:MAX_RECORDS]
+        records = [r for r in (clean_record(r, now) for r in answer.records) if r][:MAX_RECORDS]
         return ParseResponse(type="records", records=records) if records else UNKNOWN
     if answer.type == "question":
         if not answer.question:
@@ -99,7 +99,7 @@ def read_answer(text: str, now: datetime) -> ParseResponse:
     return ParseResponse(type=answer.type)
 
 
-def _clean(record: ParsedRecord, now: datetime) -> ParsedRecord | None:
+def clean_record(record: ParsedRecord, now: datetime) -> ParsedRecord | None:
     """기록 한 줄 다듬기 — 그 종류에 없는 칸은 비우고, 때는 기기의 시간대로 맞춘다.
 
     이름이 있어야 하는 루틴 · 메모에 이름이 없으면 그 줄은 버린다.
@@ -114,11 +114,11 @@ def _clean(record: ParsedRecord, now: datetime) -> ParsedRecord | None:
         values["color"] = None
     for name in ("start_at", "end_at"):
         if values[name] is not None:
-            values[name] = _local(values[name], now)
+            values[name] = to_local(values[name], now)
     return ParsedRecord(kind=record.kind, **values)
 
 
-def _local(at: datetime, now: datetime) -> datetime:
+def to_local(at: datetime, now: datetime) -> datetime:
     # 시간대 없이 온 때는 기기의 시간대로 본다
     if at.tzinfo is None:
         return at.replace(tzinfo=now.tzinfo)
