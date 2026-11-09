@@ -59,8 +59,16 @@ export type Answer = {
   offset: number;
 };
 
-/** 찾을 조건으로 답 문장을 만든다. offset 은 마지막에서 몇 번째 앞인지(그 전 수유는?) */
-export function answerFor(q: FindQuery, events: CareEvent[], now: Date, offset = 0): Answer {
+/** 평균을 묻는 말 — 여러 날에 걸친 답에 「하루 평균」을 덧붙인다 */
+export const asksAverage = (text: string) => /평균/.test(text);
+
+/** 범위 안에서 지금까지 지난 날 수(오늘을 하나로) */
+function daysIn(q: FindQuery, now: Date): number {
+  return Math.ceil((Math.min(q.range.to, now.getTime()) - q.range.from) / (24 * 60 * MIN));
+}
+
+/** 찾을 조건으로 답 문장을 만든다. offset 은 마지막에서 몇 번째 앞인지(그 전 수유는?). average 면 여러 날의 답에 하루 평균을 붙인다 */
+export function answerFor(q: FindQuery, events: CareEvent[], now: Date, offset = 0, average = false): Answer {
   const a = runFind(q, events, now);
   const what = WHAT_LABEL[q.what];
   if (q.measure === 'last' || offset > 0) {
@@ -81,7 +89,12 @@ export function answerFor(q: FindQuery, events: CareEvent[], now: Date, offset =
   }
   if (a.rows.length === 0) return { text: `${q.range.label}에 찾는 기록이 없어요.`, keys: [], label: '', open: null, query: q, offset: 0 };
   const lines = [`${q.range.label} ${what} ${a.big}${copula(a.big)}.`];
-  if (a.line) lines.push(`${a.line}${copula(a.line)}.`);
+  const days = daysIn(q, now);
+  if (average && a.value && days > 1) {
+    const v = a.value.n / days;
+    const avg = a.value.unit === 'min' ? durationLabel(Math.round(v)) : a.value.unit === 'ml' ? `${Math.round(v)}ml` : `${Number(v.toFixed(1))}번`;
+    lines.push(`하루 평균 ${avg}${copula(avg)}.`);
+  } else if (a.line) lines.push(`${a.line}${copula(a.line)}.`);
   return { text: lines.join(' '), keys: a.rows.map((r) => r.key), label: what, open: null, query: q, offset: 0 };
 }
 

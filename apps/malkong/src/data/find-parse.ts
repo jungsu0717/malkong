@@ -143,7 +143,8 @@ export type FindRow = {
   diaper?: CareEvent['diaper'];
   color?: CareEvent['color'];
 };
-export type FindAnswer = { big: string; line: string | null; rows: FindRow[] };
+/** value 는 큰 숫자의 값 — 하루 평균을 낼 때 쓴다(분 · ml · 번). 마지막 값을 물었으면 null */
+export type FindAnswer = { big: string; line: string | null; rows: FindRow[]; value: { n: number; unit: 'min' | 'ml' | 'count' } | null };
 
 const whenOf = (at: number, now: Date) => {
   const days = Math.round((startOfDay(now) - startOfDay(new Date(at))) / DAY);
@@ -163,6 +164,7 @@ export function runFind(q: FindQuery, events: CareEvent[], now = new Date()): Fi
   const rows: FindRow[] = [];
   let big = '';
   let line: string | null = null;
+  let value: FindAnswer['value'] = null;
 
   if (q.what === 'feed' || q.what === 'formula' || q.what === 'breast') {
     const sessions = feedSessions(events).filter((s) => inRange(t(s.startAt)) && (q.what === 'feed' || s.kind === q.what));
@@ -177,11 +179,14 @@ export function runFind(q: FindQuery, events: CareEvent[], now = new Date()): Fi
     } else if (q.measure === 'amount' && q.what !== 'breast') {
       big = `${Math.round(ml)}ml`;
       line = `분유 ${formula.length}번`;
+      value = { n: ml, unit: 'ml' };
     } else if (q.measure === 'duration' && q.what !== 'formula') {
       big = durationLabel(min);
       line = `모유 ${breast.length}번`;
+      value = { n: min, unit: 'min' };
     } else {
       big = `${sessions.length}번`;
+      value = { n: sessions.length, unit: 'count' };
       line = q.what === 'feed' ? `모유 ${breast.length}번, 분유 ${formula.length}번` : q.what === 'formula' ? `${Math.round(ml)}ml` : durationLabel(min);
     }
   } else if (q.what === 'diaper' || q.what === 'pee' || q.what === 'poo') {
@@ -200,6 +205,7 @@ export function runFind(q: FindQuery, events: CareEvent[], now = new Date()): Fi
     } else {
       big = `${list.length}번`;
       line = q.what === 'diaper' ? `소변 ${pee}번, 대변 ${poo}번` : null;
+      value = { n: list.length, unit: 'count' };
     }
   } else if (q.what === 'sleep' || q.what === 'nap' || q.what === 'night') {
     const list = events.filter((e) => {
@@ -221,9 +227,11 @@ export function runFind(q: FindQuery, events: CareEvent[], now = new Date()): Fi
     } else if (q.measure === 'count') {
       big = `${list.length}번`;
       line = durationLabel(minutes);
+      value = { n: list.length, unit: 'count' };
     } else {
       big = durationLabel(minutes);
       line = `${list.length}번`;
+      value = { n: minutes, unit: 'min' };
     }
   } else {
     const kind = q.what;
@@ -239,7 +247,7 @@ export function runFind(q: FindQuery, events: CareEvent[], now = new Date()): Fi
       line = last ? whenOf(t(last.startAt), now) : null;
     }
   }
-  return { big, line, rows: rows.sort((a, b) => b.at - a.at) };
+  return { big, line, rows: rows.sort((a, b) => b.at - a.at), value };
 }
 
 /** 목록 줄의 때 — 「어제 21:00」 「오늘 02:05」 */

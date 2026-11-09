@@ -23,7 +23,7 @@ import { FontFamily } from '@/constants/theme';
 import { parseAdd, type AddResult } from '@/data/add-parse';
 import { changesFrom, dayContext, lastTurns, onlyAdds, pointsOrEdits, selectedLabel, sourceOfKey, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
 import { askAgent, type AgentResponse } from '@/data/api';
-import { answerFor, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
+import { answerFor, asksAverage, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
 import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
 import { hhmm } from '@/data/day-flow';
 import type { CareEvent, EventInput, EventKind } from '@/data/events';
@@ -234,7 +234,7 @@ export function AskSheet({
     }
     if (res.type === 'question') {
       const q = queryFromServer(res.question, now);
-      if (q) return answer(answerFor(q, events, now));
+      if (q) return answer(answerFor(q, events, now, 0, asksAverage(s)));
     }
     if (res.type === 'changes') {
       const changes = changesFrom(res.actions, ctx, now, s);
@@ -276,7 +276,7 @@ export function AskSheet({
         const f = followUp(s, lastAnswer, now);
         if (f) return answer(answerFor(f.query, events, now, f.offset));
         const q = parseFind(s, now);
-        if (q) return answer(answerFor(q, events, now));
+        if (q) return answer(answerFor(q, events, now, 0, asksAverage(s)));
       } else {
         // 기록하는 말 — 규칙으로 하나를 읽을 수 있고 여럿이 아니면 바로
         const r = parseAdd(s, now);

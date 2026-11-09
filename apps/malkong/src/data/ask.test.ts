@@ -117,3 +117,11 @@ test('서버 기록 — 모델이 모유 시간을 빠뜨리면 문장에서 읽
   assert.equal(minutesIn('10분 전에 분유 120'), null);
   assert.equal(minutesIn('낮잠 1시간 10분'), 70);
 });
+
+test('평균을 물으면 여러 날의 답에 하루 평균', () => {
+  const q = parseFind('이번 주 분유 몇 ml?', NOW)!;
+  const a = answerFor(q, EVENTS, NOW, 0, true);
+  assert.match(a.text, /하루 평균 \d+ml/);
+  const one = answerFor(parseFind('오늘 분유 몇 ml?', NOW)!, EVENTS, NOW, 0, true);
+  assert.doesNotMatch(one.text, /평균/);
+});
