@@ -15,7 +15,8 @@ import { onRemoteChange, requestSync } from './sync-events';
 type MemosValue = {
   memos: Memo[];
   loading: boolean;
-  addMemo: (text: string) => Promise<void>;
+  /** 메모 쓰기 — at 을 주면 그날 그 시각(달력 · 물어보기). 새 메모, 빈 글이면 null */
+  addMemo: (text: string, at?: Date) => Promise<Memo | null>;
   /** 발달 체크 — 그 항목의 메모가 있으면 지우고, 없으면 오늘 날짜로 남긴다 */
   toggleCheck: (ref: string, text: string) => Promise<void>;
   /** 오늘의 놀이 「했어요」 — 오늘 그 놀이의 메모가 있으면 지우고, 없으면 남긴다(SPEC-STAGE-04) */
@@ -64,12 +65,13 @@ export function MemosProvider({ children }: { children: ReactNode }) {
     requestSync();
   }, []);
 
-  const addMemo = useCallback(async (text: string) => {
-    if (!text.trim()) return;
-    const memo = makeMemo(text);
+  const addMemo = useCallback(async (text: string, at?: Date) => {
+    if (!text.trim()) return null;
+    const memo = makeMemo(text, at ?? new Date());
     await upsertMemoRow(memo);
     setMemos((prev) => sortMemos([memo, ...prev]));
     requestSync();
+    return memo;
   }, []);
 
   const toggleCheck = useCallback(

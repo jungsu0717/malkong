@@ -19,8 +19,8 @@ export const HEAD = 44;
 export const BUTTONS = 52;
 /** 자는 중인 지금 노드의 높이 */
 export const SLEEP_NOW_H = 64;
-/** 노드 아래 이름 두 줄(띄움 8 포함) */
-const LABEL = 40;
+/** 노드 아래 이름 세 줄 — 이름, 시각, 같은 기록끼리 간격(띄움 8 포함, task today/018) */
+const LABEL = 56;
 /** 틀 안 줄과 줄 사이(줄 바꿈 선이 지나간다) */
 const LINE_GAP = 14;
 const PAD = 14;
@@ -36,7 +36,7 @@ const R = 14;
 /** 틀 안 줄 바꿈 선 — 틀 테두리 안쪽 */
 const IN = 8;
 const IR = 6;
-const LINK_H = { plain: 34, pill: 56, sleep: 120 } as const;
+const LINK_H = { plain: 34, pill: 56, sleep: 136 } as const;
 
 export type Rect = { x: number; y: number; w: number; h: number };
 export type Point = { cx: number; cy: number };
@@ -129,7 +129,8 @@ export function flowLayout({ width, chip, parts, links, future }: LayoutInput): 
   const dashed: string[] = [];
   const W = width - FX * 2;
   const chipRect: Rect | null = chip ? { x: 30, y: 12, w: 132, h: 32 } : null;
-  let y = chip ? 64 : 12;
+  // 맨 위 오른쪽에 「흐름 | 목록」 전환이 있어 첫 토막은 그 아래에서 시작한다
+  let y = chip ? 64 : 56;
 
   type Placed = PartGeo & { enter: { x: number; y: number }; exit: { x: number; y: number } };
   const placed: Placed[] = [];

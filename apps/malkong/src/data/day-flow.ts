@@ -289,7 +289,12 @@ export type SubItem =
   /** 기저귀 · 체온 · 키 · 몸무게 */
   | { type: 'side'; key: string; at: number; event: CareEvent }
   | { type: 'routine'; key: string; at: number; routineId: string; logId: string | null; title: string; by: string | null }
-  | { type: 'todo'; key: string; at: number; todoId: string; title: string; by: string | null };
+  | { type: 'todo'; key: string; at: number; todoId: string; title: string; by: string | null }
+  /** 그날 쓴 메모(일기) — 우리 아기 메모 중 사람이 쓴 것 */
+  | { type: 'memo'; key: string; at: number; memoId: string; text: string };
+
+/** 그날 메모 — 하루 흐름에 메모 노드로(SPEC-MAIN-08) */
+export type DayMemo = { memoId: string; text: string; at: string };
 
 /** 그날 완료한 할 일(내 할 일) */
 export type TodoDone = { todoId: string; title: string; at: string; by: string | null };
@@ -316,7 +321,7 @@ export function isNightStart(at: number): boolean {
 }
 
 /** [from, to) 의 기록(잠 말고) — 재는 중인 모유는 지금 묶음이 보여 주므로 뺀다. 그 시간의 기록 화면도 쓴다 */
-export function itemsBetween(events: CareEvent[], routines: RoutineDone[], todos: TodoDone[], from: number, to: number): SubItem[] {
+export function itemsBetween(events: CareEvent[], routines: RoutineDone[], todos: TodoDone[], from: number, to: number, memos: DayMemo[] = []): SubItem[] {
   const inDay = (at: number) => at >= from && at < to;
   const items: SubItem[] = [];
   for (const s of feedSessions(events)) {
@@ -338,6 +343,10 @@ export function itemsBetween(events: CareEvent[], routines: RoutineDone[], todos
     const at = t(d.at);
     if (inDay(at)) items.push({ type: 'todo', key: `todo-${d.todoId}`, at, todoId: d.todoId, title: d.title, by: d.by });
   }
+  for (const m of memos) {
+    const at = t(m.at);
+    if (inDay(at)) items.push({ type: 'memo', key: `memo-${m.memoId}`, at, memoId: m.memoId, text: m.text });
+  }
   return items.sort((a, b) => a.at - b.at);
 }
 
@@ -351,7 +360,7 @@ function itemEnd(it: SubItem): number {
  * 앞 기록이 끝난 뒤 `BLOCK_GAP` 넘게 기록이 없거나 그 사이에 잠을 적었으면 새 묶음이 시작된다.
  * 오늘이면 마지막 묶음이 지금(모유를 재는 중이면 시작한 때)에서 `BLOCK_GAP` 안일 때 지금 묶음(live)이 된다.
  */
-export function dayFlow(events: CareEvent[], routines: RoutineDone[], todos: TodoDone[], day: Date, now = new Date()): DayFlow {
+export function dayFlow(events: CareEvent[], routines: RoutineDone[], todos: TodoDone[], day: Date, now = new Date(), memos: DayMemo[] = []): DayFlow {
   const D0 = startOfDay(day).getTime();
   const D1 = D0 + DAY;
   const isToday = now.getTime() >= D0 && now.getTime() < D1;
@@ -359,7 +368,7 @@ export function dayFlow(events: CareEvent[], routines: RoutineDone[], todos: Tod
   const sleeps = events
     .filter((e) => e.kind === 'sleep' && t(e.startAt) < until && endOf(e, now) > D0)
     .map((e): SleepSpan => ({ event: e, from: t(e.startAt), to: e.endAt ? t(e.endAt) : null, night: isNightStart(t(e.startAt)) }));
-  const items = itemsBetween(events, routines, todos, D0, until);
+  const items = itemsBetween(events, routines, todos, D0, until, memos);
 
   // 잠과 기록을 시간순으로 — 같은 때면 잠 먼저
   type Entry = { at: number; sleep?: SleepSpan; item?: SubItem };
@@ -466,3 +475,46 @@ export function dayTotals(events: CareEvent[], day: Date, now = new Date()): Day
   out.sleepMin = Math.round(out.sleepMin);
   return out;
 }
+
+const GAP_MAX = 24 * 60;
+
+/**
+ * 같은 기록끼리 간격(분) — 노드 셋째 줄 「+3시간 5분」(SPEC-MAIN-08, task today/018). 키는 SubItem · 잠의 key(기록 id, `routine-<logId>`).
+ * 수유는 앞 수유를 시작한 때부터(모유와 분유 함께), 기저귀 · 체온 · 몸무게 · 키는 같은 종류의 앞 기록부터,
+ * 루틴은 같은 루틴을 그날 앞에 한 때부터, 잠은 앞 잠이 끝난 때부터(깨어 있던 시간). 앞 기록이 24시간보다 오래전이면 넣지 않는다.
+ */
+export function itemGaps(events: CareEvent[], routines: RoutineDone[] = []): Map<string, number> {
+  const out = new Map<string, number>();
+  const put = (key: string, at: number, prev: number | null) => {
+    if (prev === null) return;
+    const d = (at - prev) / MIN;
+    if (d > 0 && d <= GAP_MAX) out.set(key, d);
+  };
+  const byStart = <T extends { startAt: string }>(list: T[]) => [...list].sort((a, b) => t(a.startAt) - t(b.startAt));
+  const feeds = byStart(feedSessions(events));
+  feeds.forEach((s, i) => put(s.id, t(s.startAt), i > 0 ? t(feeds[i - 1].startAt) : null));
+  for (const kind of ['diaper', 'temp', 'weight', 'height'] as const) {
+    const list = byStart(events.filter((e) => e.kind === kind));
+    list.forEach((e, i) => put(e.id, t(e.startAt), i > 0 ? t(list[i - 1].startAt) : null));
+  }
+  const sleeps = byStart(events.filter((e) => e.kind === 'sleep'));
+  sleeps.forEach((e, i) => {
+    const prev = i > 0 ? sleeps[i - 1].endAt : null;
+    put(e.id, t(e.startAt), prev ? t(prev) : null);
+  });
+  const byRoutine = new Map<string, RoutineDone[]>();
+  for (const r of routines) byRoutine.set(r.routineId, [...(byRoutine.get(r.routineId) ?? []), r]);
+  for (const list of byRoutine.values()) {
+    const sorted = [...list].sort((a, b) => t(a.at) - t(b.at));
+    sorted.forEach((r, i) => {
+      const prev = i > 0 ? sorted[i - 1] : null;
+      const sameDay = prev !== null && startOfDay(new Date(t(prev.at))).getTime() === startOfDay(new Date(t(r.at))).getTime();
+      put(`routine-${r.logId ?? r.routineId}`, t(r.at), sameDay && prev ? t(prev.at) : null);
+    });
+  }
+  return out;
+}
+
+/** 간격 글 — 「+3시간 5분」, 잠은 「깨어 있던 시간 5시간 10분」 */
+export const gapLabel = (minutes: number) => `+${durationLabel(minutes)}`;
+export const awakeLabel = (minutes: number) => `깨어 있던 시간 ${durationLabel(minutes)}`;

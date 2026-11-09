@@ -38,6 +38,8 @@ type RoutinesValue = {
   completeAll: (id: string) => Promise<void>;
   /** 「오늘은 건너뛰기」 ↔ 취소 — 그날 알림과 진행에서 빠진다(task common/022) */
   skipToday: (id: string) => Promise<void>;
+  /** 정한 때에 완료 한 줄 — 수유와 같이 먹인 비타민D, 물어보기로 적은 루틴(task log/008 · today/019). 새 줄의 id */
+  logAt: (id: string, at: Date) => Promise<string>;
   /** 완료한 한 줄의 때 바꾸기 — 하루 흐름의 기록 화면에서(task today/014) */
   moveLog: (logId: string, at: Date) => Promise<void>;
   /** 완료한 한 줄 지우기 — 「완료 취소」 */
@@ -179,6 +181,15 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
     [addLog, dropLog],
   );
 
+  const logAt = useCallback(
+    async (id: string, at: Date) => {
+      const log = makeRoutineLog(id, at);
+      await addLog(log);
+      return log.id;
+    },
+    [addLog],
+  );
+
   const skipToday = useCallback(
     async (id: string) => {
       const skips = logsOn(id, current.current.logs, new Date()).filter((l) => l.skip);
@@ -268,11 +279,12 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
       toggleStep,
       completeAll,
       skipToday,
+      logAt,
       moveLog,
       removeLog,
       completeStock,
     }),
-    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, restoreRoutine, check, toggleStep, completeAll, skipToday, moveLog, removeLog, completeStock],
+    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, restoreRoutine, check, toggleStep, completeAll, skipToday, logAt, moveLog, removeLog, completeStock],
   );
 
   return <RoutinesContext.Provider value={value}>{children}</RoutinesContext.Provider>;

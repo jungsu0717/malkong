@@ -13,14 +13,19 @@ import { useTheme } from '@/hooks/use-theme';
 export function DiaperGlyph({ diaper, color, size }: { diaper: DiaperKind; color: StoolColor | null; size: number }) {
   const c = useTheme();
   const fill = color ? STOOL_SWATCH[color] : 'none';
-  if (diaper === 'pee') return <Ionicons name="water-outline" size={size} color={c.text} />;
-  if (diaper === 'poo') return <PooIcon size={size} color={c.text} fill={fill} />;
+  if (diaper === 'pee') return <Ionicons name="water-outline" size={size} color={c.peeFg} />;
+  if (diaper === 'poo') return <PooIcon size={size} color={c.pooFg} fill={fill} />;
   return (
     <View style={styles.pair}>
-      <Ionicons name="water-outline" size={Math.round(size * 0.7)} color={c.text} />
-      <PooIcon size={Math.round(size * 0.8)} color={c.text} fill={fill} />
+      <Ionicons name="water-outline" size={Math.round(size * 0.7)} color={c.peeFg} />
+      <PooIcon size={Math.round(size * 0.8)} color={c.pooFg} fill={fill} />
     </View>
   );
+}
+
+/** 기저귀 바탕 — 소변은 노랑, 대변이 있으면 갈색 */
+export function diaperTone(diaper: DiaperKind, c: ReturnType<typeof useTheme>) {
+  return diaper === 'pee' ? { backgroundColor: c.peeBg, borderColor: c.peeLine } : { backgroundColor: c.pooBg, borderColor: c.pooLine };
 }
 
 const styles = StyleSheet.create({

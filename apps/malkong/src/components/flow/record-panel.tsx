@@ -2,14 +2,14 @@
  * 위쪽 기록 칸 (SPEC-MAIN-08, task today/017) — 모유 · 분유 · 기저귀 · 잠 넷. 하루 흐름 어느 보기에서나 날짜 아래에 고정한다.
  *
  * 칸마다 동그란 기록 단추(+ 표시)와 그날 합계가 있다. 단추를 누르면 기록 시트, 이름과 합계를 누르면 그래프 화면(SPEC-LOG-04)이 열린다.
- * 자는 중이면 잠 단추가 「수면 종료」다(SPEC-LOG-02). 칸 아래 「추가」 줄은 한 줄로 적는 시트(SPEC-MAIN-12).
+ * 자는 중이면 잠 단추가 「수면 종료」다(SPEC-LOG-02). 문장으로 적기는 오른쪽 아래 「물어보기」에서 한다(SPEC-MAIN-12).
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { BottleIcon } from '@/components/baby-icons';
+import { BottleIcon, ZzIcon } from '@/components/baby-icons';
 import { ThemedText } from '@/components/themed-text';
 import { tap } from '@/components/ui';
 import type { DayTotals } from '@/data/day-flow';
@@ -24,14 +24,12 @@ export function RecordPanel({
   date,
   sleeping,
   onRecord,
-  onAdd,
 }: {
   totals: DayTotals;
   /** 합계의 날 — 그래프 화면도 그날로 연다 */
   date: Date;
   sleeping: boolean;
   onRecord: (kind: EventKind) => void;
-  onAdd: () => void;
 }) {
   const c = useTheme();
   const day = `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
@@ -45,14 +43,14 @@ export function RecordPanel({
   const icon = (kind: EventKind) => {
     if (kind === 'breast') return <Ionicons name="heart-outline" size={22} color="#FFFFFF" />;
     if (kind === 'formula') return <BottleIcon size={22} color="#FFFFFF" />;
-    if (kind === 'diaper') return <Ionicons name="water-outline" size={21} color={c.text} />;
-    return sleeping ? <Ionicons name="sunny-outline" size={22} color={c.accent} /> : <Ionicons name="moon" size={20} color={c.onInk} />;
+    if (kind === 'diaper') return <Ionicons name="water-outline" size={21} color={c.peeFg} />;
+    return sleeping ? <Ionicons name="sunny-outline" size={22} color={c.accent} /> : <ZzIcon size={21} color={c.onInk} />;
   };
   const look = (kind: EventKind) =>
     kind === 'breast' || kind === 'formula'
       ? { backgroundColor: c.accent }
       : kind === 'diaper'
-        ? { backgroundColor: c.card, borderWidth: 1.5, borderColor: c.flowLine }
+        ? { backgroundColor: c.peeBg, borderWidth: 1.5, borderColor: c.peeLine }
         : sleeping
           ? { backgroundColor: c.accentSoft }
           : { backgroundColor: c.ink };
@@ -102,24 +100,6 @@ export function RecordPanel({
           );
         })}
       </View>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="추가, 예: 오후 3시 산책"
-        onPress={() => {
-          tap();
-          onAdd();
-        }}
-        style={({ pressed }) => [styles.add, { backgroundColor: pressed ? c.surfaceStrong : c.surface }]}>
-        <View style={[styles.addIcon, { backgroundColor: c.ink }]}>
-          <Ionicons name="add" size={18} color={c.onInk} />
-        </View>
-        <ThemedText type="label" style={{ fontWeight: 700 }}>
-          추가
-        </ThemedText>
-        <ThemedText type="label" numberOfLines={1} style={[styles.flex, { color: c.textSecondary, fontWeight: 400 }]}>
-          예: 오후 3시 산책
-        </ThemedText>
-      </Pressable>
     </View>
   );
 }
@@ -134,6 +114,4 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 1 },
   value: { fontWeight: 700, fontSize: 15, lineHeight: 20, letterSpacing: -0.4 },
   flex: { flex: 1, minWidth: 0 },
-  add: { height: 44, borderRadius: 14, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  addIcon: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
 });

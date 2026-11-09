@@ -13,8 +13,9 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
-import { BottleIcon } from '@/components/baby-icons';
-import { DiaperGlyph } from '@/components/log/diaper-glyph';
+import { BottleIcon, ZzIcon } from '@/components/baby-icons';
+import { MemoSheet } from '@/components/growth/memo-sheet';
+import { DiaperGlyph, diaperTone } from '@/components/log/diaper-glyph';
 import { useLogActions } from '@/components/log/use-log-actions';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
@@ -39,6 +40,7 @@ import {
 import { STOOL_COLOR_LABEL, durationLabel, eventTitle, startOfDay } from '@/data/event-summary';
 import type { CareEvent } from '@/data/events';
 import { useEvents } from '@/data/events-context';
+import { useMemos } from '@/data/memos-context';
 import { useRoutines } from '@/data/routines-context';
 import { useTodos } from '@/data/todos-context';
 import { useNow } from '@/hooks/use-now';
@@ -58,6 +60,8 @@ export default function RecordsScreen() {
   const { routines, logs, moveLog, removeLog } = useRoutines();
   const { todos, topics, update, toggleDone, remove: removeTodo } = useTodos();
   const log = useLogActions();
+  const { memos, updateMemo, removeMemo } = useMemos();
+  const [memoEdit, setMemoEdit] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(params.open ?? params.sleep ?? null);
   const general = topics.find((x) => x.kind === 'general')?.id ?? null;
 
@@ -75,9 +79,11 @@ export default function RecordsScreen() {
       });
     const doneTodos: TodoDone[] = todos.filter((x) => x.topicId === general && x.doneAt).map((x) => ({ todoId: x.id, title: x.title, at: x.doneAt as string, by: x.doneBy }));
     const list: Row[] = sleep ? [{ key: sleep.id, at: t(sleep.startAt), item: { type: 'sleep', key: sleep.id, at: t(sleep.startAt), event: sleep } }] : [];
-    for (const it of itemsBetween(events, dones, doneTodos, from, until + 1)) list.push({ key: it.key, at: it.at, item: it });
+    const dayMemos = memos.filter((m) => m.ref === null).map((m) => ({ memoId: m.id, text: m.text, at: m.at }));
+    for (const it of itemsBetween(events, dones, doneTodos, from, until + 1, dayMemos)) list.push({ key: it.key, at: it.at, item: it });
     return list.sort((a, b) => a.at - b.at);
-  }, [events, logs, routines, todos, general, sleep, from, until]);
+  }, [events, logs, routines, todos, general, sleep, from, until, memos]);
+  const editing = memoEdit ? (memos.find((m) => m.id === memoEdit) ?? null) : null;
 
   const dayStart = startOfDay(new Date(from)).getTime();
   const day = new Date(from);
@@ -139,11 +145,27 @@ export default function RecordsScreen() {
               setOpen(null);
               void removeTodo(id);
             }}
+            onEditMemo={(id) => setMemoEdit(id)}
           />
         ))}
       </ScrollView>
       <AdBanner anchored />
       {log.sheets}
+      <MemoSheet
+        open={editing !== null}
+        memo={editing}
+        dayText={editing ? hhmm(editing.at) : ''}
+        onSave={(text) => {
+          if (editing) void updateMemo(editing.id, text);
+          setMemoEdit(null);
+        }}
+        onDelete={() => {
+          if (editing) void removeMemo(editing.id);
+          setMemoEdit(null);
+          setOpen(null);
+        }}
+        onClose={() => setMemoEdit(null)}
+      />
     </ThemedView>
   );
 }
@@ -163,6 +185,7 @@ function RecordRow({
   onMoveTodo,
   onUndoTodo,
   onDeleteTodo,
+  onEditMemo,
 }: {
   row: Row;
   last: boolean;
@@ -176,6 +199,7 @@ function RecordRow({
   onUndoRoutine: (logId: string) => void;
   onEditRoutine: (routineId: string) => void;
   onMoveTodo: (id: string, at: Date) => void;
+  onEditMemo: (id: string) => void;
   onUndoTodo: (id: string) => void;
   onDeleteTodo: (id: string) => void;
 }) {
@@ -195,23 +219,31 @@ function RecordRow({
     if (it.type === 'sleep')
       return (
         <Tile bg={c.ink}>
-          <Ionicons name="moon" size={15} color={c.onInk} />
+          <ZzIcon size={16} color={c.onInk} />
         </Tile>
       );
     if (it.type === 'routine' || it.type === 'todo')
       return (
-        <Tile bg={c.surfaceStrong}>
-          <RoutineIcon title={it.title} size={16} color={c.text} />
+        <Tile bg={c.doneBg}>
+          <RoutineIcon title={it.title} size={16} color={c.doneFg} />
+        </Tile>
+      );
+    if (it.type === 'memo')
+      return (
+        <Tile bg={c.memoBg}>
+          <Ionicons name="document-text-outline" size={16} color={c.memoFg} />
         </Tile>
       );
     const k = it.event.kind;
-    return (
-      <Tile bg={c.surfaceStrong}>
-        {k === 'diaper' && it.event.diaper && it.event.diaper !== 'pee' ? (
+    if (k === 'diaper' && it.event.diaper)
+      return (
+        <Tile bg={diaperTone(it.event.diaper, c).backgroundColor}>
           <DiaperGlyph diaper={it.event.diaper} color={it.event.color} size={16} />
-        ) : (
-          <Ionicons name={k === 'diaper' ? 'water-outline' : k === 'temp' ? 'thermometer-outline' : k === 'weight' ? 'scale-outline' : 'resize-outline'} size={16} color={c.text} />
-        )}
+        </Tile>
+      );
+    return (
+      <Tile bg={k === 'temp' ? c.tempBg : c.surfaceStrong}>
+        <Ionicons name={k === 'temp' ? 'thermometer-outline' : k === 'weight' ? 'scale-outline' : 'resize-outline'} size={16} color={k === 'temp' ? c.tempFg : c.text} />
       </Tile>
     );
   })();
@@ -222,6 +254,8 @@ function RecordRow({
         ? sleepTitle({ event: it.event, from: t(it.event.startAt), to: it.event.endAt ? t(it.event.endAt) : null, night: isNightStart(t(it.event.startAt)) }, now)
         : it.type === 'routine' || it.type === 'todo'
           ? it.title
+          : it.type === 'memo'
+            ? it.text.split('\n')[0]
           : it.event.kind === 'diaper'
             ? it.event.diaper === 'pee'
               ? '소변'
@@ -229,7 +263,7 @@ function RecordRow({
                 ? '대변'
                 : '소변, 대변'
             : eventTitle(it.event, now);
-  const by = it.type === 'feed' ? it.session.by : it.type === 'routine' || it.type === 'todo' ? it.by : it.event.by;
+  const by = it.type === 'feed' ? it.session.by : it.type === 'routine' || it.type === 'todo' ? it.by : it.type === 'memo' ? null : it.event.by;
   const extra = it.type === 'side' && it.event.kind === 'diaper' && it.event.color && it.event.diaper !== 'pee' ? STOOL_COLOR_LABEL[it.event.color] : null;
   const meta = [hhmm(row.at), extra, by].filter(Boolean).join(' · ');
 
@@ -267,6 +301,14 @@ function RecordRow({
                   </>
                 }
               />
+            )}
+            {it.type === 'memo' && (
+              <>
+                <ThemedText type="body">{it.text}</ThemedText>
+                <View style={styles.actions}>
+                  <Button label="편집" variant="secondary" size="sm" style={styles.flex} onPress={() => onEditMemo(it.memoId)} />
+                </View>
+              </>
             )}
             {it.type === 'todo' && (
               <DoneBody

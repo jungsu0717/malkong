@@ -214,3 +214,33 @@ export function getKnowledgeVersion(): Promise<{ version: string }> {
 export function getKnowledgeBundle(): Promise<{ version: string; items: unknown }> {
   return request<{ version: string; items: unknown }>('GET', '/v1/knowledge/bundle', undefined, SHORT_TIMEOUT_MS);
 }
+
+/** 문장 읽기(task common/031) — 규칙으로 못 읽은 말을 서버의 모델이 기록이나 찾을 조건으로 바꾼다. 모델에는 문장과 지금 시각만 간다 */
+export type ParsedRecord = {
+  kind: 'breast' | 'formula' | 'diaper' | 'sleep' | 'temp' | 'weight' | 'height' | 'routine' | 'memo';
+  startAt: string | null;
+  endAt: string | null;
+  minutes: number | null;
+  amount: number | null;
+  side: 'left' | 'right' | null;
+  diaper: 'pee' | 'poo' | 'both' | null;
+  color: 'yellow' | 'brown' | 'green' | 'black' | 'red' | 'white' | null;
+  title: string | null;
+};
+export type ParseResponse = {
+  type: 'records' | 'question' | 'health' | 'unknown';
+  records: ParsedRecord[];
+  question: { what: string; range: string; measure: string } | null;
+};
+
+/** 기기 시각을 오프셋이 붙은 ISO 로 — 「2026-11-06T14:20:00+09:00」 */
+function localIso(d: Date): string {
+  const pad = (n: number) => String(Math.floor(Math.abs(n))).padStart(2, '0');
+  const off = -d.getTimezoneOffset();
+  const sign = off >= 0 ? '+' : '-';
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${sign}${pad(off / 60)}:${pad(off % 60)}`;
+}
+
+export function parseSentence(text: string, now = new Date()): Promise<ParseResponse> {
+  return withDeviceKey<ParseResponse>('POST', '/v1/parse', { text, now: localIso(now) }, 15000);
+}

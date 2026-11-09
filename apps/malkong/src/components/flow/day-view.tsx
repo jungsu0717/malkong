@@ -15,6 +15,7 @@ import Svg, { Circle, Defs, Pattern, Rect } from 'react-native-svg';
 
 import { BottleIcon } from '@/components/baby-icons';
 import { careWarnings, WarnCard } from '@/components/flow/care-warn';
+import { DayList, ViewToggle } from '@/components/flow/day-list';
 import {
   BlockFrame,
   ChipNode,
@@ -36,14 +37,18 @@ import { Button, Card, tap } from '@/components/ui';
 import { useBaby } from '@/data/baby-context';
 import { dayNews } from '@/data/day-news';
 import {
+  awakeLabel,
   awakeMinutes,
   dayFlow,
   feedTitle,
+  gapLabel,
   hhmm,
+  itemGaps,
   nextFeedGuess,
   sleepTitle,
   spanRange,
   type Block,
+  type DayMemo,
   type RoutineDone,
   type SleepSpan,
   type SubItem,
@@ -67,6 +72,8 @@ const DAY = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 /** 가족 노드를 숨겼는지 — 'yes' 면 이 폰에서 다시 보이지 않는다(예전 홈 가족 초대 카드와 같은 설정값) */
 const FAMILY_HIDDEN_KEY = 'home.familyCardHidden';
+/** 흐름 | 목록 중 고른 보기 — 이 폰에서 기억한다(SPEC-MAIN-08) */
+const VIEW_KEY = 'day.view';
 
 const MIN = 60 * 1000;
 
@@ -74,6 +81,7 @@ function subKind(it: SubItem): ItemKind {
   if (it.type === 'feed') return it.session.kind;
   if (it.type === 'routine') return 'routine';
   if (it.type === 'todo') return 'todo';
+  if (it.type === 'memo') return 'memo';
   const e = it.event;
   if (e.kind === 'diaper') return e.diaper === 'pee' ? 'pee' : e.diaper === 'both' ? 'both' : 'poo';
   return e.kind as ItemKind;
@@ -84,6 +92,8 @@ const shapeOf = (it: SubItem): Shape => (it.type === 'side' && it.event.kind ===
 function subTitle(it: SubItem, now: Date): string {
   if (it.type === 'feed') return feedTitle(it.session, now);
   if (it.type === 'routine' || it.type === 'todo') return it.title;
+  // 노드 이름은 짧게 「메모」 — 내용은 목록 보기와 기록 화면에서
+  if (it.type === 'memo') return '메모';
   const e = it.event;
   if (e.kind === 'diaper') return e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '소변, 대변';
   if (e.kind === 'temp') return e.amount !== null ? `${e.amount}℃` : '체온';
@@ -151,14 +161,22 @@ function displayParts(flow: ReturnType<typeof dayFlow>, isToday: boolean, now: D
   return { parts, links };
 }
 
+/** 물어보기가 답한 기록 — 흐름 · 목록에서 코랄 테두리와 짧은 표시(SPEC-MAIN-13). keys 는 SubItem key 나 잠 기록 id */
+export type Highlight = { keys: string[]; label: string };
+
 export function DayView({
   date,
   now,
+  highlight = null,
+  onFocus,
   onStart,
   onStop,
 }: {
   date: Date;
   now: Date;
+  highlight?: Highlight | null;
+  /** 비춘 기록이 있는 높이(이 화면 맨 위에서) — 물어보기 창에 가리지 않게 부르는 쪽이 스크롤한다 */
+  onFocus?: (y: number) => void;
   /** 모유 재기 시작(반대쪽) */
   onStart: (kind: EventKind, side: Side | null) => void;
   onStop: (e: CareEvent) => void;
@@ -173,12 +191,21 @@ export function DayView({
   const routine = useRoutineActions(now);
   const schedule = useBabyRows(now);
   const [width, setWidth] = useState(0);
+  const [canvasY, setCanvasY] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [familyHidden, setFamilyHidden] = useState(true);
+  const [mode, setMode] = useState<'flow' | 'list'>('flow');
   useEffect(() => {
     void readSetting(FAMILY_HIDDEN_KEY).then((v) => setFamilyHidden(v === 'yes'));
+    void readSetting(VIEW_KEY).then((v) => {
+      if (v === 'list') setMode('list');
+    });
   }, []);
+  const changeMode = (m: 'flow' | 'list') => {
+    setMode(m);
+    void writeSetting(VIEW_KEY, m);
+  };
   const breast = runningOf(events, 'breast');
   // 모유를 재는 중이면 1초마다 — 지금 노드의 시계만
   const tick = useNow(!!breast || !!runningOf(events, 'sleep'), events);
@@ -200,7 +227,28 @@ export function DayView({
     () => todos.filter((t) => t.topicId === generalTopic && t.doneAt).map((t) => ({ todoId: t.id, title: t.title, at: t.doneAt as string, by: t.doneBy })),
     [todos, generalTopic],
   );
-  const flow = useMemo(() => dayFlow(events, dones, doneTodos, date, now), [events, dones, doneTodos, date, now]);
+  // 그날 쓴 메모 — 발달 체크에서 남긴 줄(ref)은 빼고 사람이 쓴 것만
+  const dayMemos = useMemo<DayMemo[]>(() => memos.filter((m) => m.ref === null).map((m) => ({ memoId: m.id, text: m.text, at: m.at })), [memos]);
+  const flow = useMemo(() => dayFlow(events, dones, doneTodos, date, now, dayMemos), [events, dones, doneTodos, date, now, dayMemos]);
+  // 같은 기록끼리 간격 — 루틴은 그날 한 줄 모두로 센다
+  const gaps = useMemo(() => {
+    const all: RoutineDone[] = logs
+      .filter((l) => l.step == null && !l.skip)
+      .flatMap((l) => {
+        const r = routines.find((x) => x.id === l.routineId);
+        return r ? [{ routineId: r.id, logId: l.id, title: r.title, at: l.at, by: l.by }] : [];
+      });
+    return itemGaps(events, all);
+  }, [events, logs, routines]);
+  const lit = (key: string) => (highlight && highlight.keys.includes(key) ? highlight.label : null);
+  const gapOf = (key: string) => {
+    const m = gaps.get(key);
+    return m === undefined ? null : gapLabel(m);
+  };
+  const awakeOf = (id: string) => {
+    const m = gaps.get(id);
+    return m === undefined ? null : awakeLabel(m);
+  };
   const news = baby ? dayNews(events, memos, baby.birthDate, date, now) : null;
 
   if (!baby || !age) return null;
@@ -345,7 +393,24 @@ export function DayView({
     </View>
   ) : null;
 
+  const focusY = (() => {
+    if (!geo || !highlight || highlight.keys.length === 0) return null;
+    for (let i = 0; i < shown.length; i++) {
+      const d = shown[i];
+      if (d.type === 'block') {
+        const k = d.block.items.findIndex((it) => highlight.keys.includes(it.key));
+        if (k >= 0) return canvasY + geo.parts[i].nodes[k].cy;
+      }
+      if (d.type === 'sleeps') {
+        const k = d.sleeps.findIndex((s) => highlight.keys.includes(s.event.id));
+        if (k >= 0) return canvasY + geo.parts[i].nodes[k].cy;
+      }
+    }
+    const li = shownLinks.findIndex((l) => l.kind === 'sleep' && l.sleep && highlight.keys.includes(l.sleep.event.id));
+    return li >= 0 && geo.links[li] ? canvasY + geo.links[li].cy : null;
+  })();
   const warns = isToday ? careWarnings(events, age.month, now) : [];
+  const nextFeed = future.find((x) => x.key === 'next-feed') ?? null;
   const weekday = WEEKDAYS[date.getDay()];
 
   return (
@@ -365,8 +430,50 @@ export function DayView({
         </Card>
       )}
 
-      <View style={styles.canvas} onLayout={(e: LayoutChangeEvent) => setWidth(Math.round(e.nativeEvent.layout.width))}>
+      {mode === 'list' ? (
+        <View style={styles.listWrap}>
+          <View style={styles.toggleRow}>
+            <ViewToggle mode={mode} onChange={changeMode} />
+          </View>
+          <DayList
+            flow={flow}
+            dayStart={dayStart}
+            now={tick}
+            isToday={isToday}
+            nowTitle={nowTitle}
+            nowExtra={
+              breast ? (
+                <View style={styles.listRun}>
+                  <Button label="종료" variant="accent" size="sm" style={styles.flex} onPress={() => onStop(breast)} />
+                  <Button label="반대쪽" variant="secondary" size="sm" style={styles.flex} onPress={() => onStart('breast', breast.side === 'right' ? 'left' : 'right')} />
+                </View>
+              ) : null
+            }
+            nextFeed={nextFeed ? { title: nextFeed.title, sub: nextFeed.sub, onPress: nextFeed.onPress } : null}
+            info={(it) => ({
+              kind: subKind(it),
+              title: it.type === 'memo' ? it.text : subTitle(it, now),
+              stool: it.type === 'side' && it.event.kind === 'diaper' && it.event.diaper !== 'pee' ? it.event.color : null,
+              by: it.type === 'feed' ? it.session.by : it.type === 'side' ? it.event.by : it.type === 'memo' ? null : it.by,
+            })}
+            gapOf={gapOf}
+            awakeOf={awakeOf}
+            lit={lit}
+            onOpenItem={(b, key) => openRecords(blockParams(b, flow.live?.key === b.key, key))}
+            onOpenSleep={openSleep}
+          />
+        </View>
+      ) : (
+      <View
+        style={styles.canvas}
+        onLayout={(e: LayoutChangeEvent) => {
+          setWidth(Math.round(e.nativeEvent.layout.width));
+          setCanvasY(e.nativeEvent.layout.y);
+        }}>
         <DotGrid />
+        <View style={styles.toggleAbs}>
+          <ViewToggle mode={mode} onChange={changeMode} />
+        </View>
         {!isToday && shown.length === 0 && (
           <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
             {`${date.getMonth() + 1}월 ${date.getDate()}일 ${weekday}에는 남긴 기록이 없어요`}
@@ -414,7 +521,16 @@ export function DayView({
                 return (
                   <View key={d.key} style={StyleSheet.absoluteFill} pointerEvents="box-none">
                     {d.sleeps.map((s, k) => (
-                      <SleepNode key={s.event.id} cx={g.nodes[k].cx} cy={g.nodes[k].cy} title={sleepTitle(s, now)} sub={spanRange(s.from, s.to, dayStart)} onPress={() => openSleep(s)} />
+                      <SleepNode
+                        key={s.event.id}
+                        cx={g.nodes[k].cx}
+                        cy={g.nodes[k].cy}
+                        title={sleepTitle(s, now)}
+                        sub={spanRange(s.from, s.to, dayStart)}
+                        gap={awakeOf(s.event.id)}
+                        highlight={lit(s.event.id)}
+                        onPress={() => openSleep(s)}
+                      />
                     ))}
                   </View>
                 );
@@ -427,7 +543,7 @@ export function DayView({
                   {items.map((it, k) => {
                     const n = g.nodes[k];
                     const title = subTitle(it, now);
-                    const by = it.type === 'feed' ? it.session.by : it.type === 'side' ? it.event.by : it.by;
+                    const by = it.type === 'feed' ? it.session.by : it.type === 'side' ? it.event.by : it.type === 'memo' ? null : it.by;
                     const stool = it.type === 'side' && it.event.kind === 'diaper' && it.event.diaper !== 'pee' ? it.event.color : null;
                     return (
                       <ItemNode
@@ -437,8 +553,10 @@ export function DayView({
                         kind={subKind(it)}
                         title={title}
                         sub={hhmm(it.at)}
-                        aria={`${hhmm(it.at)} ${title}${stool ? ` ${STOOL_COLOR_LABEL[stool]}` : ''}${by ? `, ${by}` : ''}`}
+                        aria={`${hhmm(it.at)} ${title}${it.type === 'memo' ? ` ${it.text}` : ''}${stool ? ` ${STOOL_COLOR_LABEL[stool]}` : ''}${by ? `, ${by}` : ''}`}
                         stool={stool}
+                        gap={gapOf(it.key)}
+                        highlight={lit(it.key)}
                         onPress={() => d.type === 'block' && openRecords(blockParams(d.block, d.now, it.key))}
                       />
                     );
@@ -453,7 +571,19 @@ export function DayView({
               if (l.kind === 'pill' && l.label) return <GapPill key={`gap-${i}`} cx={at.cx} cy={at.cy} label={l.label} />;
               if (l.kind === 'sleep' && l.sleep) {
                 const s = l.sleep;
-                return <SleepNode key={`link-${s.event.id}`} small cx={at.cx} cy={at.cy} title={sleepTitle(s, now)} sub={spanRange(s.from, s.to, dayStart)} onPress={() => openSleep(s)} />;
+                return (
+                  <SleepNode
+                    key={`link-${s.event.id}`}
+                    small
+                    cx={at.cx}
+                    cy={at.cy}
+                    title={sleepTitle(s, now)}
+                    sub={spanRange(s.from, s.to, dayStart)}
+                    gap={awakeOf(s.event.id)}
+                    highlight={lit(s.event.id)}
+                    onPress={() => openSleep(s)}
+                  />
+                );
               }
               return null;
             })}
@@ -477,7 +607,9 @@ export function DayView({
           </FlowCanvas>
         )}
       </View>
+      )}
 
+      {mode === 'flow' && onFocus && focusY !== null && <FocusReporter y={focusY} onFocus={onFocus} />}
       {routine.sheets}
       {schedule.sheets}
       <DayNewsSheet
@@ -488,6 +620,14 @@ export function DayView({
       />
     </View>
   );
+}
+
+/** 비춘 기록의 높이가 바뀌면 한 번 알린다 — 계산은 그리는 중에, 알림은 그린 뒤에 */
+function FocusReporter({ y, onFocus }: { y: number; onFocus: (y: number) => void }) {
+  useEffect(() => {
+    onFocus(y);
+  }, [y, onFocus]);
+  return null;
 }
 
 /** 흐름 바탕의 점 모눈 — n8n 캔버스처럼 */
@@ -515,4 +655,8 @@ const styles = StyleSheet.create({
   canvas: { marginHorizontal: -16, paddingBottom: 8, minHeight: 120 },
   empty: { paddingVertical: 24, textAlign: 'center' },
   runRow: { position: 'absolute', left: 14, right: 14, bottom: 12, flexDirection: 'row', gap: 8 },
+  listWrap: { marginHorizontal: -16 },
+  toggleRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 11 },
+  toggleAbs: { position: 'absolute', top: 11, right: 16, zIndex: 5 },
+  listRun: { flexDirection: 'row', gap: 8 },
 });

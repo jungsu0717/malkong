@@ -85,6 +85,17 @@ export function BottleIcon({ size = 24, color }: IconProps) {
   );
 }
 
+/** 잠 — 큰 Z 와 작은 z(달 대신, 빌드 12 피드백) */
+export function ZzIcon({ size = 24, color }: IconProps) {
+  const s = { stroke: color, strokeWidth: 2.1, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path d="M4.5 11.5h6.5l-6.5 8h6.5" {...s} />
+      <Path d="M13.5 4.5h5.5l-5.5 6.5h5.5" {...s} />
+    </Svg>
+  );
+}
+
 /** 대변 — 세 층으로 쌓인 모양. fill 에 적은 변 색을 넣으면 그 색으로 채운다(소변은 물방울이라 대변은 물방울로 그리지 않는다) */
 export function PooIcon({ size = 24, color, fill = 'none' }: IconProps & { fill?: ColorValue }) {
   const s = { stroke: color, fill, strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;

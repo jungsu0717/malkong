@@ -24,8 +24,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { BottleIcon } from '@/components/baby-icons';
-import { DiaperGlyph } from '@/components/log/diaper-glyph';
+import { BottleIcon, ZzIcon } from '@/components/baby-icons';
+import { DiaperGlyph, diaperTone } from '@/components/log/diaper-glyph';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import type { IconName } from '@/components/ui';
@@ -76,6 +76,7 @@ export function NodeLabel({
   width = 70,
   dim = false,
   accent = false,
+  gap = null,
 }: {
   cx: number;
   top: number;
@@ -84,6 +85,8 @@ export function NodeLabel({
   width?: number;
   dim?: boolean;
   accent?: boolean;
+  /** 셋째 줄 — 같은 기록끼리 간격(코랄) */
+  gap?: string | null;
 }) {
   const c = useTheme();
   return (
@@ -94,6 +97,11 @@ export function NodeLabel({
       {sub ? (
         <ThemedText type="caption" numberOfLines={1} style={[styles.labelSub, { color: c.textSecondary }]}>
           {sub}
+        </ThemedText>
+      ) : null}
+      {gap ? (
+        <ThemedText type="caption" numberOfLines={1} style={[styles.labelGap, { color: c.accentText }]}>
+          {gap}
         </ThemedText>
       ) : null}
     </View>
@@ -154,9 +162,9 @@ export function BlockFrame({
   );
 }
 
-export type ItemKind = 'breast' | 'formula' | 'pee' | 'poo' | 'both' | 'temp' | 'weight' | 'height' | 'routine' | 'todo';
+export type ItemKind = 'breast' | 'formula' | 'pee' | 'poo' | 'both' | 'temp' | 'weight' | 'height' | 'routine' | 'todo' | 'memo';
 
-/** 묶음 안 기록 하나 — 수유는 코랄 네모, 기저귀는 동그라미, 루틴과 할 일은 흰 네모에 체크 */
+/** 묶음 안 기록 하나 — 수유는 코랄 네모, 기저귀는 동그라미(소변 노랑, 대변 갈색), 체온 빨강, 루틴과 할 일은 파랑 네모에 체크, 메모 보라. gap 은 셋째 줄 간격 */
 export function ItemNode({
   cx,
   cy,
@@ -165,6 +173,8 @@ export function ItemNode({
   sub,
   aria,
   stool,
+  gap,
+  highlight,
   onPress,
 }: {
   cx: number;
@@ -173,26 +183,20 @@ export function ItemNode({
   title: string;
   sub: string;
   aria: string;
+  /** 같은 기록끼리 간격 「+3시간 5분」 */
+  gap?: string | null;
+  /** 물어보기가 답한 기록 — 코랄 테두리와 짧은 표시 */
+  highlight?: string | null;
   /** 대변 색을 적었으면 대변 아이콘을 그 색으로 채운다 */
   stool?: StoolColor | null;
   onPress: () => void;
 }) {
   const c = useTheme();
-  const feed = kind === 'breast' || kind === 'formula';
-  const diaper = kind === 'pee' || kind === 'poo' || kind === 'both';
+  const diaper = isDiaper(kind);
   const done = kind === 'routine' || kind === 'todo';
-  const ion: Partial<Record<ItemKind, IconName>> = { breast: 'heart-outline', pee: 'water-outline', temp: 'thermometer-outline', weight: 'scale-outline', height: 'resize-outline' };
   const size = diaper ? 42 : ITEM;
-  const icon =
-    kind === 'formula' ? (
-      <BottleIcon size={21} color="#FFFFFF" />
-    ) : done ? (
-      <RoutineIcon title={title} size={21} color={c.text} />
-    ) : kind === 'poo' || kind === 'both' ? (
-      <DiaperGlyph diaper={kind} color={stool ?? null} size={21} />
-    ) : (
-      <Ionicons name={ion[kind] ?? 'ellipse-outline'} size={21} color={feed ? '#FFFFFF' : c.text} />
-    );
+  const icon = <NodeIcon kind={kind} title={title} stool={stool ?? null} size={21} />;
+  const tone = nodeTone(kind, c);
   return (
     <>
       <Animated.View entering={ZoomIn.springify().damping(13)} style={[styles.itemWrap, { left: cx - size / 2, top: cy - size / 2, width: size, height: size }]}>
@@ -205,19 +209,59 @@ export function ItemNode({
             styles.item,
             styles.shadow,
             { width: size, height: size, borderRadius: diaper ? size / 2 : 12 },
-            feed ? { backgroundColor: c.accent } : { backgroundColor: c.card, borderWidth: 1.5, borderColor: c.flowLine },
+            tone,
             pressed && { opacity: 0.8 },
           ]}>
           {icon}
         </Pressable>
+        {highlight != null && <HighlightRing size={size} round={diaper} />}
         {done && (
           <View pointerEvents="none" style={[styles.badge, { backgroundColor: c.ink, borderColor: c.card }]}>
             <Ionicons name="checkmark" size={10} color={c.onInk} />
           </View>
         )}
       </Animated.View>
-      <NodeLabel cx={cx} top={cy + ITEM / 2 + 8} title={title} sub={sub} />
+      {/* 비춘 기록은 테두리와 코랄 이름 — 위에 표시를 붙이면 묶음 제목을 가린다 */}
+      <NodeLabel cx={cx} top={cy + ITEM / 2 + 8} title={title} sub={sub} gap={gap} accent={highlight != null} />
     </>
+  );
+}
+
+const isDiaper = (kind: ItemKind): kind is 'pee' | 'poo' | 'both' => kind === 'pee' || kind === 'poo' || kind === 'both';
+
+/** 기록마다 바탕색 — 흰 네모로 다 같아 보이지 않게(빌드 12 피드백). 흐름 노드와 목록 줄이 같이 쓴다 */
+export function nodeTone(kind: ItemKind, c: ReturnType<typeof useTheme>) {
+  if (kind === 'breast' || kind === 'formula') return { backgroundColor: c.accent };
+  if (isDiaper(kind)) return { ...diaperTone(kind, c), borderWidth: 1.5 };
+  if (kind === 'temp') return { backgroundColor: c.tempBg, borderColor: c.tempLine, borderWidth: 1.5 };
+  if (kind === 'routine' || kind === 'todo') return { backgroundColor: c.doneBg, borderColor: c.doneLine, borderWidth: 1.5 };
+  if (kind === 'memo') return { backgroundColor: c.memoBg, borderColor: c.memoLine, borderWidth: 1.5 };
+  return { backgroundColor: c.surface, borderColor: c.flowLine, borderWidth: 1.5 };
+}
+
+/** 기록 아이콘 — 수유는 흰 하트 · 젖병, 기저귀는 물방울과 대변, 루틴은 이름에 맞는 아이콘 */
+export function NodeIcon({ kind, title, stool, size }: { kind: ItemKind; title: string; stool: StoolColor | null; size: number }) {
+  const c = useTheme();
+  if (kind === 'formula') return <BottleIcon size={size} color="#FFFFFF" />;
+  if (kind === 'routine' || kind === 'todo') return <RoutineIcon title={title} size={size} color={c.doneFg} />;
+  if (isDiaper(kind)) return <DiaperGlyph diaper={kind} color={stool} size={size} />;
+  const ion: Partial<Record<ItemKind, IconName>> = { breast: 'heart-outline', temp: 'thermometer-outline', weight: 'scale-outline', height: 'resize-outline', memo: 'document-text-outline' };
+  const color = kind === 'breast' ? '#FFFFFF' : kind === 'temp' ? c.tempFg : kind === 'memo' ? c.memoFg : c.text;
+  return <Ionicons name={ion[kind] ?? 'ellipse-outline'} size={size} color={color} />;
+}
+
+/** 물어보기가 답한 기록의 테두리 */
+function HighlightRing({ size, round }: { size: number; round: boolean }) {
+  const c = useTheme();
+  const pad = 9;
+  return (
+    <View
+      pointerEvents="none"
+      style={[
+        styles.ring,
+        { left: -pad, top: -pad, width: size + pad * 2, height: size + pad * 2, borderRadius: round ? (size + pad * 2) / 2 : 18, borderColor: c.accent, shadowColor: c.accent },
+      ]}
+    />
   );
 }
 
@@ -265,7 +309,26 @@ export function GapPill({ cx, cy, label }: { cx: number; cy: number; label: stri
 }
 
 /** 잠 — 먹색 네모, 아래에 「낮잠 1시간 10분」 「12:00~13:10」. 묶음 사이 선 위에서는 조금 작게 */
-export function SleepNode({ cx, cy, small = false, title, sub, onPress }: { cx: number; cy: number; small?: boolean; title: string; sub: string; onPress: () => void }) {
+export function SleepNode({
+  cx,
+  cy,
+  small = false,
+  title,
+  sub,
+  gap = null,
+  highlight = null,
+  onPress,
+}: {
+  cx: number;
+  cy: number;
+  small?: boolean;
+  title: string;
+  sub: string;
+  /** 앞 잠에서 깬 뒤 깨어 있던 시간 */
+  gap?: string | null;
+  highlight?: string | null;
+  onPress: () => void;
+}) {
   const c = useTheme();
   const size = small ? 40 : ITEM;
   return (
@@ -277,10 +340,11 @@ export function SleepNode({ cx, cy, small = false, title, sub, onPress }: { cx: 
           hitSlop={6}
           onPress={onPress}
           style={({ pressed }) => [styles.item, styles.shadow, { width: size, height: size, borderRadius: 12, backgroundColor: c.ink, opacity: pressed ? 0.85 : 1 }]}>
-          <Ionicons name="moon" size={small ? 19 : 21} color={c.onInk} />
+          <ZzIcon size={small ? 20 : 22} color={c.onInk} />
         </Pressable>
+        {highlight != null && <HighlightRing size={size} round={false} />}
       </Animated.View>
-      <NodeLabel cx={cx} top={cy + size / 2 + 4} title={title} sub={sub} width={120} />
+      <NodeLabel cx={cx} top={cy + size / 2 + 4} title={title} sub={sub} gap={gap} width={150} accent={highlight != null} />
     </>
   );
 }
@@ -295,7 +359,7 @@ export function SleepNowNode({ rect, title, sub, onPress }: { rect: Rect; title:
       onPress={onPress}
       style={[styles.sleepNow, styles.shadow, { left: rect.x, top: rect.y, width: rect.w, height: SLEEP_NOW_H, backgroundColor: c.ink, borderColor: c.accent }]}>
       <View style={[styles.tile, { backgroundColor: 'rgba(255,255,255,0.12)' }]}>
-        <Ionicons name="moon" size={18} color={c.onInk} />
+        <ZzIcon size={19} color={c.onInk} />
       </View>
       <View style={styles.flex}>
         <ThemedText type="heading" numberOfLines={1} style={[styles.sleepNowTitle, { color: c.onInk }]}>
@@ -401,6 +465,8 @@ const styles = StyleSheet.create({
   label: { position: 'absolute', alignItems: 'center' },
   labelTitle: { fontWeight: 700, fontSize: 12.5, lineHeight: 17 },
   labelSub: { fontSize: 11, lineHeight: 15, fontVariant: ['tabular-nums'] },
+  labelGap: { fontSize: 11, lineHeight: 15, fontWeight: 600, fontVariant: ['tabular-nums'] },
+  ring: { position: 'absolute', borderWidth: 3, shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 0 } },
   frame: { position: 'absolute', borderRadius: 18 },
   frameHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, paddingHorizontal: 14 },
   frameTitle: { fontWeight: 700, fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'], flexShrink: 1 },

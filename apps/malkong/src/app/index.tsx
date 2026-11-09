@@ -9,7 +9,7 @@
 
 import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,9 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { AdBanner } from '@/components/ad-banner';
 import { TeddyIcon } from '@/components/baby-icons';
-import { AddSheet } from '@/components/flow/add-sheet';
-import { DayView } from '@/components/flow/day-view';
-import { FindSheet } from '@/components/flow/find-sheet';
+import { AskButton, AskSheet } from '@/components/flow/ask-sheet';
+import { DayView, type Highlight } from '@/components/flow/day-view';
 import { RecordPanel } from '@/components/flow/record-panel';
 import { WeekView } from '@/components/flow/week-view';
 import { YearView } from '@/components/flow/year-view';
@@ -61,8 +60,11 @@ export default function FlowScreen() {
   const { loading: todosLoading, todos } = useTodos();
   const { events, loading: eventsLoading } = useEvents();
   const log = useLogActions();
-  const [adding, setAdding] = useState(false);
-  const [finding, setFinding] = useState(false);
+  /** 물어보기 창과 그 답이 비추는 기록(SPEC-MAIN-12 · 13) */
+  const [asking, setAsking] = useState(false);
+  const [highlight, setHighlight] = useState<Highlight | null>(null);
+  // 비춘 기록이 화면 위쪽에 오게 — 아래는 물어보기 창이 덮는다
+  const focusAt = useCallback((y: number) => scroll.current?.scrollTo({ y: Math.max(0, y - 90), animated: true }), []);
   // 30초마다, 그리고 기록 · 루틴 완료 · 할 일이 바뀌면 바로 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다. 재는 중 시계는 지금 노드가 따로 센다
   const changed = useMemo(() => ({ events, logs, todos }), [events, logs, todos]);
   const now = useNow(false, changed);
@@ -147,14 +149,14 @@ export default function FlowScreen() {
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="기록 찾기"
+              accessibilityLabel="달력, 메모와 일정"
               hitSlop={6}
               onPress={() => {
                 tap();
-                setFinding(true);
+                router.push('/calendar');
               }}
               style={({ pressed }) => [styles.my, { borderColor: c.border, backgroundColor: pressed ? c.surfaceStrong : c.card }]}>
-              <Ionicons name="search" size={20} color={c.text} />
+              <Ionicons name="calendar-outline" size={20} color={c.text} />
             </Pressable>
             <Pressable
               accessibilityRole="button"
@@ -192,26 +194,39 @@ export default function FlowScreen() {
             date={totalsDay}
             sleeping={!!runningOf(events, 'sleep')}
             onRecord={log.press}
-            onAdd={() => setAdding(true)}
           />
         </View>
       </View>
 
-      <GestureDetector gesture={gesture}>
-        <ScrollView ref={scroll} style={styles.flex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.body}>
-            {view === 'day' && (
-              <DayView key={(day ?? now).toDateString()} date={day ?? now} now={now} onStart={(kind, side) => void log.start(kind, side)} onStop={(e) => void log.stop(e)} />
-            )}
-            {view === 'week' && <WeekView now={now} onPickDay={(d) => go('day', d)} />}
-            {view === 'year' && <YearView now={now} />}
+      <View style={styles.flex}>
+        <GestureDetector gesture={gesture}>
+          <ScrollView ref={scroll} style={styles.flex} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+            <View style={styles.body}>
+              {view === 'day' && (
+                <DayView
+                  key={(day ?? now).toDateString()}
+                  date={day ?? now}
+                  now={now}
+                  highlight={highlight}
+                  onFocus={focusAt}
+                  onStart={(kind, side) => void log.start(kind, side)}
+                  onStop={(e) => void log.stop(e)}
+                />
+              )}
+              {view === 'week' && <WeekView now={now} onPickDay={(d) => go('day', d)} />}
+              {view === 'year' && <YearView now={now} />}
+            </View>
+          </ScrollView>
+        </GestureDetector>
+        {!asking && (
+          <View style={styles.askAt} pointerEvents="box-none">
+            <AskButton onPress={() => setAsking(true)} />
           </View>
-        </ScrollView>
-      </GestureDetector>
+        )}
+      </View>
       <AdBanner anchored />
       {log.sheets}
-      <AddSheet open={adding} onClose={() => setAdding(false)} onOpenKind={(kind) => log.open(kind)} />
-      <FindSheet open={finding} onClose={() => setFinding(false)} />
+      <AskSheet open={asking} onClose={() => setAsking(false)} onHighlight={setHighlight} onOpenKind={(kind, editing) => log.open(kind, editing)} />
     </ThemedView>
   );
 }
@@ -220,6 +235,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1, minWidth: 0 },
   topBand: { borderBottomWidth: 1 },
+  /** 물어보기 단추 — 흐름 오른쪽 아래, 광고 위 */
+  askAt: { position: 'absolute', right: 0, bottom: 16, left: 0, height: 52 },
   top: { paddingHorizontal: 16, paddingBottom: 12, gap: 12, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -228,6 +245,7 @@ const styles = StyleSheet.create({
   my: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   segment: { flexDirection: 'row', padding: 3, borderRadius: 12 },
   seg: { flex: 1, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
-  scroll: { paddingBottom: 24 },
+  // 아래 92 — 물어보기 단추가 마지막 노드를 가리지 않게
+  scroll: { paddingBottom: 92 },
   body: { paddingHorizontal: 16, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
 });
