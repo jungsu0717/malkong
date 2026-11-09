@@ -182,6 +182,10 @@ function getDb(): Promise<SQLite.SQLiteDatabase> {
       if (!logColumns.some((col) => col.name === 'skip')) {
         await db.execAsync('ALTER TABLE routine_log ADD COLUMN skip INTEGER NOT NULL DEFAULT 0');
       }
+      // 시간을 재는 루틴의 끝(task today/020)
+      if (!logColumns.some((col) => col.name === 'end_at')) {
+        await db.execAsync('ALTER TABLE routine_log ADD COLUMN end_at TEXT');
+      }
       return db;
     })();
   }
@@ -491,7 +495,7 @@ export async function readRoutineLogRows(days = 400): Promise<RoutineLog[]> {
   const db = await getDb();
   const since = new Date(Date.now() - days * 86_400_000).toISOString();
   const rows = await db.getAllAsync<Omit<RoutineLog, 'skip'> & { skip: number }>(
-    `SELECT id, routine_id AS routineId, at, by, step, skip, created_at AS createdAt FROM routine_log WHERE at >= ? ORDER BY at`,
+    `SELECT id, routine_id AS routineId, at, by, step, skip, created_at AS createdAt, end_at AS endAt FROM routine_log WHERE at >= ? ORDER BY at`,
     since,
   );
   return rows.map((l) => ({ ...l, skip: l.skip === 1 }));
@@ -500,7 +504,7 @@ export async function readRoutineLogRows(days = 400): Promise<RoutineLog[]> {
 export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {
   const db = await getDb();
   await db.runAsync(
-    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, by, step, skip, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    'INSERT OR REPLACE INTO routine_log (id, routine_id, at, by, step, skip, created_at, end_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
     l.id,
     l.routineId,
     l.at,
@@ -508,6 +512,7 @@ export async function insertRoutineLogRow(l: RoutineLog): Promise<void> {
     l.step,
     l.skip ? 1 : 0,
     l.createdAt,
+    l.endAt ?? null,
   );
 }
 

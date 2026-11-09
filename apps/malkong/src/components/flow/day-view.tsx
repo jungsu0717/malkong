@@ -61,7 +61,7 @@ import { useEvents } from '@/data/events-context';
 import { useFamily } from '@/data/family-context';
 import { flowLayout, type LinkSpec, type PartSpec, type Shape } from '@/data/flow-layout';
 import { useMemos } from '@/data/memos-context';
-import { logsOn, todayPlan } from '@/data/routine';
+import { isTimed, logsOn, todayPlan } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { poseOf } from '@/data/stage';
 import { useTodos } from '@/data/todos-context';
@@ -91,6 +91,8 @@ const shapeOf = (it: SubItem): Shape => (it.type === 'side' && it.event.kind ===
 
 function subTitle(it: SubItem, now: Date): string {
   if (it.type === 'feed') return feedTitle(it.session, now);
+  // 시간을 잰 루틴은 걸린 시간까지 — 「터미타임 10분」
+  if (it.type === 'routine' && it.end !== null && it.end > it.at) return `${it.title} ${durationLabel((it.end - it.at) / MIN)}`;
   if (it.type === 'routine' || it.type === 'todo') return it.title;
   // 노드 이름은 짧게 「메모」 — 내용은 목록 보기와 기록 화면에서
   if (it.type === 'memo') return '메모';
@@ -184,7 +186,7 @@ export function DayView({
   const c = useTheme();
   const { baby, age } = useBaby();
   const { events } = useEvents();
-  const { routines, logs } = useRoutines();
+  const { routines, logs, timers: routineTimers } = useRoutines();
   const { todos, topics, toggleDone } = useTodos();
   const family = useFamily();
   const { memos } = useMemos();
@@ -218,8 +220,10 @@ export function DayView({
   const dones = useMemo<RoutineDone[]>(
     () =>
       routines.flatMap((r) => {
-        const first = logsOn(r.id, logs, date).find((l) => l.step == null && !l.skip);
-        return first ? [{ routineId: r.id, logId: first.id, title: r.title, at: first.at, by: first.by }] : [];
+        const done = logsOn(r.id, logs, date).filter((l) => l.step == null && !l.skip);
+        // 터미타임처럼 시간을 재는 루틴은 그날 한 것 모두, 나머지는 첫 줄 하나(task today/020)
+        const list = isTimed(r) ? done : done.slice(0, 1);
+        return list.map((l) => ({ routineId: r.id, logId: l.id, title: r.title, at: l.at, by: l.by, endAt: l.endAt ?? null }));
       }),
     [routines, logs, date],
   );
@@ -277,15 +281,19 @@ export function DayView({
       });
     }
     const plan = todayPlan(routines, logs, now);
-    for (const x of plan.today.filter((y) => !y.s.done && !y.s.skipped)) {
+    // 시간을 재는 루틴은 한 뒤에도 「한 번 더」로 남는다
+    for (const x of plan.today.filter((y) => (!y.s.done || isTimed(y.r)) && !y.s.skipped)) {
       const [h, m] = (x.r.time ?? '').split(':').map(Number);
+      const again = x.s.done && isTimed(x.r);
+      const runningFrom = routineTimers[x.r.id];
       future.push({
         key: `routine-${x.r.id}`,
-        at: x.r.time ? dayStart + (h * 60 + m) * 60 * 1000 : Number.MAX_SAFE_INTEGER - 4,
-        icon: <RoutineIcon title={x.r.title} size={20} color={c.text} />,
+        at: x.r.time && !again ? dayStart + (h * 60 + m) * 60 * 1000 : Number.MAX_SAFE_INTEGER - 4,
+        icon: <RoutineIcon title={x.r.title} size={20} color={runningFrom ? c.accent : c.text} />,
+        accent: !!runningFrom,
         title: x.r.title,
-        sub: x.r.time ?? '하루 중',
-        aria: `${x.r.title}${x.r.time ? ` ${x.r.time}` : ''}, 누르면 완료`,
+        sub: runningFrom ? `${hhmm(runningFrom)}부터 재는 중` : again ? '한 번 더' : (x.r.time ?? '하루 중'),
+        aria: isTimed(x.r) ? `${x.r.title}${again ? ' 한 번 더' : ''}, 누르면 시작하거나 지난 것 적기` : `${x.r.title}${x.r.time ? ` ${x.r.time}` : ''}, 누르면 완료`,
         onPress: () => {
           tap();
           routine.onCheck(x.r.id);
@@ -552,7 +560,7 @@ export function DayView({
                         cy={n.cy}
                         kind={subKind(it)}
                         title={title}
-                        sub={hhmm(it.at)}
+                        sub={it.type === 'routine' && it.end !== null && it.end > it.at ? spanRange(it.at, it.end, dayStart) : hhmm(it.at)}
                         aria={`${hhmm(it.at)} ${title}${it.type === 'memo' ? ` ${it.text}` : ''}${stool ? ` ${STOOL_COLOR_LABEL[stool]}` : ''}${by ? `, ${by}` : ''}`}
                         stool={stool}
                         gap={gapOf(it.key)}

@@ -96,7 +96,7 @@ export function sidesLine(s: FeedSession, now = new Date()): string | null {
   return parts.length > 0 ? parts.join(', ') : null;
 }
 
-export type RoutineDone = { routineId: string; title: string; at: string; by: string | null; logId?: string | null };
+export type RoutineDone = { routineId: string; title: string; at: string; by: string | null; logId?: string | null; /** 시간을 재는 루틴의 끝 */ endAt?: string | null };
 
 /** 지금 깨어 있는 분 — 마지막 잠이 끝난 뒤. 자는 중이거나 잠 기록이 없거나 너무 오래됐으면 null */
 export function awakeMinutes(events: CareEvent[], now = new Date()): number | null {
@@ -288,7 +288,7 @@ export type SubItem =
   | { type: 'feed'; key: string; at: number; session: FeedSession }
   /** 기저귀 · 체온 · 키 · 몸무게 */
   | { type: 'side'; key: string; at: number; event: CareEvent }
-  | { type: 'routine'; key: string; at: number; routineId: string; logId: string | null; title: string; by: string | null }
+  | { type: 'routine'; key: string; at: number; routineId: string; logId: string | null; title: string; by: string | null; end: number | null }
   | { type: 'todo'; key: string; at: number; todoId: string; title: string; by: string | null }
   /** 그날 쓴 메모(일기) — 우리 아기 메모 중 사람이 쓴 것 */
   | { type: 'memo'; key: string; at: number; memoId: string; text: string };
@@ -337,7 +337,7 @@ export function itemsBetween(events: CareEvent[], routines: RoutineDone[], todos
   }
   for (const r of routines) {
     const at = t(r.at);
-    if (inDay(at)) items.push({ type: 'routine', key: `routine-${r.logId ?? r.routineId}`, at, routineId: r.routineId, logId: r.logId ?? null, title: r.title, by: r.by });
+    if (inDay(at)) items.push({ type: 'routine', key: `routine-${r.logId ?? r.routineId}`, at, routineId: r.routineId, logId: r.logId ?? null, title: r.title, by: r.by, end: r.endAt ? t(r.endAt) : null });
   }
   for (const d of todos) {
     const at = t(d.at);
@@ -352,6 +352,7 @@ export function itemsBetween(events: CareEvent[], routines: RoutineDone[], todos
 
 /** 기록이 끝난 때 — 수유는 마지막 쪽이 끝난 때, 나머지는 남긴 때 */
 function itemEnd(it: SubItem): number {
+  if (it.type === 'routine' && it.end !== null) return Math.max(it.at, it.end);
   return it.type === 'feed' && it.session.endAt ? Math.max(it.at, t(it.session.endAt)) : it.at;
 }
 

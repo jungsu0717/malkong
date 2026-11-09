@@ -245,6 +245,7 @@ export function planIncoming(args: {
       step: typeof d.step === 'number' && Number.isInteger(d.step) && d.step >= 0 ? d.step : null,
       skip: bool(d.skip),
       createdAt: str(d.createdAt) ?? item.updatedAt,
+      endAt: str(d.endAt),
     });
     logIds.add(item.id);
   }

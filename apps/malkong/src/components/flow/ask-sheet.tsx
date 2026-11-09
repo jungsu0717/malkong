@@ -66,7 +66,7 @@ export function AskSheet({
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const { events, add: addEvent, remove: removeEvent } = useEvents();
-  const { routines, addRoutine, logAt, removeLog } = useRoutines();
+  const { addRoutine, logTitle, removeLog } = useRoutines();
   const { addMemo, removeMemo } = useMemos();
   const { add: addTodo, update: updateTodo } = useTodos();
   const [msgs, setMsgs] = useState<Msg[]>([]);
@@ -93,10 +93,7 @@ export function AskSheet({
 
   /** 루틴 이름으로 완료 한 줄 — 없는 이름이면 매일 체크 루틴을 만든다 */
   const doneRoutine = async (title: string, at: Date): Promise<Saved> => {
-    const key = title.replace(/\s/g, '').toLowerCase();
-    const have = routines.find((r) => !r.hidden && r.title.replace(/\s/g, '').toLowerCase() === key);
-    const r = have ?? (await addRoutine({ title, kind: 'check', everyDays: 1, weekdays: null, time: null, items: null }));
-    const id = await logAt(r.id, at);
+    const id = await logTitle(title, at);
     return { kind: 'routine', id, title, at: at.getTime(), item: 'routine', key: `routine-${id}` };
   };
 

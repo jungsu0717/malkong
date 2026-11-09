@@ -15,6 +15,9 @@ import { logsOn, makeRoutine, makeRoutineLog, routineReminders, titleKey, todayS
 import { onRemoteChange, requestSync } from './sync-events';
 import { useTodos } from './todos-context';
 
+/** 재는 중인 터미타임 — 루틴 id → 시작한 때(이 폰에서만) */
+const TIMERS_KEY = 'routine.timers';
+
 /** 알림 허락을 처음 알림 시각을 넣을 때 한 번만 묻는다 — 할 일과 같은 설정값 */
 const ASKED_KEY = 'todo_reminder_asked';
 
@@ -39,7 +42,14 @@ type RoutinesValue = {
   /** 「오늘은 건너뛰기」 ↔ 취소 — 그날 알림과 진행에서 빠진다(task common/022) */
   skipToday: (id: string) => Promise<void>;
   /** 정한 때에 완료 한 줄 — 수유와 같이 먹인 비타민D, 물어보기로 적은 루틴(task log/008 · today/019). 새 줄의 id */
-  logAt: (id: string, at: Date) => Promise<string>;
+  logAt: (id: string, at: Date, endAt?: Date | null) => Promise<string>;
+  /** 시간을 재는 루틴(터미타임) — 재는 중인 루틴 id → 시작한 때. 이 폰에서만 기억한다(task today/020) */
+  timers: Record<string, string>;
+  startTimer: (id: string) => Promise<void>;
+  /** 재기를 끝내고 시작부터 지금까지를 완료 한 줄로 */
+  stopTimer: (id: string) => Promise<void>;
+  /** 이름으로 완료 한 줄 — 같은 이름(띄어쓰기 · 대소문자 무시)의 루틴이 없으면 매일 체크 루틴을 만든다. 새 줄의 id */
+  logTitle: (title: string, at: Date) => Promise<string>;
   /** 완료한 한 줄의 때 바꾸기 — 하루 흐름의 기록 화면에서(task today/014) */
   moveLog: (logId: string, at: Date) => Promise<void>;
   /** 완료한 한 줄 지우기 — 「완료 취소」 */
@@ -182,12 +192,53 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logAt = useCallback(
-    async (id: string, at: Date) => {
-      const log = makeRoutineLog(id, at);
+    async (id: string, at: Date, endAt: Date | null = null) => {
+      const log = makeRoutineLog(id, at, null, null, false, endAt);
       await addLog(log);
       return log.id;
     },
     [addLog],
+  );
+
+  const [timers, setTimers] = useState<Record<string, string>>({});
+  useEffect(() => {
+    void readSetting(TIMERS_KEY).then((v) => {
+      try {
+        if (v) setTimers(JSON.parse(v) as Record<string, string>);
+      } catch {
+        // 깨진 값이면 재는 중인 것이 없는 것으로
+      }
+    });
+  }, []);
+  const saveTimers = useCallback((next: Record<string, string>) => {
+    setTimers(next);
+    void writeSetting(TIMERS_KEY, JSON.stringify(next));
+  }, []);
+  const startTimer = useCallback(
+    async (id: string) => {
+      saveTimers({ ...timers, [id]: new Date().toISOString() });
+    },
+    [timers, saveTimers],
+  );
+  const stopTimer = useCallback(
+    async (id: string) => {
+      const from = timers[id];
+      const rest = { ...timers };
+      delete rest[id];
+      saveTimers(rest);
+      if (from) await logAt(id, new Date(from), new Date());
+    },
+    [timers, saveTimers, logAt],
+  );
+
+  const logTitle = useCallback(
+    async (title: string, at: Date) => {
+      const key = title.replace(/\s/g, '').toLowerCase();
+      const have = current.current.all.find((r) => !r.hidden && r.title.replace(/\s/g, '').toLowerCase() === key);
+      const r = have ?? (await addRoutine({ title: title.trim(), kind: 'check', everyDays: 1, weekdays: null, time: null, items: null }));
+      return logAt(r.id, at);
+    },
+    [addRoutine, logAt],
   );
 
   const skipToday = useCallback(
@@ -280,11 +331,15 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
       completeAll,
       skipToday,
       logAt,
+      logTitle,
+      timers,
+      startTimer,
+      stopTimer,
       moveLog,
       removeLog,
       completeStock,
     }),
-    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, restoreRoutine, check, toggleStep, completeAll, skipToday, logAt, moveLog, removeLog, completeStock],
+    [routines, logs, loading, addRoutine, updateRoutine, removeRoutine, restoreRoutine, check, toggleStep, completeAll, skipToday, logAt, logTitle, timers, startTimer, stopTimer, moveLog, removeLog, completeStock],
   );
 
   return <RoutinesContext.Provider value={value}>{children}</RoutinesContext.Provider>;

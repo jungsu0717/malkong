@@ -222,7 +222,7 @@ export function ItemNode({
         )}
       </Animated.View>
       {/* 비춘 기록은 테두리와 코랄 이름 — 위에 표시를 붙이면 묶음 제목을 가린다 */}
-      <NodeLabel cx={cx} top={cy + ITEM / 2 + 8} title={title} sub={sub} gap={gap} accent={highlight != null} />
+      <NodeLabel cx={cx} top={cy + ITEM / 2 + 8} title={title} sub={sub} gap={gap} accent={highlight != null} width={title.length > 6 || sub.length > 6 ? 86 : 70} />
     </>
   );
 }

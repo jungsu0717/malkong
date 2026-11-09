@@ -391,6 +391,14 @@ function FeedBody({
         </View>
       </View>
       {(sides || amount) && <ThemedText type="small">{sides ?? amount}</ThemedText>}
+      {session.parts.some((p) => p.note) && (
+        <ThemedText type="small" style={{ color: c.textSecondary }}>
+          {session.parts
+            .map((p) => p.note)
+            .filter(Boolean)
+            .join('\n')}
+        </ThemedText>
+      )}
       {gapBefore !== null && (
         <ThemedText type="small" style={{ color: c.textSecondary }}>
           앞 수유와 {durationLabel(Math.round(gapBefore))} 간격

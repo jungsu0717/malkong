@@ -1,7 +1,8 @@
 /**
  * 루틴을 누를 때의 흐름 — 홈 「오늘 할 루틴」과 루틴 화면이 같이 쓴다 (SPEC-MAIN-02 · 05 · 06 · 08, task today/007).
  *
- * 단계가 있으면 단계 시트, 재고 확인은 재고 확인 시트, 그 밖의 체크는 바로 완료 ↔ 되돌림. 편집은 routine-form 화면.
+ * 단계가 있으면 단계 시트, 재고 확인은 재고 확인 시트, 터미타임처럼 시간을 재는 루틴은 시작과 끝 시트(task today/020),
+ * 그 밖의 체크는 바로 완료 ↔ 되돌림. 편집은 routine-form 화면.
  * 보이는 화면에서 그날 루틴(둘 이상)을 마지막 하나까지 완료한 순간이 「좋은 순간」이다 — 쌓이면 스토어 별점 창(SPEC-MY-09).
  * `sheets` 는 화면에 한 번 둔다.
  */
@@ -11,16 +12,18 @@ import { useEffect, useRef, useState } from 'react';
 
 import { RoutineStepsSheet } from '@/components/routine/routine-steps-sheet';
 import { StockSheet } from '@/components/routine/stock-sheet';
+import { TimedSheet } from '@/components/routine/timed-sheet';
 import { happyMoment } from '@/data/review';
-import { hasSteps, todayPlan, type Routine } from '@/data/routine';
+import { hasSteps, isTimed, todayPlan, type Routine } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 
 export function useRoutineActions(now: Date) {
   const focused = useIsFocused();
-  const { routines, logs, loading, updateRoutine, check, toggleStep, completeAll, skipToday, completeStock } = useRoutines();
+  const { routines, logs, loading, updateRoutine, check, toggleStep, completeAll, skipToday, completeStock, timers, startTimer, stopTimer, logAt } = useRoutines();
   /** 단계 시트 · 재고 확인 시트로 연 루틴 id */
   const [stepsId, setStepsId] = useState<string | null>(null);
   const [stockId, setStockId] = useState<string | null>(null);
+  const [timedId, setTimedId] = useState<string | null>(null);
 
   const leftBefore = useRef<number | null>(null);
   useEffect(() => {
@@ -34,13 +37,15 @@ export function useRoutineActions(now: Date) {
   const edit = (r: Routine) => router.push({ pathname: '/routine-form', params: { id: r.id } });
   const onCheck = (id: string) => {
     const r = routines.find((x) => x.id === id);
-    if (r && hasSteps(r)) setStepsId(id);
+    if (r && isTimed(r)) setTimedId(id);
+    else if (r && hasSteps(r)) setStepsId(id);
     else if (r?.kind === 'stock') setStockId(id);
     else void check(id);
   };
 
   const stepsRoutine = routines.find((r) => r.id === stepsId) ?? null;
   const stockRoutine = routines.find((r) => r.id === stockId) ?? null;
+  const timedRoutine = routines.find((r) => r.id === timedId) ?? null;
   const sheets = (
     <>
       <RoutineStepsSheet
@@ -59,6 +64,27 @@ export function useRoutineActions(now: Date) {
         }}
         onClose={() => setStepsId(null)}
       />
+      {timedRoutine && (
+        <TimedSheet
+          key={timedRoutine.id}
+          routine={timedRoutine}
+          logs={logs}
+          running={timers[timedRoutine.id] ?? null}
+          onStart={() => {
+            void startTimer(timedRoutine.id);
+            setTimedId(null);
+          }}
+          onStop={() => {
+            void stopTimer(timedRoutine.id);
+            setTimedId(null);
+          }}
+          onSave={(start, end) => {
+            void logAt(timedRoutine.id, start, end);
+            setTimedId(null);
+          }}
+          onClose={() => setTimedId(null)}
+        />
+      )}
       <StockSheet
         key={stockId ?? 'stock-closed'}
         routine={stockRoutine}

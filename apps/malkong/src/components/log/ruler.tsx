@@ -258,7 +258,19 @@ const dayWord = (at: Date, now: Date) => {
  * 고른 때 앞뒤 하루를 그리고 지금 뒤로는 그리지 않는다. 때 글자를 누르면 날짜 바퀴(시각은 그대로, iOS · 웹은 아래에 펼치고
  * 안드로이드는 창). 범위 밖 날짜를 고르면 그 때를 가운데로 다시 그린다.
  */
-export function TimeRuler({ label, value, onChange, caption }: { label: string; value: Date; onChange: (at: Date) => void; caption?: string | null }) {
+export function TimeRuler({
+  label,
+  value,
+  onChange,
+  caption,
+  danger = false,
+}: {
+  label: string;
+  value: Date;
+  onChange: (at: Date) => void;
+  caption?: string | null;
+  danger?: boolean;
+}) {
   const c = useTheme();
   const now = useNow(false);
   const [open, setOpen] = useState(false);
@@ -317,7 +329,7 @@ export function TimeRuler({ label, value, onChange, caption }: { label: string; 
         nowAtMax={atNow}
         glide="normal"
       />
-      {caption !== null ? <Caption text={caption ?? auto} /> : null}
+      {caption !== null ? <Caption text={caption ?? auto} danger={danger} /> : null}
       {open && <DateTimeWheel value={value} onChange={pick} />}
     </View>
   );

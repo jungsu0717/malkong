@@ -157,7 +157,7 @@ export function DayList({
         const it = l.item;
         const x = info(it);
         // 시작과 끝이 다른 것만(모유) — 분유처럼 한 때인 것은 시각이 이미 왼쪽에 있다
-        const end = it.type === 'feed' && it.session.endAt ? new Date(it.session.endAt).getTime() : null;
+        const end = it.type === 'feed' && it.session.endAt ? new Date(it.session.endAt).getTime() : it.type === 'routine' ? it.end : null;
         const range = end !== null && end - it.at >= MIN ? spanRange(it.at, end, dayStart) : null;
         const meta = [range, x.stool ? STOOL_COLOR_LABEL[x.stool] : null, x.by].filter(Boolean).join(' · ');
         const gap = gapOf(it.key);

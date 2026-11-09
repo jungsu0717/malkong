@@ -51,7 +51,14 @@ export type RoutineLog = {
   /** 「오늘은 건너뛰기」 줄 — 한 것으로 세지 않고, 그날 알림과 진행에서 뺀다(task common/022) */
   skip: boolean;
   createdAt: string;
+  /** 끝낸 때 — 터미타임처럼 시간을 재는 루틴만(task today/020). 옛 줄에는 없다 */
+  endAt?: string | null;
 };
+
+/** 시간을 재는 루틴 — 시작과 끝을 적고 하루에 여러 번 한다(SPEC-MAIN-02, task today/020) */
+export function isTimed(r: { title: string }): boolean {
+  return /터미\s*타임/.test(r.title);
+}
 
 const DAY_MS = 86_400_000;
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -352,8 +359,9 @@ export function makeRoutineLog(
   by: string | null = null,
   step: number | null = null,
   skip = false,
+  endAt: Date | null = null,
 ): RoutineLog {
-  return { id: newRoutineLogId(), routineId, at: at.toISOString(), by, step, skip, createdAt: new Date().toISOString() };
+  return { id: newRoutineLogId(), routineId, at: at.toISOString(), by, step, skip, createdAt: new Date().toISOString(), endAt: endAt ? endAt.toISOString() : null };
 }
 
 /** 같은 물건인가 — 띄어쓰기를 빼고 본다 */
