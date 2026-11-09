@@ -1,8 +1,9 @@
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BabyPhotoPicker, BirthFields } from '@/components/baby-profile-extra';
 import { BuddyAvatar } from '@/components/brand';
 import { FirstYearList } from '@/components/onboarding/first-year-list';
 import { ThemedText } from '@/components/themed-text';
@@ -10,6 +11,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Button, Chip } from '@/components/ui';
 import { FontFamily, Gutter, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { ageFrom, formatDate, validateBirthDate } from '@/data/baby';
+import { EMPTY_BIRTH, readBirthInfo, saveBirthInfo, type BirthInfo } from '@/data/baby-extra';
 import { useBaby } from '@/data/baby-context';
 import { BRIEFING_TIMES, monthStart, timeLabel, todoOf } from '@/data/briefing';
 import { checkupGroups } from '@/data/checkup-todos';
@@ -45,6 +47,11 @@ export default function OnboardingScreen() {
   const [name, setName] = useState(isEdit ? (baby?.name ?? '') : '');
   const [time, setTime] = useState(DEFAULT_BRIEFING_TIME);
   const [saving, setSaving] = useState(false);
+  // 태어날 때 정보 — 프로필 수정에서만, 이 폰에만(task my/012)
+  const [birth, setBirth] = useState<BirthInfo>(EMPTY_BIRTH);
+  useEffect(() => {
+    if (isEdit) void readBirthInfo().then(setBirth);
+  }, [isEdit]);
 
   const monthRef = useRef<TextInput>(null);
   const dayRef = useRef<TextInput>(null);
@@ -62,6 +69,7 @@ export default function OnboardingScreen() {
     try {
       await save({ name: name || null, birthDate });
       if (isEdit) {
+        await saveBirthInfo(birth);
         router.back();
         return;
       }
@@ -181,7 +189,7 @@ export default function OnboardingScreen() {
       )}
       <SafeAreaView style={styles.flex} edges={isEdit ? ['bottom'] : ['top', 'bottom']}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.content}>
+          <ScrollView style={styles.flex} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" scrollEnabled={isEdit}>
             {!isEdit && <BuddyAvatar size={64} />}
             <View style={styles.heading}>
               <ThemedText type="display">{isEdit ? '아기 프로필' : '육아버디를\n시작할게요'}</ThemedText>
@@ -191,6 +199,8 @@ export default function OnboardingScreen() {
                   : '아기 생일만 입력하면 시작할 수 있어요'}
               </ThemedText>
             </View>
+            {/* 사진 — 이 폰에만(SPEC-MY-02) */}
+            {isEdit && <BabyPhotoPicker />}
 
             <View style={styles.field}>
               <ThemedText type="label" style={{ color: c.textSecondary }}>
@@ -268,7 +278,8 @@ export default function OnboardingScreen() {
                 />
               </View>
             </View>
-          </View>
+            {isEdit && <BirthFields value={birth} onChange={setBirth} />}
+          </ScrollView>
 
           <View style={styles.footer}>
             <Button
@@ -297,8 +308,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: Gutter,
+    paddingBottom: Spacing.four,
     paddingTop: Spacing.five,
     gap: Spacing.four,
     width: '100%',

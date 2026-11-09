@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 import { AdBanner } from '@/components/ad-banner';
-import { TeddyIcon } from '@/components/baby-icons';
+import { BabyAvatar } from '@/components/baby-profile-extra';
 import { AskButton, AskSheet } from '@/components/flow/ask-sheet';
 import { DayView, type Highlight } from '@/components/flow/day-view';
 import { RecordPanel } from '@/components/flow/record-panel';
@@ -167,7 +167,7 @@ export default function FlowScreen() {
                 router.push('/my');
               }}
               style={({ pressed }) => [styles.my, { borderColor: c.border, backgroundColor: pressed ? c.surfaceStrong : c.card }]}>
-              <TeddyIcon size={22} color={c.text} />
+              <BabyAvatar size={38} />
             </Pressable>
           </View>
 

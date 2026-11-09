@@ -1,6 +1,6 @@
 # 012 아기 프로필 — 사진과 태어날 때 정보
 
-> 상태: 대기
+> 상태: 구현 완료 (2026-11-09) · 사진 고르기는 빌드 13 에서 폰 확인
 > 근거: [my](../../menu-spec/my.md) SPEC-MY-02
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「빌드 12 피드백 5판 시안 (2026-11-09)」 · 결정: [039](../../decisions/039-ask-chat-and-feedback-5.md)
 
@@ -15,5 +15,14 @@
 
 ## 완료 조건
 
-- [ ] (SPEC-MY-02) 뒤로 단추, 사진 고르기, 마이 버튼에 사진
-- [ ] (SPEC-MY-02) 태어날 때(선택) — 시각, 성별, 몸무게, 키, 혈액형
+- [x] (SPEC-MY-02) 뒤로 단추, 사진 고르기, 마이 버튼에 사진
+- [x] (SPEC-MY-02) 태어날 때(선택) — 시각, 성별, 몸무게, 키, 혈액형
+
+## 확인
+
+- `expo-image-picker`(SDK 57, `npx expo install`) — 앨범에서 정사각형으로 자른 사진, 사진 보관함 안내 문구는 app.json 플러그인. 카메라와 마이크 권한은 끔
+- 사진은 `expo-file-system` 의 `File` · `Paths.document` 로 앱 폴더에 복사하고 주소만 설정 `baby.photo` 에(`src/data/baby-extra.ts`). 바꾸면 예전 파일을 지운다. 서버로 보내지 않는다
+- 태어날 때 정보는 설정 `baby.birth`. 아기 줄(baby)에는 넣지 않는다
+- 하루 흐름 위 마이 버튼과 프로필 맨 위가 같은 사진(`BabyAvatar`)
+- 웹: 프로필 — 사진 자리, 생일, 이름, 태어날 때(시각, 여아 · 남아, 몸무게 3.2kg, 키, 혈액형 O)
+- 새 기능 모듈이라 Expo Go 가 아니라 새 빌드(13)가 필요하다
