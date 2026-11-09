@@ -1,9 +1,11 @@
 /**
- * 물어보기 — 문장으로 적고 묻는 채팅 (SPEC-MAIN-12 · 13, task today/019, decisions/039).
+ * 물어보기 — 문장으로 적고 묻고 고치는 채팅 (SPEC-MAIN-12 · 13, task today/019 · 022, decisions/039 · 040).
  *
  * 하루 흐름 오른쪽 아래 단추로 연다. 위에는 흐름이 그대로 보이고, 이 창은 아래쪽을 덮는다(흐름은 계속 스크롤된다).
+ * 처음 한 번 「지금 보는 날의 기록도 함께 읽을까요?」를 묻는다. 함께 읽으면 창 위에 「11월 6일 하루」와, 흐름에서 누른 기록 「선택 · …」이 칩으로 붙는다.
  * 묻는 말이면 기기 안 기록으로 답하고 그 기록을 흐름에서 비춘다. 기록하는 말이면 바로 저장하고 「되돌리기」 · 「수정」.
- * 할 일 · 루틴 · 이름만 있는 말은 예전 「추가」 시트처럼 카드를 눌러야 저장한다. 규칙으로 못 읽거나 기록이 여럿이면 서버의 모델로 읽는다.
+ * 「이거」, 「옮겨 줘」처럼 화면을 가리키거나 고치는 말, 규칙으로 못 읽은 말은 서버의 에이전트(/v1/agent)에게 보낸다.
+ * 에이전트가 고치기 · 지우기 · 일정을 돌려주면 변경 카드로 보이고 「모두 적용」을 눌러야 반영한다. 적용한 뒤에도 「되돌리기」가 있다.
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -12,14 +14,17 @@ import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ZzIcon } from '@/components/baby-icons';
 import { NodeIcon, nodeTone, type ItemKind } from '@/components/flow/flow-graph';
 import { KIND_UI } from '@/components/log/kinds';
 import { ThemedText } from '@/components/themed-text';
-import { tap } from '@/components/ui';
+import { Button, tap } from '@/components/ui';
 import { FontFamily } from '@/constants/theme';
 import { parseAdd, type AddResult } from '@/data/add-parse';
-import { parseSentence } from '@/data/api';
-import { answerFor, followUp, HEALTH_REPLY, inputsFromServer, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
+import { changesFrom, dayContext, lastTurns, onlyAdds, pointsOrEdits, selectedLabel, sourceOfKey, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
+import { askAgent, type AgentResponse } from '@/data/api';
+import { answerFor, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
+import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
 import { hhmm } from '@/data/day-flow';
 import type { CareEvent, EventInput, EventKind } from '@/data/events';
 import { useEvents } from '@/data/events-context';
@@ -35,59 +40,120 @@ import type { Highlight } from './day-view';
 /** 적은 기록 하나 — 되돌릴 때 지울 것 */
 type Saved = { kind: 'event' | 'routine' | 'memo'; id: string; title: string; at: number; item: ItemKind; key: string };
 
+/** 변경 카드의 상태 — 보이는 중, 적용함, 되돌림, 취소 */
+type ChangeState = 'open' | 'applied' | 'undone' | 'cancelled';
+
 type Msg =
   | { id: string; from: 'me'; text: string }
-  | { id: string; from: 'app'; type: 'text'; text: string }
-  | { id: string; from: 'app'; type: 'answer'; answer: Answer }
-  | { id: string; from: 'app'; type: 'saved'; saved: Saved[]; undone: boolean }
-  | { id: string; from: 'app'; type: 'card'; result: AddResult; used: boolean };
+  | { id: string; from: 'app'; type: 'text'; text: string; steps?: string[] }
+  | { id: string; from: 'app'; type: 'answer'; answer: Answer; steps?: string[] }
+  | { id: string; from: 'app'; type: 'saved'; saved: Saved[]; undone: boolean; steps?: string[] }
+  | { id: string; from: 'app'; type: 'card'; result: AddResult; used: boolean }
+  | { id: string; from: 'app'; type: 'changes'; changes: Change[]; reply: string | null; steps: string[]; state: ChangeState };
 
 let seq = 0;
 const nextId = () => `m${++seq}`;
 
 const DEFAULT_SUGGEST = ['이전 수유 언제 했어?', '오늘 분유 몇 ml?', '마지막 대변은?'];
+const NOT_READ = '잘 알아듣지 못했어요. 「분유 120 먹였어」, 「마지막 대변은?」처럼 적어 보세요.';
+/** 「일주일 보기로」를 붙이는 범위 */
+const WEEK_RANGES = ['thisWeek', 'lastWeek', 'recent7'];
 
-const itemOf = (input: EventInput): ItemKind =>
-  input.kind === 'diaper' ? (input.diaper === 'pee' ? 'pee' : input.diaper === 'both' ? 'both' : 'poo') : (input.kind as ItemKind);
+/** 아이콘 칸 — 흐름 노드와 같은 색. 잠은 zZ, 일정은 달력 */
+type Tile = ItemKind | 'sleep' | 'plan';
+
+const itemOf = (input: EventInput): Tile =>
+  input.kind === 'diaper' ? (input.diaper === 'pee' ? 'pee' : input.diaper === 'both' ? 'both' : 'poo') : input.kind === 'sleep' ? 'sleep' : (input.kind as ItemKind);
+
+const tileOfSource = (s: CtxSource): Tile => (s.type === 'event' ? itemOf(s.event) : s.type === 'routine' ? 'routine' : 'memo');
+
+const tileOfChange = (ch: Change): Tile => {
+  if (ch.op === 'plan') return 'plan';
+  if (ch.op === 'add') return ch.input.type === 'event' ? itemOf(ch.input.input) : ch.input.type === 'routine' ? 'routine' : 'memo';
+  return tileOfSource(ch.src);
+};
+
+/** 앞 대화 — 에이전트가 「그 수유」를 알아듣게 */
+function turnsOf(list: Msg[]): Turn[] {
+  return list.flatMap((m): Turn[] => {
+    if (m.from === 'me') return [{ role: 'user', text: m.text }];
+    if (m.type === 'text') return [{ role: 'app', text: m.text }];
+    if (m.type === 'answer') return [{ role: 'app', text: m.answer.text }];
+    if (m.type === 'saved') return [{ role: 'app', text: `${m.undone ? '되돌림' : '적음'}: ${m.saved.map((s) => `${hhmm(s.at)} ${s.title}`).join(', ')}` }];
+    if (m.type === 'changes') {
+      const what = m.changes.map((ch) => (ch.op === 'plan' ? `일정 ${ch.title} ${ch.when}` : ch.op === 'update' ? `${ch.title} ${ch.from} → ${ch.to}` : `${ch.op === 'add' ? '추가' : '삭제'} ${ch.title}`));
+      const state = m.state === 'applied' ? '적용함' : m.state === 'undone' ? '되돌림' : m.state === 'cancelled' ? '취소함' : '확인 기다림';
+      return [{ role: 'app', text: `바꿀 것(${state}): ${what.join(', ')}` }];
+    }
+    return [];
+  });
+}
 
 export function AskSheet({
   open,
+  day,
+  selectedKey,
+  onClearSelected,
   onClose,
   onHighlight,
   onOpenKind,
+  onShowWeek,
 }: {
   open: boolean;
+  /** 보고 있는 날 — 함께 읽기에 동의했으면 이날 기록을 보낸다 */
+  day: Date;
+  /** 창을 연 채 흐름 · 목록에서 누른 기록의 key */
+  selectedKey: string | null;
+  onClearSelected: () => void;
   onClose: () => void;
   /** 답한 기록이나 새 기록을 흐름에서 비춘다 — 창을 닫으면 null */
   onHighlight: (h: Highlight | null) => void;
   /** 모자란 기록이나 「+」의 체온 · 몸무게 · 키 — 그 입력 시트, 고칠 기록이 있으면 같이 */
   onOpenKind: (kind: EventKind, editing?: CareEvent) => void;
+  /** 「일주일 보기로」 */
+  onShowWeek: () => void;
 }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
-  const { events, add: addEvent, remove: removeEvent } = useEvents();
-  const { addRoutine, logTitle, removeLog } = useRoutines();
-  const { addMemo, removeMemo } = useMemos();
-  const { add: addTodo, update: updateTodo } = useTodos();
+  const consent = useAskConsent();
+  const { events, add: addEvent, update: updateEvent, remove: removeEvent } = useEvents();
+  const { routines, logs, addRoutine, logTitle, logAt, moveLog, removeLog } = useRoutines();
+  const { memos, addMemo, updateMemo, removeMemo } = useMemos();
+  const { add: addTodo, update: updateTodo, remove: removeTodo } = useTodos();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [plus, setPlus] = useState(false);
   const [lastAnswer, setLastAnswer] = useState<Answer | null>(null);
   const scroll = useRef<ScrollView>(null);
+  const input = useRef<TextInput>(null);
+  /** 적용한 변경 카드를 되돌리는 방법 — 메시지 id 별로 */
+  const undos = useRef(new Map<string, () => Promise<void>>());
 
   if (!open) return null;
 
+  const routineLogs = logs.flatMap((l) => {
+    const r = routines.find((x) => x.id === l.routineId);
+    return r ? [{ log: l, title: r.title }] : [];
+  });
+  const context = (now: Date): DayContext | null => (consent === 'yes' ? dayContext(day, events, routineLogs, memos, now) : null);
+  const shown = consent === 'yes' ? context(new Date()) : null;
+  const selected = shown ? sourceOfKey(shown, selectedKey) : null;
+  const dayLabel = `${day.getMonth() + 1}월 ${day.getDate()}일`;
+
   const push = (...m: Msg[]) => setMsgs((prev) => [...prev, ...m]);
+  const setMsg = (id: string, patch: Partial<Extract<Msg, { type: 'changes' }>> | { undone: boolean }) =>
+    setMsgs((prev) => prev.map((x) => (x.id === id ? ({ ...x, ...patch } as Msg) : x)));
   const close = () => {
     onHighlight(null);
+    onClearSelected();
     setPlus(false);
     onClose();
   };
 
-  const answer = (a: Answer) => {
+  const answer = (a: Answer, steps?: string[]) => {
     setLastAnswer(a);
-    push({ id: nextId(), from: 'app', type: 'answer', answer: a });
+    push({ id: nextId(), from: 'app', type: 'answer', answer: a, steps });
     onHighlight(a.keys.length ? { keys: a.keys, label: a.label } : null);
   };
 
@@ -98,7 +164,7 @@ export function AskSheet({
   };
 
   /** 기록들을 저장하고 「N개 적었어요」 — 모자란 것은 그 입력 시트를 연다 */
-  const saveAll = async (list: ParsedInput[]) => {
+  const saveAll = async (list: ParsedInput[], steps?: string[]) => {
     const saved: Saved[] = [];
     let missing: EventKind | null = null;
     for (const x of list) {
@@ -108,7 +174,7 @@ export function AskSheet({
           continue;
         }
         const e = await addEvent(x.input);
-        saved.push({ kind: 'event', id: e.id, title: x.title, at: new Date(e.startAt).getTime(), item: itemOf(x.input), key: e.id });
+        saved.push({ kind: 'event', id: e.id, title: x.title, at: new Date(e.startAt).getTime(), item: itemOf(x.input) as ItemKind, key: e.id });
       } else if (x.type === 'routine') {
         saved.push(await doneRoutine(x.title, new Date(x.at)));
       } else {
@@ -118,23 +184,76 @@ export function AskSheet({
     }
     if (saved.length) {
       tap('success');
-      push({ id: nextId(), from: 'app', type: 'saved', saved, undone: false });
+      push({ id: nextId(), from: 'app', type: 'saved', saved, undone: false, steps });
       onHighlight({ keys: saved.map((s) => s.key), label: '새 기록' });
     }
     if (missing) {
       push({ id: nextId(), from: 'app', type: 'text', text: `${KIND_UI[missing].label}은 더 적을 것이 있어서 입력 창을 열게요.` });
       onOpenKind(missing);
     }
-    if (!saved.length && !missing) push({ id: nextId(), from: 'app', type: 'text', text: '잘 알아듣지 못했어요. 「분유 120 먹였어」, 「마지막 대변은?」처럼 적어 보세요.' });
+    if (!saved.length && !missing) push({ id: nextId(), from: 'app', type: 'text', text: NOT_READ });
   };
 
-  /** 서버 모델로 읽기 — 안 되면 null */
-  const viaServer = async (s: string) => {
-    try {
-      return await parseSentence(s);
-    } catch {
-      return null;
+  /** 에이전트가 안 되거나 알아듣지 못했을 때 — 규칙으로 읽은 만큼 */
+  const fallback = (s: string, now: Date, failed: boolean) => {
+    if (pointsOrEdits(s)) {
+      const why = consent !== 'yes' ? '기록을 고치려면 그날 기록을 함께 읽어야 해요. 마이에서 켤 수 있어요.' : failed ? '지금은 기록을 고칠 수 없어요. 잠시 뒤에 다시 해 보세요.' : '어느 기록인지 모르겠어요. 흐름에서 그 기록을 누르고 다시 말해 주세요.';
+      push({ id: nextId(), from: 'app', type: 'text', text: why });
+      return;
     }
+    if (isQuestion(s)) {
+      push({ id: nextId(), from: 'app', type: 'text', text: '찾는 기록이 없어요. 수유, 기저귀, 잠처럼 기록 이름을 넣어 보세요.' });
+      return;
+    }
+    const split = looksMulti(s) ? splitRecords(s, now) : [];
+    if (split.length) return void saveAll(split);
+    const r = parseAdd(s, now);
+    if (r?.type === 'record' && r.complete) return void saveAll([{ type: 'event', input: r.input, complete: true, title: r.title }]);
+    if (r) push({ id: nextId(), from: 'app', type: 'card', result: r, used: false });
+    else push({ id: nextId(), from: 'app', type: 'text', text: NOT_READ });
+  };
+
+  /** 서버의 에이전트에게 — 동의했으면 보는 날의 기록과 선택한 기록을 함께 */
+  const viaAgent = async (s: string, now: Date) => {
+    const ctx = context(now);
+    const sel = ctx ? sourceOfKey(ctx, selectedKey) : null;
+    const keyOf = new Map((ctx?.sources ?? []).map((x) => [x.ref, x.key]));
+    setBusy(true);
+    let res: AgentResponse | null = null;
+    try {
+      res = await askAgent({ text: s, history: lastTurns(turnsOf(msgs)), day: ctx?.day ?? null, records: ctx?.records ?? [], selected: sel?.ref ?? null }, now);
+    } catch {
+      res = null;
+    }
+    setBusy(false);
+    if (!res) return fallback(s, now, true);
+    const steps = ctx ? [`${dayLabel} 기록 ${ctx.records.length}개를 읽었어요`] : [];
+    if (res.type === 'health') {
+      push({ id: nextId(), from: 'app', type: 'text', text: HEALTH_REPLY });
+      return;
+    }
+    if (res.type === 'question') {
+      const q = queryFromServer(res.question, now);
+      if (q) return answer(answerFor(q, events, now));
+    }
+    if (res.type === 'changes') {
+      const changes = changesFrom(res.actions, ctx, now, s);
+      if (onlyAdds(changes)) return saveAll(changes.flatMap((ch) => (ch.op === 'add' ? [ch.input] : [])), steps.length ? steps : undefined);
+      if (changes.length) {
+        tap();
+        push({ id: nextId(), from: 'app', type: 'changes', changes, reply: res.reply, steps: [...steps, `바꿀 것 ${changes.length}개를 정했어요`], state: 'open' });
+        const keys = changes.flatMap((ch) => (ch.op === 'update' || ch.op === 'delete' ? [ch.src.key] : []));
+        onHighlight(keys.length ? { keys, label: '바꿀 기록' } : null);
+        return;
+      }
+    }
+    if ((res.type === 'answer' || res.type === 'changes') && res.reply) {
+      push({ id: nextId(), from: 'app', type: 'text', text: res.reply, steps: steps.length ? steps : undefined });
+      const keys = res.highlight.flatMap((ref) => (keyOf.has(ref) ? [keyOf.get(ref)!] : []));
+      onHighlight(keys.length ? { keys, label: '찾은 기록' } : null);
+      return;
+    }
+    fallback(s, now, false);
   };
 
   const send = async (raw: string) => {
@@ -151,48 +270,26 @@ export function AskSheet({
       return;
     }
 
-    if (isQuestion(s)) {
-      const f = followUp(s, lastAnswer, now);
-      if (f) return answer(answerFor(f.query, events, now, f.offset));
-      const q = parseFind(s, now);
-      if (q) return answer(answerFor(q, events, now));
-      setBusy(true);
-      const res = await viaServer(s);
-      setBusy(false);
-      const sq = res?.type === 'question' ? queryFromServer(res.question, now) : null;
-      if (res?.type === 'health') push({ id: nextId(), from: 'app', type: 'text', text: HEALTH_REPLY });
-      else if (sq) answer(answerFor(sq, events, now));
-      else push({ id: nextId(), from: 'app', type: 'text', text: '찾는 기록이 없어요. 수유, 기저귀, 잠처럼 기록 이름을 넣어 보세요.' });
-      return;
-    }
-
-    // 기록하는 말 — 규칙으로 하나를 읽을 수 있고 여럿이 아니면 바로
-    const r = parseAdd(s, now);
-    if (r && !looksMulti(s)) {
-      if (r.type === 'record' && r.complete) return saveAll([{ type: 'event', input: r.input, complete: true, title: r.title }]);
-      if (r.type !== 'plain' || !/비타민|유산균|영양제|약/.test(s)) {
-        push({ id: nextId(), from: 'app', type: 'card', result: r, used: false });
-        return;
+    // 화면을 가리키거나 고치는 말은 규칙으로 읽지 않는다
+    if (!pointsOrEdits(s)) {
+      if (isQuestion(s)) {
+        const f = followUp(s, lastAnswer, now);
+        if (f) return answer(answerFor(f.query, events, now, f.offset));
+        const q = parseFind(s, now);
+        if (q) return answer(answerFor(q, events, now));
+      } else {
+        // 기록하는 말 — 규칙으로 하나를 읽을 수 있고 여럿이 아니면 바로
+        const r = parseAdd(s, now);
+        if (r && !looksMulti(s)) {
+          if (r.type === 'record' && r.complete) return saveAll([{ type: 'event', input: r.input, complete: true, title: r.title }]);
+          if (r.type !== 'plain' || !/비타민|유산균|영양제|약/.test(s)) {
+            push({ id: nextId(), from: 'app', type: 'card', result: r, used: false });
+            return;
+          }
+        }
       }
     }
-    setBusy(true);
-    const res = await viaServer(s);
-    setBusy(false);
-    if (res?.type === 'health') {
-      push({ id: nextId(), from: 'app', type: 'text', text: HEALTH_REPLY });
-      return;
-    }
-    if (res?.type === 'records' && res.records.length) return saveAll(inputsFromServer(res.records, now, s));
-    if (res?.type === 'question') {
-      const sq = queryFromServer(res.question, now);
-      if (sq) return answer(answerFor(sq, events, now));
-    }
-    // 서버가 안 되면 규칙으로 읽은 만큼 — 여럿이면 나눠 읽고, 하나면 그 기록이나 카드
-    const split = looksMulti(s) ? splitRecords(s, now) : [];
-    if (split.length) return saveAll(split);
-    if (r?.type === 'record' && r.complete) return saveAll([{ type: 'event', input: r.input, complete: true, title: r.title }]);
-    if (r) push({ id: nextId(), from: 'app', type: 'card', result: r, used: false });
-    else push({ id: nextId(), from: 'app', type: 'text', text: '잘 알아듣지 못했어요. 「분유 120 먹였어」, 「마지막 대변은?」처럼 적어 보세요.' });
+    await viaAgent(s, now);
   };
 
   const undo = async (m: Extract<Msg, { type: 'saved' }>) => {
@@ -202,7 +299,7 @@ export function AskSheet({
       else if (s.kind === 'routine') await removeLog(s.id);
       else await removeMemo(s.id);
     }
-    setMsgs((prev) => prev.map((x) => (x.id === m.id && x.from === 'app' && x.type === 'saved' ? { ...x, undone: true } : x)));
+    setMsg(m.id, { undone: true });
     onHighlight(null);
   };
 
@@ -217,6 +314,94 @@ export function AskSheet({
     const to = Math.max(...m.saved.map((s) => s.at)) + 60 * 1000;
     close();
     router.push({ pathname: '/records', params: { from: String(from), to: String(to), open: first.key } });
+  };
+
+  /** 변경 하나 반영 — 되돌리는 방법과 비출 key */
+  const applyOne = async (ch: Change): Promise<{ undo: () => Promise<void>; key: string | null } | null> => {
+    if (ch.op === 'plan') {
+      const t = await addTodo({ title: ch.title, dueAt: ch.at.toISOString(), hasTime: ch.hasTime });
+      return t ? { undo: () => removeTodo(t.id), key: null } : null;
+    }
+    if (ch.op === 'add') {
+      const x = ch.input;
+      if (x.type === 'event') {
+        const e = await addEvent(x.input);
+        return { undo: () => removeEvent(e.id), key: e.id };
+      }
+      if (x.type === 'routine') {
+        const id = await logTitle(x.title, new Date(x.at));
+        return { undo: () => removeLog(id), key: `routine-${id}` };
+      }
+      const m = await addMemo(x.text, new Date(x.at));
+      return m ? { undo: () => removeMemo(m.id), key: `memo-${m.id}` } : null;
+    }
+    const src = ch.src;
+    if (ch.op === 'delete') {
+      if (src.type === 'event') {
+        const e = src.event;
+        await removeEvent(e.id);
+        return { undo: async () => void (await addEvent({ kind: e.kind, startAt: e.startAt, endAt: e.endAt, amount: e.amount, side: e.side, diaper: e.diaper, color: e.color, note: e.note, by: e.by })), key: null };
+      }
+      if (src.type === 'routine') {
+        const l = src.log;
+        await removeLog(l.id);
+        return { undo: async () => void (await logAt(l.routineId, new Date(l.at), l.endAt ? new Date(l.endAt) : null)), key: null };
+      }
+      const m = src.memo;
+      await removeMemo(m.id);
+      return { undo: async () => void (await addMemo(m.text, new Date(m.at))), key: null };
+    }
+    const p = ch.patch;
+    if (src.type === 'event' && !('at' in p) && !('text' in p)) {
+      const e = src.event;
+      const before = Object.fromEntries(Object.keys(p).map((k) => [k, e[k as keyof CareEvent]]));
+      await updateEvent(e.id, p);
+      return { undo: () => updateEvent(e.id, before), key: src.key };
+    }
+    if (src.type === 'routine' && 'at' in p) {
+      const moved = await moveLog(src.log.id, new Date(p.at));
+      return moved ? { undo: async () => void (await moveLog(moved, new Date(src.log.at))), key: `routine-${moved}` } : null;
+    }
+    if (src.type === 'memo' && 'text' in p) {
+      const old = src.memo.text;
+      await updateMemo(src.memo.id, p.text);
+      return { undo: () => updateMemo(src.memo.id, old), key: src.key };
+    }
+    return null;
+  };
+
+  const applyChanges = async (m: Extract<Msg, { type: 'changes' }>) => {
+    if (busy) return;
+    tap('success');
+    setBusy(true);
+    const backs: (() => Promise<void>)[] = [];
+    const keys: string[] = [];
+    for (const ch of m.changes) {
+      try {
+        const done = await applyOne(ch);
+        if (done) {
+          backs.push(done.undo);
+          if (done.key) keys.push(done.key);
+        }
+      } catch {
+        // 하나가 안 되어도 나머지는 반영한다
+      }
+    }
+    undos.current.set(m.id, async () => {
+      for (const b of backs.reverse()) await b().catch(() => undefined);
+    });
+    setBusy(false);
+    setMsg(m.id, { state: 'applied' });
+    onHighlight(keys.length ? { keys, label: '바꾼 기록' } : null);
+  };
+
+  const undoChanges = async (m: Extract<Msg, { type: 'changes' }>) => {
+    tap();
+    const back = undos.current.get(m.id);
+    undos.current.delete(m.id);
+    if (back) await back();
+    setMsg(m.id, { state: 'undone' });
+    onHighlight(null);
   };
 
   const applyCard = async (m: Extract<Msg, { type: 'card' }>, act: 'todo' | 'routine' | 'done' | 'today' | 'detail') => {
@@ -248,7 +433,55 @@ export function AskSheet({
     }
   };
 
-  const suggest = lastAnswer?.query ? [`그 전 ${WHAT_LABEL[lastAnswer.query.what]}는?`, ...DEFAULT_SUGGEST.filter((x) => !x.includes(WHAT_LABEL[lastAnswer.query!.what]))].slice(0, 3) : DEFAULT_SUGGEST;
+  // 선택한 기록이 있으면 그 기록에 할 말, 아니면 지난 답에 이어 묻기
+  const suggest: { label: string; fill?: string }[] = selected
+    ? [{ label: '10분 앞으로 옮겨 줘' }, ...(selected.type === 'event' ? [{ label: '메모 남겨 줘', fill: '이 기록에 메모: ' }] : []), { label: '지워 줘' }]
+    : (lastAnswer?.query ? [`그 전 ${WHAT_LABEL[lastAnswer.query.what]}는?`, ...DEFAULT_SUGGEST.filter((x) => !x.includes(WHAT_LABEL[lastAnswer.query!.what]))].slice(0, 3) : DEFAULT_SUGGEST).map((label) => ({ label }));
+
+  if (consent === null) {
+    return (
+      <View pointerEvents="box-none" style={styles.wrap}>
+        <View style={[styles.sheet, { backgroundColor: c.background, paddingBottom: 10 + insets.bottom, shadowColor: c.text }]}>
+          <View style={[styles.grabber, { backgroundColor: c.surfaceStrong }]} />
+          <View style={styles.head}>
+            <View style={styles.headTitle} />
+            <Pressable accessibilityRole="button" accessibilityLabel="닫기" hitSlop={8} onPress={close} style={styles.close}>
+              <Ionicons name="close" size={22} color={c.textSecondary} />
+            </Pressable>
+          </View>
+          <ScrollView contentContainerStyle={styles.consent}>
+            <ThemedText type="title" style={styles.consentTitle}>
+              {'지금 보는 날의 기록도\n함께 읽을까요?'}
+            </ThemedText>
+            <ThemedText type="body" style={{ color: c.textSecondary }}>
+              그날 기록을 읽으면 「그 수유」, 「이거」 같은 말도 알아듣고 바로 고쳐 드려요.
+            </ThemedText>
+            <View>
+              {[
+                ['보내는 것', '지금 보는 날의 기록과 적은 문장'],
+                ['받는 곳', 'Google Gemini (미국 등)'],
+                ['쓰는 곳', '묻는 말에 답하고 기록을 고치는 데만'],
+                ['보관', '육아버디 서버에 저장하지 않아요'],
+              ].map(([k, v]) => (
+                <View key={k} style={[styles.consentRow, { borderTopColor: c.border }]}>
+                  <ThemedText type="label" style={[styles.consentKey, { color: c.textSecondary }]}>
+                    {k}
+                  </ThemedText>
+                  <ThemedText type="body" style={styles.flex}>
+                    {v}
+                  </ThemedText>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+          <View style={styles.consentButtons}>
+            <Button size="lg" label="동의하고 함께 읽기" onPress={() => void saveAskConsent('yes')} />
+            <Button variant="ghost" label="문장만 읽기" onPress={() => void saveAskConsent('no')} />
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView pointerEvents="box-none" style={styles.wrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -262,6 +495,25 @@ export function AskSheet({
             <Ionicons name="close" size={22} color={c.textSecondary} />
           </Pressable>
         </View>
+        {consent === 'yes' && (
+          <View style={styles.ctxRow}>
+            <View style={[styles.ctx, { backgroundColor: c.surface }]}>
+              <Ionicons name="calendar-outline" size={14} color={c.textSecondary} />
+              <ThemedText type="caption" style={styles.ctxText}>{`${dayLabel} 하루`}</ThemedText>
+            </View>
+            {selected && (
+              <View style={[styles.ctx, styles.ctxSel, { backgroundColor: c.surface }]}>
+                <RecTile tile={tileOfSource(selected)} title={selected.label} size={20} />
+                <ThemedText type="caption" numberOfLines={1} style={[styles.ctxText, styles.shrink]}>
+                  {`선택 · ${selectedLabel(selected)}`}
+                </ThemedText>
+                <Pressable accessibilityRole="button" accessibilityLabel="선택 풀기" hitSlop={8} onPress={onClearSelected} style={styles.ctxX}>
+                  <Ionicons name="close" size={14} color={c.textSecondary} />
+                </Pressable>
+              </View>
+            )}
+          </View>
+        )}
 
         <ScrollView
           ref={scroll}
@@ -271,7 +523,7 @@ export function AskSheet({
           onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
           {msgs.length === 0 && (
             <ThemedText type="small" style={[styles.hint, { color: c.textSecondary }]}>
-              {'「분유 120 먹였어」처럼 적으면 기록하고,\n「이전 수유 언제 했어?」처럼 물으면 답해요.'}
+              {consent === 'yes' ? '「분유 120 먹였어」처럼 적으면 기록하고,\n흐름에서 기록을 누르고 「10분 앞으로 옮겨 줘」처럼 말하면 고쳐요.' : '「분유 120 먹였어」처럼 적으면 기록하고,\n「이전 수유 언제 했어?」처럼 물으면 답해요.'}
             </ThemedText>
           )}
           {msgs.map((m) => {
@@ -286,6 +538,7 @@ export function AskSheet({
             }
             return (
               <View key={m.id} style={[styles.app, { backgroundColor: c.surface }]}>
+                {'steps' in m && m.steps && m.steps.length > 0 && <Steps steps={m.steps} />}
                 {m.type === 'text' && <ThemedText type="body">{m.text}</ThemedText>}
                 {m.type === 'answer' && (
                   <>
@@ -301,6 +554,16 @@ export function AskSheet({
                         }}
                       />
                     )}
+                    {!m.answer.open && m.answer.query && WEEK_RANGES.includes(m.answer.query.range.key) && (
+                      <SmallButton
+                        label="일주일 보기로"
+                        accent
+                        onPress={() => {
+                          close();
+                          onShowWeek();
+                        }}
+                      />
+                    )}
                   </>
                 )}
                 {m.type === 'saved' && (
@@ -309,9 +572,7 @@ export function AskSheet({
                     {!m.undone &&
                       m.saved.map((s) => (
                         <View key={s.key} style={[styles.rec, { backgroundColor: c.card }]}>
-                          <View style={[styles.recTile, nodeTone(s.item, c), s.item === 'pee' || s.item === 'poo' || s.item === 'both' ? styles.round : null]}>
-                            <NodeIcon kind={s.item} title={s.title} stool={null} size={15} />
-                          </View>
+                          <RecTile tile={s.item} title={s.title} size={28} />
                           <ThemedText type="label" numberOfLines={1} style={styles.recTitle}>
                             {s.title}
                           </ThemedText>
@@ -327,6 +588,9 @@ export function AskSheet({
                       </View>
                     )}
                   </>
+                )}
+                {m.type === 'changes' && (
+                  <ChangesBody m={m} busy={busy} onApply={() => void applyChanges(m)} onCancel={() => (tap(), setMsg(m.id, { state: 'cancelled' }), onHighlight(null))} onUndo={() => void undoChanges(m)} />
                 )}
                 {m.type === 'card' && <CardBody m={m} onUse={(act) => void applyCard(m, act)} />}
               </View>
@@ -351,7 +615,15 @@ export function AskSheet({
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
             {suggest.map((x) => (
-              <Chip key={x} label={x} onPress={() => void send(x)} />
+              <Chip
+                key={x.label}
+                label={x.label}
+                onPress={() => {
+                  if (!x.fill) return void send(x.label);
+                  setText(x.fill);
+                  input.current?.focus();
+                }}
+              />
             ))}
           </ScrollView>
         )}
@@ -369,6 +641,7 @@ export function AskSheet({
             <Ionicons name={plus ? 'close' : 'add'} size={22} color={c.text} />
           </Pressable>
           <TextInput
+            ref={input}
             value={text}
             onChangeText={setText}
             placeholder="기록하거나 물어보세요"
@@ -389,6 +662,100 @@ export function AskSheet({
         </View>
       </View>
     </KeyboardAvoidingView>
+  );
+}
+
+/** 「✓ 11월 6일 기록 12개를 읽었어요」 */
+function Steps({ steps }: { steps: string[] }) {
+  const c = useTheme();
+  return (
+    <View style={styles.steps}>
+      {steps.map((s) => (
+        <View key={s} style={styles.step}>
+          <Ionicons name="checkmark" size={13} color={c.textSecondary} />
+          <ThemedText type="caption" style={{ color: c.textSecondary }}>
+            {s}
+          </ThemedText>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+/** 흐름 노드와 같은 색의 아이콘 칸 */
+function RecTile({ tile, title, size }: { tile: Tile; title: string; size: number }) {
+  const c = useTheme();
+  const icon = Math.round(size * 0.54);
+  if (tile === 'plan')
+    return (
+      <View style={[styles.tile, { width: size, height: size, borderRadius: size * 0.3 }, nodeTone('routine', c)]}>
+        <Ionicons name="calendar-outline" size={icon} color={c.doneFg} />
+      </View>
+    );
+  if (tile === 'sleep')
+    return (
+      <View style={[styles.tile, { width: size, height: size, borderRadius: size * 0.3, backgroundColor: c.surfaceStrong }]}>
+        <ZzIcon size={icon} color={c.text} />
+      </View>
+    );
+  const round = tile === 'pee' || tile === 'poo' || tile === 'both';
+  return (
+    <View style={[styles.tile, { width: size, height: size, borderRadius: round ? size / 2 : size * 0.3 }, nodeTone(tile, c)]}>
+      <NodeIcon kind={tile} title={title} stool={null} size={icon} />
+    </View>
+  );
+}
+
+const TAG: Record<Change['op'], string> = { add: '추가', plan: '추가', update: '수정', delete: '삭제' };
+
+/** 변경 카드 — 「이렇게 바꿀게요.」, 카드들, 「모두 적용」 · 「취소」, 적용한 뒤 「되돌리기」 */
+function ChangesBody({ m, busy, onApply, onCancel, onUndo }: { m: Extract<Msg, { type: 'changes' }>; busy: boolean; onApply: () => void; onCancel: () => void; onUndo: () => void }) {
+  const c = useTheme();
+  const head = m.state === 'applied' ? '바꿨어요.' : m.state === 'undone' ? '되돌렸어요.' : m.state === 'cancelled' ? '바꾸지 않았어요.' : (m.reply ?? '이렇게 바꿀게요.');
+  return (
+    <>
+      <ThemedText type="body">{head}</ThemedText>
+      {(m.state === 'open' || m.state === 'applied') &&
+        m.changes.map((ch, i) => {
+          const tagColor = ch.op === 'update' ? c.accentText : ch.op === 'delete' ? c.danger : c.doneFg;
+          const detail = ch.op === 'plan' ? `${ch.when} · 일정` : ch.op === 'add' ? hhmm(ch.at) : ch.op === 'delete' ? ch.from : '';
+          return (
+            <View key={`${ch.op}-${i}`} style={[styles.rec, styles.change, { backgroundColor: c.card }]}>
+              <RecTile tile={tileOfChange(ch)} title={ch.title} size={30} />
+              <View style={styles.flex}>
+                <ThemedText type="caption" style={{ color: tagColor, fontWeight: 700 }}>
+                  {TAG[ch.op]}
+                </ThemedText>
+                <ThemedText type="label" numberOfLines={1} style={[styles.recTitle, ch.op === 'delete' && styles.strike]}>
+                  {ch.title}
+                </ThemedText>
+                {ch.op === 'update' ? (
+                  <ThemedText type="caption" style={{ color: c.textSecondary, fontVariant: ['tabular-nums'] }}>
+                    <ThemedText type="caption" style={[styles.strike, { color: c.textSecondary }]}>
+                      {ch.from}
+                    </ThemedText>
+                    {' → '}
+                    <ThemedText type="caption" style={{ color: c.accentText, fontWeight: 700 }}>
+                      {ch.to}
+                    </ThemedText>
+                  </ThemedText>
+                ) : (
+                  <ThemedText type="caption" style={{ color: c.textSecondary, fontVariant: ['tabular-nums'] }}>
+                    {detail}
+                  </ThemedText>
+                )}
+              </View>
+            </View>
+          );
+        })}
+      {m.state === 'open' && (
+        <View style={styles.row}>
+          <SmallButton label="모두 적용" ink disabled={busy} onPress={onApply} />
+          <SmallButton label="취소" onPress={onCancel} />
+        </View>
+      )}
+      {m.state === 'applied' && <SmallButton label="되돌리기" onPress={onUndo} />}
+    </>
   );
 }
 
@@ -428,14 +795,20 @@ function CardBody({ m, onUse }: { m: Extract<Msg, { type: 'card' }>; onUse: (act
   );
 }
 
-function SmallButton({ label, accent = false, onPress }: { label: string; accent?: boolean; onPress: () => void }) {
+function SmallButton({ label, accent = false, ink = false, disabled = false, onPress }: { label: string; accent?: boolean; ink?: boolean; disabled?: boolean; onPress: () => void }) {
   const c = useTheme();
+  const color = ink ? c.onInk : accent ? c.accentText : c.text;
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.small, { borderColor: accent ? c.accent : c.border, backgroundColor: pressed ? c.surface : c.card }]}>
-      <ThemedText type="label" style={{ fontWeight: 700, color: accent ? c.accentText : c.text }}>
+      style={({ pressed }) => [
+        styles.small,
+        ink ? { borderColor: c.ink, backgroundColor: c.ink, opacity: pressed || disabled ? 0.8 : 1 } : { borderColor: accent ? c.accent : c.border, backgroundColor: pressed ? c.surface : c.card },
+      ]}>
+      <ThemedText type="label" style={{ fontWeight: 700, color }}>
         {label}
       </ThemedText>
       {accent && <Ionicons name="chevron-forward" size={14} color={c.accentText} />}
@@ -504,8 +877,23 @@ const styles = StyleSheet.create({
   me: { alignSelf: 'flex-end', maxWidth: '80%', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 18, borderBottomRightRadius: 4 },
   app: { alignSelf: 'flex-start', maxWidth: '86%', paddingVertical: 10, paddingHorizontal: 14, borderRadius: 18, borderBottomLeftRadius: 4, gap: 8 },
   rec: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 12, minWidth: 200 },
-  recTile: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  round: { borderRadius: 14 },
+  tile: { alignItems: 'center', justifyContent: 'center' },
+  change: { alignItems: 'flex-start', paddingVertical: 10 },
+  strike: { textDecorationLine: 'line-through' },
+  flex: { flex: 1, minWidth: 0 },
+  shrink: { flexShrink: 1 },
+  steps: { gap: 3 },
+  step: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  ctxRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 16, paddingBottom: 6 },
+  ctx: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 30, paddingLeft: 10, paddingRight: 12, borderRadius: 15, maxWidth: '100%' },
+  ctxSel: { paddingLeft: 5, paddingRight: 4 },
+  ctxText: { fontWeight: 600 },
+  ctxX: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center' },
+  consent: { paddingHorizontal: 24, paddingTop: 4, gap: 14 },
+  consentTitle: { fontSize: 21, lineHeight: 28, letterSpacing: -0.4 },
+  consentRow: { flexDirection: 'row', gap: 12, paddingVertical: 10, borderTopWidth: 1 },
+  consentKey: { width: 64 },
+  consentButtons: { paddingHorizontal: 24, paddingTop: 12, gap: 4 },
   recTitle: { flex: 1, fontWeight: 700 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   small: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', height: 34, paddingHorizontal: 12, borderRadius: 17, borderWidth: 1.5 },

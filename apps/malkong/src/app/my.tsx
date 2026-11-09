@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Card, ListRow, Toggle } from '@/components/ui';
 import { Gutter, MaxContentWidth, Spacing } from '@/constants/theme';
 import { storedDeviceKey } from '@/data/api';
+import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
 import { DEFAULT_BABY_NAME } from '@/data/baby';
 import { timeLabel } from '@/data/briefing';
 import { useBaby } from '@/data/baby-context';
@@ -38,6 +39,7 @@ export default function MyScreen() {
   const [deviceKey, setDeviceKey] = useState<string | null>(null);
   const { operator, asUser, setAsUser } = useEntitlements();
   const family = useFamily();
+  const askConsent = useAskConsent();
 
   return (
     <ThemedView style={styles.container}>
@@ -86,6 +88,16 @@ export default function MyScreen() {
                   : '초대 코드로 같은 아기를 함께 봐요'
               }
               onPress={() => router.push('/family')}
+            />
+          </Card>
+
+          {/* 물어보기가 보고 있는 날의 기록을 함께 읽는지 — 처음 한 번 물어본 것을 여기서 바꾼다(decisions/040) */}
+          <Card style={styles.rows}>
+            <ListRow
+              icon="chatbubble-ellipses-outline"
+              title="물어보기에서 기록 함께 읽기"
+              detail="보고 있는 날의 기록을 Google Gemini 로 보내요"
+              right={<Toggle label="물어보기에서 기록 함께 읽기" value={askConsent === 'yes'} onChange={(on) => void saveAskConsent(on ? 'yes' : 'no')} />}
             />
           </Card>
 

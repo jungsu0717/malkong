@@ -1,0 +1,62 @@
+# 032 물어보기 에이전트 서버 — /v1/agent (Gemini)
+
+> 상태: 진행 중 (2026-11-09)
+> 근거: [main](../../menu-spec/main.md) SPEC-MAIN-12 · SPEC-MAIN-13
+> 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「물어보기 에이전트 6판 시안 (2026-11-09)」 · 결정: [040](../../decisions/040-ask-agent-reads-the-day.md)
+
+## 목표
+
+물어보기 창의 한 번 묻기를 모델 한 번 호출로 처리한다. 문장, 최근 대화 몇 줄, 보고 있는 날의 기록(동의했을 때만), 선택한 기록을 받아
+답 글과 바꿀 것 목록(추가, 수정, 삭제, 일정)을 돌려준다. 저장과 반영은 앱이 사람 확인을 받아서 한다.
+
+## 계약 — POST /v1/agent
+
+기기 키(`X-Device-Key`)가 있어야 한다. 이름은 바깥에서 camelCase(ApiModel 별칭), 안에서 snake_case.
+
+요청
+
+| 칸 | 모양 | 뜻 |
+|---|---|---|
+| `text` | 글 1~300자(앞뒤 공백 제거) | 이번에 쓴 문장 |
+| `now` | 시간대가 붙은 ISO | 기기의 지금 |
+| `history` | `{role: "user" \| "app", text: 글 1~600자}` 최대 6개, 기본 빈 목록 | 바로 앞 대화(오래된 것부터) |
+| `day` | `YYYY-MM-DD` 또는 null | 보고 있는 날. 기록을 보낼 때만 |
+| `records` | 아래 기록 최대 150개, 기본 빈 목록 | 그날 기록. 동의하지 않았으면 빈 목록 |
+| `selected` | 기록의 `ref` 또는 null | 흐름에서 누른 기록 |
+
+기록 한 줄(`ContextRecord`): `ref`(`r` 뒤에 숫자 1~3자리, 예 `r12`), `kind`(parse 의 RecordKind 와 같은 9가지), `startAt`(시간대 붙은 ISO),
+`endAt`, `amount`, `side`, `diaper`, `color`, `title`(루틴 이름이나 메모 글, 300자까지), `note`(기록에 붙인 메모, 300자까지), `by`(남긴 사람의 가족 이름, 20자까지). 비어도 되는 칸은 모두 null 기본.
+`selected` 가 records 에 없는 ref 이면 null 로 본다. ref 가 겹치면 422.
+
+응답
+
+| 칸 | 모양 | 뜻 |
+|---|---|---|
+| `type` | `answer` \| `changes` \| `question` \| `health` \| `unknown` | |
+| `reply` | 글(최대 300자) 또는 null | answer 의 답 글, changes 의 짧은 설명(없어도 됨) |
+| `question` | parse 의 FindQuestion 또는 null | type 이 question 일 때만 — 며칠에 걸친 합계 · 평균 · 횟수는 앱이 센다 |
+| `actions` | 아래 바꿀 것 최대 10개 | type 이 changes 일 때만 |
+| `highlight` | ref 목록 최대 10개 | 답이 가리키는 기록(answer, changes) |
+
+바꿀 것 한 줄(`AgentAction`) — 칸이 평평하다: `op`(`add` \| `update` \| `delete` \| `plan`), `ref`, `kind`, `startAt`, `endAt`, `minutes`, `amount`, `side`, `diaper`, `color`, `title`, `note`, `hasTime`.
+
+- `add`: 새 기록 하나. parse 의 기록 한 줄과 같은 규칙(`_clean` 그대로 — 종류에 없는 칸은 비우고, 루틴 · 메모는 title 이 있어야 한다, 때는 기기 시간대로). `ref` 는 비운다.
+- `update`: `ref` 가 보낸 기록에 있어야 한다. 서버가 `kind` 를 그 기록의 kind 로 채우고, 그 종류에 있는 칸 중 바뀌는 칸만 남긴다(parse 의 FIELDS 에 `note` 를 더해서 — note 는 breast, formula, diaper, sleep, temp, weight, height 에만, memo 는 title 이 글). 바뀌는 칸이 없으면 버린다.
+- `delete`: `ref` 가 보낸 기록에 있어야 한다. 서버가 `kind` 를 채우고 나머지 칸은 비운다.
+- `plan`: 할 일 · 일정. `title`, `startAt` 이 있어야 하고 `hasTime`(시각을 말했으면 true, 날만 말했으면 false, 없으면 true). 나머지 칸은 비운다.
+- 맞지 않는 줄은 버린다. changes 인데 남은 줄이 없으면: reply 가 있으면 answer, 없으면 unknown.
+- highlight 는 보낸 ref 만 남긴다. health 와 unknown 은 reply · actions · highlight 를 비운다(앱이 정해 둔 글을 보인다). question 이면 actions 를 비운다.
+
+오류: 401(기기 키), 422(형식), 429 `LIMIT_EXCEEDED`(기기마다 하루 상한, 설정 `agent_per_device_per_day` 기본 200), 503 `MODEL_UNAVAILABLE`(키 없음, 모델 실패).
+
+## 정한 것
+
+- 모델은 parse 와 같은 `gemini-3.1-flash-lite`, 같은 키. 생각 수준은 `low`(가리키는 말과 하루 안 비교를 맞히려고 parse 의 minimal 보다 한 단계 위)
+- 받은 문장, 기록, 대화, 모델 답은 저장하지도 로그에 남기지도 않는다. 로그에는 실패 종류와 답 글자 수만
+- `/v1/parse` 는 빌드 13 이 쓰니 그대로 둔다
+
+## 완료 조건
+
+- [ ] (SPEC-MAIN-12 · 13) `/v1/agent` 계약대로, 가짜 모델 시험
+- [ ] 문서: api-contract, backend
+- [ ] 운영 배포(Julian 승인 뒤)

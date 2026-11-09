@@ -170,6 +170,8 @@ export function DayView({
   date,
   now,
   highlight = null,
+  selected = null,
+  onPick,
   onFocus,
   onStart,
   onStop,
@@ -177,6 +179,10 @@ export function DayView({
   date: Date;
   now: Date;
   highlight?: Highlight | null;
+  /** 물어보기 창을 연 채 누른 기록의 key — 「선택」으로 비춘다(task today/022) */
+  selected?: string | null;
+  /** 물어보기 창이 열려 있으면 기록을 누를 때 입력 시트 대신 이것을 부른다 */
+  onPick?: (key: string) => void;
   /** 비춘 기록이 있는 높이(이 화면 맨 위에서) — 물어보기 창에 가리지 않게 부르는 쪽이 스크롤한다 */
   onFocus?: (y: number) => void;
   /** 모유 재기 시작(반대쪽) */
@@ -244,7 +250,7 @@ export function DayView({
       });
     return itemGaps(events, all);
   }, [events, logs, routines]);
-  const lit = (key: string) => (highlight && highlight.keys.includes(key) ? highlight.label : null);
+  const lit = (key: string) => (selected === key ? '선택' : highlight && highlight.keys.includes(key) ? highlight.label : null);
   const gapOf = (key: string) => {
     const m = gaps.get(key);
     return m === undefined ? null : gapLabel(m);
@@ -467,8 +473,8 @@ export function DayView({
             gapOf={gapOf}
             awakeOf={awakeOf}
             lit={lit}
-            onOpenItem={(b, key) => openRecords(blockParams(b, flow.live?.key === b.key, key))}
-            onOpenSleep={openSleep}
+            onOpenItem={(b, key) => (onPick && !key.startsWith('todo-') ? onPick(key) : openRecords(blockParams(b, flow.live?.key === b.key, key)))}
+            onOpenSleep={(s) => (onPick ? onPick(s.event.id) : openSleep(s))}
           />
         </View>
       ) : (
@@ -537,7 +543,7 @@ export function DayView({
                         sub={spanRange(s.from, s.to, dayStart)}
                         gap={awakeOf(s.event.id)}
                         highlight={lit(s.event.id)}
-                        onPress={() => openSleep(s)}
+                        onPress={() => (onPick ? onPick(s.event.id) : openSleep(s))}
                       />
                     ))}
                   </View>
@@ -565,7 +571,7 @@ export function DayView({
                         stool={stool}
                         gap={gapOf(it.key)}
                         highlight={lit(it.key)}
-                        onPress={() => d.type === 'block' && openRecords(blockParams(d.block, d.now, it.key))}
+                        onPress={() => (onPick && it.type !== 'todo' ? onPick(it.key) : d.type === 'block' && openRecords(blockParams(d.block, d.now, it.key)))}
                       />
                     );
                   })}
@@ -589,7 +595,7 @@ export function DayView({
                     sub={spanRange(s.from, s.to, dayStart)}
                     gap={awakeOf(s.event.id)}
                     highlight={lit(s.event.id)}
-                    onPress={() => openSleep(s)}
+                    onPress={() => (onPick ? onPick(s.event.id) : openSleep(s))}
                   />
                 );
               }

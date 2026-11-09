@@ -244,3 +244,33 @@ function localIso(d: Date): string {
 export function parseSentence(text: string, now = new Date()): Promise<ParseResponse> {
   return withDeviceKey<ParseResponse>('POST', '/v1/parse', { text, now: localIso(now) }, 15000);
 }
+
+/**
+ * 물어보기 에이전트(task today/022, decisions/040) — 문장, 앞 대화, 보고 있는 날의 기록(동의했을 때만), 선택한 기록을 보내고
+ * 답 글과 바꿀 것을 받는다. 바꿀 것은 앱이 변경 카드로 보이고 사람이 눌러야 반영한다. 계약은 api-contract 「POST /v1/agent」
+ */
+export type AgentRequest = {
+  text: string;
+  history: import('./agent').Turn[];
+  day: string | null;
+  records: import('./agent').CtxRecord[];
+  selected: string | null;
+};
+export type AgentResponse = {
+  type: 'answer' | 'changes' | 'question' | 'health' | 'unknown';
+  reply: string | null;
+  question: { what: string; range: string; measure: string } | null;
+  actions: import('./agent').AgentAction[];
+  highlight: string[];
+};
+
+export async function askAgent(req: AgentRequest, now = new Date()): Promise<AgentResponse> {
+  const res = await withDeviceKey<Partial<AgentResponse>>('POST', '/v1/agent', { ...req, now: localIso(now) }, 20000);
+  return {
+    type: res.type ?? 'unknown',
+    reply: res.reply ?? null,
+    question: res.question ?? null,
+    actions: res.actions ?? [],
+    highlight: res.highlight ?? [],
+  };
+}

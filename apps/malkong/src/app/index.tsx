@@ -1,7 +1,7 @@
 /**
  * 하루 흐름 — 탭 없는 첫 화면 (SPEC-MAIN-08 · 10 · 11 · 12 · 13, task today/012 · 013 · 014 · 017, decisions/037 · 038).
  *
- * 위쪽에 날짜 · 함께한 지 며칠 · 돋보기(기록 찾기) · 마이 버튼(곰돌이), 그 아래 「하루 · 일주일 · 1년」 바꾸기. 화면을 두 손가락으로 오므리면 한 단계 물러나고
+ * 위쪽에 날짜 · 함께한 지 며칠 · 달력 · 마이 버튼(아기 사진), 그 아래 「하루 · 일주일 · 1년」 바꾸기. 화면을 두 손가락으로 오므리면 한 단계 물러나고
  * (하루 → 일주일 → 1년), 벌리면 다가간다. 일주일 보기에서 막대를 누르면 그날 하루 보기, 「오늘 보기」를 누르면 돌아온다.
  * 알림을 누르고 들어오면 `view` 로 보기를 고른다(성장 소식 · 아기 일정 알림은 1년).
  * 그 아래 기록 칸(모유 · 분유 · 기저귀 · 잠 단추와 합계, 「추가」 줄)이 위쪽에 고정되고 아래 흐름만 스크롤된다. 바닥에는 배너 광고만 고정한다(app-design 「광고 자리」).
@@ -29,6 +29,7 @@ import { ThemedView } from '@/components/themed-view';
 import { useLogActions } from '@/components/log/use-log-actions';
 import { tap } from '@/components/ui';
 import { MaxContentWidth } from '@/constants/theme';
+import { useAskConsent } from '@/data/ask-consent';
 import { useBaby } from '@/data/baby-context';
 import { birthOf } from '@/data/auto-todos';
 import { dayTotals } from '@/data/day-flow';
@@ -63,6 +64,9 @@ export default function FlowScreen() {
   /** 물어보기 창과 그 답이 비추는 기록(SPEC-MAIN-12 · 13) */
   const [asking, setAsking] = useState(false);
   const [highlight, setHighlight] = useState<Highlight | null>(null);
+  /** 창을 연 채 흐름에서 누른 기록 — 그날 기록을 함께 읽기로 했을 때만(task today/022) */
+  const [pickedKey, setPickedKey] = useState<string | null>(null);
+  const consent = useAskConsent();
   // 비춘 기록이 화면 위쪽에 오게 — 아래는 물어보기 창이 덮는다
   const focusAt = useCallback((y: number) => scroll.current?.scrollTo({ y: Math.max(0, y - 90), animated: true }), []);
   // 30초마다, 그리고 기록 · 루틴 완료 · 할 일이 바뀌면 바로 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다. 재는 중 시계는 지금 노드가 따로 센다
@@ -208,6 +212,15 @@ export default function FlowScreen() {
                   date={day ?? now}
                   now={now}
                   highlight={highlight}
+                  selected={asking ? pickedKey : null}
+                  onPick={
+                    asking && consent === 'yes'
+                      ? (k) => {
+                          tap();
+                          setPickedKey((p) => (p === k ? null : k));
+                        }
+                      : undefined
+                  }
                   onFocus={focusAt}
                   onStart={(kind, side) => void log.start(kind, side)}
                   onStop={(e) => void log.stop(e)}
@@ -226,7 +239,16 @@ export default function FlowScreen() {
       </View>
       <AdBanner anchored />
       {log.sheets}
-      <AskSheet open={asking} onClose={() => setAsking(false)} onHighlight={setHighlight} onOpenKind={(kind, editing) => log.open(kind, editing)} />
+      <AskSheet
+        open={asking}
+        day={view === 'day' && day ? day : now}
+        selectedKey={pickedKey}
+        onClearSelected={() => setPickedKey(null)}
+        onClose={() => setAsking(false)}
+        onHighlight={setHighlight}
+        onOpenKind={(kind, editing) => log.open(kind, editing)}
+        onShowWeek={() => go('week')}
+      />
     </ThemedView>
   );
 }

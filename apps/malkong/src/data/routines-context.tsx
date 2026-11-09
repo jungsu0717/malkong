@@ -51,7 +51,7 @@ type RoutinesValue = {
   /** 이름으로 완료 한 줄 — 같은 이름(띄어쓰기 · 대소문자 무시)의 루틴이 없으면 매일 체크 루틴을 만든다. 새 줄의 id */
   logTitle: (title: string, at: Date) => Promise<string>;
   /** 완료한 한 줄의 때 바꾸기 — 하루 흐름의 기록 화면에서(task today/014) */
-  moveLog: (logId: string, at: Date) => Promise<void>;
+  moveLog: (logId: string, at: Date) => Promise<string | null>;
   /** 완료한 한 줄 지우기 — 「완료 취소」 */
   removeLog: (logId: string) => Promise<void>;
   /** 재고 확인 — 부족한 것을 장보기에 넣고 루틴을 끝낸다. 새로 넣은 수를 돌려준다(SPEC-MAIN-06) */
@@ -284,9 +284,13 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
   const moveLog = useCallback(
     async (logId: string, at: Date) => {
       const before = current.current.logs.find((l) => l.id === logId);
-      if (!before) return;
+      if (!before) return null;
       await dropLog(logId);
-      await addLog({ ...makeRoutineLog(before.routineId, at, before.by, before.step, before.skip) });
+      // 터미타임처럼 끝이 있는 줄은 걸린 시간을 그대로 두고 함께 옮긴다
+      const end = before.endAt ? new Date(new Date(before.endAt).getTime() + (at.getTime() - new Date(before.at).getTime())) : null;
+      const moved = makeRoutineLog(before.routineId, at, before.by, before.step, before.skip, end);
+      await addLog(moved);
+      return moved.id;
     },
     [addLog, dropLog],
   );
