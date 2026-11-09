@@ -13,6 +13,7 @@ from app.domain.entitlements.router import router as entitlements_router
 from app.domain.family.router import router as family_router
 from app.domain.knowledge.router import router as knowledge_router
 from app.domain.legal.router import router as legal_router
+from app.domain.parse.router import router as parse_router
 
 
 def create_app() -> FastAPI:
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
     app.include_router(entitlements_router, prefix="/v1")
     app.include_router(family_router, prefix="/v1")
     app.include_router(knowledge_router, prefix="/v1")
+    app.include_router(parse_router, prefix="/v1")
     # 스토어에 넣을 공개 주소라 /v1 을 붙이지 않는다
     app.include_router(legal_router)
 

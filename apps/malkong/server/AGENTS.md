@@ -1,6 +1,6 @@
 # 육아버디 서버(코드명 malkong) — 코드 작업 규칙
 
-이 폴더는 육아버디 서버(FastAPI)다. 지금 하는 일은 기기 키, 가족 공유, 공공 지식(L1) 내려받기 셋이다. 서버가 무엇을 하고 무엇을 저장하는지는
+이 폴더는 육아버디 서버(FastAPI)다. 지금 하는 일은 기기 키, 가족 공유, 공공 지식(L1) 내려받기, 문장 읽기(Gemini) 넷이다. 서버가 무엇을 하고 무엇을 저장하는지는
 [backend](../docs/architecture/backend.md) 서버 절이, API 모양은 [api-contract](../docs/architecture/api-contract.md)가
 정본이다. 이 파일은 코드를 어떻게 쓰는지만 다룬다.
 
@@ -32,8 +32,8 @@ uv run python -m scripts.sync_l1
 
 - 로컬에서 쓰는 비밀값(Neon 주소 같은 것)은 `server/.env` 에 둔다. 이 파일은 git, Docker 빌드, gcloud 업로드에서
   모두 빠진다. 값을 출력하거나 로그·커밋에 남기지 않는다
-- 질문 답변(`/v1/ask`) · 피드백 · 보상 광고와 모델 어댑터 · 모델 비교 도구(eval)는 2026-10-22 에 뺐다(task common/022).
-  옛 코드는 git 기록에 있다
+- 질문 답변(`/v1/ask`) · 피드백 · 보상 광고 · 모델 비교 도구(eval)는 2026-10-22 에 뺐다(task common/022). 옛 코드는 git 기록에 있다.
+  모델 어댑터는 2026-11-09 에 문장 읽기(`/v1/parse`)에 필요한 만큼만 다시 두었다(`app/infra/llm/`, task common/031)
 
 ## 배포 (Cloud Run)
 
@@ -53,19 +53,21 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregi
 gcloud projects add-iam-policy-binding malkong --condition=None \
   --member="serviceAccount:481623022922-compute@developer.gserviceaccount.com" --role="roles/run.builder"
 
-# 배포 (server/ 에서) — 비밀값은 Secret Manager 에서. --set-secrets 는 적은 것만 남기므로 예전 Gemini 키는 빠진다.
+# 배포 (server/ 에서) — 비밀값은 Secret Manager 에서. --set-secrets 는 적은 것만 붙이고 나머지는 떼므로 셋을 모두 적는다.
 # --remove-env-vars 는 예전 모델 설정(MALKONG_LLM_*)을 지운다 — 2026-10-22 정리 뒤 첫 배포 한 번만 필요하다
 gcloud run deploy malkong-server --source . --region asia-northeast3 \
   --allow-unauthenticated --min-instances 0 --max-instances 2 \
   --remove-env-vars MALKONG_LLM_PROVIDER,MALKONG_LLM_MODEL,MALKONG_LLM_PAID_TIER \
-  --set-secrets MALKONG_DATABASE_URL=malkong-database-url:latest,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest
+  --set-secrets MALKONG_DATABASE_URL=malkong-database-url:latest,MALKONG_OPERATOR_DEVICE_KEYS=malkong-operator-keys:latest,MALKONG_GEMINI_API_KEY=malkong-gemini-key:latest
 
 # 바꾼 판을 먼저 시험하려면 --no-traffic --tag <이름> 을 붙여 트래픽 없는 시험판으로 올리고, 확인한 뒤
 # `gcloud run services update-traffic malkong-server --region asia-northeast3 --to-latest` 와 `--remove-tags <이름>` 으로 넘긴다.
 # --no-traffic 을 한 번 쓰면 트래픽이 그 판에 고정되므로 --to-latest 로 풀어 줘야 다음 배포가 자동으로 넘어간다
 
-# 서버는 2026-10-22 부터 AI 모델을 부르지 않는다(task common/022). Secret Manager 의 malkong-gemini-key 는 서버가 더 읽지 않으니
-# 그대로 두어도 되고, Julian 이 나중에 지워도 된다
+# 문장 읽기(/v1/parse)는 Secret Manager 의 malkong-gemini-key 를 MALKONG_GEMINI_API_KEY 로 읽는다(2026-11-09, task common/031).
+# 이 키가 빠지면 /v1/parse 만 503 이 되고 나머지는 그대로 돈다. 모델을 바꿀 때는 --update-env-vars MALKONG_GEMINI_MODEL=<모델 id> 를 더한다.
+# 배포가 비밀값을 읽을 권한이 없다고 멈추면 Julian 이 서비스 계정(481623022922-compute@…)에
+# malkong-gemini-key 의 roles/secretmanager.secretAccessor 를 준다
 
 # 배포마다 서버 이미지가 Artifact Registry(cloud-run-source-deploy)에 남는다 — 무료 구간은 0.5GB(이미지 하나 약 75MB).
 # 최근 2개만 남기고 7일 지난 것은 지우는 규칙을 한 번 걸어 둔다(규칙 파일 artifact-cleanup-policy.json). 지우는 일이라 Julian 이 직접 한다
@@ -98,15 +100,17 @@ app/
   domain/entitlements/ 기기 키 확인 · 광고 여부(service.py) · GET /entitlements · 저장소 팩토리
   domain/family/       /family — 가족 만들기 · 참여 · 나가기 · 맞추기(아기 · 할 일 · 루틴 · 메모)
   domain/knowledge/    /knowledge/version · bundle — 승인된 L1 만 읽는 저장소(repository.py)
+  domain/parse/        POST /parse — 문장 읽기. 지시문(system_prompt.txt) · 답 모양(prompt.py) · 모델 답 검사와 하루 상한(service.py)
   data/l1/             L1 사본 — scripts/sync_l1.py 가 만든다. 손으로 고치지 않는다
   infra/db/            바깥 저장소 — Neon(Postgres)과 메모리 판. 주소가 없으면 메모리
     usage_store.py     기기 키 해시
     family_store.py    가족 · 가족 기록
+  infra/llm/           모델 어댑터 — 계약(base.py)과 Gemini Interactions API 를 REST 로 부르는 것(gemini.py, httpx2)
 scripts/               손으로 돌리는 도구(sync_l1). 서버 이미지에는 들어가지 않는다
 tests/
 ```
 
-도메인 이름은 api-contract 경로의 첫 토막을 쓴다 — `devices`, `entitlements`, `family`, `knowledge`.
+도메인 이름은 api-contract 경로의 첫 토막을 쓴다 — `devices`, `entitlements`, `family`, `knowledge`, `parse`.
 
 ## 계층 규칙 — Router → Service → Repository
 
@@ -143,3 +147,5 @@ tests/
 
 - 새 엔드포인트를 만들면 `tests/` 에 테스트를 하나 이상 둔다
 - 저장소 같은 바깥 의존은 `app.dependency_overrides` 로 메모리 판이나 가짜를 끼워 시험한다
+- 모델도 가짜(`tests/test_parse.py` 의 FakeModel)로 시험한다. 실제 Gemini 호출은 pytest 에 넣지 않고, 손으로 돌릴 때는
+  몇 번 부를지 먼저 말한다(루트 AGENTS.md 「AI 모델 실제 호출은 최소로」)

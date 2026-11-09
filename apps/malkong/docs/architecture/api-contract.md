@@ -7,7 +7,7 @@
 운영자(가족) 기기는 헤더 `X-As-User: 1` 을 더해 `/v1/entitlements` 를 일반 기기처럼 받을 수 있다
 (일반 사용자로 보기 — [backend](backend.md) 운영자 절). 일반 기기의 이 헤더는 무시한다.
 
-지금 서버가 하는 일은 기기 키 · 기기 자격 · 공공 지식(L1) 내려받기 · 가족 공유 넷이다. 질문 답변(`/v1/ask`) ·
+지금 서버가 하는 일은 기기 키 · 기기 자격 · 공공 지식(L1) 내려받기 · 가족 공유 · 문장 읽기 다섯이다. 질문 답변(`/v1/ask`) ·
 보상형 광고 적립(`/v1/reward/ssv`) · 답변 피드백(`/v1/feedback`)은 2026-10-22 에 뺐다(아래 「뺀 것」).
 
 ## POST /v1/devices — 디바이스 키 발급
@@ -80,6 +80,61 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 스토어에 넣을 공개 주소다(`/v1` 없음, 기기 키 없음). `/support` 는 자주 묻는 질문과 문의 이메일 — App Store 의 지원 URL. HTML 한 장을 그대로 준다. 본문 정본은 앱의 `src/data/legal.ts` 이고,
 `node scripts/export-legal.mjs`(앱 폴더)가 `server/app/data/legal/` 에 만든다. 본문과 어긋나면 `legal-html.test.ts` 가 실패한다(task common/024).
 
+## POST /v1/parse — 문장 읽기 (SPEC-MAIN-12 · 13)
+
+물어보기 창에서 앱 규칙(`add-parse.ts` · `find-parse.ts`)으로 못 읽은 문장, 특히 한 문장에 기록이 여럿인 문장을 기록이나 찾을 조건으로 바꾼다
+([decisions/039](../decisions/039-ask-chat-and-feedback-5.md)). 요청 머리 `X-Device-Key` 필수.
+서버는 문장과 지금 시각만 모델에 보내고, 모델은 문장을 아래 모양으로 바꾸기만 한다. 숫자는 앱이 기기 안 기록에서 센다.
+무엇을 보내고 무엇을 저장하지 않는지는 [backend](backend.md) 「문장 읽기」.
+
+요청: `{ "text": "10분 전에 대소변 기저귀 갈고 분유 120 먹였어", "now": "2026-11-06T14:20:00+09:00" }`
+— `text` 는 앞뒤 공백을 빼고 1~300자, `now` 는 기기의 지금 시각(시간대가 붙은 ISO). 시간대가 없으면 422.
+
+응답:
+
+```json
+{
+  "type": "records",
+  "records": [
+    { "kind": "diaper", "startAt": "2026-11-06T14:10:00+09:00", "endAt": null, "minutes": null, "amount": null,
+      "side": null, "diaper": "both", "color": null, "title": null },
+    { "kind": "formula", "startAt": "2026-11-06T14:10:00+09:00", "endAt": null, "minutes": null, "amount": 120,
+      "side": null, "diaper": null, "color": null, "title": null }
+  ],
+  "question": null
+}
+```
+
+| 칸 | 뜻 |
+|---|---|
+| `type` | `records`(기록으로 남길 말) · `question`(기록을 묻는 말) · `health`(열, 발진, 약처럼 의료 판단을 묻는 말) · `unknown`(그 밖이나 읽지 못한 말) |
+| `records[]` | `type` 이 records 일 때만 채운다(한 문장에 10줄까지). 그 밖에는 `[]` |
+| `kind` | breast · formula · diaper · sleep · temp · weight · height · routine · memo |
+| `startAt` · `endAt` | 그 일이 일어난(시작한) 때와 끝난 때. `now` 와 같은 시간대의 ISO. 때를 말하지 않았으면 `startAt` 은 null(지금) |
+| `minutes` | 말한 걸린 시간(「15분 먹였어」, 「1시간 잤어」). 걸린 시간만 말했으면 `startAt` 은 null 이고 시작 시각은 앱이 정한다 |
+| `amount` | 분유 ml · 체온 ℃ · 몸무게 kg · 키 cm |
+| `side` · `diaper` · `color` | 모유 left · right / 기저귀 pee · poo · both / 변 색 yellow · brown · green · black · red · white |
+| `title` | 루틴 · 영양제 이름(비타민D, 유산균, 터미타임, 목욕)이나 메모 글. routine · memo 줄에는 늘 있다 |
+| `question` | `type` 이 question 일 때만 `{ what, range, measure }`, 그 밖에는 null |
+
+`question` 의 값은 앱 `src/data/find-parse.ts` 의 글자 그대로다 — 앱이 그대로 `rangeOf` · `runFind` 에 넣는다.
+
+- `what`: feed · formula · breast · diaper · pee · poo · sleep · nap · night · temp · weight · height
+- `range`: today · yesterday · lastNight · tonight · thisWeek · lastWeek · recent7 · recent30.
+  `recentN`(최근 N일)과 `date`(N월 N일)는 며칠인지, 어느 날인지 실을 칸이 없어서 받지 않는다. 그런 기간을 물으면 `unknown` 이고, 앱 규칙이 읽는다
+- `measure`: count · amount · duration · last
+
+```
+평시     ▸ 서버는 모델 답의 형식을 검사한다. JSON 이 아니거나 값이 목록 밖이거나 뜻이 맞지 않으면(빈 records, 칸 없는 question)
+           { type: "unknown", records: [], question: null } 를 준다.
+평시     ▸ 기록 종류에 없는 칸(모유의 amount, 소변의 color 같은 것)은 서버가 비우고, 이름 없는 routine · memo 줄은 뺀다.
+평시     ▸ health 에는 아무 칸도 싣지 않는다. 앱이 정해 둔 한 줄만 보이고, 서버도 모델도 답하는 글을 만들지 않는다.
+조건 위반 ▸ 키가 없거나 모르는 키면 401 DEVICE_KEY_INVALID. 형식이 틀린 요청은 422 INVALID_REQUEST.
+조건 위반 ▸ 기기마다 하루(한국 시간 0시에 바뀐다) 300번을 넘으면 429 LIMIT_EXCEEDED.
+조건 위반 ▸ 서버에 모델 키가 없거나 모델에 닿지 못하면(네트워크, 10초 시간 초과, 모델 회사의 4xx · 5xx) 503 MODEL_UNAVAILABLE.
+           앱은 규칙으로 읽은 만큼만 쓴다.
+```
+
 ## 뺀 것 (2026-10-22, task common/022)
 
 앱이 AI 상담을 뺀 뒤([decisions/024](../decisions/024-topic-todo-no-ai-answers.md)) 부르지 않게 된 것을 서버에서도 지웠다.
@@ -108,3 +163,4 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 - 2026-10-30 `events[]` 에 `by`(누가 남겼는지) (SPEC-LOG-07, task log/003)
 - 2026-10-22 질문 답변 · 보상 광고 · 피드백 · 또래 질문을 뺌, 자격은 `{ ads, operator }` 만, 가족 맞추기에 메모(`memo`)와 `itemKinds` (task common/022 · 024)
 - 2026-10-22 `GET /privacy` · `/terms` 웹 페이지 (task common/024)
+- 2026-11-09 `POST /v1/parse` — 물어보기 창의 문장 읽기(한 문장의 기록 여럿, 찾을 조건, health, unknown), 기기마다 하루 300번, 503 MODEL_UNAVAILABLE (decisions/039, task common/031)
