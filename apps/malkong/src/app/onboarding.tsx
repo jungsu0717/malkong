@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -166,7 +166,20 @@ export default function OnboardingScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.flex} edges={['top', 'bottom']}>
+      {/* 마이에서 들어온 프로필 수정 — 위에 뒤로 가기 */}
+      {isEdit && (
+        <Stack.Screen
+          options={{
+            headerShown: true,
+            title: '',
+            headerShadowVisible: false,
+            headerTintColor: c.text,
+            headerStyle: { backgroundColor: c.background },
+            headerBackButtonDisplayMode: 'minimal',
+          }}
+        />
+      )}
+      <SafeAreaView style={styles.flex} edges={isEdit ? ['bottom'] : ['top', 'bottom']}>
         <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.content}>
             {!isEdit && <BuddyAvatar size={64} />}

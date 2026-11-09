@@ -103,7 +103,7 @@ function readRecord(raw: string, now: Date): AddResult | null {
   if (/분유/.test(text)) kind = 'formula';
   else if (/모유|젖/.test(text)) kind = 'breast';
   else if (/수유/.test(text)) kind = /\d+\s*(ml|미리|cc)/i.test(text) ? 'formula' : 'breast';
-  else if (/기저귀|소변|대변|응가|똥|쉬했|쉬\s/.test(text)) kind = 'diaper';
+  else if (/기저귀|소변|대변|응가|똥|오줌|쉬했|쉬\s/.test(text)) kind = 'diaper';
   else if (/체온|열이|열\s/.test(text)) kind = 'temp';
   else if (/몸무게|체중/.test(text)) kind = 'weight';
   else if (/키\s|키가|키는|신장/.test(text)) kind = 'height';
@@ -137,10 +137,12 @@ function readRecord(raw: string, now: Date): AddResult | null {
     };
   }
   if (kind === 'diaper') {
-    const poo = /대변|응가|똥/.test(rest);
-    const pee = /소변|쉬/.test(rest);
+    // 「대소변」은 「대변」을 품지 않아서 따로 본다
+    const both = /대소변|똥오줌|쉬\s*응가|응가\s*쉬/.test(rest);
+    const poo = both || /대변|응가|똥/.test(rest);
+    const pee = both || /소변|쉬|오줌/.test(rest);
     const diaper: DiaperKind | null = poo && pee ? 'both' : poo ? 'poo' : pee ? 'pee' : null;
-    const title = diaper === 'both' ? '소변, 대변' : diaper === 'poo' ? '대변' : diaper === 'pee' ? '소변' : '기저귀';
+    const title = diaper === 'both' ? '대소변' : diaper === 'poo' ? '대변' : diaper === 'pee' ? '소변' : '기저귀';
     return { type: 'record', kind, input: { kind, diaper, startAt }, complete: diaper !== null, title, when };
   }
   if (kind === 'sleep') {

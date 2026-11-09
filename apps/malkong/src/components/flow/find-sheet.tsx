@@ -62,9 +62,14 @@ export function FindSheet({ open, onClose }: { open: boolean; onClose: () => voi
           </View>
 
           {text.trim().length > 0 && !query && (
-            <ThemedText type="small" style={{ color: c.textSecondary }}>
-              수유, 기저귀, 잠처럼 기록 이름을 넣어 보세요
-            </ThemedText>
+            <View style={[styles.card, { backgroundColor: c.card, borderColor: c.border }]}>
+              <ThemedText type="label" style={{ fontWeight: 600 }}>
+                찾는 기록이 없어요
+              </ThemedText>
+              <ThemedText type="small" style={{ color: c.textSecondary }}>
+                수유, 기저귀, 잠처럼 기록 이름을 넣어 보세요
+              </ThemedText>
+            </View>
           )}
 
           {query && answer && (
@@ -119,6 +124,11 @@ export function FindSheet({ open, onClose }: { open: boolean; onClose: () => voi
                     </ThemedText>
                   ) : null}
                 </View>
+                {answer.rows.length === 0 && (
+                  <ThemedText type="small" style={{ color: c.textSecondary }}>
+                    찾는 기록이 없어요
+                  </ThemedText>
+                )}
                 {answer.rows.slice(0, 30).map((r, i) => (
                   <View key={r.key} style={[styles.row, i > 0 && { borderTopWidth: 1, borderTopColor: c.divider }]}>
                     <ThemedText type="label" style={styles.when}>

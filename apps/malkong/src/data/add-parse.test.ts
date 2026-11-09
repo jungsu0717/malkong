@@ -38,6 +38,17 @@ test('기록 — 어제 밤 대변, 종류를 모르는 기저귀는 마저 적�
   assert.equal(d?.type === 'record' && d.complete, false);
 });
 
+test('기록 — 「대소변」은 소변과 대변 둘 다(「대변」 글자를 품지 않는다)', () => {
+  for (const text of ['대소변', '방금 대소변 봤어', '똥오줌 쌌어']) {
+    const r = parseAdd(text, NOW);
+    if (r?.type !== 'record') throw new Error(`기록이 아님: ${text}`);
+    assert.equal(r.input.diaper, 'both', text);
+    assert.equal(r.title, '대소변');
+  }
+  const pee = parseAdd('소변', NOW);
+  assert.equal(pee?.type === 'record' && pee.input.diaper, 'pee');
+});
+
 test('기록 — 낮잠 1시간 10분은 시각이 아니라 걸린 시간', () => {
   const r = parseAdd('낮잠 1시간 10분 잤어', NOW);
   if (r?.type !== 'record') throw new Error('기록이 아님');

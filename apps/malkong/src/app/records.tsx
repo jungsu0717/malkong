@@ -223,7 +223,7 @@ function RecordRow({
               ? '소변'
               : it.event.diaper === 'poo'
                 ? '대변'
-                : '소변, 대변'
+                : '대소변'
             : eventTitle(it.event, now);
   const by = it.type === 'feed' ? it.session.by : it.type === 'routine' || it.type === 'todo' ? it.by : it.event.by;
   const extra = it.type === 'side' && it.event.kind === 'diaper' && it.event.color && it.event.diaper !== 'pee' ? STOOL_COLOR_LABEL[it.event.color] : null;

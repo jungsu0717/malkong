@@ -28,6 +28,7 @@ import {
   type ItemKind,
 } from '@/components/flow/flow-graph';
 import { DayNewsSheet } from '@/components/log/day-news-card';
+import { STOOL_SWATCH } from '@/components/log/kinds';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { useRoutineActions } from '@/components/routine/use-routine-actions';
 import { ThemedText } from '@/components/themed-text';
@@ -50,7 +51,7 @@ import {
   type TodoDone,
 } from '@/data/day-flow';
 import { readSetting, writeSetting } from '@/data/db';
-import { durationLabel, lastFeedStart, startOfDay } from '@/data/event-summary';
+import { STOOL_COLOR_LABEL, durationLabel, lastFeedStart, startOfDay } from '@/data/event-summary';
 import { runningOf, type CareEvent, type EventKind, type Side } from '@/data/events';
 import { useEvents } from '@/data/events-context';
 import { useFamily } from '@/data/family-context';
@@ -85,7 +86,7 @@ function subTitle(it: SubItem, now: Date): string {
   if (it.type === 'feed') return feedTitle(it.session, now);
   if (it.type === 'routine' || it.type === 'todo') return it.title;
   const e = it.event;
-  if (e.kind === 'diaper') return e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '소변, 대변';
+  if (e.kind === 'diaper') return e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '대소변';
   if (e.kind === 'temp') return e.amount !== null ? `${e.amount}℃` : '체온';
   if (e.kind === 'weight') return e.amount !== null ? `${e.amount}kg` : '몸무게';
   return e.amount !== null ? `${e.amount}cm` : '키';
@@ -428,6 +429,7 @@ export function DayView({
                     const n = g.nodes[k];
                     const title = subTitle(it, now);
                     const by = it.type === 'feed' ? it.session.by : it.type === 'side' ? it.event.by : it.by;
+                    const stool = it.type === 'side' && it.event.kind === 'diaper' && it.event.diaper !== 'pee' ? it.event.color : null;
                     return (
                       <ItemNode
                         key={it.key}
@@ -436,7 +438,8 @@ export function DayView({
                         kind={subKind(it)}
                         title={title}
                         sub={hhmm(it.at)}
-                        aria={`${hhmm(it.at)} ${title}${by ? `, ${by}` : ''}`}
+                        aria={`${hhmm(it.at)} ${title}${stool ? ` ${STOOL_COLOR_LABEL[stool]}` : ''}${by ? `, ${by}` : ''}`}
+                        tint={stool ? STOOL_SWATCH[stool] : null}
                         onPress={() => d.type === 'block' && openRecords(blockParams(d.block, d.now, it.key))}
                       />
                     );

@@ -68,23 +68,23 @@ export function DateWheel({ value, onChange }: { value: Date; onChange: (date: D
 export function pickDate(_value: Date, _onChange: (date: Date) => void) {}
 
 export const RECORD_BACK_DAYS = 60;
-const local = (d: Date) => `${ymd(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
-/** 기록의 때 — 브라우저 날짜 · 시각 칸. 60일 전부터 지금까지 */
+/** 기록의 날짜 — 브라우저 날짜 칸. 60일 전부터 오늘까지, 시각은 그대로 */
 export function DateTimeWheel({ value, onChange }: { value: Date; onChange: (at: Date) => void }) {
   const c = useTheme();
   const now = new Date();
   return (
     <input
-      type="datetime-local"
-      aria-label="날짜와 시간"
-      value={local(value)}
-      max={local(now)}
-      min={local(new Date(now.getTime() - RECORD_BACK_DAYS * 24 * 60 * 60 * 1000))}
+      type="date"
+      aria-label="날짜"
+      value={ymd(value)}
+      max={ymd(now)}
+      min={ymd(new Date(now.getTime() - RECORD_BACK_DAYS * 24 * 60 * 60 * 1000))}
       onChange={(e) => {
-        const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(e.target.value);
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(e.target.value);
         if (!m) return;
-        const at = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+        // 시각은 눈금으로 고르니 그대로 둔다
+        const at = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), value.getHours(), value.getMinutes());
         onChange(at.getTime() > Date.now() ? new Date() : at);
       }}
       style={{

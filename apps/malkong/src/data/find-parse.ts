@@ -182,7 +182,7 @@ export function runFind(q: FindQuery, events: CareEvent[], now = new Date()): Fi
         inRange(t(e.startAt)) &&
         (q.what === 'diaper' || (q.what === 'pee' ? e.diaper === 'pee' || e.diaper === 'both' : e.diaper === 'poo' || e.diaper === 'both')),
     );
-    rows.push(...list.map((e) => ({ key: e.id, at: t(e.startAt), kind: e.kind, title: e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '소변, 대변', by: e.by })));
+    rows.push(...list.map((e) => ({ key: e.id, at: t(e.startAt), kind: e.kind, title: e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '대소변', by: e.by })));
     const pee = list.filter((e) => e.diaper === 'pee' || e.diaper === 'both').length;
     const poo = list.filter((e) => e.diaper === 'poo' || e.diaper === 'both').length;
     if (q.measure === 'last') {

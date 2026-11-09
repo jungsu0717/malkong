@@ -79,7 +79,7 @@ export function eventTitle(e: CareEvent, now = new Date()): string {
     case 'formula':
       return `분유 ${e.amount !== null ? `${trim(e.amount, 0)}ml` : ''}`.trim();
     case 'diaper': {
-      const base = e.diaper === 'poo' ? '기저귀 대변' : e.diaper === 'both' ? '기저귀 소변 · 대변' : '기저귀 소변';
+      const base = e.diaper === 'poo' ? '기저귀 대변' : e.diaper === 'both' ? '기저귀 대소변' : '기저귀 소변';
       return e.color && e.diaper !== 'pee' ? `${base} · ${STOOL_COLOR_LABEL[e.color]}` : base;
     }
     case 'sleep':

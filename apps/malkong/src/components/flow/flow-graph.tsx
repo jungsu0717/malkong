@@ -162,6 +162,7 @@ export function ItemNode({
   title,
   sub,
   aria,
+  tint,
   onPress,
 }: {
   cx: number;
@@ -170,6 +171,8 @@ export function ItemNode({
   title: string;
   sub: string;
   aria: string;
+  /** 대변 색을 적었으면 그 색으로 아이콘을 칠한다 */
+  tint?: string | null;
   onPress: () => void;
 }) {
   const c = useTheme();
@@ -184,7 +187,11 @@ export function ItemNode({
     ) : done ? (
       <RoutineIcon title={title} size={21} color={c.text} />
     ) : (
-      <Ionicons name={ion[kind] ?? 'ellipse-outline'} size={kind === 'poo' ? 18 : 21} color={feed ? '#FFFFFF' : kind === 'poo' ? c.textSecondary : c.text} />
+      <Ionicons
+        name={ion[kind] ?? 'ellipse-outline'}
+        size={kind === 'poo' ? (tint ? 22 : 18) : 21}
+        color={feed ? '#FFFFFF' : tint ? tint : kind === 'poo' ? c.textSecondary : c.text}
+      />
     );
   return (
     <>

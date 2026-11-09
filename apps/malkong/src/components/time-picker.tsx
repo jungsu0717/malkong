@@ -1,7 +1,7 @@
 /**
  * 시각 · 날짜 고르기 (task today/004 · topic/009 · log/005) — 폰의 기본 선택기를 쓴다.
  * iOS 는 화면 안에 펼치고(`TimeWheel` · `DateWheel` · `DateTimeWheel`), 안드로이드는 창을 띄운다(`pickTime` · `pickDate` · `pickDateTime`). 웹은 time-picker.web.tsx.
- * 기록의 때(`DateTimeWheel`)는 지나간 때만 — 60일 전부터 지금까지, 1분 단위.
+ * 기록의 날짜(`DateTimeWheel`)는 지나간 날만 — 60일 전부터 오늘까지. 시각은 눈금(log/ruler.tsx)으로 고른다.
  */
 
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
@@ -70,30 +70,39 @@ export function pickDate(value: Date, onChange: (date: Date) => void) {
   DateTimePickerAndroid.open({ mode: 'date', value, minimumDate: new Date(), onValueChange: (_, d) => onChange(d) });
 }
 
-/** 기록의 때를 고르는 바퀴 — 날짜 · 오전/오후 · 시 · 분(iOS). 60일 전부터 지금까지 */
+/**
+ * 기록의 날짜를 고르는 바퀴(iOS) — 시각은 눈금으로 고르니 날짜만 바꾸고 시각은 그대로 둔다. 60일 전부터 오늘까지, 앞으로의 때는 지금으로.
+ * 날짜와 시각을 한 바퀴에 넣으면(mode datetime) 칸이 넓어 좁은 시트에서 오른쪽이 잘린다.
+ */
 export function DateTimeWheel({ value, onChange }: { value: Date; onChange: (at: Date) => void }) {
   const scheme = useColorScheme();
   if (Platform.OS !== 'ios') return null;
   const now = new Date();
   return (
     <DateTimePicker
-      mode="datetime"
+      mode="date"
       display="spinner"
       locale="ko-KR"
       maximumDate={now}
       minimumDate={new Date(now.getTime() - RECORD_BACK_DAYS * 24 * 60 * 60 * 1000)}
       themeVariant={scheme === 'dark' ? 'dark' : 'light'}
       value={value}
-      onValueChange={(_, d) => onChange(d)}
+      onValueChange={(_, d) => onChange(sameTimeOn(d, value))}
       style={styles.wheel}
     />
   );
 }
 
+/** day 날짜에 at 의 시각 — 지금보다 뒤면 지금 */
+export function sameTimeOn(day: Date, at: Date): Date {
+  const d = new Date(day.getFullYear(), day.getMonth(), day.getDate(), at.getHours(), at.getMinutes());
+  return d.getTime() > Date.now() ? new Date() : d;
+}
+
 /** 기록의 때를 얼마나 앞까지 고를 수 있나 */
 export const RECORD_BACK_DAYS = 60;
 
-/** 안드로이드 — 날짜 창을 띄우고, 고르면 이어서 시각 창. 앞으로의 때는 지금으로 */
+/** 안드로이드 — 날짜 창. 시각은 눈금으로 고르니 그대로 두고, 앞으로의 때는 지금으로 */
 export function pickDateTime(value: Date, onChange: (at: Date) => void) {
   if (Platform.OS !== 'android') return;
   const now = new Date();
@@ -102,17 +111,7 @@ export function pickDateTime(value: Date, onChange: (at: Date) => void) {
     value,
     maximumDate: now,
     minimumDate: new Date(now.getTime() - RECORD_BACK_DAYS * 24 * 60 * 60 * 1000),
-    onValueChange: (_, day) => {
-      DateTimePickerAndroid.open({
-        mode: 'time',
-        is24Hour: false,
-        value,
-        onValueChange: (__, time) => {
-          const at = new Date(day.getFullYear(), day.getMonth(), day.getDate(), time.getHours(), time.getMinutes());
-          onChange(at.getTime() > Date.now() ? new Date() : at);
-        },
-      });
-    },
+    onValueChange: (_, day) => onChange(sameTimeOn(day, value)),
   });
 }
 
