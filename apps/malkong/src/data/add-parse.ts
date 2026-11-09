@@ -182,7 +182,13 @@ export function parseAdd(raw: string, now = new Date()): AddResult | null {
   const record = readRecord(text, now);
   if (record) return record;
   const due = parseDue(text, now);
-  const title = due.title.replace(/\s*(하기|할 것|해야 해|해야 함)$/, '').trim() || text;
+  // 「2개월 접종 일정 넣어 줘」 → 「2개월 접종」 — 부탁하는 말과 끝의 「일정」은 이름에서 뺀다(물어보기 창, task today/022)
+  const title =
+    due.title
+      .replace(/\s*(하기|할 것|해야 해|해야 함)$/, '')
+      .replace(/\s*(일정|할 ?일)?\s*(으로|로)?\s*(넣어|추가해|잡아|등록해|적어|만들어)\s*(줘|주세요|줄래|줘요|둬)?\s*\.?$/, '')
+      .replace(/\s+일정$/, '')
+      .trim() || text;
   if (due.repeat) {
     const routine = routineOf(title, due.repeat, due.dueAt, due.hasTime);
     const label = `${repeatLabel(due.repeat)}${due.hasTime && due.dueAt ? ` ${hm(due.dueAt)}` : ''}`;

@@ -33,7 +33,7 @@
 | 칸 | 모양 | 뜻 |
 |---|---|---|
 | `type` | `answer` \| `changes` \| `question` \| `health` \| `unknown` | |
-| `reply` | 글(최대 300자) 또는 null | answer 의 답 글, changes 의 짧은 설명(없어도 됨) |
+| `reply` | 늘 null | 모델이 쓴 문장은 내보내지 않는다(2026-11-09 실제 호출 뒤 바꿈) — 답 문장은 앱이 highlight 의 기록으로 쓴다 |
 | `question` | parse 의 FindQuestion 또는 null | type 이 question 일 때만 — 며칠에 걸친 합계 · 평균 · 횟수는 앱이 센다 |
 | `actions` | 아래 바꿀 것 최대 10개 | type 이 changes 일 때만 |
 | `highlight` | ref 목록 최대 10개 | 답이 가리키는 기록(answer, changes) |
@@ -44,7 +44,7 @@
 - `update`: `ref` 가 보낸 기록에 있어야 한다. 서버가 `kind` 를 그 기록의 kind 로 채우고, 그 종류에 있는 칸 중 바뀌는 칸만 남긴다(parse 의 FIELDS 에 `note` 를 더해서 — note 는 breast, formula, diaper, sleep, temp, weight, height 에만, memo 는 title 이 글). 바뀌는 칸이 없으면 버린다.
 - `delete`: `ref` 가 보낸 기록에 있어야 한다. 서버가 `kind` 를 채우고 나머지 칸은 비운다.
 - `plan`: 할 일 · 일정. `title`, `startAt` 이 있어야 하고 `hasTime`(시각을 말했으면 true, 날만 말했으면 false, 없으면 true). 나머지 칸은 비운다.
-- 맞지 않는 줄은 버린다. changes 인데 남은 줄이 없으면: reply 가 있으면 answer, 없으면 unknown.
+- 맞지 않는 줄은 버린다. changes 인데 남은 줄이 없으면 unknown. 글 칸에 혼잣말 흔적이 있으면 그 칸을 버린다.
 - highlight 는 보낸 ref 만 남긴다. health 와 unknown 은 reply · actions · highlight 를 비운다(앱이 정해 둔 글을 보인다). question 이면 actions 를 비운다.
 
 오류: 401(기기 키), 422(형식), 429 `LIMIT_EXCEEDED`(기기마다 하루 상한, 설정 `agent_per_device_per_day` 기본 200), 503 `MODEL_UNAVAILABLE`(키 없음, 모델 실패).
@@ -59,7 +59,7 @@
 
 - [x] (SPEC-MAIN-12 · 13) `/v1/agent` 계약대로, 가짜 모델 시험
 - [x] 문서: api-contract, backend
-- [ ] 모델 고르기(Julian — 아래 「확인」의 실제 호출 결과)
+- [x] 모델 고르기 — 3.1 Flash-Lite 그대로, 부르는 방식을 바꿈(Julian 「ㅇㅇ」, 아래 「확인」)
 - [ ] 운영 배포(Julian 승인 뒤)
 
 ## 확인
@@ -76,3 +76,8 @@
   - 둘 다 틀림: 일정 이름 칸에 모델이 스스로 생각한 말을 씀(「2개월 접종Parse error: … No, wait」), 답 글에 같은 말을 되풀이하거나 이상한 말을 덧붙임
     (「적어요시작해요와…」, 「13:10에 깼어요.단13:10에 깼어요.단…」). 3.8 Flash 의 첫 답은 10초
   - 두 모델 모두 생각 토큰이 0 으로 나왔다. 정해진 JSON 모양으로 바로 답하게 하니 모델이 생각을 답 칸 안에서 하는 것으로 보인다 — 모델 크기보다 부르는 방식의 문제
+- 부르는 방식을 바꾼 뒤 6번(Julian 「ㅇㅇ」, 2026-11-09, `gemini-3.1-flash-lite` + 생각 low) — 모델은 기록과 바꿀 것만 고르고 답 문장은 앱이 쓴다.
+  글 칸의 혼잣말은 서버가 버리고, 빠진 일정은 앱 규칙이 문장에서 읽는다(task today/022)
+  - 여섯 모두 맞음(1.2~2.6초, 생각 90~380 토큰): 앞 수유 비교 → r13, r7 을 골라 앱이 「분유 120ml는 앞 수유(10:50, 140ml)보다 20ml 적어요.」,
+    옮기기 → 13:40 수정(일정 이름 칸에는 또 혼잣말이 와서 서버가 버리고, 앱이 「2개월 접종 내일(11월 7일) 09:00」을 읽음), 지우기, 메모 → 기록 메모,
+    이번 주 밤잠 평균 → 찾을 조건, 낮잠 몇 시에 깼어 → r11 을 골라 앱이 「12:00~13:10 잠 1시간 10분이에요.」

@@ -1,12 +1,16 @@
-"""물어보기 서비스 — 문장과 보고 있는 날의 기록을 모델에 한 번 보내 답 글이나 바꿀 것 목록을 받는다.
+"""물어보기 서비스 — 문장과 보고 있는 날의 기록을 모델에 한 번 보내 가리키는 기록이나
+바꿀 것 목록을 받는다.
 
 근거는 decisions/040 과 task common/032. 모델 답은 칸마다 검사해서 맞지 않는 줄은 버린다.
+모델이 쓴 문장은 내보내지 않는다 — 답 문장은 앱이 가리키는 기록으로 쓴다(헌장 13). 실제 호출에서
+모델이 정해진 JSON 칸 안에 혼잣말을 쓰거나 같은 말을 되풀이한 일이 있었다(2026-11-09).
 저장과 반영은 앱이 사람 확인을 받아서 한다. 서버는 보낸 기록을 가리키는 줄만 남긴다.
 문장, 기록, 대화, 모델 답은 저장하지도 로그에 남기지도 않는다(server/AGENTS.md 「금지」).
 """
 
 import json
 import logging
+import re
 import threading
 from collections import defaultdict
 from datetime import date, datetime
@@ -20,7 +24,6 @@ from app.common.core.setting import Settings
 from app.domain.agent.prompt import (
     MAX_ACTIONS,
     MAX_HIGHLIGHT,
-    MAX_REPLY,
     MODEL_SCHEMA,
     SYSTEM_PROMPT,
     user_message,
@@ -41,6 +44,26 @@ logger = logging.getLogger("uvicorn.error")
 
 # 메모(note)를 붙일 수 있는 기록 — 루틴과 메모는 title 이 글이라 note 가 없다
 NOTE_KINDS = {"breast", "formula", "diaper", "sleep", "temp", "weight", "height"}
+# 일정 이름의 길이 상한 — 「2개월 접종」, 「병원 예약」처럼 짧은 이름만 받는다
+MAX_PLAN_TITLE = 20
+# 모델이 글 칸에 혼잣말을 쓴 흔적 — 한글과 라틴 글자, 흔한 기호 밖의 글자(다른 나라 글자)나
+# 스키마 칸 이름, 기록 번호(r12), 화살표. 실제 호출에서 「2개월 접종Parse error: … No, wait」,
+# 「2개월 접종 বয়স 확인 필요함 …」을 본 뒤에 둔다
+LEAK = re.compile(
+    r"[^\u0020-\u007e\u00b7\u2103\u3000-\u303f\u1100-\u11ff\u3130-\u318f\uac00-\ud7a3\uff01-\uff5e\n]"
+    r"|error|wait|highlight|start_?at|end_?at|has_?time|json|->|→|\br\d{1,3}\b",
+    re.IGNORECASE,
+)
+
+
+def plain_text(value: str | None, limit: int) -> str | None:
+    """사람이 쓴 것 같은 짧은 글만 — 비었거나, 길거나, 혼잣말 흔적이 있으면 None."""
+    if value is None:
+        return None
+    text = value.strip()
+    if not text or len(text) > limit or LEAK.search(text):
+        return None
+    return text
 
 
 def _unknown() -> AgentResponse:
@@ -108,7 +131,6 @@ def read_answer(text: str, req: AgentRequest) -> AgentResponse:
         return AgentResponse(type=answer.type)
 
     records = {r.ref: r for r in req.records}
-    reply = _reply(answer.reply)
     highlight = _highlight(answer.highlight, records)
 
     if answer.type == "question":
@@ -116,25 +138,16 @@ def read_answer(text: str, req: AgentRequest) -> AgentResponse:
             question = FindQuestion.model_validate(answer.question)
         except ValidationError:
             return _unknown()
-        return AgentResponse(type="question", reply=reply, question=question, highlight=highlight)
+        return AgentResponse(type="question", question=question, highlight=highlight)
 
     if answer.type == "changes":
         actions = [a for a in (_action(item, records, req.now) for item in answer.actions) if a]
-        if actions:
-            return AgentResponse(
-                type="changes", reply=reply, actions=actions[:MAX_ACTIONS], highlight=highlight
-            )
-        # 남은 줄이 없으면 답 글이 있을 때만 답으로 보인다
+        if not actions:
+            return _unknown()
+        return AgentResponse(type="changes", actions=actions[:MAX_ACTIONS], highlight=highlight)
 
-    if not reply:
-        return _unknown()
-    return AgentResponse(type="answer", reply=reply, highlight=highlight)
-
-
-def _reply(value: str | None) -> str | None:
-    if value is None:
-        return None
-    return value.strip()[:MAX_REPLY] or None
+    # answer — 가리키는 기록만 보낸다. 비어 있으면 앱이 「그날 기록에서 찾지 못했어요」를 보인다
+    return AgentResponse(type="answer", highlight=highlight)
 
 
 def _highlight(values: list[Any], records: dict[str, ContextRecord]) -> list[str]:
@@ -169,6 +182,8 @@ def _add(action: AgentAction, now: datetime) -> AgentAction | None:
     if action.kind is None:
         return None
     values = {name: getattr(action, name) for name in OPTIONAL}
+    if values["title"] is not None:
+        values["title"] = plain_text(values["title"], 300)
     record = clean_record(ParsedRecord(kind=action.kind, **values), now)
     if record is None:
         return None
@@ -176,11 +191,12 @@ def _add(action: AgentAction, now: datetime) -> AgentAction | None:
 
 
 def _plan(action: AgentAction, now: datetime) -> AgentAction | None:
-    if not action.title or action.start_at is None:
+    title = plain_text(action.title, MAX_PLAN_TITLE)
+    if not title or action.start_at is None:
         return None
     return AgentAction(
         op="plan",
-        title=action.title,
+        title=title,
         start_at=to_local(action.start_at, now),
         # 시각을 말했는지 모델이 적지 않았으면 시각이 있는 일정으로 본다
         has_time=True if action.has_time is None else action.has_time,
@@ -194,6 +210,10 @@ def _update(action: AgentAction, record: ContextRecord, now: datetime) -> AgentA
     # title 이 없는 기록 종류에 title 만 왔으면 기록에 붙이는 메모로 읽는다
     if record.kind in NOTE_KINDS and action.note is None and action.title:
         action = action.model_copy(update={"note": action.title, "title": None})
+    # 글 칸(메모, 루틴 · 메모 이름)에 혼잣말 흔적이 있으면 그 칸은 바뀌지 않은 것으로 본다
+    action = action.model_copy(
+        update={"note": plain_text(action.note, 300), "title": plain_text(action.title, 300)}
+    )
     changes: dict[str, Any] = {}
     for name in sorted(allowed):
         value = getattr(action, name)

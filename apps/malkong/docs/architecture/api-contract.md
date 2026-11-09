@@ -206,10 +206,10 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 | 칸 | 뜻 |
 |---|---|
 | `type` | `answer`(보는 날 기록으로 답한 물음), `changes`(더하기, 고치기, 지우기, 일정), `question`(며칠에 걸친 숫자를 묻는 말), `health`(의료 판단을 묻는 말), `unknown`(그 밖이나 읽지 못한 말) |
-| `reply` | answer 의 답 글(늘 있다), changes 의 짧은 설명(없을 수 있다). 앞뒤 공백을 빼고 300자까지 |
+| `reply` | 늘 null — 모델이 쓴 문장은 내보내지 않는다. 답 문장은 앱이 `highlight` 의 기록으로 쓴다(헌장 13). 칸은 앞으로를 위해 남긴다 |
 | `question` | `type` 이 question 일 때만 parse 와 같은 `{ what, range, measure }`, 그 밖에는 null. 앱이 기기 안 기록에서 센다 |
 | `actions[]` | `type` 이 changes 일 때만 채운다(10줄까지). 그 밖에는 `[]` |
-| `highlight[]` | 답이 가리키는 기록의 `ref`, 10개까지. 요청에 보낸 ref 만 온다 |
+| `highlight[]` | 답이 되는 기록의 `ref`, 10개까지. 요청에 보낸 ref 만 온다. 비교를 물었으면 물은 기록이 먼저. answer 인데 비어 있으면 그날 기록에 답이 없다는 뜻 |
 
 바꿀 것 한 줄(`actions[]`)은 칸이 평평하다. 칸은 늘 모두 오고, `op` 마다 아래 칸만 채워지며 나머지는 null 이다.
 
@@ -225,9 +225,10 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 평시     ▸ 맞지 않는 줄은 버린다 — 보내지 않은 ref 를 가리키는 update 와 delete, 바뀌는 칸이 없는 update,
            title 이나 startAt 이 없는 plan, 종류가 없거나 이름 없는 routine · memo 인 add, 값이 목록 밖인 줄.
            때는 모두 `now` 의 시간대로 맞춘다.
-평시     ▸ changes 인데 남은 줄이 없으면 reply 가 있을 때 answer, 없으면 unknown 이다.
-           reply 가 빈 answer 와 조건이 맞지 않는 question 도 unknown 이다.
-평시     ▸ health 와 unknown 은 reply, actions, highlight 를 비워 보낸다. 앱이 정해 둔 글을 보인다(헌장 5).
+평시     ▸ changes 인데 남은 줄이 없으면 unknown 이다. 조건이 맞지 않는 question 도 unknown 이다.
+평시     ▸ 글 칸(일정 이름 20자까지, 루틴 · 메모 이름, 기록 메모)에 한글과 라틴 글자 밖의 글자, 스키마 칸 이름, 기록 번호, 화살표가 있으면
+           모델의 혼잣말로 보고 그 칸을 버린다(실제 호출에서 「2개월 접종Parse error: … No, wait」을 본 뒤, 2026-11-09).
+평시     ▸ health 와 unknown 은 actions, highlight 를 비워 보낸다. 앱이 정해 둔 글을 보인다(헌장 5).
 평시     ▸ question 이면 actions 를 비운다.
 조건 위반 ▸ 키가 없거나 모르는 키면 401 DEVICE_KEY_INVALID. 형식이 틀린 요청(겹친 ref 포함)은 422 INVALID_REQUEST.
 조건 위반 ▸ 기기마다 하루(한국 시간 0시에 바뀐다) 200번을 넘으면 429 LIMIT_EXCEEDED. 문장 읽기의 300번과 따로 센다.

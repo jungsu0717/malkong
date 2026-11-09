@@ -5,9 +5,10 @@
  * 앱이 반영할 변경 목록으로 바꾼다. 서버가 한 번 검사해서 보내지만, 앱도 범위를 벗어난 값과 바뀌지 않는 수정은 버린다.
  */
 
-import { inputsFromServer, type ParsedInput } from './ask.ts';
+import { parseAdd } from './add-parse.ts';
+import { copula, inputsFromServer, type ParsedInput } from './ask.ts';
 import { feedSessions, hhmm } from './day-flow.ts';
-import { eventTitle, STOOL_COLOR_LABEL } from './event-summary.ts';
+import { durationLabel, eventTitle, minutesOf, STOOL_COLOR_LABEL } from './event-summary.ts';
 import { AMOUNT_RANGE, type CareEvent, type DiaperKind, type Side, type StoolColor } from './events.ts';
 import type { RoutineLog } from './routine.ts';
 import type { Memo } from './stage.ts';
@@ -362,3 +363,101 @@ export function lastTurns(turns: Turn[], n = 6): Turn[] {
     .slice(-n)
     .map((t) => ({ role: t.role, text: t.text.trim().slice(0, 600) }));
 }
+
+// --- 답 문장 — 모델은 기록만 고르고 문장은 앱이 쓴다(헌장 13) ---
+
+/** 받침이 있으면 앞 말, 없으면 뒤 말 — 「120ml는」, 「15분은」 */
+const josa = (word: string, withBatchim: string, without: string) => (copula(word) === '이에요' ? withBatchim : without);
+
+/** 기록 한 줄 — 「12:00~13:10 잠 1시간 10분」, 「13:50 분유 120ml」, 「11:05 메모 「처음으로 뒤집기를 했어요」」 */
+function lineOf(s: CtxSource): string {
+  if (s.type === 'event') {
+    const e = s.event;
+    const range = (e.kind === 'breast' || e.kind === 'sleep') && e.endAt ? `${hhmm(e.startAt)}~${hhmm(e.endAt)}` : hhmm(e.startAt);
+    return `${range} ${s.label}`;
+  }
+  if (s.type === 'routine') return `${s.log.endAt ? `${hhmm(s.log.at)}~${hhmm(s.log.endAt)}` : hhmm(s.log.at)} ${s.title}`;
+  return `${hhmm(s.memo.at)} 메모 「${memoLine(s.memo.text)}」`;
+}
+
+/** 두 기록 비교 — 같은 종류의 분유 양이나 모유 · 잠의 걸린 시간만. 앞이 물은 기록, 뒤가 비교할 기록 */
+function compare(a: CtxSource, b: CtxSource, now: Date): string | null {
+  if (a.type !== 'event' || b.type !== 'event') return null;
+  const x = a.event;
+  const y = b.event;
+  const feed = (k: string) => k === 'breast' || k === 'formula';
+  if (!(x.kind === y.kind || (feed(x.kind) && feed(y.kind)))) return null;
+  const word = new Date(y.startAt).getTime() < new Date(x.startAt).getTime() ? '앞' : '뒤';
+  const what = feed(y.kind) ? '수유' : y.kind === 'sleep' ? '잠' : KIND_WORD[y.kind];
+  const other = `${word} ${what}(${hhmm(y.startAt)}, ${b.label.replace(/^(분유|모유|잠|체온|몸무게|키) ?/, '') || b.label})`;
+  let diff: string | null = null;
+  let sign = 0;
+  if (x.kind === 'formula' && y.kind === 'formula' && x.amount !== null && y.amount !== null) {
+    sign = Math.sign(x.amount - y.amount);
+    diff = `${Math.round(Math.abs(x.amount - y.amount))}ml`;
+  } else if ((x.kind === 'breast' || x.kind === 'sleep') && x.kind === y.kind && x.endAt && y.endAt) {
+    const d = Math.round(minutesOf(x, now)) - Math.round(minutesOf(y, now));
+    sign = Math.sign(d);
+    diff = durationLabel(Math.abs(d));
+  } else if ((x.kind === 'temp' || x.kind === 'weight' || x.kind === 'height') && x.kind === y.kind && x.amount !== null && y.amount !== null) {
+    const unit = AMOUNT_RANGE[x.kind]?.unit ?? '';
+    sign = Math.sign(x.amount - y.amount);
+    diff = `${Number(Math.abs(x.amount - y.amount).toFixed(2))}${unit}`;
+  }
+  if (diff === null) return null;
+  const head = `${a.label}${josa(a.label, '은', '는')} ${other}`;
+  if (sign === 0) return `${head}${josa(other.replace(/\)$/, ''), '과', '와')} 같아요.`;
+  const more = x.kind === 'formula' ? (sign > 0 ? '많아요' : '적어요') : x.kind === 'temp' ? (sign > 0 ? '높아요' : '낮아요') : sign > 0 ? '길어요' : '짧아요';
+  const verb = x.kind === 'weight' ? (sign > 0 ? '무거워요' : '가벼워요') : x.kind === 'height' ? (sign > 0 ? '커요' : '작아요') : more;
+  return `${head}보다 ${diff} ${verb}.`;
+}
+
+const KIND_WORD: Record<CareEvent['kind'], string> = { breast: '수유', formula: '수유', diaper: '기저귀', sleep: '잠', temp: '체온', weight: '몸무게', height: '키' };
+
+/**
+ * 에이전트가 고른 기록으로 답 문장 — 비교를 물었고 두 기록이 같은 종류면 차이를, 아니면 그 기록들을 시각과 함께.
+ * 고른 기록이 없으면 「11월 6일 기록에서 찾지 못했어요.」
+ */
+export function answerText(refs: string[], ctx: DayContext, question: string, dayLabel: string, now: Date): { text: string; keys: string[] } {
+  const list: CtxSource[] = [];
+  for (const ref of refs) {
+    const s = ctx.sources.find((x) => x.ref === ref);
+    if (s && !list.includes(s)) list.push(s);
+  }
+  if (!list.length) return { text: `${dayLabel} 기록에서 찾지 못했어요.`, keys: [] };
+  const keys = [...new Set(list.map((s) => s.key))];
+  if (list.length === 2 && /보다|비교|많이|적게|덜|더 /.test(question)) {
+    const c = compare(list[0], list[1], now);
+    if (c) return { text: c, keys };
+  }
+  const sorted = [...list].sort((a, b) => timeOf(a) - timeOf(b));
+  const lines = sorted.slice(0, 3).map(lineOf);
+  const body = lines.join(', ');
+  // 끝이 「」」나 「)」면 그 앞 글자로 「이에요 · 예요」를 고른다
+  const text = sorted.length > 3 ? `${body} 등 ${sorted.length}개예요.` : `${body}${copula(body.replace(/[」)]+$/, ''))}.`;
+  return { text, keys };
+}
+
+const timeOf = (s: CtxSource) => new Date(s.type === 'event' ? s.event.startAt : s.type === 'routine' ? s.log.at : s.memo.at).getTime();
+
+/** 일정을 넣어 달라는 말인가 */
+export const asksPlan = (text: string) => /일정|예약|할 ?일/.test(text);
+
+/**
+ * 에이전트가 일정을 빠뜨렸을 때 — 문장을 「~고」, 쉼표로 나눠 앱 규칙으로 날짜와 이름을 읽는다.
+ * 실제 호출에서 모델이 일정의 때를 빠뜨린 일이 있었다(2026-11-09).
+ */
+export function planFromText(text: string, now: Date): Change | null {
+  const parts = text
+    .split(/(?<=\S)고\s*,?\s+|하고\s+|그리고\s+|,\s*/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+  for (const p of parts.reverse()) {
+    if (!asksPlan(p) || pointsOrEdits(p)) continue;
+    const r = parseAdd(p, now);
+    if (r?.type !== 'todo' || !r.title) continue;
+    return { op: 'plan', title: r.title.slice(0, 60), at: r.dueAt, hasTime: r.hasTime, when: whenLabel(r.dueAt, r.hasTime, now) };
+  }
+  return null;
+}
+

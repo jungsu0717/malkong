@@ -21,7 +21,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button, tap } from '@/components/ui';
 import { FontFamily } from '@/constants/theme';
 import { parseAdd, type AddResult } from '@/data/add-parse';
-import { changesFrom, dayContext, lastTurns, onlyAdds, pointsOrEdits, selectedLabel, sourceOfKey, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
+import { answerText, asksPlan, changesFrom, dayContext, lastTurns, onlyAdds, planFromText, pointsOrEdits, selectedLabel, sourceOfKey, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
 import { askAgent, type AgentResponse } from '@/data/api';
 import { answerFor, asksAverage, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
 import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
@@ -217,7 +217,6 @@ export function AskSheet({
   const viaAgent = async (s: string, now: Date) => {
     const ctx = context(now);
     const sel = ctx ? sourceOfKey(ctx, selectedKey) : null;
-    const keyOf = new Map((ctx?.sources ?? []).map((x) => [x.ref, x.key]));
     setBusy(true);
     let res: AgentResponse | null = null;
     try {
@@ -238,19 +237,25 @@ export function AskSheet({
     }
     if (res.type === 'changes') {
       const changes = changesFrom(res.actions, ctx, now, s);
+      // 에이전트가 일정을 빠뜨렸으면 앱 규칙으로 문장에서 날짜와 이름을 읽는다
+      if (asksPlan(s) && !changes.some((ch) => ch.op === 'plan')) {
+        const plan = planFromText(s, now);
+        if (plan) changes.push(plan);
+      }
       if (onlyAdds(changes)) return saveAll(changes.flatMap((ch) => (ch.op === 'add' ? [ch.input] : [])), steps.length ? steps : undefined);
       if (changes.length) {
         tap();
-        push({ id: nextId(), from: 'app', type: 'changes', changes, reply: res.reply, steps: [...steps, `바꿀 것 ${changes.length}개를 정했어요`], state: 'open' });
+        push({ id: nextId(), from: 'app', type: 'changes', changes, reply: null, steps: [...steps, `바꿀 것 ${changes.length}개를 정했어요`], state: 'open' });
         const keys = changes.flatMap((ch) => (ch.op === 'update' || ch.op === 'delete' ? [ch.src.key] : []));
         onHighlight(keys.length ? { keys, label: '바꿀 기록' } : null);
         return;
       }
     }
-    if ((res.type === 'answer' || res.type === 'changes') && res.reply) {
-      push({ id: nextId(), from: 'app', type: 'text', text: res.reply, steps: steps.length ? steps : undefined });
-      const keys = res.highlight.flatMap((ref) => (keyOf.has(ref) ? [keyOf.get(ref)!] : []));
-      onHighlight(keys.length ? { keys, label: '찾은 기록' } : null);
+    // 답 — 에이전트는 기록만 고르고 문장은 앱이 그 기록으로 쓴다(헌장 13)
+    if (res.type === 'answer' && ctx) {
+      const a = answerText(res.highlight, ctx, s, dayLabel, now);
+      push({ id: nextId(), from: 'app', type: 'text', text: a.text, steps });
+      onHighlight(a.keys.length ? { keys: a.keys, label: '찾은 기록' } : null);
       return;
     }
     fallback(s, now, false);

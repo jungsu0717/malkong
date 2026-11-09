@@ -14,16 +14,15 @@ from app.domain.agent.schema import ActionOp, AgentType, ContextRecord, HistoryT
 from app.domain.parse.prompt import QUESTION_SCHEMA, RECORD_PROPERTIES, WEEKDAYS, enum_schema
 from app.domain.parse.service import to_local
 
-# 한 번에 돌려주는 바꿀 것과 가리키는 기록 수의 상한, 답 글의 길이 상한
+# 한 번에 돌려주는 바꿀 것과 가리키는 기록 수의 상한
 MAX_ACTIONS = 10
 MAX_HIGHLIGHT = 10
-MAX_REPLY = 300
 
 # 칸마다 뜻 — 실제 호출에서 plan 의 title 에 문장을 쓰고 startAt 을 빠뜨린 일이 있어
 # (2026-11-09) 적어 둔다
 DESCRIBE = {
-    "reply": "answer 의 답 글(해요체 한두 문장). changes 면 비워도 된다",
     "ref": "update, delete 가 가리키는 기록(r12)",
+    "highlight": "답이 되는 기록의 ref. 비교를 물으면 선택한 기록을 먼저",
     "startAt": "그 일이 일어난 때, plan 이면 일정의 때(지금과 같은 시간대의 ISO 8601)",
     "title": "루틴 이름, 메모 글, 일정 이름(「2개월 접종」처럼 짧은 이름, 문장 아님)",
     "note": "update 로 기록에 붙이는 메모",
@@ -40,7 +39,6 @@ MODEL_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
         "type": {"type": "string", "enum": list(get_args(AgentType))},
-        "reply": _described("reply", {"type": "string"}),
         "question": QUESTION_SCHEMA,
         "actions": {
             "type": "array",
@@ -59,7 +57,9 @@ MODEL_SCHEMA: dict[str, Any] = {
                 "required": ["op"],
             },
         },
-        "highlight": {"type": "array", "maxItems": MAX_HIGHLIGHT, "items": {"type": "string"}},
+        "highlight": _described(
+            "highlight", {"type": "array", "maxItems": MAX_HIGHLIGHT, "items": {"type": "string"}}
+        ),
     },
     "required": ["type"],
 }

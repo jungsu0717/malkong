@@ -194,7 +194,8 @@ def test_answer_with_highlight(app, fake: FakeModel) -> None:
     answer(
         fake,
         type="answer",
-        reply="  분유 120ml는 앞 수유(10:50, 140ml)보다 20ml 적어요.  ",
+        # 모델이 글을 써도 내보내지 않는다 — 답 문장은 앱이 가리키는 기록으로 쓴다
+        reply="분유 120ml는 앞 수유보다 20ml 적어요시작해요와 비교하면",
         # 보내지 않은 ref 와 겹친 ref 는 뺀다
         highlight=["r9", "r99", "r7", "r9", 3],
         # answer 에 붙은 바꿀 것과 찾을 조건은 싣지 않는다
@@ -205,29 +206,24 @@ def test_answer_with_highlight(app, fake: FakeModel) -> None:
     assert res.status_code == 200
     assert res.json() == {
         "type": "answer",
-        "reply": "분유 120ml는 앞 수유(10:50, 140ml)보다 20ml 적어요.",
+        "reply": None,
         "question": None,
         "actions": [],
         "highlight": ["r9", "r7"],
     }
 
 
-def test_reply_is_capped(app, fake: FakeModel) -> None:
-    answer(fake, type="answer", reply="가" * 400)
-    assert ask(phone(app), "오늘 어땠어?").json()["reply"] == "가" * 300
-
-
-@pytest.mark.parametrize("reply", [None, "", "   "])
-def test_answer_without_reply_is_unknown(app, fake: FakeModel, reply) -> None:
-    answer(fake, type="answer", reply=reply, highlight=["r9"])
-    assert ask(phone(app), "오늘 어땠어?").json() == EMPTY
+def test_answer_without_highlight_stays_answer(app, fake: FakeModel) -> None:
+    # 답이 되는 기록이 없다는 답 — 앱이 「그날 기록에서 찾지 못했어요」를 보인다
+    answer(fake, type="answer", highlight=[])
+    assert ask(phone(app), "오늘 목욕했어?").json() == {**EMPTY, "type": "answer"}
 
 
 def test_highlight_keeps_ten(app, fake: FakeModel) -> None:
     records = [
         {"ref": f"r{i}", "kind": "formula", "startAt": NOW, "amount": 100} for i in range(12)
     ]
-    answer(fake, type="answer", reply="12번 먹었어요.", highlight=[f"r{i}" for i in range(12)])
+    answer(fake, type="answer", highlight=[f"r{i}" for i in range(12)])
     body = ask(phone(app), "오늘 몇 번 먹었어?", records=records).json()
     assert body["highlight"] == [f"r{i}" for i in range(10)]
 
@@ -263,7 +259,7 @@ def test_update_and_plan(app, fake: FakeModel) -> None:
     assert res.status_code == 200
     body = res.json()
     assert body["type"] == "changes"
-    assert body["reply"] == "옮기고 일정을 넣을게요."
+    assert body["reply"] is None
     assert body["question"] is None
     assert body["highlight"] == ["r9"]
     update, plan = body["actions"]
@@ -470,8 +466,8 @@ def test_actions_keep_ten(app, fake: FakeModel) -> None:
     assert [a["amount"] for a in body["actions"]] == [10 + i for i in range(10)]
 
 
-def test_changes_without_lines_falls_back(app, fake: FakeModel) -> None:
-    # 남은 줄이 없고 답 글이 있으면 답으로
+def test_changes_without_lines_is_unknown(app, fake: FakeModel) -> None:
+    # 남은 줄이 없으면 모델이 글을 썼어도 unknown
     answer(
         fake,
         type="changes",
@@ -479,16 +475,39 @@ def test_changes_without_lines_falls_back(app, fake: FakeModel) -> None:
         actions=[{"op": "delete", "ref": "r99"}],
         highlight=["r9"],
     )
-    assert ask(phone(app), "그거 지워 줘").json() == {
-        "type": "answer",
-        "reply": "그 기록을 찾지 못했어요.",
-        "question": None,
-        "actions": [],
-        "highlight": ["r9"],
-    }
-    # 답 글도 없으면 unknown
-    answer(fake, type="changes", actions=[{"op": "delete", "ref": "r99"}], highlight=["r9"])
     assert ask(phone(app), "그거 지워 줘").json() == EMPTY
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "2개월 접종Parse error: missing title/plan? No, wait",
+        "2개월 접종 বয়স 확인 필요함",
+        "r9 를 옮기고 일정 추가",
+        "2개월 접종 예약을 추가했어요. 내일 09:00입니다.",
+    ],
+)
+def test_plan_title_with_leaked_text_is_dropped(app, fake: FakeModel, title) -> None:
+    # 실제 호출에서 본 혼잣말(2026-11-09) — 다른 나라 글자, 칸 이름, 기록 번호, 긴 문장
+    answer(
+        fake,
+        type="changes",
+        actions=[{"op": "plan", "title": title, "startAt": "2026-11-10T09:00:00+09:00"}],
+    )
+    assert ask(phone(app), "내일 9시에 접종 일정 넣어 줘").json() == EMPTY
+
+
+def test_note_with_leaked_text_is_not_a_change(app, fake: FakeModel) -> None:
+    answer(
+        fake,
+        type="changes",
+        actions=[
+            {"op": "update", "ref": "r9", "note": "트림 highlight: r9"},
+            {"op": "update", "ref": "r9", "note": "트림 두 번"},
+        ],
+    )
+    [action] = ask(phone(app), "이 기록에 메모: 트림 두 번").json()["actions"]
+    assert action["note"] == "트림 두 번"
 
 
 def test_without_records_update_and_delete_are_dropped(app, fake: FakeModel) -> None:

@@ -84,3 +84,11 @@ test('이름만 · 할 일 · 루틴', () => {
   const monthly = parseAdd('매달 1일 손톱 깎기', NOW);
   assert.equal(monthly?.type, 'todo');
 });
+
+test('할 일 이름에서 부탁하는 말과 끝의 「일정」을 뺀다', () => {
+  const a = parseAdd('내일 아침 9시에 2개월 접종 일정 넣어 줘', NOW);
+  assert.equal(a?.type, 'todo');
+  assert.equal(a?.title, '2개월 접종');
+  assert.equal(parseAdd('다음 주 화요일 병원 예약 일정 추가해 줘', NOW)?.title, '병원 예약');
+  assert.equal(parseAdd('11월 20일 BCG 접종', NOW)?.title, 'BCG 접종');
+});

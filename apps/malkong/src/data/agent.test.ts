@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { changesFrom, dayContext, lastTurns, onlyAdds, pointsOrEdits, selectedLabel, sourceOfKey, whenLabel } from './agent.ts';
+import { answerText, changesFrom, dayContext, lastTurns, onlyAdds, planFromText, pointsOrEdits, selectedLabel, sourceOfKey, whenLabel } from './agent.ts';
 import type { CareEvent } from './events.ts';
 import type { RoutineLog } from './routine.ts';
 import type { Memo } from './stage.ts';
@@ -158,4 +158,24 @@ test('앞 대화 — 빈 말은 빼고 마지막 6줄, 줄마다 600자', () => 
   assert.equal(out.length, 6);
   assert.equal(out[0].text, '말 3');
   assert.equal(out[5].text.length, 600);
+});
+
+test('답 문장은 앱이 — 비교는 차이로, 그 밖에는 시각과 함께', () => {
+  const day = '11월 6일';
+  assert.equal(answerText(['r8', 'r5'], ctx, '이거 앞 수유보다 많이 먹은 거야?', day, NOW).text, '분유 120ml는 앞 수유(10:50, 140ml)보다 20ml 적어요.');
+  assert.equal(answerText(['r7'], ctx, '아까 낮잠 몇 시에 깼어?', day, NOW).text, '12:00~13:10 잠 1시간 10분이에요.');
+  assert.equal(answerText(['r5', 'r8'], ctx, '오늘 분유 언제 먹었어?', day, NOW).text, '10:50 분유 140ml, 13:50 분유 120ml예요.');
+  assert.equal(answerText(['r4'], ctx, '오늘 메모 뭐 있어?', day, NOW).text, '09:10 메모 「처음으로 뒤집기를 했어요」예요.');
+  const none = answerText(['r99'], ctx, '목욕했어?', day, NOW);
+  assert.deepEqual(none, { text: '11월 6일 기록에서 찾지 못했어요.', keys: [] });
+  // 수유 세션은 첫 줄 key 하나로
+  assert.deepEqual(answerText(['r2', 'r3'], ctx, '모유 언제?', day, NOW).keys, [left.id]);
+});
+
+test('일정을 빠뜨렸으면 앱 규칙으로 — 「~고」 뒤의 일정 말', () => {
+  const p = planFromText('이거 10분 앞으로 옮기고, 내일 아침 9시에 2개월 접종 일정 넣어 줘', NOW);
+  if (p?.op !== 'plan') return assert.fail();
+  assert.equal(p.title, '2개월 접종');
+  assert.equal(p.when, '내일(11월 7일) 09:00');
+  assert.equal(planFromText('이거 지워 줘', NOW), null);
 });
