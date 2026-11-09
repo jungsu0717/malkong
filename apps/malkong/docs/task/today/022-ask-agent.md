@@ -1,6 +1,6 @@
 # 022 물어보기 에이전트 — 보는 날의 기록을 함께 읽고, 고칠 것은 변경 카드로
 
-> 상태: 진행 중 (2026-11-09)
+> 상태: 구현 완료 (2026-11-09) · 서버는 2026-11-09 운영 배포(revision 00027) · 폰 확인은 TestFlight 빌드 14 에서
 > 근거: [main](../../menu-spec/main.md) SPEC-MAIN-15 · SPEC-MAIN-12 · SPEC-MAIN-13
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「물어보기 에이전트 6판 시안 (2026-11-09)」 · 결정: [040](../../decisions/040-ask-agent-reads-the-day.md) · 서버: [common/032](../common/032-agent-server.md)
 
@@ -28,7 +28,7 @@
 - [x] (SPEC-MAIN-15) 변경 카드 「모두 적용」 · 「취소」 · 「되돌리기」
 - [x] 개인정보 처리방침 — 함께 읽기에 동의한 경우의 기록 보내기
 - [x] 단위 시험(`agent.test.ts`), 웹에서 가짜 서버 응답으로 확인, 실제 호출(서버 task common/032 「확인」)
-- [ ] 빌드(Julian 승인 뒤)
+- [x] 빌드(Julian 「ㅇㅇ 승인」 — 2026-11-09, 1.0.0 (14), TestFlight 자동 제출)
 
 ## 확인
 

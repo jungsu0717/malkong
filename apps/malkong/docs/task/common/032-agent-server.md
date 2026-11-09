@@ -1,6 +1,6 @@
 # 032 물어보기 에이전트 서버 — /v1/agent (Gemini)
 
-> 상태: 진행 중 (2026-11-09)
+> 상태: 완료 (2026-11-09) · 운영 배포 revision 00027
 > 근거: [main](../../menu-spec/main.md) SPEC-MAIN-12 · SPEC-MAIN-13
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「물어보기 에이전트 6판 시안 (2026-11-09)」 · 결정: [040](../../decisions/040-ask-agent-reads-the-day.md)
 
@@ -60,7 +60,7 @@
 - [x] (SPEC-MAIN-12 · 13) `/v1/agent` 계약대로, 가짜 모델 시험
 - [x] 문서: api-contract, backend
 - [x] 모델 고르기 — 3.1 Flash-Lite 그대로, 부르는 방식을 바꿈(Julian 「ㅇㅇ」, 아래 「확인」)
-- [ ] 운영 배포(Julian 승인 뒤)
+- [x] 운영 배포(Julian 「ㅇㅇ 승인」 — 2026-11-09, revision 00027-rdz, /health · 지식 판 2026.10.5 · /v1/agent 401(키 없이) · /privacy 에 「물어보기에서 기록 함께 읽기」)
 
 ## 확인
 
