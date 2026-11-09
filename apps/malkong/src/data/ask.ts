@@ -139,13 +139,29 @@ const okTime = (iso: string | null, now: Date) => {
   return t;
 };
 
-/** 서버 기록을 앱의 기록 입력으로 — 앞으로의 때나 범위 밖 숫자는 버리고, 모자라면 complete 가 false(그 입력 시트에서 마저 적는다) */
-export function inputsFromServer(records: ServerRecord[], now: Date): ParsedInput[] {
+/** 문장 속 걸린 시간 — 「15분」, 「1시간 10분」. 없으면 null */
+export function minutesIn(text: string): number | null {
+  const h = /(\d+)\s*시간/.exec(text);
+  const m = /(\d+)\s*분(?!\s*(전|뒤|후))/.exec(text);
+  if (!h && !m) return null;
+  const total = (h ? Number(h[1]) * 60 : 0) + (m ? Number(m[1]) : 0);
+  return total > 0 && total <= 16 * 60 ? total : null;
+}
+
+/**
+ * 서버 기록을 앱의 기록 입력으로 — 앞으로의 때나 범위 밖 숫자는 버리고, 모자라면 complete 가 false(그 입력 시트에서 마저 적는다).
+ * 모델이 모유 · 잠의 걸린 시간을 빠뜨리면(실제 호출에서 본 일) 문장에서 직접 읽고, 시작이 지금이면 그만큼 앞에서 시작한 것으로 본다.
+ */
+export function inputsFromServer(records: ServerRecord[], now: Date, text = ''): ParsedInput[] {
   const out: ParsedInput[] = [];
+  const timed = records.filter((r) => r.kind === 'breast' || r.kind === 'sleep');
+  const said = timed.length === 1 ? minutesIn(text) : null;
   for (const r of records) {
-    const start = okTime(r.startAt, now);
+    let start = okTime(r.startAt, now);
     const end = okTime(r.endAt, now);
-    const mins = r.minutes !== null && r.minutes > 0 && r.minutes <= 16 * 60 ? Math.round(r.minutes) : null;
+    const own = r.minutes !== null && r.minutes > 0 && r.minutes <= 16 * 60 ? Math.round(r.minutes) : null;
+    const mins = own ?? ((r.kind === 'breast' || r.kind === 'sleep') && end === null ? said : null);
+    if (mins !== null && own === null && start !== null && Math.abs(start - now.getTime()) <= MIN) start = null;
     if (r.kind === 'routine' && r.title) {
       out.push({ type: 'routine', title: r.title.trim().slice(0, 40), at: new Date(start ?? now.getTime()).toISOString() });
       continue;

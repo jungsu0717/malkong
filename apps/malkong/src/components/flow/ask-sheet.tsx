@@ -182,7 +182,7 @@ export function AskSheet({
       push({ id: nextId(), from: 'app', type: 'text', text: HEALTH_REPLY });
       return;
     }
-    if (res?.type === 'records' && res.records.length) return saveAll(inputsFromServer(res.records, now));
+    if (res?.type === 'records' && res.records.length) return saveAll(inputsFromServer(res.records, now, s));
     if (res?.type === 'question') {
       const sq = queryFromServer(res.question, now);
       if (sq) return answer(answerFor(sq, events, now));

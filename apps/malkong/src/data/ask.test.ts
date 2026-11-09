@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { answerFor, copula, followUp, inputsFromServer, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords } from './ask.ts';
+import { answerFor, copula, followUp, inputsFromServer, isHealth, isQuestion, looksMulti, minutesIn, queryFromServer, splitRecords } from './ask.ts';
 import type { CareEvent } from './events.ts';
 import { parseFind } from './find-parse.ts';
 
@@ -99,4 +99,21 @@ test('서버가 안 될 때 — 「~고」로 나눠 읽고, 앞쪽의 때를 �
   assert.equal(times[0], NOW.getTime() - 10 * 60 * 1000);
   assert.equal(times[1], times[0]);
   assert.deepEqual(splitRecords('분유 120 먹였어', NOW), []);
+});
+
+test('서버 기록 — 모델이 모유 시간을 빠뜨리면 문장에서 읽는다', () => {
+  const list = inputsFromServer(
+    [
+      { kind: 'breast', startAt: NOW.toISOString(), endAt: null, minutes: null, amount: null, side: 'left', diaper: null, color: null, title: null },
+      { kind: 'routine', startAt: null, endAt: null, minutes: null, amount: null, side: null, diaper: null, color: null, title: '비타민D' },
+    ],
+    NOW,
+    '왼쪽 15분 먹이고 비타민D 먹였어',
+  );
+  const breast = list[0];
+  assert.equal(breast.type === 'event' && breast.complete, true);
+  assert.equal(breast.type === 'event' && breast.title, '모유 왼쪽 15분');
+  assert.equal(breast.type === 'event' && new Date(breast.input.startAt!).getTime(), NOW.getTime() - 15 * 60 * 1000);
+  assert.equal(minutesIn('10분 전에 분유 120'), null);
+  assert.equal(minutesIn('낮잠 1시간 10분'), 70);
 });
