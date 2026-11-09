@@ -1,6 +1,6 @@
 # 012 아기 프로필 — 사진과 태어날 때 정보
 
-> 상태: 구현 완료 (2026-11-09) · 사진 고르기는 빌드 13 에서 폰 확인
+> 상태: 구현 완료 (2026-11-09) · 사진 고르기는 TestFlight 빌드 13 에서 폰 확인
 > 근거: [my](../../menu-spec/my.md) SPEC-MY-02
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「빌드 12 피드백 5판 시안 (2026-11-09)」 · 결정: [039](../../decisions/039-ask-chat-and-feedback-5.md)
 

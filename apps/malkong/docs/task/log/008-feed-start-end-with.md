@@ -1,6 +1,6 @@
 # 008 모유 시작과 끝, 같이 먹인 것, 메모
 
-> 상태: 구현 완료 (2026-11-09) · 폰 확인은 빌드 13 에서
+> 상태: 구현 완료 (2026-11-09) · 폰 확인은 TestFlight 빌드 13 에서
 > 근거: [log](../../menu-spec/log.md) SPEC-LOG-01
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「빌드 12 피드백 5판 시안 (2026-11-09)」 · 결정: [039](../../decisions/039-ask-chat-and-feedback-5.md)
 

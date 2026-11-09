@@ -1,6 +1,6 @@
 # 031 문장 읽기 서버 — /v1/parse (Gemini)
 
-> 상태: 구현 완료 (2026-11-09) · 운영 배포는 Julian 승인 뒤
+> 상태: 완료 (2026-11-09) · 운영 배포 revision 00026
 > 근거: [main](../../menu-spec/main.md) SPEC-MAIN-12 · SPEC-MAIN-13
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「빌드 12 피드백 5판 시안 (2026-11-09)」 · 결정: [039](../../decisions/039-ask-chat-and-feedback-5.md)
 
@@ -18,7 +18,7 @@
 
 - [x] (SPEC-MAIN-12) 한 문장의 기록 여러 개를 읽는다
 - [x] (SPEC-MAIN-13) 묻는 말을 찾을 조건으로, 건강 질문은 health
-- [ ] 운영 배포(Julian 승인)
+- [x] 운영 배포(Julian 승인 「ㅇㅇ 배포 해야지」 — 2026-11-09, revision 00026, /health · 지식 판 2026.10.5 · /v1/parse 401(키 없이) · /privacy 에 Gemini 문장)
 
 ## 확인
 

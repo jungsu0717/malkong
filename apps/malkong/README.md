@@ -11,7 +11,8 @@
   [today/019](docs/task/today/019-ask-chat.md) 돋보기와 「추가」 줄 대신 오른쪽 아래 「물어보기」 채팅(문장 기록은 바로 저장하고 되돌리기, 묻고 답하며 그 기록을 비춤),
   [common/031](docs/task/common/031-parse-server.md) 규칙으로 못 읽은 문장은 서버 `/v1/parse`(Gemini, 문장만 보냄), [log/008](docs/task/log/008-feed-start-end-with.md) 모유 시작과 끝 · 같이 먹인 것 · 메모,
   [today/020](docs/task/today/020-timed-routines.md) 터미타임 여러 번 · 시작과 끝, [my/012](docs/task/my/012-baby-profile-photo.md) 아기 사진과 태어날 때 정보, [today/021](docs/task/today/021-family-calendar.md) 함께 보는 달력.
-  개인정보 처리방침에 문장 읽기를 적었다. **남은 것(Julian)**: 서버 운영 배포 승인, Gemini 키가 유료 등급인지 확인, 빌드 1.0.0 (13) 승인
+  개인정보 처리방침에 문장 읽기를 적었다. 서버를 운영에 배포했고(2026-11-09, revision 00026 — 결제한 Gemini 키 `malkong-gemini-key`),
+  **빌드 1.0.0 (13)** 을 EAS 에 올리고 TestFlight 자동 제출을 걸었다(2026-11-09)
 
 - **하루 흐름 4판(2026-11-06)**: Julian 이 빌드 11 을 써 보고 기록이 늦게 보이는 것, 잠을 잘 안 적으니 묶음이 이상한 것, 바닥 기록 줄 위치,
   수유량과 시간 고르기를 짚었다. 캔버스 4판 시안을 확정(「ㅇㅇ 저렇게해서 다 적용해주고」)하고 반영했다 —
