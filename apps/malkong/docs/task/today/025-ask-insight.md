@@ -1,6 +1,6 @@
 # 025 물어보기 — 기록으로 답할 수 있는 물음은 앱이 바로, 숫자 답에 평소와 견준 한 줄
 
-> 상태: 구현 완료 (2026-11-10) · 빌드는 Julian 승인 뒤
+> 상태: 구현 완료 (2026-11-10) · 빌드 1.0.0 (16) TestFlight 자동 제출(2026-11-10)
 > 근거: [main](../../menu-spec/main.md) SPEC-MAIN-13 · SPEC-MAIN-16 · [constitution](../../constitution.md) 5 · 13
 
 ## 목표
@@ -39,7 +39,7 @@ src/components/flow/ask-sheet.tsx — 비교 · 깬 시각 · 누가를 규칙 �
 - [x] (SPEC-MAIN-16) 「초안」이 없는 부탁으로도 하루 초안, 부탁한 말은 모델로 보내지 않음
 - [x] 단위 시험(`ask-local.test.ts` 12개), tsc · lint · copy-check
 - [x] 웹에서 확인(모델 호출 없음)
-- [ ] 빌드(Julian 승인 뒤)
+- [x] 빌드 1.0.0 (16) — Julian 「승인」(2026-11-10)
 
 ## 확인
 

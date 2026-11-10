@@ -36,7 +36,7 @@ docs: decisions/043, knowledge-layers, api-contract, constitution 13, main SPEC-
 - [x] 빌드 15 와 지금 서버가 그대로 맞물린다(요청 `tools`)
 - [x] 서버 게이트(ruff · format · pytest 137개), 앱 tsc · lint · 시험 179개 · copy-check
 - [x] 실제 모델로 고르는지 확인 — 두 번(열 문장씩), 아래 「확인」
-- [ ] 서버 배포, 빌드(Julian 승인 뒤)
+- [x] 서버 배포(revision 00029, /health · 지식 판 2026.10.5 · /v1/agent 401(키 없이)), 빌드 1.0.0 (16) — Julian 「승인」(2026-11-10)
 
 ## 확인
 
