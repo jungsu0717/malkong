@@ -39,7 +39,7 @@ docs: decisions/044, main SPEC-MAIN-13 · 15, backend, api-contract, server AGEN
 - [x] 서버 끄는 스위치와 내용 없는 횟수 로그
 - [x] 서버 게이트(ruff · format · pytest 144개), 앱 tsc · lint · 시험 183개 · copy-check
 - [x] 웹에서 확인(모델 호출 없음)
-- [ ] 서버 배포, 빌드 17
+- [x] 서버 배포(revision 00030, /health · 지식 판 2026.10.5 · /v1/agent 401(키 없이)), 빌드 1.0.0 (17) TestFlight 자동 제출 — Julian 「배포 승인할테니까」(2026-11-10)
 
 ## 확인
 
