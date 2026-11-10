@@ -53,6 +53,10 @@ test('초안을 부탁하는 말과 그 나머지', () => {
   assert.equal(asksDraft('오늘 하루 기록 초안으로 작성해 줘. 10시 반에 분유 140 먹었어'), true);
   assert.equal(asksDraft('초안 만들어 줘'), true);
   assert.equal(asksDraft('분유 120 먹였어'), false);
+  assert.equal(asksDraft('전체 기록 작성해줘'), true);
+  assert.equal(asksDraft('오늘 기록 다 채워 줘'), true);
+  assert.equal(asksDraft('오늘 기록 보여줘'), false);
+  assert.equal(stripDraftAsk('전체 기록 작성해줘'), '');
   assert.equal(stripDraftAsk('오늘 하루 기록 초안으로 작성해 줘. 10시 반에 분유 140 먹었어'), '10시 반에 분유 140 먹었어');
   assert.equal(stripDraftAsk('초안으로 잡아 주고 7시에 소변 갈았어'), '7시에 소변 갈았어');
   assert.equal(stripDraftAsk('오늘 하루 초안 작성해 줘'), '');
