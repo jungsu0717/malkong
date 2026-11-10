@@ -169,6 +169,7 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 | `day` | 보고 있는 날(`YYYY-MM-DD`). 기록을 보낼 때만 채우고, 아니면 null |
 | `records[]` | 그날 기록, 150개까지. 처음 한 번 동의하지 않았으면 `[]` |
 | `selected` | 흐름에서 누른 기록의 `ref`, 없으면 null. `records` 에 없는 ref 이면 null 로 본다 |
+| `tools` | 앱이 기능 목록(`server/app/domain/agent/tools.json`)을 실행할 수 있으면 true. 없거나 false 면 `type` 에 tools 가 오지 않는다(빌드 15 까지). [decisions/043](../decisions/043-agent-knows-app-tools.md) |
 
 기록 한 줄(`records[]`)의 칸은 다음과 같다. `ref` 와 `kind`, `startAt` 은 꼭 있어야 하고, 나머지는 비워도 되며 기본이 null 이다.
 
@@ -205,10 +206,11 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 
 | 칸 | 뜻 |
 |---|---|
-| `type` | `answer`(보는 날 기록으로 답한 물음), `changes`(더하기, 고치기, 지우기, 일정), `question`(며칠에 걸친 숫자를 묻는 말), `health`(의료 판단을 묻는 말), `unknown`(그 밖이나 읽지 못한 말) |
+| `type` | `answer`(보는 날 기록으로 답한 물음), `changes`(더하기, 고치기, 지우기, 일정), `question`(며칠에 걸친 숫자를 묻는 말), `tools`(앱 기능으로 답할 말, 요청의 `tools` 가 true 일 때만), `health`(의료 판단을 묻는 말), `unknown`(그 밖이나 읽지 못한 말) |
 | `reply` | 늘 null — 모델이 쓴 문장은 내보내지 않는다. 답 문장은 앱이 `highlight` 의 기록으로 쓴다(헌장 13). 칸은 앞으로를 위해 남긴다 |
 | `question` | `type` 이 question 일 때만 parse 와 같은 `{ what, range, measure }`, 그 밖에는 null. 앱이 기기 안 기록에서 센다 |
 | `actions[]` | `type` 이 changes 일 때만 채운다(10줄까지). 그 밖에는 `[]` |
+| `calls[]` | `type` 이 tools 일 때만, 3개까지. 한 줄은 `{ tool, what, range, rangeB, measure, sleep, day, when, name }` — 칸은 늘 모두 오고, 그 기능의 값만 채워진다. 기능과 값의 목록은 tools.json 이 정본이다. 그 밖에는 `[]` |
 | `highlight[]` | 답이 되는 기록의 `ref`, 10개까지. 요청에 보낸 ref 만 온다. 비교를 물었으면 물은 기록이 먼저. answer 인데 비어 있으면 그날 기록에 답이 없다는 뜻 |
 
 바꿀 것 한 줄(`actions[]`)은 칸이 평평하다. 칸은 늘 모두 오고, `op` 마다 아래 칸만 채워지며 나머지는 null 이다.
@@ -230,6 +232,9 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
            모델의 혼잣말로 보고 그 칸을 버린다(실제 호출에서 「2개월 접종Parse error: … No, wait」을 본 뒤, 2026-11-09).
 평시     ▸ health 와 unknown 은 actions, highlight 를 비워 보낸다. 앱이 정해 둔 글을 보인다(헌장 5).
 평시     ▸ question 이면 actions 를 비운다.
+평시     ▸ tools 면 줄마다 검사한다 — 목록에 없는 기능, 그 기능의 값이 빠지거나 목록 밖인 줄, 혼잣말 흔적이 있거나 20자를 넘는 `name` 은 버리고,
+           그 기능이 쓰지 않는 칸은 비운다. 남은 줄이 없으면 unknown. 요청의 `tools` 가 false 인데 모델이 tools 를 고르면 unknown 이다.
+평시     ▸ 앱은 tools 의 기능을 기기 안의 모든 기록으로 실행하고 답 문장을 쓴다. 보는 날 밖의 기록은 서버로 오지 않는다.
 조건 위반 ▸ 키가 없거나 모르는 키면 401 DEVICE_KEY_INVALID. 형식이 틀린 요청(겹친 ref 포함)은 422 INVALID_REQUEST.
 조건 위반 ▸ 기기마다 하루(한국 시간 0시에 바뀐다) 200번을 넘으면 429 LIMIT_EXCEEDED. 문장 읽기의 300번과 따로 센다.
 조건 위반 ▸ 서버에 모델 키가 없거나 모델에 닿지 못하면(네트워크, 15초 시간 초과, 모델 회사의 4xx · 5xx) 503 MODEL_UNAVAILABLE.
@@ -265,3 +270,4 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 - 2026-10-22 `GET /privacy` · `/terms` 웹 페이지 (task common/024)
 - 2026-11-09 `POST /v1/parse` — 물어보기 창의 문장 읽기(한 문장의 기록 여럿, 찾을 조건, health, unknown), 기기마다 하루 300번, 503 MODEL_UNAVAILABLE (decisions/039, task common/031)
 - 2026-11-09 `POST /v1/agent` — 물어보기. 문장, 앞 대화, 동의했을 때 보고 있는 날의 기록과 선택한 기록을 받아 답 글(answer)이나 바꿀 것(add, update, delete, plan), 찾을 조건, health, unknown 을 돌려준다. 기기마다 하루 200번 (decisions/040, task common/032)
+- 2026-11-10 `POST /v1/agent` 에 요청 `tools` 와 응답 `type: tools` · `calls[]` — 모델이 앱 기능(tools.json)과 값만 고르고 앱이 실행한다. `tools` 를 보내지 않는 앱은 지금 그대로 (decisions/043, task today/026)

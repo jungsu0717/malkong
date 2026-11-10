@@ -29,6 +29,7 @@ import { parseAdd, type AddResult } from '@/data/add-parse';
 import { answerText, asksPlan, changesFrom, dayContext, lastTurns, MAX_CONTEXT, onlyAdds, planFromText, pointsOrEdits, selectedLabel, sourceOfKey, ymd, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
 import { askAgent, type AgentResponse } from '@/data/api';
 import { answerFor, asksAverage, copula, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
+import { runTool, type ToolResult } from '@/data/agent-tools';
 import { asksCompare, asksDaySummary, compareAnswer, daySummaryAnswer, findAnswer, knowsTerm, questionFits, wakeAnswer, whoAnswer, type LocalAnswer, type LocalData } from '@/data/ask-local';
 import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
 import { useBaby } from '@/data/baby-context';
@@ -297,7 +298,7 @@ export function AskSheet({
     setBusy(true);
     let res: AgentResponse | null = null;
     try {
-      res = await askAgent({ text: s, history: lastTurns(turnsOf(msgs, draftItems)), day: ctx?.day ?? null, records: ctx?.records ?? [], selected: sel?.ref ?? null }, now);
+      res = await askAgent({ text: s, history: lastTurns(turnsOf(msgs, draftItems)), day: ctx?.day ?? null, records: ctx?.records ?? [], selected: sel?.ref ?? null, tools: true }, now);
     } catch {
       res = null;
     }
@@ -307,6 +308,31 @@ export function AskSheet({
     if (res.type === 'health') {
       push({ id: nextId(), from: 'app', type: 'text', text: HEALTH_REPLY });
       return;
+    }
+    // 앱 기능 — 모델은 기능과 값만 골랐고, 앱이 기기 안 기록으로 실행해 답을 쓴다(decisions/043)
+    if (res.type === 'tools') {
+      const sel2 = sel?.type === 'event' ? sel.event : selected?.type === 'event' ? selected.event : null;
+      const results = res.calls.map((c) => runTool(c, { data: local(), viewDay: day, now, selected: sel2 })).filter((r): r is ToolResult => r !== null);
+      const answers = results.flatMap((r) => (r.kind === 'answer' ? [r.answer] : []));
+      if (answers.length) {
+        setLastAnswer(null);
+        push({ id: nextId(), from: 'app', type: 'text', text: answers.map((a) => a.text).join(' ') });
+        const keys = [...new Set(answers.flatMap((a) => a.keys))];
+        onHighlight(keys.length ? { keys, label: answers.find((a) => a.keys.length)?.label ?? '' } : null);
+      }
+      for (const r of results) {
+        if (r.kind !== 'action') continue;
+        if (r.action === 'draft') return makeDraft(s, now, false);
+        if (r.action === 'diary') {
+          setDiary(true);
+          push({ id: nextId(), from: 'app', type: 'text', text: '메모 창을 열었어요' });
+        }
+        if (r.action === 'week') {
+          push({ id: nextId(), from: 'app', type: 'text', text: '일주일 보기로 바꿨어요' });
+          onShowWeek();
+        }
+      }
+      if (results.length) return;
     }
     if (res.type === 'question') {
       const q = queryFromServer(res.question, now);
@@ -367,12 +393,12 @@ export function AskSheet({
   };
 
   /** 「오늘 하루 기록 초안으로 작성해 줘. 10시 반에 분유 140 먹었어」 — 말한 기록은 규칙으로 읽고(못 읽으면 에이전트에게 문장만), 나머지 때는 평소 기록으로 채운다 */
-  const makeDraft = async (s: string, now: Date) => {
+  const makeDraft = async (s: string, now: Date, askAgentForRest = true) => {
     const rest = stripDraftAsk(s);
     let said: ParsedInput[] = [];
     if (rest) {
       said = looksMulti(rest) ? splitRecords(rest, now) : recordOf(rest, now);
-      if (!said.length) {
+      if (!said.length && askAgentForRest) {
         setBusy(true);
         try {
           const res = await askAgent({ text: rest, history: [], day: null, records: [], selected: null }, now);

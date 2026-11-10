@@ -34,11 +34,20 @@ def _described(name: str, schema: dict[str, Any]) -> dict[str, Any]:
     return {**schema, "description": DESCRIBE[name]}
 
 
+# 기능 목록 — 서버는 지시문과 답 모양을, 앱은 실행 코드를 이 파일 하나에서 만든다(decisions/043)
+TOOLS: dict[str, Any] = json.loads(
+    (Path(__file__).parent / "tools.json").read_text(encoding="utf-8")
+)
+TOOL_NAMES = [t["name"] for t in TOOLS["tools"]]
+MAX_CALLS: int = TOOLS["maxCalls"]
+# 기능 목록을 쓰지 않는 앱(빌드 15 까지)에는 tools 를 고를 수 없게 한다
+BASE_TYPES = [t for t in get_args(AgentType) if t != "tools"]
+
 # Gemini 가 받는 JSON 스키마(일부 문법만 된다). 비어도 되는 칸은 required 에서 뺀다
 MODEL_SCHEMA: dict[str, Any] = {
     "type": "object",
     "properties": {
-        "type": {"type": "string", "enum": list(get_args(AgentType))},
+        "type": {"type": "string", "enum": BASE_TYPES},
         "question": QUESTION_SCHEMA,
         "actions": {
             "type": "array",
@@ -66,6 +75,120 @@ MODEL_SCHEMA: dict[str, Any] = {
 
 # 지시문은 글이 길어 따로 둔다. 서버 이미지에도 함께 들어간다(app/ 통째로 복사)
 SYSTEM_PROMPT = (Path(__file__).parent / "system_prompt.txt").read_text(encoding="utf-8")
+
+
+def _tool_arg_schema(name: str) -> dict[str, Any]:
+    arg = TOOLS["args"][name]
+    if arg.get("type") == "string":
+        return {"type": "string", "description": arg["does"]}
+    return {"type": "string", "enum": arg["values"], "description": arg["does"]}
+
+
+# 기능 목록을 쓰는 앱의 답 모양 — calls 를 더한다
+TOOLS_SCHEMA: dict[str, Any] = {
+    **MODEL_SCHEMA,
+    "properties": {
+        **MODEL_SCHEMA["properties"],
+        "type": {"type": "string", "enum": list(get_args(AgentType))},
+        "calls": {
+            "type": "array",
+            "maxItems": MAX_CALLS,
+            "description": "type 이 tools 일 때 앱이 실행할 기능",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "tool": {"type": "string", "enum": TOOL_NAMES},
+                    **{name: _tool_arg_schema(name) for name in TOOLS["args"]},
+                },
+                "required": ["tool"],
+            },
+        },
+    },
+}
+
+
+def _cut(text: str, start: str, end: str, new: str) -> str:
+    """지시문의 한 토막(start 부터 end 앞까지)을 바꾼다.
+
+    지시문을 고쳐 토막이 없어지면 시험이 바로 알게 멈춘다.
+    """
+    a = text.index(start)
+    b = text.index(end, a)
+    return text[:a] + new + text[b:]
+
+
+def _tools_section() -> str:
+    lines = [
+        "# 앱 기능(tools)",
+        "앱은 아래 기능을 기기 안의 모든 기록(보는 날 밖의 날도)으로 직접 실행한다. "
+        "너는 기능과 값만 고르고, 숫자와 답 문장은 앱이 쓴다.",
+        f"- 한 문장에 기능을 1~{MAX_CALLS}개 고른다. 말한 순서대로 넣는다.",
+        "- 기능의 값은 아래 「값」의 낱말만 쓴다. 문장에 없는 값은 지어내지 않고, "
+        "물음에 맞는 값이 없으면 그 기능을 고르지 않는다.",
+        "- 손톱, 목욕, 비타민D 처럼 기록 종류(what)에 없는 일은 find_name 으로 찾는다. "
+        "그 일을 수유나 기저귀 같은 다른 종류로 바꾸지 않는다.",
+        "",
+        "기능:",
+    ]
+    for tool in TOOLS["tools"]:
+        args = ", ".join(tool["args"])
+        lines.append(f"- {tool['name']}({args}): {tool['does']}")
+    lines += ["", "값:"]
+    for name, arg in TOOLS["args"].items():
+        lines.append(f"- {name}: {arg['words']}")
+    return "\n".join(lines) + "\n"
+
+
+def _tools_examples() -> str:
+    out = []
+    for tool in TOOLS["tools"]:
+        for ex in tool["examples"]:
+            body = json.dumps(
+                {"type": "tools", "calls": [ex["call"]]}, ensure_ascii=False, separators=(",", ":")
+            )
+            out.append(f"문장: {ex['text']}\n{body}")
+    return "\n".join(out) + "\n"
+
+
+def tools_prompt(base: str = SYSTEM_PROMPT) -> str:
+    """기능 목록을 쓰는 앱의 지시문.
+
+    answer 를 가리키는 기록으로 좁히고, question 을 tools 로 바꾸고, 「앱 기능」 절과 보기를 더한다.
+    """
+    text = _cut(
+        base,
+        "- answer:",
+        "- changes:",
+        "- answer: 보는 날의 기록 가운데 선택한 기록이나 가리키는 기록"
+        "(「이거」, 「아까 낮잠」, 「1시 50분 분유」)으로 답하는 물음.\n"
+        "  답이 되는 기록의 ref 를 highlight 에 넣는다. "
+        "답 문장은 앱이 그 기록으로 쓰니 너는 문장을 쓰지 않는다.\n",
+    )
+    text = _cut(
+        text,
+        "- question:",
+        "- health:",
+        "- tools: 기록을 묻고, 견주고, 요약하고, 하루 초안이나 메모 창이나 일주일 보기를 "
+        "부탁하는 말. 아래 「앱 기능」에서 고른다.\n"
+        "  보는 날 밖의 기간, 며칠에 걸친 합계와 평균, "
+        "기록을 보내지 않았을 때 기록을 묻는 말도 여기다. calls 를 채운다.\n",
+    )
+    text = text.replace(
+        "보낸 기록으로 답할 수 없고 찾을 조건으로도 바꿀 수 없는 말",
+        "보낸 기록으로 답할 수 없고 앱 기능으로도 할 수 없는 말",
+        1,
+    )
+    text = _cut(text, "# question", "# 보기", _tools_section() + "\n")
+    text = _cut(
+        text,
+        "문장: 이번 주 밤잠 평균은?",
+        "문장: 열이 38도인데",
+        _tools_examples(),
+    )
+    return text
+
+
+TOOLS_PROMPT = tools_prompt()
 
 ROLES = {"user": "사용자", "app": "앱"}
 

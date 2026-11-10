@@ -1,0 +1,137 @@
+{
+  "about": "물어보기 에이전트가 아는 앱 기능 목록(decisions/043). 서버는 이 파일로 모델 지시문의 「앱 기능」 절과 답 모양을 만들고, 앱(src/data/agent-tools.ts)은 같은 이름의 기능을 기기 안 기록으로 실행한다. 고치면 앱 시험(agent-tools.test.ts)이 앱 쪽과 맞는지 본다.",
+  "version": 1,
+  "maxCalls": 3,
+  "args": {
+    "what": {
+      "does": "기록 종류",
+      "values": ["feed", "formula", "breast", "diaper", "pee", "poo", "sleep", "nap", "night", "temp", "weight", "height"],
+      "words": "feed 수유 전체(먹은 것), formula 분유, breast 모유, diaper 기저귀 전체, pee 소변, poo 대변, sleep 잠 전체, nap 낮잠, night 밤잠, temp 체온, weight 몸무게, height 키"
+    },
+    "range": {
+      "does": "기간",
+      "values": ["today", "yesterday", "lastNight", "tonight", "thisWeek", "lastWeek", "recent7", "recent30"],
+      "words": "today 오늘, yesterday 어제, lastNight 어젯밤(어제 18시부터 오늘 6시), tonight 오늘 밤, thisWeek 이번 주, lastWeek 지난주, recent7 최근 일주일, recent30 최근 한 달"
+    },
+    "rangeB": {
+      "does": "견줄 기간",
+      "values": ["today", "yesterday", "lastNight", "tonight", "thisWeek", "lastWeek", "recent7", "recent30"],
+      "words": "range 와 같은 값"
+    },
+    "measure": {
+      "does": "무엇을 셀지",
+      "values": ["count", "amount", "duration"],
+      "words": "count 몇 번, amount 분유를 얼마나(ml), duration 얼마나 잤는지 · 모유를 얼마나 먹였는지"
+    },
+    "sleep": {
+      "does": "어느 잠",
+      "values": ["any", "nap", "night"],
+      "words": "any 마지막으로 깬 잠, nap 낮잠, night 밤잠"
+    },
+    "day": {
+      "does": "어느 날",
+      "values": ["today", "yesterday", "viewing"],
+      "words": "today 오늘, yesterday 어제, viewing 지금 보고 있는 날(말이 없을 때)"
+    },
+    "when": {
+      "does": "언제 것을 찾을지",
+      "values": ["today", "yesterday", "viewing", "last"],
+      "words": "today 오늘 했는지, yesterday 어제 했는지, viewing 보고 있는 날, last 마지막으로 한 때(「언제」를 물었을 때)"
+    },
+    "name": {
+      "does": "찾을 이름",
+      "type": "string",
+      "maxLength": 20,
+      "words": "루틴 · 할 일 · 메모에 있을 짧은 이름(「손톱」, 「목욕」, 「비타민D」). 문장이 아니라 낱말 하나"
+    }
+  },
+  "tools": [
+    {
+      "name": "total",
+      "does": "기간 안의 횟수, 분유 양, 걸린 시간 합계. 오늘이면 지난 7일의 같은 시각까지 평균을 앱이 덧붙인다",
+      "args": ["what", "range", "measure"],
+      "examples": [
+        { "text": "오늘 분유 몇 ml 먹었어?", "call": { "tool": "total", "what": "formula", "range": "today", "measure": "amount" } },
+        { "text": "어젯밤 몇 시간 잤어?", "call": { "tool": "total", "what": "night", "range": "lastNight", "measure": "duration" } }
+      ]
+    },
+    {
+      "name": "average",
+      "does": "여러 날의 하루 평균",
+      "args": ["what", "range", "measure"],
+      "examples": [{ "text": "이번 주 밤잠 평균은?", "call": { "tool": "average", "what": "night", "range": "thisWeek", "measure": "duration" } }]
+    },
+    {
+      "name": "last",
+      "does": "그 종류의 마지막 기록과 지난 시간. 수유면 평소 간격으로 본 다음 수유도",
+      "args": ["what"],
+      "examples": [{ "text": "맘마 마지막으로 언제 줬지", "call": { "tool": "last", "what": "feed" } }]
+    },
+    {
+      "name": "compare_ranges",
+      "does": "두 기간을 견준다 — 여러 날이면 하루 평균끼리, 오늘과 하루를 견주면 같은 시각까지",
+      "args": ["what", "measure", "range", "rangeB"],
+      "examples": [
+        { "text": "이번 주 낮잠이 지난주보다 줄었어?", "call": { "tool": "compare_ranges", "what": "nap", "measure": "duration", "range": "thisWeek", "rangeB": "lastWeek" } },
+        { "text": "오늘 어제보다 많이 먹었어?", "call": { "tool": "compare_ranges", "what": "feed", "measure": "count", "range": "today", "rangeB": "yesterday" } }
+      ]
+    },
+    {
+      "name": "compare_previous",
+      "does": "선택한 기록(없으면 그 종류의 마지막)을 그 앞 같은 종류와 견준다 — 분유는 양, 모유와 잠은 걸린 시간",
+      "args": ["what"],
+      "examples": [{ "text": "이번 낮잠 저번 낮잠보다 짧았나", "call": { "tool": "compare_previous", "what": "nap" } }]
+    },
+    {
+      "name": "feed_gap",
+      "does": "최근 수유 간격 평균, 마지막 수유에서 지난 시간, 다음 수유 예상",
+      "args": [],
+      "examples": [{ "text": "요즘 몇 시간마다 먹어?", "call": { "tool": "feed_gap" } }]
+    },
+    {
+      "name": "wake",
+      "does": "깬 시각과 그 잠의 길이, 지난 7일 같은 잠 평균. 지금 자는 중이면 잠든 시각",
+      "args": ["sleep"],
+      "examples": [{ "text": "아침에 언제 깼더라", "call": { "tool": "wake", "sleep": "night" } }]
+    },
+    {
+      "name": "who",
+      "does": "그 종류의 마지막 기록을 남긴 가족",
+      "args": ["what"],
+      "examples": [{ "text": "마지막 기저귀 누가 갈았어?", "call": { "tool": "who", "what": "diaper" } }]
+    },
+    {
+      "name": "find_name",
+      "does": "루틴, 할 일, 메모, 기록에 붙인 메모에서 이름으로 찾는다 — 했는지와 마지막 때",
+      "args": ["name", "when"],
+      "examples": [
+        { "text": "오늘 손톱 정리 해줬던가", "call": { "tool": "find_name", "name": "손톱", "when": "today" } },
+        { "text": "목욕 마지막으로 언제 시켰지", "call": { "tool": "find_name", "name": "목욕", "when": "last" } }
+      ]
+    },
+    {
+      "name": "day_summary",
+      "does": "그날 수유 · 기저귀 · 잠 합계와 루틴 · 할 일 · 발달 체크",
+      "args": ["day"],
+      "examples": [{ "text": "어제 하루 어땠는지 알려줘", "call": { "tool": "day_summary", "day": "yesterday" } }]
+    },
+    {
+      "name": "day_draft",
+      "does": "보는 날의 하루 기록 초안 — 지난 7일 기록의 평소 시각으로 채우고, 사람이 고친 뒤 저장한다",
+      "args": [],
+      "examples": [{ "text": "평소 패턴대로 오늘 하루 대충 채워놔", "call": { "tool": "day_draft" } }]
+    },
+    {
+      "name": "write_diary",
+      "does": "메모(일기) 쓰기 창을 그날 기록 칩과 함께 연다. 글은 사람이 쓴다",
+      "args": [],
+      "examples": [{ "text": "오늘 일기 좀 남기고 싶어", "call": { "tool": "write_diary" } }]
+    },
+    {
+      "name": "show_week",
+      "does": "일주일 보기로 바꾼다",
+      "args": [],
+      "examples": [{ "text": "일주일 치 한눈에 보여줘", "call": { "tool": "show_week" } }]
+    }
+  ]
+}

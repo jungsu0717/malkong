@@ -13,7 +13,7 @@ import { copula } from './ask.ts';
 import { dayFacts, routineDones, todoDones, type Fact } from './day-facts.ts';
 import { feedSessions, hhmm, isNightStart } from './day-flow.ts';
 import { durationLabel, eventTitle, minutesOf, startOfDay, statsBetween } from './event-summary.ts';
-import { findWhen, parseFind, rangeOf, runFind } from './find-parse.ts';
+import { findWhen, parseFind, rangeOf, runFind, type FindRange, type FindWhat } from './find-parse.ts';
 import type { CareEvent } from './events.ts';
 import type { Routine, RoutineLog } from './routine.ts';
 import type { Memo } from './stage.ts';
@@ -175,13 +175,18 @@ export function findAnswer(text: string, data: LocalData, viewDay: Date, now: Da
   if (EVENT_WORDS.test(s) && !knowsTerm(text, data)) return null;
   const terms = searchTerms(text);
   if (!terms.length) return null;
+  const { day, explicit } = dayOf(s, viewDay, now);
+  return findTerms(terms, /언제|마지막/.test(s) && !explicit ? null : day, data, now);
+}
+
+/** 이름으로 찾기 — day 가 있으면 그날 했는지(없으면 마지막 때), null 이면 마지막 때 */
+export function findTerms(terms: string[], day: Date | null, data: LocalData, now: Date): LocalAnswer {
   const all = occurrences(terms, data).filter((h) => h.at <= now.getTime());
   const routine = data.routines.find((r) => terms.some((t) => flat(r.title).includes(flat(t))));
   const name = all[all.length - 1]?.type === 'routine' || all[all.length - 1]?.type === 'todo' ? all[all.length - 1].title : (routine?.title ?? terms[0]);
-  const { day, explicit } = dayOf(s, viewDay, now);
   const label = '찾은 기록';
 
-  if (/언제|마지막/.test(s) && !explicit) {
+  if (!day) {
     const last = all[all.length - 1];
     if (!last) return { text: `「${name}」 기록을 찾지 못했어요.`, keys: [], label };
     const w = whenWord(last.at, now);
@@ -226,11 +231,16 @@ const subj = (w: string) => `${w}${copula(w) === '이에요' ? '이' : '가'}`;
  */
 export function wakeAnswer(text: string, events: CareEvent[], now: Date): LocalAnswer | null {
   if (!/(일어났|일어난|깼|깬|깨어났|기상)/.test(text) || /(분유|모유|기저귀|체온)/.test(text)) return null;
+  return wakeFor(/낮잠/.test(text) ? 'nap' : /밤잠|아침/.test(text) ? 'night' : 'any', events, now);
+}
+
+/** 깬 시각 — any 는 마지막으로 깬 잠(지금 자는 중이면 잠든 시각), nap · night 는 그 잠 */
+export function wakeFor(which: 'any' | 'nap' | 'night', events: CareEvent[], now: Date): LocalAnswer {
   const sleeps = events.filter((e) => e.kind === 'sleep').sort((a, b) => a.startAt.localeCompare(b.startAt));
   const running = sleeps.find((e) => !e.endAt);
-  const wantNap = /낮잠/.test(text);
-  const wantNight = /밤잠|아침/.test(text);
-  if (running && !wantNap && !wantNight) {
+  const wantNap = which === 'nap';
+  const wantNight = which === 'night';
+  if (running && which === 'any') {
     return { text: `지금 자는 중이에요. ${hhmm(running.startAt)}에 잠들었어요.`, keys: [running.id], label: '지금 잠' };
   }
   const ended = sleeps.filter((e) => e.endAt && new Date(e.endAt).getTime() <= now.getTime());
@@ -255,8 +265,12 @@ export function whoAnswer(text: string, events: CareEvent[], now: Date): LocalAn
   if (!/누가|누구/.test(text)) return null;
   const q = parseFind(text, now);
   if (!q) return null;
-  const range = /오늘/.test(text) ? q.range : rangeOf('recent7', now);
-  const row = runFind({ ...q, measure: 'last', range }, events, now).rows[0];
+  return whoFor(q.what, /오늘/.test(text) ? q.range : rangeOf('recent7', now), events, now);
+}
+
+/** 그 종류의 마지막 기록을 남긴 가족 */
+export function whoFor(what: FindWhat, range: FindRange, events: CareEvent[], now: Date): LocalAnswer {
+  const row = runFind({ what, range, measure: 'last' }, events, now).rows[0];
   if (!row) return { text: '찾는 기록이 없어요.', keys: [], label: '' };
   const head = `${findWhen(row.at, now)} ${row.title}${copula(row.title) === '이에요' ? '은' : '는'}`;
   if (row.by) return { text: `${head} ${subj(row.by)} 남긴 기록이에요.`, keys: [row.key], label: row.by };
@@ -271,8 +285,10 @@ export const asksCompare = (text: string) =>
  * 비교할 기록 — 선택한 기록, 없으면 말한 종류의 마지막 기록. 그 앞의 같은 종류와 견준다(분유는 양, 모유 · 잠은 걸린 시간).
  * 견줄 수 없으면 null.
  */
-export function compareAnswer(text: string, events: CareEvent[], selected: CareEvent | null, now: Date): LocalAnswer | null {
+export function compareAnswer(text: string, events: CareEvent[], selected: CareEvent | null, now: Date, what: FindWhat | null = null): LocalAnswer | null {
   const src = (e: CareEvent): CtxSource => ({ type: 'event', ref: '', key: e.id, label: eventTitle(e, now), event: e });
+  // 에이전트가 값으로 고른 종류(compare_previous) — 낮잠 · 밤잠은 잠으로, 수유 전체는 마지막 수유의 종류로
+  if (what && !text) text = what === 'formula' ? '분유' : what === 'breast' ? '모유' : what === 'feed' ? '수유' : what === 'nap' ? '낮잠' : what === 'night' ? '밤잠' : what === 'sleep' ? '잠' : '';
   const kindOf = (): CareEvent['kind'] | null => {
     if (selected && (selected.kind === 'formula' || selected.kind === 'breast' || selected.kind === 'sleep')) return selected.kind;
     if (/분유/.test(text)) return 'formula';
@@ -298,7 +314,12 @@ export function compareAnswer(text: string, events: CareEvent[], selected: CareE
             const min = s.parts.reduce((m, p) => m + minutesOf(p, now), 0);
             return { ...head, endAt: new Date(new Date(head.startAt).getTime() + min * MIN).toISOString(), side: null };
           });
-  const at = selected ? list.findIndex((e) => e.id === selected.id) : list.length - 1;
+  const pickNight = /밤잠/.test(text) ? true : /낮잠/.test(text) ? false : null;
+  const lastOf = () => {
+    for (let i = list.length - 1; i >= 0; i--) if (pickNight === null || isNightStart(new Date(list[i].startAt).getTime()) === pickNight) return i;
+    return -1;
+  };
+  const at = selected ? list.findIndex((e) => e.id === selected.id) : kind === 'sleep' ? lastOf() : list.length - 1;
   if (at < 1) return null;
   const a = list[at];
   // 잠은 같은 종류(밤잠은 밤잠, 낮잠은 낮잠)의 앞 것과

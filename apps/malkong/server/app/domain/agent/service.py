@@ -23,9 +23,13 @@ from app.common.core.exception import ApiException
 from app.common.core.setting import Settings
 from app.domain.agent.prompt import (
     MAX_ACTIONS,
+    MAX_CALLS,
     MAX_HIGHLIGHT,
     MODEL_SCHEMA,
     SYSTEM_PROMPT,
+    TOOLS,
+    TOOLS_PROMPT,
+    TOOLS_SCHEMA,
     user_message,
 )
 from app.domain.agent.schema import (
@@ -34,6 +38,7 @@ from app.domain.agent.schema import (
     AgentResponse,
     ContextRecord,
     ModelAnswer,
+    ToolCall,
 )
 from app.domain.entitlements.service import Device
 from app.domain.parse.schema import FindQuestion, ParsedRecord
@@ -90,8 +95,12 @@ class AgentService:
             selected=req.selected,
             history=req.history,
         )
+        # 기능 목록을 실행할 수 있는 앱에만 「앱 기능」 절과 tools 답을 연다(decisions/043)
+        system, schema = (
+            (TOOLS_PROMPT, TOOLS_SCHEMA) if req.tools else (SYSTEM_PROMPT, MODEL_SCHEMA)
+        )
         try:
-            text = await self._model.generate_json(SYSTEM_PROMPT, message, MODEL_SCHEMA)
+            text = await self._model.generate_json(system, message, schema)
         except ModelError as exc:
             # exc 에는 예외 종류와 상태 코드만 있다
             logger.warning("agent: 모델에 닿지 못함 (%s)", exc)
@@ -139,6 +148,14 @@ def read_answer(text: str, req: AgentRequest) -> AgentResponse:
         except ValidationError:
             return _unknown()
         return AgentResponse(type="question", question=question, highlight=highlight)
+
+    if answer.type == "tools":
+        if not req.tools:
+            return _unknown()
+        calls = [c for c in (_call(item) for item in answer.calls) if c]
+        if not calls:
+            return _unknown()
+        return AgentResponse(type="tools", calls=calls[:MAX_CALLS], highlight=highlight)
 
     if answer.type == "changes":
         actions = [a for a in (_action(item, records, req.now) for item in answer.actions) if a]
@@ -231,3 +248,35 @@ def _update(action: AgentAction, record: ContextRecord, now: datetime) -> AgentA
     if not changes:
         return None
     return AgentAction(op="update", ref=record.ref, kind=record.kind, **changes)
+
+
+# 기능마다 쓰는 값 — tools.json 의 args 이름(camelCase)을 파이썬 칸 이름으로
+_TOOL_ARGS = {t["name"]: t["args"] for t in TOOLS["tools"]}
+_FIELD = {"rangeB": "range_b"}
+
+
+def _call(item: Any) -> ToolCall | None:
+    """기능 한 줄 다듬기.
+
+    목록에 없는 기능, 빠지거나 목록에 없는 값이 있으면 None(그 줄을 버린다).
+    """
+    try:
+        call = ToolCall.model_validate(item)
+    except ValidationError:
+        return None
+    names = _TOOL_ARGS.get(call.tool)
+    if names is None:
+        return None
+    values: dict[str, Any] = {}
+    for name in names:
+        arg = TOOLS["args"][name]
+        value = getattr(call, _FIELD.get(name, name))
+        if arg.get("type") == "string":
+            # 찾을 이름은 낱말 하나 — 혼잣말 흔적이나 문장이면 버린다
+            value = plain_text(value, arg["maxLength"])
+        elif value not in arg["values"]:
+            value = None
+        if value is None:
+            return None
+        values[_FIELD.get(name, name)] = value
+    return ToolCall(tool=call.tool, **values)

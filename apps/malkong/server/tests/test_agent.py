@@ -115,7 +115,14 @@ def at(value: str) -> str:
     return datetime.fromisoformat(value).isoformat()
 
 
-EMPTY = {"type": "unknown", "reply": None, "question": None, "actions": [], "highlight": []}
+EMPTY = {
+    "type": "unknown",
+    "reply": None,
+    "question": None,
+    "actions": [],
+    "highlight": [],
+    "calls": [],
+}
 
 
 def test_needs_device_key(app, fake: FakeModel) -> None:
@@ -210,6 +217,7 @@ def test_answer_with_highlight(app, fake: FakeModel) -> None:
         "question": None,
         "actions": [],
         "highlight": ["r9", "r7"],
+        "calls": [],
     }
 
 
@@ -536,6 +544,7 @@ def test_question(app, fake: FakeModel) -> None:
         "question": {"what": "night", "range": "thisWeek", "measure": "duration"},
         "actions": [],
         "highlight": [],
+        "calls": [],
     }
 
 
@@ -707,3 +716,87 @@ def test_update_reads_title_on_a_record_as_its_memo(app, fake: FakeModel) -> Non
     assert body["type"] == "changes"
     [action] = body["actions"]
     assert (action["ref"], action["note"], action["title"]) == ("r9", "트림 두 번 했어", None)
+
+
+# --- 기능 목록(tools.json, decisions/043) ---
+
+
+def test_tools_only_for_apps_that_say_so(app, fake: FakeModel) -> None:
+    """기능 목록을 쓰는 앱에만 「앱 기능」 절과 tools 답. 빌드 15 까지의 앱은 지금처럼."""
+    answer(fake, type="tools", calls=[{"tool": "feed_gap"}])
+    # 보내지 않은 앱에는 tools 를 고를 수 없게 했으니, 와도 unknown
+    assert ask(phone(app), "요즘 몇 시간마다 먹어?").json() == EMPTY
+    system, _, schema = fake.calls[-1]
+    assert "# 앱 기능" not in system
+    assert "tools" not in schema["properties"]["type"]["enum"]
+    assert "calls" not in schema["properties"]
+
+    res = ask(phone(app), "요즘 몇 시간마다 먹어?", tools=True)
+    assert res.json() == EMPTY | {"type": "tools", "calls": [{"tool": "feed_gap"} | NO_ARGS]}
+    system, _, schema = fake.calls[-1]
+    assert "# 앱 기능(tools)" in system and "find_name(name, when)" in system
+    # question 은 tools 로 바뀌고, 찾을 조건의 설명 절은 「앱 기능」 절로 바뀐다
+    assert "- question:" not in system and "# question" not in system
+    assert "tools" in schema["properties"]["type"]["enum"]
+    assert "feed_gap" in schema["properties"]["calls"]["items"]["properties"]["tool"]["enum"]
+
+
+NO_ARGS = {k: None for k in ("what", "range", "rangeB", "measure", "sleep", "day", "when", "name")}
+
+
+def test_tool_calls_are_checked_one_by_one(app, fake: FakeModel) -> None:
+    """목록에 없는 기능, 빠진 값, 목록에 없는 값, 문장 같은 이름은 그 줄만 버린다.
+
+    쓰지 않는 값은 지운다.
+    """
+    answer(
+        fake,
+        type="tools",
+        calls=[
+            {
+                "tool": "compare_ranges",
+                "what": "nap",
+                "measure": "duration",
+                "range": "thisWeek",
+                "rangeB": "lastWeek",
+                "name": "x",
+            },
+            {"tool": "total", "what": "nail", "range": "today", "measure": "count"},
+            {"tool": "total", "what": "feed", "range": "today"},
+            {"tool": "delete_everything"},
+            {"tool": "find_name", "name": "손톱 깎았는지 확인 No, wait", "when": "today"},
+            {"tool": "find_name", "name": "손톱", "when": "today"},
+        ],
+    )
+    res = ask(phone(app), "이번 주 낮잠이 지난주보다 줄었어? 손톱은?", tools=True)
+    assert res.json()["calls"] == [
+        NO_ARGS
+        | {
+            "tool": "compare_ranges",
+            "what": "nap",
+            "measure": "duration",
+            "range": "thisWeek",
+            "rangeB": "lastWeek",
+        },
+        NO_ARGS | {"tool": "find_name", "name": "손톱", "when": "today"},
+    ]
+
+
+def test_tools_with_no_valid_call_is_unknown(app, fake: FakeModel) -> None:
+    answer(fake, type="tools", calls=[{"tool": "total", "what": "nail"}])
+    assert ask(phone(app), "손톱 몇 번 잘랐어?", tools=True).json() == EMPTY
+
+
+def test_tools_examples_follow_the_catalog() -> None:
+    """tools.json 의 보기는 그 기능의 값을 모두 갖추고 값이 목록 안에 있어야 한다.
+
+    지시문의 보기가 틀리면 모델이 따라 틀린다.
+    """
+    from app.domain.agent.prompt import TOOLS
+    from app.domain.agent.service import _call
+
+    for tool in TOOLS["tools"]:
+        assert tool["examples"], tool["name"]
+        for ex in tool["examples"]:
+            call = _call(ex["call"])
+            assert call is not None and call.tool == tool["name"], ex

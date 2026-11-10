@@ -255,13 +255,17 @@ export type AgentRequest = {
   day: string | null;
   records: import('./agent').CtxRecord[];
   selected: string | null;
+  /** 앱이 기능 목록(tools.json)을 실행할 수 있다 — 서버가 「앱 기능」을 모델에 알리고 type tools 로 답할 수 있다(decisions/043) */
+  tools?: boolean;
 };
 export type AgentResponse = {
-  type: 'answer' | 'changes' | 'question' | 'health' | 'unknown';
+  type: 'answer' | 'changes' | 'question' | 'tools' | 'health' | 'unknown';
   reply: string | null;
   question: { what: string; range: string; measure: string } | null;
   actions: import('./agent').AgentAction[];
   highlight: string[];
+  /** type 이 tools 일 때 — 앱이 기기 안 기록으로 실행할 기능 */
+  calls: import('./agent-tools').ToolCall[];
 };
 
 export async function askAgent(req: AgentRequest, now = new Date()): Promise<AgentResponse> {
@@ -272,5 +276,6 @@ export async function askAgent(req: AgentRequest, now = new Date()): Promise<Age
     question: res.question ?? null,
     actions: res.actions ?? [],
     highlight: res.highlight ?? [],
+    calls: res.calls ?? [],
   };
 }

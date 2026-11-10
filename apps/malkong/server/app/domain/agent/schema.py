@@ -16,7 +16,8 @@ from app.domain.parse.schema import Diaper, FindQuestion, PooColor, RecordKind, 
 Ref = Annotated[str, StringConstraints(pattern=r"^r[0-9]{1,3}$")]
 Text300 = Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)]
 
-AgentType = Literal["answer", "changes", "question", "health", "unknown"]
+# tools 는 앱이 기능 목록(tools.json)을 쓸 수 있다고 알렸을 때만(decisions/043)
+AgentType = Literal["answer", "changes", "question", "tools", "health", "unknown"]
 ActionOp = Literal["add", "update", "delete", "plan"]
 
 
@@ -57,6 +58,8 @@ class AgentRequest(ApiModel):
     records: Annotated[list[ContextRecord], Field(max_length=150)] = Field(default_factory=list)
     # 흐름에서 누른 기록
     selected: Ref | None = None
+    # 앱이 기능 목록(tools.json)을 실행할 수 있으면 true — 빌드 15 까지의 앱은 보내지 않는다
+    tools: bool = False
 
     @model_validator(mode="after")
     def _check_refs(self) -> "AgentRequest":
@@ -92,6 +95,20 @@ class AgentAction(ApiModel):
     has_time: bool | None = None
 
 
+class ToolCall(ApiModel):
+    """앱 기능 하나와 그 값(tools.json). 칸은 평평하고, 기능마다 쓰는 칸만 남긴다(service.py)."""
+
+    tool: str
+    what: str | None = None
+    range: str | None = None
+    range_b: str | None = None
+    measure: str | None = None
+    sleep: str | None = None
+    day: str | None = None
+    when: str | None = None
+    name: str | None = None
+
+
 class AgentResponse(ApiModel):
     type: AgentType
     # answer 의 답 글, changes 의 짧은 설명(없어도 된다)
@@ -102,6 +119,8 @@ class AgentResponse(ApiModel):
     actions: list[AgentAction] = Field(default_factory=list)
     # 답이 가리키는 기록의 ref
     highlight: list[str] = Field(default_factory=list)
+    # type 이 tools 일 때만 — 앱이 기기 안 기록으로 실행할 기능
+    calls: list[ToolCall] = Field(default_factory=list)
 
 
 class ModelAnswer(ApiModel):
@@ -112,3 +131,4 @@ class ModelAnswer(ApiModel):
     question: Any = None
     actions: list[Any] = Field(default_factory=list)
     highlight: list[Any] = Field(default_factory=list)
+    calls: list[Any] = Field(default_factory=list)

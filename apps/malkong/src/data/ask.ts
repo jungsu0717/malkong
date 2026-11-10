@@ -76,7 +76,7 @@ function daysIn(q: FindQuery, now: Date): number {
 
 const DAY_MS = 24 * 60 * MIN;
 const was = (w: string) => (copula(w) === '이에요' ? '이었어요' : '였어요');
-const valueText = (n: number, unit: 'min' | 'ml' | 'count') =>
+export const valueText = (n: number, unit: 'min' | 'ml' | 'count') =>
   unit === 'min' ? durationLabel(Math.round(n / 5) * 5) : unit === 'ml' ? `${Math.round(n / 10) * 10}ml` : `${Number(n.toFixed(1))}번`;
 
 /**
