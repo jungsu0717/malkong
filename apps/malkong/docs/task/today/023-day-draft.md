@@ -1,6 +1,6 @@
 # 023 물어보기 7판 — 위는 흐름 아래는 대화, 바꿀 것은 흐름에 초안으로, 하루 초안
 
-> 상태: 구현 완료 (2026-11-10) · 빌드는 Julian 승인 뒤
+> 상태: 구현 완료 (2026-11-10) · 빌드 1.0.0 (15) TestFlight 자동 제출(2026-11-10)
 > 근거: [main](../../menu-spec/main.md) SPEC-MAIN-16 · SPEC-MAIN-15
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「물어보기 7판 시안 — 흐름과 대화를 함께, 하루 초안 (2026-11-09)」 · 결정: [041](../../decisions/041-day-draft-on-the-flow.md)
 
@@ -28,7 +28,7 @@
 - [x] (SPEC-MAIN-16) 초안 고치기 — 흐름의 작은 창, 말로(규칙 → 에이전트), 「고침」 표시
 - [x] 단위 시험(`day-draft.test.ts` 7개), tsc · lint · copy-check
 - [x] 웹에서 확인(모델 호출 없이 — 초안 만들기는 규칙만으로 된다)
-- [ ] 빌드(Julian 승인 뒤)
+- [x] 빌드 1.0.0 (15) — Julian 「승인」(2026-11-10). 서버 지시문 한 줄(f6c44e2)도 같은 승인으로 운영에 배포(revision 00028)
 
 ## 확인
 

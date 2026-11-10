@@ -1,6 +1,6 @@
 # 009 오늘 소식 그림 — 하루 24시간 고리, 버디 자세는 무작위
 
-> 상태: 구현 완료 (2026-11-10) · 빌드는 Julian 승인 뒤
+> 상태: 구현 완료 (2026-11-10) · 빌드 1.0.0 (15) TestFlight 자동 제출(2026-11-10)
 > 근거: [log](../../menu-spec/log.md) SPEC-LOG-06
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「9판 시안」의 하루 공유 그림(밝은 판, 기어가는 버디, 걷는 버디) · 결정: [042](../../decisions/042-diary-facts-and-day-ring.md)
 
@@ -37,7 +37,7 @@ src/constants/theme.ts — diaperDot
 - [x] (SPEC-LOG-06) 아기 이름 · 체온 · 변 색 없음, 다크 모드에서도 흰 판
 - [x] 단위 시험(`day-news.test.ts` 고리 포함), tsc · lint · copy-check
 - [x] 웹에서 확인
-- [ ] 빌드(Julian 승인 뒤) — 폰에서 「공유하기」로 만든 그림이 잘리지 않는지
+- [x] 빌드 1.0.0 (15) — Julian 「승인」(2026-11-10). 폰에서 볼 것: 「공유하기」로 만든 그림이 잘리지 않는지
 
 ## 확인
 

@@ -1,6 +1,6 @@
 # 011 일기 쓰기 도우미 — 메모 쓰기 창 위에 그날 기록 칩
 
-> 상태: 구현 완료 (2026-11-10) · 빌드는 Julian 승인 뒤
+> 상태: 구현 완료 (2026-11-10) · 빌드 1.0.0 (15) TestFlight 자동 제출(2026-11-10)
 > 근거: [stage](../../menu-spec/stage.md) SPEC-STAGE-03 · [main](../../menu-spec/main.md) SPEC-MAIN-12
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「9판 시안」의 메모 쓰기 판 · 결정: [042](../../decisions/042-diary-facts-and-day-ring.md)
 
@@ -39,7 +39,7 @@ src/components/flow/ask-sheet.tsx — 「오늘 일기 써 줘」, 안내 문구
 - [x] (SPEC-MAIN-12) 「오늘 일기 써 줘」는 메모 쓰기 시트를 연다, 모델을 부르지 않는다
 - [x] 단위 시험(`day-facts.test.ts` 4개), tsc · lint · copy-check
 - [x] 웹에서 확인
-- [ ] 빌드(Julian 승인 뒤)
+- [x] 빌드 1.0.0 (15) — Julian 「승인」(2026-11-10)
 
 ## 확인
 
