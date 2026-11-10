@@ -43,6 +43,7 @@ import { useEvents } from '@/data/events-context';
 import { useMemos } from '@/data/memos-context';
 import { useRoutines } from '@/data/routines-context';
 import { useTodos } from '@/data/todos-context';
+import { useDayFacts } from '@/hooks/use-day-facts';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -84,6 +85,8 @@ export default function RecordsScreen() {
     return list.sort((a, b) => a.at - b.at);
   }, [events, logs, routines, todos, general, sleep, from, until, memos]);
   const editing = memoEdit ? (memos.find((m) => m.id === memoEdit) ?? null) : null;
+  // 메모 창 위의 그 메모 날의 기록 칩(SPEC-STAGE-03, decisions/042)
+  const memoFacts = useDayFacts(editing ? new Date(editing.at) : null);
 
   const dayStart = startOfDay(new Date(from)).getTime();
   const day = new Date(from);
@@ -152,9 +155,13 @@ export default function RecordsScreen() {
       <AdBanner anchored />
       {log.sheets}
       <MemoSheet
+        key={editing ? `memo-${editing.id}` : 'memo-closed'}
         open={editing !== null}
         memo={editing}
         dayText={editing ? hhmm(editing.at) : ''}
+        facts={memoFacts.facts}
+        summary={memoFacts.summary}
+        factsLabel={memoFacts.label}
         onSave={(text) => {
           if (editing) void updateMemo(editing.id, text);
           setMemoEdit(null);

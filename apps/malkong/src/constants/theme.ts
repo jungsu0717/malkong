@@ -78,6 +78,8 @@ export const Colors = {
     memoBg: '#EFEDF8',
     memoFg: '#4B3F8F',
     memoLine: '#CFC9EA',
+    /** 오늘 소식 그림의 24시간 고리에 찍는 기저귀 점 — 흰 바탕에서 보이는 노랑(task log/009). 밖으로 나가는 그림이라 다크 모드에서도 같다 */
+    diaperDot: '#E8C24A',
   },
   dark: {
     text: '#F4F4F6',
@@ -133,6 +135,7 @@ export const Colors = {
     memoBg: '#28243D',
     memoFg: '#B5A9F0',
     memoLine: '#403A60',
+    diaperDot: '#E8C24A',
   },
 } as const;
 

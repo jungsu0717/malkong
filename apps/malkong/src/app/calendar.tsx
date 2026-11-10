@@ -22,6 +22,7 @@ import { startOfDay } from '@/data/event-summary';
 import { useMemos } from '@/data/memos-context';
 import { timeLabel } from '@/data/briefing';
 import { useTodos } from '@/data/todos-context';
+import { useDayFacts } from '@/hooks/use-day-facts';
 import { useTheme } from '@/hooks/use-theme';
 
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -79,6 +80,8 @@ export default function CalendarScreen() {
   // 메모를 쓰는 때 — 오늘이면 지금, 다른 날이면 그날 낮 12시
   const memoAt = () => (day.getTime() === today.getTime() ? new Date() : new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12));
   const editingMemo = memoOpen?.id ? (memos.find((m) => m.id === memoOpen.id) ?? null) : null;
+  // 메모 창 위의 그날 기록 칩 — 고치는 메모면 그 메모의 날(SPEC-STAGE-03, decisions/042)
+  const memoFacts = useDayFacts(memoOpen ? (editingMemo ? new Date(editingMemo.at) : day) : null);
   const editingTodo = todoEdit ? (todos.find((t) => t.id === todoEdit) ?? null) : null;
 
   return (
@@ -179,9 +182,13 @@ export default function CalendarScreen() {
       </View>
 
       <MemoSheet
+        key={memoOpen ? `memo-${memoOpen.id ?? 'new'}` : 'memo-closed'}
         open={memoOpen !== null}
         memo={editingMemo}
         dayText={`${day.getMonth() + 1}월 ${day.getDate()}일`}
+        facts={memoFacts.facts}
+        summary={memoFacts.summary}
+        factsLabel={memoFacts.label}
         onSave={(text) => {
           if (editingMemo) void updateMemo(editingMemo.id, text);
           else void addMemo(text, memoAt());

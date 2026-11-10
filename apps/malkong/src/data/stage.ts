@@ -109,6 +109,13 @@ export function poseOf(month: number): BuddyPose {
   return 'walk';
 }
 
+export const POSE_LIST: BuddyPose[] = ['lie', 'crawl', 'walk'];
+
+/** 오늘 소식 그림은 열 때마다 세 자세 중 하나 — 날마다 다른 그림이 나간다(Julian 2026-11-10, decisions/042). 1년 보기와 기념 카드는 개월대로 */
+export function randomPose(pick = Math.random): BuddyPose {
+  return POSE_LIST[Math.min(POSE_LIST.length - 1, Math.floor(pick() * POSE_LIST.length))];
+}
+
 export type StageWindow = {
   stops: StageStop[];
   /** 막대에서 지금 자리(0~1) — 칸 사이는 날짜로 나눈다 */

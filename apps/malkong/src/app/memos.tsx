@@ -21,6 +21,7 @@ import { itemById } from '@/data/l1';
 import { useMemos } from '@/data/memos-context';
 import { useRecords } from '@/data/records-context';
 import { dayNumber, splitTitle, weekOf, type Memo } from '@/data/stage';
+import { useDayFacts } from '@/hooks/use-day-facts';
 import { useTheme } from '@/hooks/use-theme';
 
 type Filter = 'all' | 'memo' | 'check' | 'play';
@@ -47,6 +48,8 @@ export default function DiaryScreen() {
   const [filter, setFilter] = useState<Filter>('all');
   /** 연 시트 — 새 메모면 memo 가 null */
   const [sheet, setSheet] = useState<{ memo: Memo | null } | null>(null);
+  // 메모 창 위의 그날 기록 칩 — 새 메모는 오늘, 고치는 메모는 그 메모의 날(SPEC-STAGE-03, decisions/042)
+  const memoFacts = useDayFacts(sheet ? (sheet.memo ? new Date(sheet.memo.at) : new Date()) : null);
   if (!baby || loading) return <ScreenLoading />;
 
   const dayText = (at: Date) => {
@@ -119,6 +122,9 @@ export default function DiaryScreen() {
         open={sheet !== null}
         memo={sheet?.memo ?? null}
         dayText={dayText(sheet?.memo ? new Date(sheet.memo.at) : new Date())}
+        facts={memoFacts.facts}
+        summary={memoFacts.summary}
+        factsLabel={memoFacts.label}
         onSave={(text) => {
           const target = sheet?.memo;
           setSheet(null);

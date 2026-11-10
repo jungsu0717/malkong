@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ZzIcon } from '@/components/baby-icons';
 import { NodeIcon, nodeTone, type ItemKind } from '@/components/flow/flow-graph';
+import { MemoSheet } from '@/components/growth/memo-sheet';
 import { KIND_UI } from '@/components/log/kinds';
 import { ThemedText } from '@/components/themed-text';
 import { Button, tap } from '@/components/ui';
@@ -28,7 +29,9 @@ import { answerText, asksPlan, changesFrom, dayContext, lastTurns, MAX_CONTEXT, 
 import { askAgent, type AgentResponse } from '@/data/api';
 import { answerFor, asksAverage, copula, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
 import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
+import { useBaby } from '@/data/baby-context';
 import { applyChangeToDrafts, asksDraft, dayDrafts, draftContext, draftSummary, draftWhen, negatedDrafts, stripDraftAsk, type Draft, type DraftSet } from '@/data/day-draft';
+import { asksDiary } from '@/data/day-facts';
 import { hhmm } from '@/data/day-flow';
 import type { CareEvent, EventInput, EventKind } from '@/data/events';
 import { useEvents } from '@/data/events-context';
@@ -36,7 +39,9 @@ import { memberName } from '@/data/family';
 import { parseFind, WHAT_LABEL } from '@/data/find-parse';
 import { useMemos } from '@/data/memos-context';
 import { useRoutines } from '@/data/routines-context';
+import { dayNumber, weekOf } from '@/data/stage';
 import { useTodos } from '@/data/todos-context';
+import { useDayFacts } from '@/hooks/use-day-facts';
 import { useTheme } from '@/hooks/use-theme';
 
 import type { Highlight, Preview } from './day-view';
@@ -167,6 +172,10 @@ export function AskSheet({
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [plus, setPlus] = useState(false);
+  /** 「오늘 일기 써 줘」로 연 메모 창 — 그날 기록 칩은 창이 열려 있을 때만 센다 */
+  const [diary, setDiary] = useState(false);
+  const { baby } = useBaby();
+  const diaryFacts = useDayFacts(diary ? day : null);
   const [lastAnswer, setLastAnswer] = useState<Answer | null>(null);
   const scroll = useRef<ScrollView>(null);
   const input = useRef<TextInput>(null);
@@ -396,6 +405,12 @@ export function AskSheet({
 
     if (isHealth(s)) {
       push({ id: nextId(), from: 'app', type: 'text', text: HEALTH_REPLY });
+      return;
+    }
+    // 「오늘 일기 써 줘」 — 글은 사람이 쓴다. 메모 창을 열고 그날 기록을 칩으로 보인다(decisions/042)
+    if (asksDiary(s)) {
+      setDiary(true);
+      push({ id: nextId(), from: 'app', type: 'text', text: '메모 창을 열었어요' });
       return;
     }
     if (asksDraft(s)) return makeDraft(s, now);
@@ -719,8 +734,8 @@ export function AskSheet({
           {msgs.length === 0 && (
             <ThemedText type="small" style={[styles.hint, { color: c.textSecondary }]}>
               {consent === 'yes'
-                ? '「분유 120 먹였어」처럼 적으면 기록하고,\n흐름에서 기록을 누르고 「10분 앞으로 옮겨 줘」처럼 말하면 고쳐요.\n「오늘 하루 기록 초안으로 작성해 줘」라고 해도 돼요.'
-                : '「분유 120 먹였어」처럼 적으면 기록하고,\n「이전 수유 언제 했어?」처럼 물으면 답해요.\n「오늘 하루 기록 초안으로 작성해 줘」라고 해도 돼요.'}
+                ? '「분유 120 먹였어」처럼 적으면 기록하고,\n흐름에서 기록을 누르고 「10분 앞으로 옮겨 줘」처럼 말하면 고쳐요.\n「오늘 하루 기록 초안으로 작성해 줘」, 「오늘 일기 써 줘」라고 해도 돼요.'
+                : '「분유 120 먹였어」처럼 적으면 기록하고,\n「이전 수유 언제 했어?」처럼 물으면 답해요.\n「오늘 하루 기록 초안으로 작성해 줘」, 「오늘 일기 써 줘」라고 해도 돼요.'}
             </ThemedText>
           )}
           {msgs.map((m) => {
@@ -871,6 +886,22 @@ export function AskSheet({
           </Pressable>
         </View>
       </View>
+      <MemoSheet
+        key={diary ? 'diary-open' : 'diary-closed'}
+        open={diary}
+        memo={null}
+        dayText={baby ? `D+${dayNumber(baby.birthDate, day)} · ${weekOf(dayNumber(baby.birthDate, day) - 1)}주차` : dayLabel}
+        facts={diaryFacts.facts}
+        summary={diaryFacts.summary}
+        factsLabel={diaryFacts.label}
+        onSave={(t) => {
+          setDiary(false);
+          // 오늘이면 지금, 지난날이면 그날 정오로 — 저장 카드와 되돌리기는 다른 기록과 같다
+          const at = ymd(day) === ymd(new Date()) ? new Date() : new Date(day.getFullYear(), day.getMonth(), day.getDate(), 12);
+          void saveAll([{ type: 'memo', text: t.trim(), at: at.toISOString() }]);
+        }}
+        onClose={() => setDiary(false)}
+      />
     </KeyboardAvoidingView>
   );
 }

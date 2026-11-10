@@ -66,7 +66,7 @@ import { flowLayout, ITEM, type LinkSpec, type PartSpec, type Shape } from '@/da
 import { useMemos } from '@/data/memos-context';
 import { isTimed, logsOn, todayPlan } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
-import { poseOf } from '@/data/stage';
+import { randomPose, type BuddyPose } from '@/data/stage';
 import { useTodos } from '@/data/todos-context';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
@@ -221,6 +221,8 @@ export function DayView({
   const [canvasY, setCanvasY] = useState(0);
   const [showAll, setShowAll] = useState(false);
   const [sharing, setSharing] = useState(false);
+  /** 소식 그림의 버디 자세 — 열 때마다 셋 중 하나(decisions/042) */
+  const [sharePose, setSharePose] = useState<BuddyPose>('lie');
   const [familyHidden, setFamilyHidden] = useState(true);
   const [mode, setMode] = useState<'flow' | 'list'>('flow');
   /** 고치는 중인 초안의 id — 작은 창이 그 노드 옆에 뜬다 */
@@ -398,6 +400,7 @@ export function DayView({
       aria: isToday ? '오늘 소식 보내기' : '이날 소식 보내기',
       onPress: () => {
         tap();
+        setSharePose(randomPose());
         setSharing(true);
       },
     });
@@ -711,7 +714,7 @@ export function DayView({
       <DayNewsSheet
         news={sharing ? news : null}
         title={isToday ? '오늘 소식' : `${date.getMonth() + 1}월 ${date.getDate()}일 소식`}
-        pose={poseOf(age.month)}
+        pose={sharePose}
         onClose={() => setSharing(false)}
       />
     </View>
