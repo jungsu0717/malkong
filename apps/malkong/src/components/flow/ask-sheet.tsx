@@ -6,6 +6,9 @@
  * 묻는 말이면 기기 안 기록으로 답하고 그 기록을 흐름에서 비춘다. 기록하는 말이면 바로 저장하고 「되돌리기」 · 「수정」.
  * 「이거」, 「옮겨 줘」처럼 화면을 가리키거나 고치는 말, 규칙으로 못 읽은 말은 서버의 에이전트(/v1/agent)에게 보낸다.
  * 에이전트가 고치기 · 지우기 · 일정을 돌려주면 변경 카드로 보이고 「모두 적용」을 눌러야 반영한다. 적용한 뒤에도 「되돌리기」가 있다.
+ * 변경 카드가 열려 있는 동안 바뀔 값은 흐름의 그 노드에 「초안」으로 먼저 보인다(SPEC-MAIN-16).
+ * 「오늘 하루 기록 초안으로 작성해 줘」라고 하면 말한 기록과 지난 7일의 평소 시각으로 하루 초안을 만들어 흐름에 점선 노드로 놓고 「초안 8개」 카드를 보인다.
+ * 초안은 흐름에서 눌러 고치거나 「오후 낮잠은 안 잤어」처럼 말로 고치고, 「모두 저장」을 눌러야 기록이 된다(decisions/041).
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -21,10 +24,11 @@ import { ThemedText } from '@/components/themed-text';
 import { Button, tap } from '@/components/ui';
 import { FontFamily } from '@/constants/theme';
 import { parseAdd, type AddResult } from '@/data/add-parse';
-import { answerText, asksPlan, changesFrom, dayContext, lastTurns, onlyAdds, planFromText, pointsOrEdits, selectedLabel, sourceOfKey, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
+import { answerText, asksPlan, changesFrom, dayContext, lastTurns, MAX_CONTEXT, onlyAdds, planFromText, pointsOrEdits, selectedLabel, sourceOfKey, ymd, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
 import { askAgent, type AgentResponse } from '@/data/api';
-import { answerFor, asksAverage, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
+import { answerFor, asksAverage, copula, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
 import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
+import { applyChangeToDrafts, asksDraft, dayDrafts, draftContext, draftSummary, draftWhen, negatedDrafts, stripDraftAsk, type Draft, type DraftSet } from '@/data/day-draft';
 import { hhmm } from '@/data/day-flow';
 import type { CareEvent, EventInput, EventKind } from '@/data/events';
 import { useEvents } from '@/data/events-context';
@@ -35,7 +39,7 @@ import { useRoutines } from '@/data/routines-context';
 import { useTodos } from '@/data/todos-context';
 import { useTheme } from '@/hooks/use-theme';
 
-import type { Highlight } from './day-view';
+import type { Highlight, Preview } from './day-view';
 
 /** 적은 기록 하나 — 되돌릴 때 지울 것 */
 type Saved = { kind: 'event' | 'routine' | 'memo'; id: string; title: string; at: number; item: ItemKind; key: string };
@@ -49,7 +53,9 @@ type Msg =
   | { id: string; from: 'app'; type: 'answer'; answer: Answer; steps?: string[] }
   | { id: string; from: 'app'; type: 'saved'; saved: Saved[]; undone: boolean; steps?: string[] }
   | { id: string; from: 'app'; type: 'card'; result: AddResult; used: boolean }
-  | { id: string; from: 'app'; type: 'changes'; changes: Change[]; reply: string | null; steps: string[]; state: ChangeState };
+  | { id: string; from: 'app'; type: 'changes'; changes: Change[]; reply: string | null; steps: string[]; state: ChangeState }
+  /** 하루 초안 카드 — 초안 목록은 화면 상태(drafts)에서 읽고, 저장한 뒤에는 적은 기록을 둔다. replaced 는 새 카드로 바뀌어 보이지 않는 것 */
+  | { id: string; from: 'app'; type: 'draft'; steps: string[]; state: 'open' | 'saved' | 'dropped' | 'replaced'; saved: Saved[]; undone: boolean };
 
 let seq = 0;
 const nextId = () => `m${++seq}`;
@@ -67,14 +73,38 @@ const itemOf = (input: EventInput): Tile =>
 
 const tileOfSource = (s: CtxSource): Tile => (s.type === 'event' ? itemOf(s.event) : s.type === 'routine' ? 'routine' : 'memo');
 
+const tileOfInput = (p: ParsedInput): Tile => (p.type === 'event' ? itemOf(p.input) : p.type === 'routine' ? 'routine' : 'memo');
+
 const tileOfChange = (ch: Change): Tile => {
   if (ch.op === 'plan') return 'plan';
-  if (ch.op === 'add') return ch.input.type === 'event' ? itemOf(ch.input.input) : ch.input.type === 'routine' ? 'routine' : 'memo';
+  if (ch.op === 'add') return tileOfInput(ch.input);
   return tileOfSource(ch.src);
 };
 
+/** 「분유 140ml를」 「소변을」 */
+const objectOf = (word: string) => (copula(word) === '이에요' ? '을' : '를');
+
+/** 규칙으로 읽은 기록 하나 — 다 적힌 것만 */
+function recordOf(text: string, now: Date): ParsedInput[] {
+  const r = parseAdd(text, now);
+  return r?.type === 'record' && r.complete ? [{ type: 'event', input: r.input, complete: true, title: r.title }] : [];
+}
+
+/** 변경 카드가 열려 있는 동안 흐름에 먼저 보일 것 — 시각을 옮기면 「~~13:50~~ 13:40」, 지우면 「삭제」와 줄 긋기 */
+function previewsOf(changes: Change[]): Preview[] {
+  return changes.flatMap((ch): Preview[] => {
+    if (ch.op === 'delete') return [{ key: ch.src.key, badge: '삭제', tone: 'danger', strike: true }];
+    if (ch.op !== 'update') return [];
+    const p = ch.patch;
+    const src = ch.src;
+    if (src.type === 'event' && 'startAt' in p && p.startAt) return [{ key: src.key, badge: '초안', subFrom: hhmm(src.event.startAt), sub: hhmm(p.startAt) }];
+    if (src.type === 'routine' && 'at' in p) return [{ key: src.key, badge: '초안', subFrom: hhmm(src.log.at), sub: hhmm(p.at) }];
+    return [{ key: src.key, badge: '초안' }];
+  });
+}
+
 /** 앞 대화 — 에이전트가 「그 수유」를 알아듣게 */
-function turnsOf(list: Msg[]): Turn[] {
+function turnsOf(list: Msg[], drafts: Draft[]): Turn[] {
   return list.flatMap((m): Turn[] => {
     if (m.from === 'me') return [{ role: 'user', text: m.text }];
     if (m.type === 'text') return [{ role: 'app', text: m.text }];
@@ -84,6 +114,11 @@ function turnsOf(list: Msg[]): Turn[] {
       const what = m.changes.map((ch) => (ch.op === 'plan' ? `일정 ${ch.title} ${ch.when}` : ch.op === 'update' ? `${ch.title} ${ch.from} → ${ch.to}` : `${ch.op === 'add' ? '추가' : '삭제'} ${ch.title}`));
       const state = m.state === 'applied' ? '적용함' : m.state === 'undone' ? '되돌림' : m.state === 'cancelled' ? '취소함' : '확인 기다림';
       return [{ role: 'app', text: `바꿀 것(${state}): ${what.join(', ')}` }];
+    }
+    if (m.type === 'draft') {
+      if (m.state === 'open') return drafts.length ? [{ role: 'app', text: `${draftSummary(drafts)}(확인 기다림)` }] : [];
+      if (m.state === 'saved') return [{ role: 'app', text: `초안 ${m.saved.length}개를 저장함` }];
+      return m.state === 'dropped' ? [{ role: 'app', text: '초안을 버림' }] : [];
     }
     return [];
   });
@@ -98,6 +133,9 @@ export function AskSheet({
   onHighlight,
   onOpenKind,
   onShowWeek,
+  drafts,
+  onDrafts,
+  onPreview,
 }: {
   open: boolean;
   /** 보고 있는 날 — 함께 읽기에 동의했으면 이날 기록을 보낸다 */
@@ -112,6 +150,11 @@ export function AskSheet({
   onOpenKind: (kind: EventKind, editing?: CareEvent) => void;
   /** 「일주일 보기로」 */
   onShowWeek: () => void;
+  /** 하루 초안 — 흐름(DayView)과 같이 보는 화면 상태(SPEC-MAIN-16) */
+  drafts: DraftSet | null;
+  onDrafts: (next: DraftSet | null) => void;
+  /** 변경 카드가 열려 있는 동안 흐름에 먼저 보일 것 */
+  onPreview: (list: Preview[]) => void;
 }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
@@ -136,13 +179,24 @@ export function AskSheet({
     const r = routines.find((x) => x.id === l.routineId);
     return r ? [{ log: l, title: r.title }] : [];
   });
-  const context = (now: Date): DayContext | null => (consent === 'yes' ? dayContext(day, events, routineLogs, memos, now) : null);
+  const dayKey = ymd(day);
+  const draftItems: Draft[] = drafts && drafts.day === dayKey ? drafts.items : [];
+  /** 하루 초안이 열려 있는가 — 기록하는 말은 초안에 넣고, 입력 칸 안내가 바뀐다 */
+  const drafting = draftItems.length > 0;
+  // 함께 읽기로 했으면 그날 기록, 초안이 있으면 그 뒤에 이어 번호를 붙여 — 모델이 「그 낮잠」을 가리켜 초안을 고치게
+  const context = (now: Date): DayContext | null => {
+    if (consent !== 'yes') return null;
+    const ctx = dayContext(day, events, routineLogs, memos, now);
+    if (!draftItems.length) return ctx;
+    const extra = draftContext(draftItems.slice(0, Math.max(0, MAX_CONTEXT - ctx.records.length)), ctx.records.length + 1);
+    return { ...ctx, records: [...ctx.records, ...extra.records], sources: [...ctx.sources, ...extra.sources] };
+  };
   const shown = consent === 'yes' ? context(new Date()) : null;
   const selected = shown ? sourceOfKey(shown, selectedKey) : null;
   const dayLabel = `${day.getMonth() + 1}월 ${day.getDate()}일`;
 
   const push = (...m: Msg[]) => setMsgs((prev) => [...prev, ...m]);
-  const setMsg = (id: string, patch: Partial<Extract<Msg, { type: 'changes' }>> | { undone: boolean }) =>
+  const setMsg = (id: string, patch: Partial<Extract<Msg, { type: 'changes' }>> | Partial<Extract<Msg, { type: 'draft' }>> | { undone: boolean }) =>
     setMsgs((prev) => prev.map((x) => (x.id === id ? ({ ...x, ...patch } as Msg) : x)));
   const close = () => {
     onHighlight(null);
@@ -150,6 +204,10 @@ export function AskSheet({
     setPlus(false);
     onClose();
   };
+
+  /** 초안 카드를 맨 아래에 다시 — 앞 카드는 보이지 않게 하고, 단계 줄(「✓ 초안에서 … 뺐어요」)을 위에 둔다 */
+  const showDraftCard = (steps: string[]) =>
+    setMsgs((prev) => [...prev.map((m) => (m.from === 'app' && m.type === 'draft' && m.state === 'open' ? { ...m, state: 'replaced' as const } : m)), { id: nextId(), from: 'app', type: 'draft', steps, state: 'open', saved: [], undone: false }]);
 
   const answer = (a: Answer, steps?: string[]) => {
     setLastAnswer(a);
@@ -220,7 +278,7 @@ export function AskSheet({
     setBusy(true);
     let res: AgentResponse | null = null;
     try {
-      res = await askAgent({ text: s, history: lastTurns(turnsOf(msgs)), day: ctx?.day ?? null, records: ctx?.records ?? [], selected: sel?.ref ?? null }, now);
+      res = await askAgent({ text: s, history: lastTurns(turnsOf(msgs, draftItems)), day: ctx?.day ?? null, records: ctx?.records ?? [], selected: sel?.ref ?? null }, now);
     } catch {
       res = null;
     }
@@ -236,16 +294,43 @@ export function AskSheet({
       if (q) return answer(answerFor(q, events, now, 0, asksAverage(s)));
     }
     if (res.type === 'changes') {
-      const changes = changesFrom(res.actions, ctx, now, s);
+      let changes = changesFrom(res.actions, ctx, now, s);
       // 에이전트가 일정을 빠뜨렸으면 앱 규칙으로 문장에서 날짜와 이름을 읽는다
       if (asksPlan(s) && !changes.some((ch) => ch.op === 'plan')) {
         const plan = planFromText(s, now);
         if (plan) changes.push(plan);
       }
+      // 하루 초안이 열려 있으면 — 초안을 가리킨 고치기 · 지우기는 초안에 바로, 새 기록은 초안에 넣는다
+      if (drafting) {
+        let items = draftItems;
+        const lines: string[] = [];
+        const rest: Change[] = [];
+        for (const ch of changes) {
+          const r = applyChangeToDrafts(items, ch);
+          if (r) {
+            items = r.items;
+            lines.push(r.line);
+          } else rest.push(ch);
+        }
+        const added = dayDrafts({ events: [], day, now, said: rest.flatMap((ch) => (ch.op === 'add' ? [ch.input] : [])), fill: false });
+        if (added.length) {
+          items = [...items, ...added].sort((a, b) => a.at - b.at);
+          lines.push(...added.map((d) => `초안에 ${draftWhen(d)} ${d.title}${objectOf(d.title)} 넣었어요`));
+        }
+        changes = rest.filter((ch) => ch.op !== 'add');
+        if (lines.length) {
+          tap();
+          onDrafts({ day: dayKey, items });
+          showDraftCard(lines);
+          if (!changes.length) return;
+        }
+      }
       if (onlyAdds(changes)) return saveAll(changes.flatMap((ch) => (ch.op === 'add' ? [ch.input] : [])), steps.length ? steps : undefined);
       if (changes.length) {
         tap();
-        push({ id: nextId(), from: 'app', type: 'changes', changes, reply: null, steps: [...steps, `바꿀 것 ${changes.length}개를 정했어요`], state: 'open' });
+        const previews = previewsOf(changes);
+        push({ id: nextId(), from: 'app', type: 'changes', changes, reply: null, steps: [...steps, previews.length ? '바꿀 것을 흐름에 먼저 표시했어요' : `바꿀 것 ${changes.length}개를 정했어요`], state: 'open' });
+        onPreview(previews);
         const keys = changes.flatMap((ch) => (ch.op === 'update' || ch.op === 'delete' ? [ch.src.key] : []));
         onHighlight(keys.length ? { keys, label: '바꿀 기록' } : null);
         return;
@@ -261,6 +346,45 @@ export function AskSheet({
     fallback(s, now, false);
   };
 
+  /** 「오늘 하루 기록 초안으로 작성해 줘. 10시 반에 분유 140 먹었어」 — 말한 기록은 규칙으로 읽고(못 읽으면 에이전트에게 문장만), 나머지 때는 평소 기록으로 채운다 */
+  const makeDraft = async (s: string, now: Date) => {
+    const rest = stripDraftAsk(s);
+    let said: ParsedInput[] = [];
+    if (rest) {
+      said = looksMulti(rest) ? splitRecords(rest, now) : recordOf(rest, now);
+      if (!said.length) {
+        setBusy(true);
+        try {
+          const res = await askAgent({ text: rest, history: [], day: null, records: [], selected: null }, now);
+          if (res?.type === 'changes') said = changesFrom(res.actions, null, now, rest).flatMap((ch) => (ch.op === 'add' ? [ch.input] : []));
+        } catch {
+          said = [];
+        }
+        setBusy(false);
+      }
+    }
+    const items = dayDrafts({ events, day, now, said, fill: true });
+    if (!items.length) {
+      push({ id: nextId(), from: 'app', type: 'text', text: `${dayLabel}에 초안으로 넣을 것이 없어요. 「10시 반에 분유 140 먹었어」처럼 적어 보세요.` });
+      return;
+    }
+    const read = dayContext(day, events, routineLogs, memos, now).records.length;
+    const guessed = items.filter((d) => d.guessed).length;
+    tap();
+    onDrafts({ day: dayKey, items });
+    onHighlight(null);
+    showDraftCard([`${dayLabel} 기록 ${read}개를 읽었어요`, ...(guessed ? ['말하지 않은 때는 지난 7일 기록을 보고 채웠어요'] : [])]);
+  };
+
+  /** 초안이 열린 채 기록하는 말 — 저장하지 않고 초안에 넣는다 */
+  const addToDraft = (said: ParsedInput[], now: Date) => {
+    const added = dayDrafts({ events: [], day, now, said, fill: false });
+    if (!added.length) return push({ id: nextId(), from: 'app', type: 'text', text: NOT_READ });
+    tap();
+    onDrafts({ day: dayKey, items: [...draftItems, ...added].sort((a, b) => a.at - b.at) });
+    showDraftCard(added.map((d) => `초안에 ${draftWhen(d)} ${d.title}${objectOf(d.title)} 넣었어요`));
+  };
+
   const send = async (raw: string) => {
     const s = raw.trim();
     if (!s || busy) return;
@@ -273,6 +397,23 @@ export function AskSheet({
     if (isHealth(s)) {
       push({ id: nextId(), from: 'app', type: 'text', text: HEALTH_REPLY });
       return;
+    }
+    if (asksDraft(s)) return makeDraft(s, now);
+    if (drafting) {
+      // 「오후 낮잠은 안 잤어」 — 규칙으로 정해지면 초안에서 바로 뺀다, 못 정하면 에이전트에게
+      const gone = negatedDrafts(s, draftItems);
+      if (gone.length) {
+        tap();
+        onDrafts({ day: dayKey, items: draftItems.filter((d) => !gone.includes(d)) });
+        showDraftCard(gone.map((d) => `초안에서 ${draftWhen(d)} ${d.title}${objectOf(d.title)} 뺐어요`));
+        return;
+      }
+      if (/안 |않았|없었|없어|아니/.test(s)) return viaAgent(s, now);
+      // 기록하는 말은 저장하지 않고 초안에 넣는다
+      if (!pointsOrEdits(s) && !isQuestion(s)) {
+        const said = looksMulti(s) ? splitRecords(s, now) : recordOf(s, now);
+        if (said.length) return addToDraft(said, now);
+      }
     }
 
     // 화면을 가리키거나 고치는 말은 규칙으로 읽지 않는다
@@ -397,6 +538,7 @@ export function AskSheet({
     });
     setBusy(false);
     setMsg(m.id, { state: 'applied' });
+    onPreview([]);
     onHighlight(keys.length ? { keys, label: '바꾼 기록' } : null);
   };
 
@@ -406,6 +548,52 @@ export function AskSheet({
     undos.current.delete(m.id);
     if (back) await back();
     setMsg(m.id, { state: 'undone' });
+    onPreview([]);
+    onHighlight(null);
+  };
+
+  /** 「모두 저장」 — 초안을 기록으로. 한 번에 되돌릴 수 있다 */
+  const saveDraft = async (m: Extract<Msg, { type: 'draft' }>) => {
+    if (busy || !draftItems.length) return;
+    tap('success');
+    setBusy(true);
+    const saved: Saved[] = [];
+    for (const d of draftItems) {
+      try {
+        const p = d.input;
+        if (p.type === 'event') {
+          const e = await addEvent(p.input);
+          saved.push({ kind: 'event', id: e.id, title: d.title, at: new Date(e.startAt).getTime(), item: itemOf(p.input) as ItemKind, key: e.id });
+        } else if (p.type === 'routine') saved.push(await doneRoutine(p.title, new Date(p.at)));
+        else {
+          const mm = await addMemo(p.text, new Date(p.at));
+          if (mm) saved.push({ kind: 'memo', id: mm.id, title: d.title, at: new Date(mm.at).getTime(), item: 'memo', key: `memo-${mm.id}` });
+        }
+      } catch {
+        // 하나가 안 되어도 나머지는 저장한다
+      }
+    }
+    setBusy(false);
+    onDrafts(null);
+    setMsg(m.id, { state: 'saved', saved });
+    onHighlight(saved.length ? { keys: saved.map((x) => x.key), label: '새 기록' } : null);
+  };
+
+  const dropDraft = (m: Extract<Msg, { type: 'draft' }>) => {
+    tap();
+    onDrafts(null);
+    setMsg(m.id, { state: 'dropped' });
+    onHighlight(null);
+  };
+
+  const undoDraft = async (m: Extract<Msg, { type: 'draft' }>) => {
+    tap();
+    for (const x of m.saved) {
+      if (x.kind === 'event') await removeEvent(x.id);
+      else if (x.kind === 'routine') await removeLog(x.id);
+      else await removeMemo(x.id);
+    }
+    setMsg(m.id, { undone: true });
     onHighlight(null);
   };
 
@@ -438,10 +626,12 @@ export function AskSheet({
     }
   };
 
-  // 선택한 기록이 있으면 그 기록에 할 말, 아니면 지난 답에 이어 묻기
-  const suggest: { label: string; fill?: string }[] = selected
-    ? [{ label: '10분 앞으로 옮겨 줘' }, ...(selected.type === 'event' ? [{ label: '메모 남겨 줘', fill: '이 기록에 메모: ' }] : []), { label: '지워 줘' }]
-    : (lastAnswer?.query ? [`그 전 ${WHAT_LABEL[lastAnswer.query.what]}는?`, ...DEFAULT_SUGGEST.filter((x) => !x.includes(WHAT_LABEL[lastAnswer.query!.what]))].slice(0, 3) : DEFAULT_SUGGEST).map((label) => ({ label }));
+  // 선택한 기록이 있으면 그 기록에 할 말, 아니면 지난 답에 이어 묻기. 초안이 열려 있으면 단추 대신 입력 칸 안내만
+  const suggest: { label: string; fill?: string }[] = drafting
+    ? []
+    : selected
+      ? [{ label: '10분 앞으로 옮겨 줘' }, ...(selected.type === 'event' ? [{ label: '메모 남겨 줘', fill: '이 기록에 메모: ' }] : []), { label: '지워 줘' }]
+      : (lastAnswer?.query ? [`그 전 ${WHAT_LABEL[lastAnswer.query.what]}는?`, ...DEFAULT_SUGGEST.filter((x) => !x.includes(WHAT_LABEL[lastAnswer.query!.what]))].slice(0, 3) : DEFAULT_SUGGEST).map((label) => ({ label }));
 
   if (consent === null) {
     return (
@@ -528,16 +718,34 @@ export function AskSheet({
           onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: true })}>
           {msgs.length === 0 && (
             <ThemedText type="small" style={[styles.hint, { color: c.textSecondary }]}>
-              {consent === 'yes' ? '「분유 120 먹였어」처럼 적으면 기록하고,\n흐름에서 기록을 누르고 「10분 앞으로 옮겨 줘」처럼 말하면 고쳐요.' : '「분유 120 먹였어」처럼 적으면 기록하고,\n「이전 수유 언제 했어?」처럼 물으면 답해요.'}
+              {consent === 'yes'
+                ? '「분유 120 먹였어」처럼 적으면 기록하고,\n흐름에서 기록을 누르고 「10분 앞으로 옮겨 줘」처럼 말하면 고쳐요.\n「오늘 하루 기록 초안으로 작성해 줘」라고 해도 돼요.'
+                : '「분유 120 먹였어」처럼 적으면 기록하고,\n「이전 수유 언제 했어?」처럼 물으면 답해요.\n「오늘 하루 기록 초안으로 작성해 줘」라고 해도 돼요.'}
             </ThemedText>
           )}
           {msgs.map((m) => {
+            if (m.from === 'app' && m.type === 'draft' && m.state === 'replaced') return null;
             if (m.from === 'me') {
               return (
                 <View key={m.id} style={[styles.me, { backgroundColor: c.ink }]}>
                   <ThemedText type="body" style={{ color: c.onInk }}>
                     {m.text}
                   </ThemedText>
+                </View>
+              );
+            }
+            // 변경 카드와 초안 카드는 말풍선 대신 단계 줄과 넓은 카드로 — 흐름을 고치는 일이라 한눈에 보이게
+            if (m.type === 'changes' || m.type === 'draft') {
+              return (
+                <View key={m.id} style={styles.wide}>
+                  {m.steps.length > 0 && <Steps steps={m.steps} />}
+                  <View style={[styles.cardBox, { borderColor: c.border, backgroundColor: c.card }]}>
+                    {m.type === 'changes' ? (
+                      <ChangesBody m={m} busy={busy} onApply={() => void applyChanges(m)} onCancel={() => (tap(), setMsg(m.id, { state: 'cancelled' }), onHighlight(null), onPreview([]))} onUndo={() => void undoChanges(m)} />
+                    ) : (
+                      <DraftBody m={m} items={draftItems} busy={busy} onSave={() => void saveDraft(m)} onDrop={() => dropDraft(m)} onUndo={() => void undoDraft(m)} />
+                    )}
+                  </View>
                 </View>
               );
             }
@@ -594,9 +802,6 @@ export function AskSheet({
                     )}
                   </>
                 )}
-                {m.type === 'changes' && (
-                  <ChangesBody m={m} busy={busy} onApply={() => void applyChanges(m)} onCancel={() => (tap(), setMsg(m.id, { state: 'cancelled' }), onHighlight(null))} onUndo={() => void undoChanges(m)} />
-                )}
                 {m.type === 'card' && <CardBody m={m} onUse={(act) => void applyCard(m, act)} />}
               </View>
             );
@@ -617,7 +822,7 @@ export function AskSheet({
             ))}
             <Chip label="메모" icon="document-text-outline" onPress={() => setText((t) => (t ? t : '메모: '))} />
           </View>
-        ) : (
+        ) : suggest.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
             {suggest.map((x) => (
               <Chip
@@ -631,7 +836,7 @@ export function AskSheet({
               />
             ))}
           </ScrollView>
-        )}
+        ) : null}
 
         <View style={styles.inputRow}>
           <Pressable
@@ -649,7 +854,7 @@ export function AskSheet({
             ref={input}
             value={text}
             onChangeText={setText}
-            placeholder="기록하거나 물어보세요"
+            placeholder={drafting ? '고칠 것을 말해 주세요' : '기록하거나 물어보세요'}
             placeholderTextColor={c.textTertiary}
             returnKeyType="send"
             onSubmitEditing={() => void send(text)}
@@ -670,20 +875,92 @@ export function AskSheet({
   );
 }
 
-/** 「✓ 11월 6일 기록 12개를 읽었어요」 */
+/** 「✓ 11월 6일 기록 12개를 읽었어요」 — 점과 선으로 이어진 단계 줄(흐름처럼) */
 function Steps({ steps }: { steps: string[] }) {
   const c = useTheme();
   return (
     <View style={styles.steps}>
+      {steps.length > 1 && <View pointerEvents="none" style={[styles.stepLine, { backgroundColor: c.border }]} />}
       {steps.map((s) => (
         <View key={s} style={styles.step}>
-          <Ionicons name="checkmark" size={13} color={c.textSecondary} />
-          <ThemedText type="caption" style={{ color: c.textSecondary }}>
+          <View style={[styles.stepDot, { backgroundColor: c.ink }]}>
+            <Ionicons name="checkmark" size={9} color={c.onInk} />
+          </View>
+          <ThemedText type="caption" style={[styles.flex, { color: c.textSecondary }]}>
             {s}
           </ThemedText>
         </View>
       ))}
     </View>
+  );
+}
+
+/** 하루 초안 카드 — 「초안 8개」와 줄 셋(「모두 보기」로 다), 「모두 저장」 · 「버리기」. 저장한 뒤에는 「N개 적었어요」와 「되돌리기」 */
+function DraftBody({ m, items, busy, onSave, onDrop, onUndo }: { m: Extract<Msg, { type: 'draft' }>; items: Draft[]; busy: boolean; onSave: () => void; onDrop: () => void; onUndo: () => void }) {
+  const c = useTheme();
+  const [all, setAll] = useState(false);
+  if (m.state === 'dropped') return <ThemedText type="body">초안을 버렸어요.</ThemedText>;
+  if (m.state === 'saved') {
+    return (
+      <>
+        <ThemedText type="body">{m.undone ? '되돌렸어요.' : `초안 ${m.saved.length}개를 적었어요.`}</ThemedText>
+        {!m.undone && <SmallButton label="되돌리기" onPress={onUndo} />}
+      </>
+    );
+  }
+  if (!items.length) return <ThemedText type="body">초안에 남은 것이 없어요. 「10시 반에 분유 140 먹었어」처럼 적으면 초안에 넣어요.</ThemedText>;
+  const rows = all || items.length <= 4 ? items : items.slice(0, 3);
+  return (
+    <>
+      <View style={styles.cardHead}>
+        <ThemedText type="heading">{`초안 ${items.length}개`}</ThemedText>
+        {items.length > 4 && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: all }}
+            hitSlop={6}
+            onPress={() => {
+              tap();
+              setAll((v) => !v);
+            }}
+            style={styles.more}>
+            <ThemedText type="caption" style={{ color: c.textSecondary, fontWeight: 600 }}>
+              {all ? '접기' : '모두 보기'}
+            </ThemedText>
+            <Ionicons name={all ? 'chevron-up' : 'chevron-down'} size={14} color={c.textSecondary} />
+          </Pressable>
+        )}
+      </View>
+      <View>
+        {rows.map((d) => (
+          <View key={d.id} style={styles.draftRow}>
+            <RecTile tile={tileOfInput(d.input)} title={d.title} size={24} />
+            <ThemedText type="label" style={[styles.draftTime, { color: c.textSecondary }]}>
+              {draftWhen(d)}
+            </ThemedText>
+            <ThemedText type="label" numberOfLines={1} style={[styles.flex, { fontWeight: 700 }]}>
+              {d.title}
+            </ThemedText>
+            {d.edited && (
+              <View style={[styles.edited, { backgroundColor: c.accentSoft }]}>
+                <ThemedText type="caption" style={{ color: c.accentText, fontWeight: 700 }}>
+                  고침
+                </ThemedText>
+              </View>
+            )}
+          </View>
+        ))}
+        {rows.length < items.length && (
+          <ThemedText type="caption" style={[styles.draftMore, { color: c.textSecondary }]}>
+            {`… ${items.length - rows.length}개 더`}
+          </ThemedText>
+        )}
+      </View>
+      <View style={styles.row}>
+        <SmallButton label="모두 저장" ink disabled={busy} onPress={onSave} />
+        <SmallButton label="버리기" onPress={onDrop} />
+      </View>
+    </>
   );
 }
 
@@ -725,7 +1002,7 @@ function ChangesBody({ m, busy, onApply, onCancel, onUndo }: { m: Extract<Msg, {
           const tagColor = ch.op === 'update' ? c.accentText : ch.op === 'delete' ? c.danger : c.doneFg;
           const detail = ch.op === 'plan' ? `${ch.when} · 일정` : ch.op === 'add' ? hhmm(ch.at) : ch.op === 'delete' ? ch.from : '';
           return (
-            <View key={`${ch.op}-${i}`} style={[styles.rec, styles.change, { backgroundColor: c.card }]}>
+            <View key={`${ch.op}-${i}`} style={[styles.rec, styles.change, { backgroundColor: c.surface }]}>
               <RecTile tile={tileOfChange(ch)} title={ch.title} size={30} />
               <View style={styles.flex}>
                 <ThemedText type="caption" style={{ color: tagColor, fontWeight: 700 }}>
@@ -862,7 +1139,8 @@ export function AskButton({ onPress }: { onPress: () => void }) {
 const styles = StyleSheet.create({
   wrap: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, justifyContent: 'flex-end', zIndex: 20 },
   sheet: {
-    maxHeight: '62%',
+    // 아래 절반이 대화, 위 절반에는 흐름이 계속 보인다(7판 시안)
+    height: '56%',
     minHeight: 360,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
@@ -887,8 +1165,18 @@ const styles = StyleSheet.create({
   strike: { textDecorationLine: 'line-through' },
   flex: { flex: 1, minWidth: 0 },
   shrink: { flexShrink: 1 },
-  steps: { gap: 3 },
-  step: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  steps: { gap: 6 },
+  step: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  stepLine: { position: 'absolute', left: 6.25, top: 9, bottom: 9, width: 1.5 },
+  stepDot: { width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  wide: { alignSelf: 'stretch', gap: 8 },
+  cardBox: { borderWidth: 1.5, borderRadius: 16, padding: 12, gap: 8 },
+  cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  more: { flexDirection: 'row', alignItems: 'center', gap: 2, height: 28, paddingLeft: 6 },
+  draftRow: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 32 },
+  draftTime: { width: 60, fontVariant: ['tabular-nums'] },
+  draftMore: { paddingLeft: 34, paddingTop: 2 },
+  edited: { height: 18, paddingHorizontal: 6, borderRadius: 9, justifyContent: 'center' },
   ctxRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 16, paddingBottom: 6 },
   ctx: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 30, paddingLeft: 10, paddingRight: 12, borderRadius: 15, maxWidth: '100%' },
   ctxSel: { paddingLeft: 5, paddingRight: 4 },

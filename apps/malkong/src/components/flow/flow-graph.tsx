@@ -4,6 +4,7 @@
  * 묶음은 둥근 틀, 수유는 코랄 네모, 기저귀는 동그라미, 완료한 루틴과 할 일은 흰 네모에 체크, 잠은 먹색 네모. 이름과 시각은 노드 아래에 둔다(n8n 처럼).
  * 지난 선 위로는 작은 점이 시간 방향으로 흐르고, 지금 묶음 안의 선은 코랄이다. 움직임 줄이기를 켜거나 화면이 안 보이면 멈춘다.
  * 새로 남긴 기록은 그 자리에 튀어나온다 — 처음 그릴 때는 튀어나오지 않는다(LayoutAnimationConfig skipEntering).
+ * 아직 저장하지 않은 초안은 흰 바탕에 점선 테두리와 「초안」 표시, 변경 카드가 열린 기록은 「~~13:50~~ 13:40」처럼 바뀔 값을 먼저 보인다(SPEC-MAIN-16).
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -77,6 +78,8 @@ export function NodeLabel({
   dim = false,
   accent = false,
   gap = null,
+  subFrom = null,
+  strike = false,
 }: {
   cx: number;
   top: number;
@@ -87,16 +90,32 @@ export function NodeLabel({
   accent?: boolean;
   /** 셋째 줄 — 같은 기록끼리 간격(코랄) */
   gap?: string | null;
+  /** 바꾸기 전 시각 — 「~~13:50~~ 13:40」처럼 줄을 긋고 새 시각을 코랄로(변경 카드가 열려 있는 동안) */
+  subFrom?: string | null;
+  /** 지울 기록 — 이름에 줄을 긋는다 */
+  strike?: boolean;
 }) {
   const c = useTheme();
   return (
     <View pointerEvents="none" style={[styles.label, { left: cx - width / 2, top, width, opacity: dim ? 0.55 : 1 }]}>
-      <ThemedText type="caption" numberOfLines={1} style={[styles.labelTitle, accent && { color: c.accentText }]}>
+      <ThemedText type="caption" numberOfLines={1} style={[styles.labelTitle, accent && { color: c.accentText }, strike && styles.strike]}>
         {title}
       </ThemedText>
       {sub ? (
         <ThemedText type="caption" numberOfLines={1} style={[styles.labelSub, { color: c.textSecondary }]}>
-          {sub}
+          {subFrom ? (
+            <>
+              <ThemedText type="caption" style={[styles.labelSub, styles.strike, { color: c.textSecondary }]}>
+                {subFrom}
+              </ThemedText>
+              {' '}
+              <ThemedText type="caption" style={[styles.labelSub, { color: c.accentText, fontWeight: 700 }]}>
+                {sub}
+              </ThemedText>
+            </>
+          ) : (
+            sub
+          )}
         </ThemedText>
       ) : null}
       {gap ? (
@@ -175,6 +194,11 @@ export function ItemNode({
   stool,
   gap,
   highlight,
+  draft = false,
+  badge = null,
+  badgeTone = 'accent',
+  subFrom = null,
+  strike = false,
   onPress,
 }: {
   cx: number;
@@ -189,14 +213,21 @@ export function ItemNode({
   highlight?: string | null;
   /** 대변 색을 적었으면 대변 아이콘을 그 색으로 채운다 */
   stool?: StoolColor | null;
+  /** 아직 저장하지 않은 초안 — 흰 바탕에 점선 테두리(SPEC-MAIN-16) */
+  draft?: boolean;
+  /** 노드 위 작은 표시 — 「초안」 「삭제」 */
+  badge?: string | null;
+  badgeTone?: 'accent' | 'danger';
+  subFrom?: string | null;
+  strike?: boolean;
   onPress: () => void;
 }) {
   const c = useTheme();
   const diaper = isDiaper(kind);
   const done = kind === 'routine' || kind === 'todo';
   const size = diaper ? 42 : ITEM;
-  const icon = <NodeIcon kind={kind} title={title} stool={stool ?? null} size={21} />;
-  const tone = nodeTone(kind, c);
+  const icon = <NodeIcon kind={kind} title={title} stool={stool ?? null} size={21} light={draft} />;
+  const tone = draft ? draftTone(kind, c) : nodeTone(kind, c);
   return (
     <>
       <Animated.View entering={ZoomIn.springify().damping(13)} style={[styles.itemWrap, { left: cx - size / 2, top: cy - size / 2, width: size, height: size }]}>
@@ -220,9 +251,10 @@ export function ItemNode({
             <Ionicons name="checkmark" size={10} color={c.onInk} />
           </View>
         )}
+        {badge ? <Tag label={badge} tone={badgeTone} /> : null}
       </Animated.View>
       {/* 비춘 기록은 테두리와 코랄 이름 — 위에 표시를 붙이면 묶음 제목을 가린다 */}
-      <NodeLabel cx={cx} top={cy + ITEM / 2 + 8} title={title} sub={sub} gap={gap} accent={highlight != null} width={title.length > 6 || sub.length > 6 ? 86 : 70} />
+      <NodeLabel cx={cx} top={cy + ITEM / 2 + 8} title={title} sub={sub} subFrom={subFrom} strike={strike} gap={gap} accent={highlight != null} width={title.length > 6 || sub.length > 6 || subFrom ? 86 : 70} />
     </>
   );
 }
@@ -239,14 +271,43 @@ export function nodeTone(kind: ItemKind, c: ReturnType<typeof useTheme>) {
   return { backgroundColor: c.surface, borderColor: c.flowLine, borderWidth: 1.5 };
 }
 
-/** 기록 아이콘 — 수유는 흰 하트 · 젖병, 기저귀는 물방울과 대변, 루틴은 이름에 맞는 아이콘 */
-export function NodeIcon({ kind, title, stool, size }: { kind: ItemKind; title: string; stool: StoolColor | null; size: number }) {
+/** 초안 — 흰 바탕에 그 기록 색의 점선 테두리 */
+export function draftTone(kind: ItemKind, c: ReturnType<typeof useTheme>) {
+  const line =
+    kind === 'breast' || kind === 'formula'
+      ? c.accent
+      : isDiaper(kind)
+        ? diaperTone(kind, c).borderColor
+        : kind === 'temp'
+          ? c.tempLine
+          : kind === 'routine' || kind === 'todo'
+            ? c.doneLine
+            : kind === 'memo'
+              ? c.memoLine
+              : c.flowLine;
+  return { backgroundColor: c.card, borderColor: line, borderWidth: 1.6, borderStyle: 'dashed' as const };
+}
+
+/** 노드 위 작은 표시 — 「초안」은 코랄, 「삭제」는 경고색 */
+function Tag({ label, tone }: { label: string; tone: 'accent' | 'danger' }) {
   const c = useTheme();
-  if (kind === 'formula') return <BottleIcon size={size} color="#FFFFFF" />;
+  return (
+    <View pointerEvents="none" style={[styles.tag, { backgroundColor: tone === 'danger' ? c.danger : c.accent, borderColor: c.card }]}>
+      <ThemedText type="caption" style={styles.tagText}>
+        {label}
+      </ThemedText>
+    </View>
+  );
+}
+
+/** 기록 아이콘 — 수유는 흰 하트 · 젖병, 기저귀는 물방울과 대변, 루틴은 이름에 맞는 아이콘. light 는 흰 바탕(초안) 위라 수유를 코랄로 */
+export function NodeIcon({ kind, title, stool, size, light = false }: { kind: ItemKind; title: string; stool: StoolColor | null; size: number; light?: boolean }) {
+  const c = useTheme();
+  if (kind === 'formula') return <BottleIcon size={size} color={light ? c.accent : '#FFFFFF'} />;
   if (kind === 'routine' || kind === 'todo') return <RoutineIcon title={title} size={size} color={c.doneFg} />;
   if (isDiaper(kind)) return <DiaperGlyph diaper={kind} color={stool} size={size} />;
   const ion: Partial<Record<ItemKind, IconName>> = { breast: 'heart-outline', temp: 'thermometer-outline', weight: 'scale-outline', height: 'resize-outline', memo: 'document-text-outline' };
-  const color = kind === 'breast' ? '#FFFFFF' : kind === 'temp' ? c.tempFg : kind === 'memo' ? c.memoFg : c.text;
+  const color = kind === 'breast' ? (light ? c.accent : '#FFFFFF') : kind === 'temp' ? c.tempFg : kind === 'memo' ? c.memoFg : c.text;
   return <Ionicons name={ion[kind] ?? 'ellipse-outline'} size={size} color={color} />;
 }
 
@@ -317,6 +378,11 @@ export function SleepNode({
   sub,
   gap = null,
   highlight = null,
+  draft = false,
+  badge = null,
+  badgeTone = 'accent',
+  subFrom = null,
+  strike = false,
   onPress,
 }: {
   cx: number;
@@ -327,6 +393,12 @@ export function SleepNode({
   /** 앞 잠에서 깬 뒤 깨어 있던 시간 */
   gap?: string | null;
   highlight?: string | null;
+  /** 아직 저장하지 않은 초안 — 흰 바탕에 먹색 점선 */
+  draft?: boolean;
+  badge?: string | null;
+  badgeTone?: 'accent' | 'danger';
+  subFrom?: string | null;
+  strike?: boolean;
   onPress: () => void;
 }) {
   const c = useTheme();
@@ -336,15 +408,21 @@ export function SleepNode({
       <Animated.View entering={ZoomIn.springify().damping(13)} style={[styles.itemWrap, { left: cx - size / 2, top: cy - size / 2, width: size, height: size }]}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`${sub} ${title} 자세히`}
+          accessibilityLabel={`${sub} ${title}${draft ? ' 초안 고치기' : ' 자세히'}`}
           hitSlop={6}
           onPress={onPress}
-          style={({ pressed }) => [styles.item, styles.shadow, { width: size, height: size, borderRadius: 12, backgroundColor: c.ink, opacity: pressed ? 0.85 : 1 }]}>
-          <ZzIcon size={small ? 20 : 22} color={c.onInk} />
+          style={({ pressed }) => [
+            styles.item,
+            styles.shadow,
+            { width: size, height: size, borderRadius: 12, opacity: pressed ? 0.85 : 1 },
+            draft ? { backgroundColor: c.card, borderColor: c.ink, borderWidth: 1.6, borderStyle: 'dashed' } : { backgroundColor: c.ink },
+          ]}>
+          <ZzIcon size={small ? 20 : 22} color={draft ? c.text : c.onInk} />
         </Pressable>
         {highlight != null && <HighlightRing size={size} round={false} />}
+        {badge ? <Tag label={badge} tone={badgeTone} /> : null}
       </Animated.View>
-      <NodeLabel cx={cx} top={cy + size / 2 + 4} title={title} sub={sub} gap={gap} width={150} accent={highlight != null} />
+      <NodeLabel cx={cx} top={cy + size / 2 + 4} title={title} sub={sub} subFrom={subFrom} strike={strike} gap={gap} width={150} accent={highlight != null} />
     </>
   );
 }
@@ -475,6 +553,9 @@ const styles = StyleSheet.create({
   item: { alignItems: 'center', justifyContent: 'center' },
   ghost: { position: 'absolute', width: ITEM, height: ITEM, borderRadius: 12, borderWidth: 1.5, borderStyle: 'dashed' },
   badge: { position: 'absolute', right: -4, bottom: -4, width: 19, height: 19, borderRadius: 10, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  tag: { position: 'absolute', top: -10, right: -16, height: 19, paddingHorizontal: 6, borderRadius: 10, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center', zIndex: 2 },
+  tagText: { color: '#FFFFFF', fontSize: 10, lineHeight: 14, fontWeight: 700 },
+  strike: { textDecorationLine: 'line-through' },
   nowDot: { position: 'absolute', width: DOT, height: DOT, borderRadius: DOT / 2, alignItems: 'center', justifyContent: 'center' },
   pulse: { width: 18, height: 18, alignItems: 'center', justifyContent: 'center' },
   pulseRing: { position: 'absolute', width: 12, height: 12, borderRadius: 6 },

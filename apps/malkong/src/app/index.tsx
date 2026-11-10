@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { AdBanner } from '@/components/ad-banner';
 import { BabyAvatar } from '@/components/baby-profile-extra';
 import { AskButton, AskSheet } from '@/components/flow/ask-sheet';
-import { DayView, type Highlight } from '@/components/flow/day-view';
+import { DayView, type Highlight, type Preview } from '@/components/flow/day-view';
 import { RecordPanel } from '@/components/flow/record-panel';
 import { WeekView } from '@/components/flow/week-view';
 import { YearView } from '@/components/flow/year-view';
@@ -29,7 +29,9 @@ import { ThemedView } from '@/components/themed-view';
 import { useLogActions } from '@/components/log/use-log-actions';
 import { tap } from '@/components/ui';
 import { MaxContentWidth } from '@/constants/theme';
+import { ymd } from '@/data/agent';
 import { useAskConsent } from '@/data/ask-consent';
+import { editDraft, type Draft, type DraftPatch, type DraftSet } from '@/data/day-draft';
 import { useBaby } from '@/data/baby-context';
 import { birthOf } from '@/data/auto-todos';
 import { dayTotals } from '@/data/day-flow';
@@ -51,6 +53,7 @@ const PINCH_OUT = 0.8;
 const PINCH_IN = 1.25;
 
 const isView = (v: unknown): v is View3 => v === 'day' || v === 'week' || v === 'year';
+const NO_DRAFTS: Draft[] = [];
 
 export default function FlowScreen() {
   const c = useTheme();
@@ -66,6 +69,14 @@ export default function FlowScreen() {
   const [highlight, setHighlight] = useState<Highlight | null>(null);
   /** 창을 연 채 흐름에서 누른 기록 — 그날 기록을 함께 읽기로 했을 때만(task today/022) */
   const [pickedKey, setPickedKey] = useState<string | null>(null);
+  /** 하루 초안과, 변경 카드가 열려 있는 동안 흐름에 먼저 보일 것 — 물어보기 창과 흐름이 같이 본다(SPEC-MAIN-16, task today/023) */
+  const [drafts, setDrafts] = useState<DraftSet | null>(null);
+  const [previews, setPreviews] = useState<Preview[]>([]);
+  const patchDraft = useCallback(
+    (id: string, patch: DraftPatch) => setDrafts((prev) => (prev ? { ...prev, items: prev.items.map((d) => (d.id === id ? editDraft(d, patch) : d)).sort((a, b) => a.at - b.at) } : prev)),
+    [],
+  );
+  const removeDraft = useCallback((id: string) => setDrafts((prev) => (prev ? { ...prev, items: prev.items.filter((d) => d.id !== id) } : prev)), []);
   const consent = useAskConsent();
   // 비춘 기록이 화면 위쪽에 오게 — 아래는 물어보기 창이 덮는다
   const focusAt = useCallback((y: number) => scroll.current?.scrollTo({ y: Math.max(0, y - 90), animated: true }), []);
@@ -111,6 +122,9 @@ export default function FlowScreen() {
   if (!baby || !age || loading || todosLoading || eventsLoading) return <ScreenLoading />;
 
   const day = picked && startOfDay(picked).getTime() !== startOfDay(now).getTime() ? picked : null;
+  /** 물어보기가 보는 날 — 하루 보기의 그날, 일주일 · 1년 보기에서는 오늘 */
+  const askDay = view === 'day' && day ? day : now;
+  const draftItems = drafts && drafts.day === ymd(askDay) ? drafts.items : NO_DRAFTS;
   const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
   const birth = birthOf(baby.birthDate);
   const title =
@@ -193,12 +207,15 @@ export default function FlowScreen() {
             })}
           </View>
 
-          <RecordPanel
-            totals={dayTotals(events, totalsDay, now)}
-            date={totalsDay}
-            sleeping={!!runningOf(events, 'sleep')}
-            onRecord={log.press}
-          />
+          {/* 물어보기 창이 열려 있으면 기록 칸을 접는다 — 위 절반에 흐름이 보이게(7판 시안, SPEC-MAIN-16) */}
+          {!asking && (
+            <RecordPanel
+              totals={dayTotals(events, totalsDay, now)}
+              date={totalsDay}
+              sleeping={!!runningOf(events, 'sleep')}
+              onRecord={log.press}
+            />
+          )}
         </View>
       </View>
 
@@ -213,6 +230,10 @@ export default function FlowScreen() {
                   now={now}
                   highlight={highlight}
                   selected={asking ? pickedKey : null}
+                  drafts={draftItems}
+                  previews={previews}
+                  onEditDraft={patchDraft}
+                  onRemoveDraft={removeDraft}
                   onPick={
                     asking && consent === 'yes'
                       ? (k) => {
@@ -241,13 +262,16 @@ export default function FlowScreen() {
       {log.sheets}
       <AskSheet
         open={asking}
-        day={view === 'day' && day ? day : now}
+        day={askDay}
         selectedKey={pickedKey}
         onClearSelected={() => setPickedKey(null)}
         onClose={() => setAsking(false)}
         onHighlight={setHighlight}
         onOpenKind={(kind, editing) => log.open(kind, editing)}
         onShowWeek={() => go('week')}
+        drafts={drafts}
+        onDrafts={setDrafts}
+        onPreview={setPreviews}
       />
     </ThemedView>
   );
