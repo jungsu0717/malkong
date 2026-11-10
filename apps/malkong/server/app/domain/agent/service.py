@@ -152,7 +152,18 @@ def read_answer(text: str, req: AgentRequest) -> AgentResponse:
     if answer.type == "tools":
         if not req.tools:
             return _unknown()
-        calls = [c for c in (_call(item) for item in answer.calls) if c]
+        calls: list[ToolCall] = []
+        # 기간을 쓰는 줄이 하나뿐인가 — 그때만 문장의 기간 낱말로 바로잡는다
+        uses_range = [
+            i
+            for i in answer.calls
+            if isinstance(i, dict) and "range" in _TOOL_ARGS.get(i.get("tool"), [])
+        ]
+        single = len(uses_range) <= 1
+        for c in (_call(item, req.text, single) for item in answer.calls):
+            # 같은 줄이 두 번 오면 하나만 — 기간마다 줄을 나눠 쓴 답을 채우면 같은 줄이 된다
+            if c and c not in calls:
+                calls.append(c)
         if not calls:
             return _unknown()
         return AgentResponse(type="tools", calls=calls[:MAX_CALLS], highlight=highlight)
@@ -253,9 +264,90 @@ def _update(action: AgentAction, record: ContextRecord, now: datetime) -> AgentA
 # 기능마다 쓰는 값 — tools.json 의 args 이름(camelCase)을 파이썬 칸 이름으로
 _TOOL_ARGS = {t["name"]: t["args"] for t in TOOLS["tools"]}
 _FIELD = {"rangeB": "range_b"}
+# 견줄 기간을 말하지 않았을 때 — 오늘은 어제와, 이번 주는 지난주와
+_RANGE_B = {
+    "today": "yesterday",
+    "thisWeek": "lastWeek",
+    "recent7": "lastWeek",
+    "tonight": "lastNight",
+}
+# 무엇을 셀지 말하지 않았을 때 — 찾기 규칙(find-parse.ts readMeasure)과 같다
+_MEASURE = {
+    "sleep": "duration",
+    "nap": "duration",
+    "night": "duration",
+    "breast": "duration",
+    "formula": "amount",
+}
 
 
-def _call(item: Any) -> ToolCall | None:
+# 문장의 기간 낱말 — 앞에 있는 것부터 본다. 「어제 밤」의 「어제」처럼 겹치면 앞줄이 이긴다
+_RANGE_WORDS = [
+    ("lastNight", re.compile(r"어젯밤|어제\s*밤|지난\s*밤")),
+    ("tonight", re.compile(r"오늘\s*밤")),
+    ("thisWeek", re.compile(r"이번\s*주")),
+    ("lastWeek", re.compile(r"지난\s*주|저번\s*주")),
+    ("recent7", re.compile(r"최근\s*(일주일|7일)|요즘\s*일주일")),
+    ("recent30", re.compile(r"한\s*달|30일")),
+    ("yesterday", re.compile(r"어제")),
+    ("today", re.compile(r"오늘")),
+]
+
+
+def ranges_in(text: str) -> list[str]:
+    """문장에 나온 기간을 나온 차례대로 — 「이번 주 낮잠이 지난주보다」는 thisWeek, lastWeek."""
+    taken: list[tuple[int, int]] = []
+    found: list[tuple[int, str]] = []
+    for key, pattern in _RANGE_WORDS:
+        for m in pattern.finditer(text):
+            if any(m.start() < b and a < m.end() for a, b in taken):
+                continue
+            taken.append((m.start(), m.end()))
+            found.append((m.start(), key))
+    keys: list[str] = []
+    for _, key in sorted(found):
+        if key not in keys:
+            keys.append(key)
+    return keys
+
+
+def _fill(call: ToolCall, text: str = "", single: bool = True) -> ToolCall:
+    """모델이 빠뜨린 값을 채운다.
+
+    실제 호출에서 total · compare_ranges 의 기간을 range 대신 when 에 쓰고
+    measure 와 rangeB 를 비운 일이 있다(2026-11-10). 다른 칸에 쓴 날(오늘 · 어제)을 옮기고,
+    셀 것과 견줄 기간은 정해 둔 값으로 둔다.
+    """
+    days = ("today", "yesterday")
+    spoken = next((v for v in (call.range, call.when, call.day) if v in days), None)
+    names = _TOOL_ARGS.get(call.tool, [])
+    update: dict[str, Any] = {}
+    # 기간은 문장의 낱말이 정본이다 — 두 번째 실제 호출에서 「어젯밤」, 「이번 주 … 지난주」를
+    # 오늘로 잡았다(2026-11-10). 기간을 쓰는 줄이 하나일 때만 바로잡는다
+    # (여럿이면 어느 줄의 기간인지 모른다)
+    said = ranges_in(text)
+    if "range" in names and single and said and call.range not in said:
+        update["range"] = said[0]
+    if "rangeB" in names and single and len(said) > 1 and call.range_b not in said[1:]:
+        update["range_b"] = said[1]
+    if "range" in names and call.range is None and "range" not in update:
+        update["range"] = spoken or (said[0] if said else "today")
+    if "when" in names and call.when is None:
+        update["when"] = spoken or "viewing"
+    if "day" in names and call.day is None:
+        update["day"] = spoken or "viewing"
+    if "sleep" in names and call.sleep is None:
+        update["sleep"] = "any"
+    if "measure" in names and call.measure is None and call.what:
+        update["measure"] = _MEASURE.get(call.what, "count")
+    if "rangeB" in names and call.range_b is None and "range_b" not in update:
+        rng = update.get("range", call.range)
+        if rng in _RANGE_B:
+            update["range_b"] = _RANGE_B[rng]
+    return call.model_copy(update=update) if update else call
+
+
+def _call(item: Any, text: str = "", single: bool = True) -> ToolCall | None:
     """기능 한 줄 다듬기.
 
     목록에 없는 기능, 빠지거나 목록에 없는 값이 있으면 None(그 줄을 버린다).
@@ -267,6 +359,7 @@ def _call(item: Any) -> ToolCall | None:
     names = _TOOL_ARGS.get(call.tool)
     if names is None:
         return None
+    call = _fill(call, text, single)
     values: dict[str, Any] = {}
     for name in names:
         arg = TOOLS["args"][name]

@@ -79,9 +79,12 @@ SYSTEM_PROMPT = (Path(__file__).parent / "system_prompt.txt").read_text(encoding
 
 def _tool_arg_schema(name: str) -> dict[str, Any]:
     arg = TOOLS["args"][name]
+    # 칸마다 쓰는 기능을 적는다 — 실제 호출에서 total 의 기간을
+    # range 대신 when 에 쓴 일이 있다(2026-11-10)
+    does = f"{arg['does']} — {arg['usedBy']} 만 쓴다"
     if arg.get("type") == "string":
-        return {"type": "string", "description": arg["does"]}
-    return {"type": "string", "enum": arg["values"], "description": arg["does"]}
+        return {"type": "string", "description": does}
+    return {"type": "string", "enum": arg["values"], "description": does}
 
 
 # 기능 목록을 쓰는 앱의 답 모양 — calls 를 더한다
@@ -123,6 +126,9 @@ def _tools_section() -> str:
         "앱은 아래 기능을 기기 안의 모든 기록(보는 날 밖의 날도)으로 직접 실행한다. "
         "너는 기능과 값만 고르고, 숫자와 답 문장은 앱이 쓴다.",
         f"- 한 문장에 기능을 1~{MAX_CALLS}개 고른다. 말한 순서대로 넣는다.",
+        "- 기능 이름 뒤 괄호에 적힌 값은 빠짐없이 모두 채우고, 괄호에 없는 칸은 쓰지 않는다. "
+        "기간은 range(견줄 기간은 rangeB)에 쓴다. when 은 find_name, day 는 day_summary 에만 쓴다.",
+        "- 두 기간을 견주는 말은 compare_ranges 한 줄로 쓴다. 기간마다 줄을 나누지 않는다.",
         "- 기능의 값은 아래 「값」의 낱말만 쓴다. 문장에 없는 값은 지어내지 않고, "
         "물음에 맞는 값이 없으면 그 기능을 고르지 않는다.",
         "- 손톱, 목욕, 비타민D 처럼 기록 종류(what)에 없는 일은 find_name 으로 찾는다. "
@@ -135,7 +141,7 @@ def _tools_section() -> str:
         lines.append(f"- {tool['name']}({args}): {tool['does']}")
     lines += ["", "값:"]
     for name, arg in TOOLS["args"].items():
-        lines.append(f"- {name}: {arg['words']}")
+        lines.append(f"- {name}({arg['usedBy']}): {arg['words']}")
     return "\n".join(lines) + "\n"
 
 

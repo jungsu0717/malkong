@@ -762,6 +762,7 @@ def test_tool_calls_are_checked_one_by_one(app, fake: FakeModel) -> None:
                 "name": "x",
             },
             {"tool": "total", "what": "nail", "range": "today", "measure": "count"},
+            # 셀 것(measure)이 빠졌으면 서버가 채운다 — 수유는 몇 번
             {"tool": "total", "what": "feed", "range": "today"},
             {"tool": "delete_everything"},
             {"tool": "find_name", "name": "손톱 깎았는지 확인 No, wait", "when": "today"},
@@ -778,6 +779,7 @@ def test_tool_calls_are_checked_one_by_one(app, fake: FakeModel) -> None:
             "range": "thisWeek",
             "rangeB": "lastWeek",
         },
+        NO_ARGS | {"tool": "total", "what": "feed", "range": "today", "measure": "count"},
         NO_ARGS | {"tool": "find_name", "name": "손톱", "when": "today"},
     ]
 
@@ -800,3 +802,80 @@ def test_tools_examples_follow_the_catalog() -> None:
         for ex in tool["examples"]:
             call = _call(ex["call"])
             assert call is not None and call.tool == tool["name"], ex
+
+
+def test_tool_calls_fill_missing_values(app, fake: FakeModel) -> None:
+    """실제 호출(2026-11-10)에서 본 모양 — 기간을 when 에 쓰고 measure 와 rangeB 를 비웠다.
+
+    서버가 채운다.
+    """
+    answer(
+        fake,
+        type="tools",
+        calls=[
+            {"tool": "compare_ranges", "what": "feed", "when": "today"},
+            {"tool": "compare_ranges", "what": "feed", "when": "yesterday"},
+            {"tool": "total", "what": "night", "when": "yesterday"},
+            {"tool": "wake"},
+        ],
+    )
+    res = ask(phone(app), "오늘 어제보다 많이 먹었어? 어젯밤은?", tools=True)
+    assert res.json()["calls"] == [
+        NO_ARGS
+        | {
+            "tool": "compare_ranges",
+            "what": "feed",
+            "measure": "count",
+            "range": "today",
+            "rangeB": "yesterday",
+        },
+        NO_ARGS | {"tool": "total", "what": "night", "range": "yesterday", "measure": "duration"},
+        NO_ARGS | {"tool": "wake", "sleep": "any"},
+    ]
+    # 어제와 견줄 기간은 정해 둔 것이 없어 둘째 줄은 버린다
+
+
+@pytest.mark.parametrize(
+    ("text", "call", "want"),
+    [
+        # 두 번째 실제 호출(2026-11-10)에서 본 모양 — 기간을 오늘로 잡거나 비웠다
+        (
+            "이번 주 낮잠이 지난주보다 줄었어?",
+            {
+                "tool": "compare_ranges",
+                "what": "nap",
+                "measure": "duration",
+                "range": "today",
+                "rangeB": "yesterday",
+            },
+            {
+                "tool": "compare_ranges",
+                "what": "nap",
+                "measure": "duration",
+                "range": "thisWeek",
+                "rangeB": "lastWeek",
+            },
+        ),
+        (
+            "어젯밤 몇 시간 잤어?",
+            {"tool": "total", "what": "night", "measure": "duration"},
+            {"tool": "total", "what": "night", "measure": "duration", "range": "lastNight"},
+        ),
+        (
+            "어제 밤에 몇 시간 잤어?",
+            {"tool": "total", "what": "night", "range": "yesterday", "measure": "duration"},
+            {"tool": "total", "what": "night", "measure": "duration", "range": "lastNight"},
+        ),
+        # 기간 낱말이 없으면 모델이 고른 값 그대로
+        (
+            "요즘 분유 하루 평균 얼마나 먹어?",
+            {"tool": "average", "what": "formula", "range": "recent7", "measure": "amount"},
+            {"tool": "average", "what": "formula", "range": "recent7", "measure": "amount"},
+        ),
+    ],
+)
+def test_tool_range_follows_the_sentence(
+    app, fake: FakeModel, text: str, call: dict, want: dict
+) -> None:
+    answer(fake, type="tools", calls=[call])
+    assert ask(phone(app), text, tools=True).json()["calls"] == [NO_ARGS | want]
