@@ -355,7 +355,7 @@ export function LogSheet({
   );
 }
 
-/** 같이 먹인 것 — 비타민D, 유산균, 이 폰에서 더한 이름. 고르면 그 수유 시각에 루틴 완료로 남는다(SPEC-LOG-01) */
+/** 「추가」 — 수유와 같이 먹인 비타민D, 유산균, 이 폰에서 더한 이름. 고르면 그 수유 시각에 루틴 완료로 남는다(SPEC-LOG-01). 칸 이름은 「추가」(빌드 15 피드백) */
 const WITH_KEY = 'feed.with';
 const WITH_DEFAULT = ['비타민D', '유산균'];
 
@@ -393,7 +393,7 @@ function WithChips({ selected, onChange }: { selected: string[]; onChange: (v: s
   return (
     <View style={styles.group}>
       <ThemedText type="label" style={{ color: c.textSecondary, fontWeight: 600 }}>
-        같이 먹인 것
+        추가
       </ThemedText>
       <View style={styles.chips}>
         {names.map((n) => (
@@ -409,11 +409,11 @@ function WithChips({ selected, onChange }: { selected: string[]; onChange: (v: s
             placeholder="예: 철분"
             placeholderTextColor={c.textTertiary}
             returnKeyType="done"
-            accessibilityLabel="같이 먹인 것 이름"
+            accessibilityLabel="추가로 먹인 것 이름"
             style={[styles.withInput, { borderColor: c.border, color: c.text }]}
           />
         ) : (
-          <Chip label="추가" icon="add" onPress={() => setAdding(true)} />
+          <Chip label="직접 입력" icon="add" onPress={() => setAdding(true)} />
         )}
       </View>
     </View>

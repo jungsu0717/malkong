@@ -172,6 +172,9 @@ export function Ruler({ value, onChange, aria, ...scale }: Scale & { value: numb
           ref={ref}
           horizontal
           showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          alwaysBounceVertical={false}
+          directionalLockEnabled
           scrollEventThrottle={16}
           onScroll={onScroll}
           snapToInterval={step * px}
@@ -341,7 +344,8 @@ const styles = StyleSheet.create({
   big: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   bigText: { fontSize: 26, lineHeight: 32, fontWeight: 700, letterSpacing: -0.5, fontVariant: ['tabular-nums'] },
   when: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
-  box: { height: H, borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
+  // 테두리 1px 씩을 더해 안쪽 높이가 내용(H)과 같게 — 작으면 아이폰에서 가로 눈금이 위아래로도 밀린다(빌드 15 피드백)
+  box: { height: H + 2, borderRadius: 14, borderWidth: 1, overflow: 'hidden' },
   marker: { position: 'absolute', top: 0 },
   chunk: { position: 'absolute', top: 0 },
 });

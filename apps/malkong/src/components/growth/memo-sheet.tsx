@@ -207,7 +207,8 @@ const styles = StyleSheet.create({
   factsHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: Spacing.two },
   shrink: { flexShrink: 1, minWidth: 0 },
   // 칩 줄은 시트 여백 밖까지 밀려 나간다
-  row: { marginHorizontal: -Spacing.four },
+  // 가로 ScrollView 가 키보드에 눌리지 않게 — 기본은 flexGrow 1 · flexShrink 1
+  row: { marginHorizontal: -Spacing.four, flexGrow: 0, flexShrink: 0 },
   rowInner: { paddingHorizontal: Spacing.four, gap: 6 },
   chip: { height: 32, paddingLeft: 5, paddingRight: 10, borderRadius: 16, borderWidth: 1.5, flexDirection: 'row', alignItems: 'center', gap: 6 },
   time: { fontVariant: ['tabular-nums'] },

@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
   flex: { flex: 1, minWidth: 0 },
   topBand: { borderBottomWidth: 1 },
   /** 물어보기 단추 — 흐름 오른쪽 아래, 광고 위 */
-  askAt: { position: 'absolute', right: 0, bottom: 16, left: 0, height: 52 },
+  askAt: { position: 'absolute', right: 0, bottom: 16, left: 0, height: 56 },
   top: { paddingHorizontal: 16, paddingBottom: 12, gap: 12, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
   headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

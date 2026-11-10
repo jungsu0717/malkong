@@ -22,7 +22,13 @@ export function isHealth(text: string): boolean {
 /** 묻는 말인가 — 물음표, 몇 · 언제 · 얼마 · 마지막, 「~는?」 같은 이어 묻기 */
 export function isQuestion(text: string): boolean {
   const s = text.trim();
-  return /[?？]$/.test(s) || /몇|언제|얼마|마지막|했나|했니|됐나|있었|어땠/.test(s) || /^(그 ?전|그 ?앞|어제|오늘|이번 주|지난주)[^ ]*(는|은)?$/.test(s);
+  return (
+    /[?？]$/.test(s) ||
+    /몇|언제|얼마|마지막|했나|했니|됐나|있었|어땠|어때|뭐 ?했|뭘|무엇|무슨|누가|어떻게/.test(s) ||
+    // 「손톱 잘랐나」, 「목욕 시켰니」, 「약 먹였냐」 — 물음표 없이 끝이 물음(빌드 15 피드백)
+    /(았|었|였|랐|렀|켰|쳤|웠|줬|봤|갔|왔|났|잤|깼|셨|겼|됐|했|있|없)(나|니|냐|을까|던가|는지)\s*$/.test(s) ||
+    /^(그 ?전|그 ?앞|어제|오늘|이번 주|지난주)[^ ]*(는|은)?$/.test(s)
+  );
 }
 
 const KIND_WORDS = /분유|모유|젖|수유|기저귀|대소변|소변|대변|응가|똥|오줌|쉬|잠|잤|낮잠|체온|몸무게|키|비타민|유산균|터미타임|목욕|산책|메모/g;
@@ -112,6 +118,8 @@ export function followUp(text: string, last: Answer | null, now: Date): { query:
     if (sameWhat) return { query: { ...last.query, measure: 'last', range: rangeOf('recent7', now) }, offset: last.offset + 1 };
   }
   if (parseFind(s, now)) return null;
+  // 「어제는?」 · 「몇 ml?」처럼 짧게 이어 물은 말만 앞 답의 종류를 붙인다 — 「오늘 몇 시에 일어났어?」에 대변 답이 나왔다(빌드 15 피드백)
+  if (/(았|었|였|랐|렀|켰|쳤|웠|줬|봤|갔|왔|났|잤|깼|셨|겼|됐|했)/.test(s)) return null;
   const again = parseFind(`${WHAT_LABEL[last.query.what]} ${s}`, now);
   return again ? { query: { ...again, measure: last.query.measure }, offset: 0 } : null;
 }

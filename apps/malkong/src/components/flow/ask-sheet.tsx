@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ZzIcon } from '@/components/baby-icons';
@@ -28,6 +29,7 @@ import { parseAdd, type AddResult } from '@/data/add-parse';
 import { answerText, asksPlan, changesFrom, dayContext, lastTurns, MAX_CONTEXT, onlyAdds, planFromText, pointsOrEdits, selectedLabel, sourceOfKey, ymd, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
 import { askAgent, type AgentResponse } from '@/data/api';
 import { answerFor, asksAverage, copula, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
+import { asksDaySummary, daySummaryAnswer, findAnswer, knowsTerm, questionFits, type LocalAnswer, type LocalData } from '@/data/ask-local';
 import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
 import { useBaby } from '@/data/baby-context';
 import { applyChangeToDrafts, asksDraft, dayDrafts, draftContext, draftSummary, draftWhen, negatedDrafts, stripDraftAsk, type Draft, type DraftSet } from '@/data/day-draft';
@@ -167,7 +169,7 @@ export function AskSheet({
   const { events, add: addEvent, update: updateEvent, remove: removeEvent } = useEvents();
   const { routines, logs, addRoutine, logTitle, logAt, moveLog, removeLog } = useRoutines();
   const { memos, addMemo, updateMemo, removeMemo } = useMemos();
-  const { add: addTodo, update: updateTodo, remove: removeTodo } = useTodos();
+  const { todos, topics, add: addTodo, update: updateTodo, remove: removeTodo } = useTodos();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -221,6 +223,14 @@ export function AskSheet({
   const answer = (a: Answer, steps?: string[]) => {
     setLastAnswer(a);
     push({ id: nextId(), from: 'app', type: 'answer', answer: a, steps });
+    onHighlight(a.keys.length ? { keys: a.keys, label: a.label } : null);
+  };
+
+  /** 기기 안에서 바로 답한 것 — 하루 전체, 루틴 · 할 일 · 메모를 이름으로 찾기(ask-local, 모델을 부르지 않는다) */
+  const local = (): LocalData => ({ events, routines, logs, todos, generalTopic: topics.find((t) => t.kind === 'general')?.id ?? null, memos });
+  const localReply = (a: LocalAnswer) => {
+    setLastAnswer(null);
+    push({ id: nextId(), from: 'app', type: 'text', text: a.text });
     onHighlight(a.keys.length ? { keys: a.keys, label: a.label } : null);
   };
 
@@ -300,7 +310,8 @@ export function AskSheet({
     }
     if (res.type === 'question') {
       const q = queryFromServer(res.question, now);
-      if (q) return answer(answerFor(q, events, now, 0, asksAverage(s)));
+      // 물음에 없는 기록 종류를 고르면 쓰지 않는다 — 「손톱 잘랐나?」에 기저귀 답이 나왔다(빌드 15 피드백)
+      if (q && questionFits(s, q.what)) return answer(answerFor(q, events, now, 0, asksAverage(s)));
     }
     if (res.type === 'changes') {
       let changes = changesFrom(res.actions, ctx, now, s);
@@ -433,11 +444,21 @@ export function AskSheet({
 
     // 화면을 가리키거나 고치는 말은 규칙으로 읽지 않는다
     if (!pointsOrEdits(s)) {
+      // 「오늘 뭐 했어?」 · 「하루 요약해 줘」 — 그날 합계와 루틴을 앱이 바로(빌드 15 피드백)
+      if (asksDaySummary(s)) return localReply(daySummaryAnswer(s, local(), day, now));
       if (isQuestion(s)) {
+        // 「비타민D 먹였나?」 — 루틴 · 할 일 · 메모에 그 이름이 있으면 수유 찾기보다 먼저
+        if (knowsTerm(s, local())) {
+          const a = findAnswer(s, local(), day, now);
+          if (a) return localReply(a);
+        }
         const f = followUp(s, lastAnswer, now);
         if (f) return answer(answerFor(f.query, events, now, f.offset));
         const q = parseFind(s, now);
         if (q) return answer(answerFor(q, events, now, 0, asksAverage(s)));
+        // 「오늘 손톱 잘랐나?」 — 기록 이름이 없는 물음은 모델에게 보내지 않고 이름으로 찾아 없으면 없다고
+        const a = findAnswer(s, local(), day, now);
+        if (a) return localReply(a);
       } else {
         // 기록하는 말 — 규칙으로 하나를 읽을 수 있고 여럿이 아니면 바로
         const r = parseAdd(s, now);
@@ -646,7 +667,7 @@ export function AskSheet({
     ? []
     : selected
       ? [{ label: '10분 앞으로 옮겨 줘' }, ...(selected.type === 'event' ? [{ label: '메모 남겨 줘', fill: '이 기록에 메모: ' }] : []), { label: '지워 줘' }]
-      : (lastAnswer?.query ? [`그 전 ${WHAT_LABEL[lastAnswer.query.what]}는?`, ...DEFAULT_SUGGEST.filter((x) => !x.includes(WHAT_LABEL[lastAnswer.query!.what]))].slice(0, 3) : DEFAULT_SUGGEST).map((label) => ({ label }));
+      : (lastAnswer?.query ? [`그 전 ${WHAT_LABEL[lastAnswer.query.what]}${copula(WHAT_LABEL[lastAnswer.query.what]) === '이에요' ? '은' : '는'}?`, ...DEFAULT_SUGGEST.filter((x) => !x.includes(WHAT_LABEL[lastAnswer.query!.what]))].slice(0, 3) : DEFAULT_SUGGEST).map((label) => ({ label }));
 
   if (consent === null) {
     return (
@@ -838,7 +859,7 @@ export function AskSheet({
             <Chip label="메모" icon="document-text-outline" onPress={() => setText((t) => (t ? t : '메모: '))} />
           </View>
         ) : suggest.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipRow} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
             {suggest.map((x) => (
               <Chip
                 key={x.label}
@@ -1148,6 +1169,22 @@ function Chip({ label, icon, onPress }: { label: string; icon?: React.ComponentP
 }
 
 /** 「버튼」 위치 — 하루 흐름 오른쪽 아래, 광고 위 */
+/** AI 비서 아이콘 — 말풍선 안에 반짝임(빌드 15 피드백 「ai agent 비서같은 아이콘으로 … 물어보기 같은 텍스트는 빼고」) */
+export function AssistantIcon({ size = 28, color, spark }: { size?: number; color: string; spark: string }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 4.5h12A2.5 2.5 0 0 1 20.5 7v8a2.5 2.5 0 0 1-2.5 2.5h-6l-4.2 3.2c-.4.3-.8 0-.8-.4v-2.8H6A2.5 2.5 0 0 1 3.5 15V7A2.5 2.5 0 0 1 6 4.5Z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+      <Path d="M12 6.9c.38 2.05 1.4 3.07 3.45 3.45-2.05.38-3.07 1.4-3.45 3.45-.38-2.05-1.4-3.07-3.45-3.45 2.05-.38 3.07-1.4 3.45-3.45Z" fill={spark} />
+      <Path d="M16.2 12.6c.15.8.55 1.2 1.35 1.35-.8.15-1.2.55-1.35 1.35-.15-.8-.55-1.2-1.35-1.35.8-.15 1.2-.55 1.35-1.35Z" fill={spark} />
+    </Svg>
+  );
+}
+
 export function AskButton({ onPress }: { onPress: () => void }) {
   const c = useTheme();
   return (
@@ -1159,10 +1196,7 @@ export function AskButton({ onPress }: { onPress: () => void }) {
         onPress();
       }}
       style={({ pressed }) => [styles.fab, { backgroundColor: c.ink, shadowColor: c.text, opacity: pressed ? 0.9 : 1 }]}>
-      <Ionicons name="chatbubble-ellipses-outline" size={20} color={c.onInk} />
-      <ThemedText type="label" style={{ color: c.onInk, fontWeight: 700, fontSize: 15 }}>
-        물어보기
-      </ThemedText>
+      <AssistantIcon color={c.onInk} spark={c.heroAccent} />
     </Pressable>
   );
 }
@@ -1221,7 +1255,9 @@ const styles = StyleSheet.create({
   recTitle: { flex: 1, fontWeight: 700 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   small: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', height: 34, paddingHorizontal: 12, borderRadius: 17, borderWidth: 1.5 },
-  chips: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 8 },
+  chips: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 8 },
+  // 가로 ScrollView 는 기본이 flexGrow 1 · flexShrink 1 — 대화 칸과 높이를 나눠 갖다가 키보드가 오르면 눌려 칩이 잘린다(빌드 15 피드백)
+  chipRow: { flexGrow: 0, flexShrink: 0 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 36, paddingHorizontal: 12, borderRadius: 18, borderWidth: 1.5 },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 10 },
   round46: { width: 46, height: 46, borderRadius: 23, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
@@ -1229,13 +1265,11 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: 16,
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    height: 52,
-    paddingLeft: 16,
-    paddingRight: 18,
-    borderRadius: 26,
+    justifyContent: 'center',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     shadowOpacity: 0.25,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
