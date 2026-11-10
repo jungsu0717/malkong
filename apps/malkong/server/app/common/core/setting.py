@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     parse_per_device_per_day: int = 300
     # 기기마다 하루 물어보기 수 — 그날 기록을 함께 보내 한 번이 더 무거워서 문장 읽기보다 낮게 둔다
     agent_per_device_per_day: int = 200
+    # 물어보기에서 모델을 부를지 — false 면 /v1/agent 가 503 이고
+    # 앱은 규칙과 카드로만 답한다(decisions/044).
+    # 앱을 새로 내지 않고 끄려면 배포에 --update-env-vars MALKONG_AGENT_ENABLED=false
+    agent_enabled: bool = True
 
     @field_validator("database_url", "operator_device_keys", "gemini_api_key", mode="before")
     @classmethod

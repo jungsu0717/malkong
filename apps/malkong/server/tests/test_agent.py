@@ -879,3 +879,26 @@ def test_tool_range_follows_the_sentence(
 ) -> None:
     answer(fake, type="tools", calls=[call])
     assert ask(phone(app), text, tools=True).json()["calls"] == [NO_ARGS | want]
+
+
+def test_agent_can_be_switched_off(app, settings: Settings, fake: FakeModel) -> None:
+    """MALKONG_AGENT_ENABLED=false 면 모델을 부르지 않고 503.
+
+    앱은 규칙과 카드로만 답한다(decisions/044).
+    """
+    off = settings.model_copy(update={"agent_enabled": False})
+    app.dependency_overrides[get_agent_service] = lambda: AgentService(fake, off)
+    res = ask(phone(app), "이거 지워 줘")
+    assert res.status_code == 503
+    assert res.json()["code"] == "MODEL_UNAVAILABLE"
+    assert fake.calls == []
+
+
+def test_agent_logs_only_the_answer_kind(app, fake: FakeModel, caplog) -> None:
+    """로그에는 답의 종류와 기능 이름, 보낸 기록 수만 — 문장과 기록 내용은 적지 않는다."""
+    answer(fake, type="tools", calls=[{"tool": "find_name", "name": "손톱", "when": "today"}])
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"):
+        ask(phone(app), "오늘 손톱 잘랐나?", tools=True)
+    lines = [r.getMessage() for r in caplog.records if r.getMessage().startswith("agent: 답")]
+    assert lines == ["agent: 답 tools (find_name) 기록 6개"]
+    assert "손톱" not in caplog.text

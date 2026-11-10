@@ -28,8 +28,8 @@ import { FontFamily } from '@/constants/theme';
 import { parseAdd, type AddResult } from '@/data/add-parse';
 import { answerText, asksPlan, changesFrom, dayContext, lastTurns, MAX_CONTEXT, onlyAdds, planFromText, pointsOrEdits, selectedLabel, sourceOfKey, ymd, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
 import { askAgent, type AgentResponse } from '@/data/api';
-import { answerFor, asksAverage, copula, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
-import { runTool, type ToolResult } from '@/data/agent-tools';
+import { answerFor, asksAverage, copula, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitAll, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
+import { localIntent, runTool, suggestFor, toolLabel, type ToolCall, type ToolResult } from '@/data/agent-tools';
 import { asksCompare, asksDaySummary, compareAnswer, daySummaryAnswer, findAnswer, knowsTerm, questionFits, wakeAnswer, whoAnswer, type LocalAnswer, type LocalData } from '@/data/ask-local';
 import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
 import { useBaby } from '@/data/baby-context';
@@ -63,7 +63,9 @@ type Msg =
   | { id: string; from: 'app'; type: 'card'; result: AddResult; used: boolean }
   | { id: string; from: 'app'; type: 'changes'; changes: Change[]; reply: string | null; steps: string[]; state: ChangeState }
   /** 하루 초안 카드 — 초안 목록은 화면 상태(drafts)에서 읽고, 저장한 뒤에는 적은 기록을 둔다. replaced 는 새 카드로 바뀌어 보이지 않는 것 */
-  | { id: string; from: 'app'; type: 'draft'; steps: string[]; state: 'open' | 'saved' | 'dropped' | 'replaced'; saved: Saved[]; undone: boolean };
+  | { id: string; from: 'app'; type: 'draft'; steps: string[]; state: 'open' | 'saved' | 'dropped' | 'replaced'; saved: Saved[]; undone: boolean }
+  /** 「어떤 걸 알려 드릴까요?」 — 뜻이 여럿이거나 못 알아들은 질문. 고르면 앱이 그 기능을 바로 실행한다(decisions/044) */
+  | { id: string; from: 'app'; type: 'choose'; text: string; calls: ToolCall[]; picked: number | null };
 
 let seq = 0;
 const nextId = () => `m${++seq}`;
@@ -208,7 +210,7 @@ export function AskSheet({
   const dayLabel = `${day.getMonth() + 1}월 ${day.getDate()}일`;
 
   const push = (...m: Msg[]) => setMsgs((prev) => [...prev, ...m]);
-  const setMsg = (id: string, patch: Partial<Extract<Msg, { type: 'changes' }>> | Partial<Extract<Msg, { type: 'draft' }>> | { undone: boolean }) =>
+  const setMsg = (id: string, patch: Partial<Extract<Msg, { type: 'changes' }>> | Partial<Extract<Msg, { type: 'draft' }>> | Partial<Extract<Msg, { type: 'choose' }>> | { undone: boolean }) =>
     setMsgs((prev) => prev.map((x) => (x.id === id ? ({ ...x, ...patch } as Msg) : x)));
   const close = () => {
     onHighlight(null);
@@ -279,10 +281,8 @@ export function AskSheet({
       push({ id: nextId(), from: 'app', type: 'text', text: why });
       return;
     }
-    if (isQuestion(s)) {
-      push({ id: nextId(), from: 'app', type: 'text', text: '찾는 기록이 없어요. 수유, 기저귀, 잠처럼 기록 이름을 넣어 보세요.' });
-      return;
-    }
+    // 모델이 꺼졌거나 닿지 않을 때, 모델도 못 읽은 질문 — 할 수 있는 것 셋을 카드로
+    if (isQuestion(s)) return showChoices(s, suggestFor(s));
     const split = looksMulti(s) ? splitRecords(s, now) : [];
     if (split.length) return void saveAll(split);
     const r = parseAdd(s, now);
@@ -310,30 +310,7 @@ export function AskSheet({
       return;
     }
     // 앱 기능 — 모델은 기능과 값만 골랐고, 앱이 기기 안 기록으로 실행해 답을 쓴다(decisions/043)
-    if (res.type === 'tools') {
-      const sel2 = sel?.type === 'event' ? sel.event : selected?.type === 'event' ? selected.event : null;
-      const results = res.calls.map((c) => runTool(c, { data: local(), viewDay: day, now, selected: sel2 })).filter((r): r is ToolResult => r !== null);
-      const answers = results.flatMap((r) => (r.kind === 'answer' ? [r.answer] : []));
-      if (answers.length) {
-        setLastAnswer(null);
-        push({ id: nextId(), from: 'app', type: 'text', text: answers.map((a) => a.text).join(' ') });
-        const keys = [...new Set(answers.flatMap((a) => a.keys))];
-        onHighlight(keys.length ? { keys, label: answers.find((a) => a.keys.length)?.label ?? '' } : null);
-      }
-      for (const r of results) {
-        if (r.kind !== 'action') continue;
-        if (r.action === 'draft') return makeDraft(s, now, false);
-        if (r.action === 'diary') {
-          setDiary(true);
-          push({ id: nextId(), from: 'app', type: 'text', text: '메모 창을 열었어요' });
-        }
-        if (r.action === 'week') {
-          push({ id: nextId(), from: 'app', type: 'text', text: '일주일 보기로 바꿨어요' });
-          onShowWeek();
-        }
-      }
-      if (results.length) return;
-    }
+    if (res.type === 'tools' && (await runCalls(res.calls, s, now))) return;
     if (res.type === 'question') {
       const q = queryFromServer(res.question, now);
       // 물음에 없는 기록 종류를 고르면 쓰지 않는다 — 「손톱 잘랐나?」에 기저귀 답이 나왔다(빌드 15 피드백)
@@ -390,6 +367,47 @@ export function AskSheet({
       return;
     }
     fallback(s, now, false);
+  };
+
+  /** 앱 기능을 실행해 답을 보인다 — 실행한 것이 하나도 없으면 false */
+  const runCalls = async (calls: ToolCall[], s: string, now: Date): Promise<boolean> => {
+    const pickedEvent = selected?.type === 'event' ? selected.event : null;
+    const results = calls.map((c) => runTool(c, { data: local(), viewDay: day, now, selected: pickedEvent })).filter((r): r is ToolResult => r !== null);
+    const answers = results.flatMap((r) => (r.kind === 'answer' ? [r.answer] : []));
+    if (answers.length) {
+      setLastAnswer(null);
+      push({ id: nextId(), from: 'app', type: 'text', text: answers.map((a) => a.text).join(' ') });
+      const keys = [...new Set(answers.flatMap((a) => a.keys))];
+      onHighlight(keys.length ? { keys, label: answers.find((a) => a.keys.length)?.label ?? '' } : null);
+    }
+    for (const r of results) {
+      if (r.kind !== 'action') continue;
+      if (r.action === 'draft') {
+        await makeDraft(s, now, false);
+        return true;
+      }
+      if (r.action === 'diary') {
+        setDiary(true);
+        push({ id: nextId(), from: 'app', type: 'text', text: '메모 창을 열었어요' });
+      }
+      if (r.action === 'week') {
+        push({ id: nextId(), from: 'app', type: 'text', text: '일주일 보기로 바꿨어요' });
+        onShowWeek();
+      }
+    }
+    return results.length > 0;
+  };
+
+  /** 「어떤 걸 알려 드릴까요?」 카드 — 모델을 부르지 않는다 */
+  const showChoices = (s: string, calls: ToolCall[]) => {
+    tap();
+    push({ id: nextId(), from: 'app', type: 'choose', text: s, calls: calls.slice(0, 3), picked: null });
+  };
+  const choose = (m: Extract<Msg, { type: 'choose' }>, i: number) => {
+    if (m.picked !== null || busy) return;
+    tap();
+    setMsg(m.id, { picked: i });
+    void runCalls([m.calls[i]], m.text, new Date());
   };
 
   /** 「오늘 하루 기록 초안으로 작성해 줘. 10시 반에 분유 140 먹었어」 — 말한 기록은 규칙으로 읽고(못 읽으면 에이전트에게 문장만), 나머지 때는 평소 기록으로 채운다 */
@@ -477,6 +495,10 @@ export function AskSheet({
     if (!pointsOrEdits(s) && isQuestion(s)) {
       const a = wakeAnswer(s, events, now) ?? whoAnswer(s, events, now);
       if (a) return localReply(a);
+      // 「이번 주 낮잠이 지난주보다 줄었어?」 · 「요즘 몇 시간마다 먹어?」는 앱 기능으로, 「낮잠 줄었어?」처럼 뜻이 여럿이면 카드로(decisions/044)
+      const intent = localIntent(s);
+      if (intent?.kind === 'run' && (await runCalls([intent.call], s, now))) return;
+      if (intent?.kind === 'choose') return showChoices(s, intent.calls);
     }
 
     // 화면을 가리키거나 고치는 말은 규칙으로 읽지 않는다
@@ -496,7 +518,14 @@ export function AskSheet({
         // 「오늘 손톱 잘랐나?」 — 기록 이름이 없는 물음은 모델에게 보내지 않고 이름으로 찾아 없으면 없다고
         const a = findAnswer(s, local(), day, now);
         if (a) return localReply(a);
+        // 그래도 못 읽은 질문은 모델에게 보내지 않고 할 수 있는 것 셋을 카드로(decisions/044)
+        return showChoices(s, suggestFor(s));
       } else {
+        // 여러 기록이 섞인 말 — 조각을 모두 규칙으로 읽었으면 모델 없이 바로 저장(decisions/044)
+        if (looksMulti(s)) {
+          const all = splitAll(s, now);
+          if (all.length) return saveAll(all);
+        }
         // 기록하는 말 — 규칙으로 하나를 읽을 수 있고 여럿이 아니면 바로
         const r = parseAdd(s, now);
         if (r && !looksMulti(s)) {
@@ -807,6 +836,13 @@ export function AskSheet({
                 </View>
               );
             }
+            if (m.type === 'choose') {
+              return (
+                <View key={m.id} style={[styles.cardBox, styles.wide, { borderColor: c.border, backgroundColor: c.card }]}>
+                  <ChooseBody m={m} onPick={(i) => choose(m, i)} />
+                </View>
+              );
+            }
             // 변경 카드와 초안 카드는 말풍선 대신 단계 줄과 넓은 카드로 — 흐름을 고치는 일이라 한눈에 보이게
             if (m.type === 'changes' || m.type === 'draft') {
               return (
@@ -1079,6 +1115,49 @@ function RecTile({ tile, title, size }: { tile: Tile; title: string; size: numbe
 
 const TAG: Record<Change['op'], string> = { add: '추가', plan: '추가', update: '수정', delete: '삭제' };
 
+const CHOICE_TILE: Record<ReturnType<typeof toolLabel>['tile'], Tile> = { sleep: 'sleep', feed: 'formula', diaper: 'pee', doc: 'memo' };
+
+/** 「어떤 걸 알려 드릴까요?」 — 줄마다 앱 기능 하나. 고른 줄은 코랄 테두리와 ✓, 나머지는 흐려진다(10판 시안) */
+function ChooseBody({ m, onPick }: { m: Extract<Msg, { type: 'choose' }>; onPick: (i: number) => void }) {
+  const c = useTheme();
+  return (
+    <>
+      <ThemedText type="label" style={{ fontWeight: 700, fontSize: 14.5 }}>
+        어떤 걸 알려 드릴까요?
+      </ThemedText>
+      {m.calls.map((call, i) => {
+        const l = toolLabel(call);
+        const picked = m.picked === i;
+        const dim = m.picked !== null && !picked;
+        return (
+          <Pressable
+            key={i}
+            accessibilityRole="button"
+            accessibilityLabel={`${l.title}, ${l.sub}`}
+            accessibilityState={{ selected: picked, disabled: m.picked !== null }}
+            disabled={m.picked !== null}
+            onPress={() => onPick(i)}
+            style={({ pressed }) => [
+              styles.choice,
+              { borderColor: picked ? c.accent : c.border, backgroundColor: pressed ? c.surface : c.card, opacity: dim ? 0.45 : 1 },
+            ]}>
+            <RecTile tile={CHOICE_TILE[l.tile]} title={l.title} size={30} />
+            <View style={styles.flex1}>
+              <ThemedText type="label" style={{ fontWeight: 700, fontSize: 14.5 }} numberOfLines={1}>
+                {l.title}
+              </ThemedText>
+              <ThemedText type="caption" style={{ color: c.textSecondary }} numberOfLines={1}>
+                {l.sub}
+              </ThemedText>
+            </View>
+            {picked ? <Ionicons name="checkmark" size={18} color={c.accent} /> : m.picked === null ? <Ionicons name="chevron-forward" size={16} color={c.textTertiary} /> : null}
+          </Pressable>
+        );
+      })}
+    </>
+  );
+}
+
 /** 변경 카드 — 「이렇게 바꿀게요.」, 카드들, 「모두 적용」 · 「취소」, 적용한 뒤 「되돌리기」 */
 function ChangesBody({ m, busy, onApply, onCancel, onUndo }: { m: Extract<Msg, { type: 'changes' }>; busy: boolean; onApply: () => void; onCancel: () => void; onUndo: () => void }) {
   const c = useTheme();
@@ -1273,6 +1352,8 @@ const styles = StyleSheet.create({
   stepDot: { width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   wide: { alignSelf: 'stretch', gap: 8 },
   cardBox: { borderWidth: 1.5, borderRadius: 16, padding: 12, gap: 8 },
+  choice: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 14, borderWidth: 1.5 },
+  flex1: { flex: 1, minWidth: 0 },
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   more: { flexDirection: 'row', alignItems: 'center', gap: 2, height: 28, paddingLeft: 6 },
   draftRow: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 32 },

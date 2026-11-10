@@ -281,11 +281,20 @@ export function inputsFromServer(records: ServerRecord[], now: Date, text = ''):
  * 서버가 안 될 때 — 「~고」, 「하고」, 쉼표로 나눠 규칙으로 하나씩 읽는다. 앞쪽에만 때가 있으면(「10분 전에 …갈고 …먹였어」) 뒤쪽도 그 때로 본다.
  * 다 읽은 기록만 돌려준다.
  */
-export function splitRecords(text: string, now: Date): ParsedInput[] {
-  const parts = text
+const partsOf = (text: string) =>
+  text
     .split(/(?<=\S)고\s+|하고\s+|그리고\s+|,\s*/)
     .map((x) => x.trim())
     .filter(Boolean);
+
+/** 조각을 모두 규칙으로 읽었을 때만 그 기록들 — 하나라도 못 읽었으면 [](모델이 읽는다). 모델을 덜 부르려고(decisions/044) */
+export function splitAll(text: string, now: Date): ParsedInput[] {
+  const out = splitRecords(text, now);
+  return out.length >= 2 && out.length === partsOf(text).length ? out : [];
+}
+
+export function splitRecords(text: string, now: Date): ParsedInput[] {
+  const parts = partsOf(text);
   if (parts.length < 2) return [];
   const out: ParsedInput[] = [];
   let firstAt: string | null = null;

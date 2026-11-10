@@ -77,7 +77,7 @@ export function rangeOf(key: FindRangeKey, now = new Date(), n = 7, date: number
   }
 }
 
-function readWhat(text: string): FindWhat | null {
+export function readWhat(text: string): FindWhat | null {
   if (/분유/.test(text)) return 'formula';
   if (/모유|젖/.test(text)) return 'breast';
   if (/수유|먹었|먹였|먹은/.test(text)) return 'feed';

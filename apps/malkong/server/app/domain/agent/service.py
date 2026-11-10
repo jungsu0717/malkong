@@ -84,7 +84,7 @@ class AgentService:
         self._calls: dict[tuple[str, date], int] = defaultdict(int)
 
     async def ask(self, device: Device, req: AgentRequest, today: date) -> AgentResponse:
-        if self._model is None:
+        if self._model is None or not self._settings.agent_enabled:
             raise _unavailable()
         self._count(device, today)
         message = user_message(
@@ -105,7 +105,14 @@ class AgentService:
             # exc 에는 예외 종류와 상태 코드만 있다
             logger.warning("agent: 모델에 닿지 못함 (%s)", exc)
             raise _unavailable() from None
-        return read_answer(text, req)
+        res = read_answer(text, req)
+        # 모델을 부른 횟수를 답의 종류로만 센다 — 문장, 기록, 모델 답은 적지 않는다(decisions/044).
+        # Cloud Run 로그에서 「agent: 답」으로 찾아 하루 몇 번 모델로 갔는지 본다
+        tools = ",".join(c.tool for c in res.calls)
+        logger.info(
+            "agent: 답 %s%s 기록 %d개", res.type, f" ({tools})" if tools else "", len(req.records)
+        )
+        return res
 
     def _count(self, device: Device, today: date) -> None:
         with self._lock:

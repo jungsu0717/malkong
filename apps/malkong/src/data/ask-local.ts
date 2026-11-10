@@ -52,6 +52,8 @@ const flat = (s: string) => s.replace(/\s+/g, '').toLowerCase();
 export function asksDaySummary(text: string): boolean {
   const s = clean(text);
   if (EVENT_WORDS.test(s) || /할 ?일|일정|루틴|초안|일기|메모/.test(s)) return false;
+  // 「요즘 어때?」, 「최근 어땠어?」는 하루가 아니라 며칠을 묻는 말 — 카드로 고르게 한다
+  if (/요즘|최근|이번 ?주|지난 ?주/.test(s) && !/오늘|어제|그제/.test(s)) return false;
   return /(뭐|뭘|무엇|무슨 ?일).*(했|하고|있었|보냈|지냈|해써|했어)|(요약|정리)(해|좀|하면)|어땠|어때$|어떻게 ?(보냈|지냈)/.test(s);
 }
 
@@ -65,7 +67,8 @@ export function searchTerms(text: string): string[] {
     if (VERB.test(w)) continue;
     // 조사
     w = w.replace(/(이랑|에서|하고|은|는|이|가|을|를|도|만|요|의|에|랑)$/, (m, _g, i: number) => (i >= 2 ? '' : m));
-    if (w.length < 2 || STOP.has(w) || /^언제/.test(w) || EVENT_WORDS.test(w)) continue;
+    // 「어때」, 「괜찮아」, 「어떻게」는 찾을 이름이 아니다 — 「애기 요즘 어때?」에서 「어때」 기록을 찾았다
+    if (w.length < 2 || STOP.has(w) || /^(언제|어때|어땠|어떻|어떤|어떠|괜찮|잘 ?하고|잘하)/.test(w) || EVENT_WORDS.test(w)) continue;
     out.push(w.toLowerCase());
   }
   return [...new Set(out)];

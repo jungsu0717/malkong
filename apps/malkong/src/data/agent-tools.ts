@@ -12,7 +12,7 @@ import { answerFor, copula, valueText } from './ask.ts';
 import { feedSessions, hhmm, nextFeedGuess, usualFeedGap } from './day-flow.ts';
 import { durationLabel, startOfDay } from './event-summary.ts';
 import type { CareEvent } from './events.ts';
-import { rangeOf, runFind, WHAT_LABEL, type FindMeasure, type FindRange, type FindRangeKey, type FindWhat } from './find-parse.ts';
+import { rangeOf, readWhat, runFind, WHAT_LABEL, type FindMeasure, type FindRange, type FindRangeKey, type FindWhat } from './find-parse.ts';
 
 const MIN = 60 * 1000;
 const DAY = 24 * 60 * MIN;
@@ -137,13 +137,22 @@ export function compareRanges(what: FindWhat, measure: FindMeasure, a: FindRange
   const single = (r: FindRange) => r.to - r.from <= DAY + 60 * MIN;
   const sameTime = a === 'today' && single(rb) && b !== 'today';
   if (sameTime) rb = { ...rb, to: rb.from + (now.getTime() - startOfDay(now).getTime()) };
-  const va = runFind({ what, range: ra, measure }, events, now).value;
-  const vb = runFind({ what, range: rb, measure }, events, now).value;
+  const fa = runFind({ what, range: ra, measure }, events, now);
+  const fb = runFind({ what, range: rb, measure }, events, now);
+  const va = fa.rows.length ? fa.value : null;
+  const vb = fb.rows.length ? fb.value : null;
   const unit = va?.unit ?? vb?.unit;
   const label = WHAT_LABEL[what];
-  if (!unit) return { text: `${ra.label}와 ${rb.label} 모두 ${label} 기록이 없어요.`, keys: [], label: '' };
+  const both = `${ra.label}${copula(ra.label) === '이에요' ? '과' : '와'} ${rb.label}`;
+  if (!unit) return { text: `${both} 모두 ${label} 기록이 없어요.`, keys: [], label: '' };
   const multi = !single(ra) || !single(rb);
   const per = (n: number, r: FindRange) => (multi ? n / daysIn(r, now) : n);
+  // 한쪽에만 기록이 있으면 견주지 않고 있는 쪽만 — 「하루 평균 0분」처럼 보이지 않게
+  if (!va || !vb) {
+    const [has, r, none] = va ? [va, ra, rb] : [vb as NonNullable<typeof vb>, rb, ra];
+    const v = valueText(per(has.n, r), unit);
+    return { text: `${topic(none.label)} ${label} 기록이 없어요. ${topic(r.label)} ${multi ? '하루 평균 ' : ''}${v}${r === ra ? copula(v) : was(v)}.`, keys: [], label: '' };
+  }
   const x = per(va?.n ?? 0, ra);
   const y = per(vb?.n ?? 0, rb);
   const fx = valueText(x, unit);
@@ -176,4 +185,151 @@ export function feedGapAnswer(events: CareEvent[], now: Date): LocalAnswer {
   const guess = nextFeedGuess(events, now);
   if (guess && guess.at.getTime() > now.getTime()) lines.push(`다음은 ${hhmm(guess.at.getTime())}쯤이에요.`);
   return { text: lines.join(' '), keys: [last.id], label: '마지막 수유' };
+}
+
+// --- 모델 없이 고르는 기능과 카드(decisions/044) ---
+// 질문은 모델로 보내지 않는다. 앱 규칙이 기능을 고르고, 뜻이 여럿이면 「어떤 걸 알려 드릴까요?」 카드로 묻는다.
+
+/** 문장의 기간 낱말 — 앞에 있는 것부터. 서버의 ranges_in(service.py)과 같은 규칙 */
+const RANGE_WORDS: [FindRangeKey, RegExp][] = [
+  ['lastNight', /어젯밤|어제\s*밤|지난\s*밤/g],
+  ['tonight', /오늘\s*밤/g],
+  ['thisWeek', /이번\s*주/g],
+  ['lastWeek', /지난\s*주|저번\s*주/g],
+  ['recent7', /최근\s*(일주일|7일)|요즘\s*일주일/g],
+  ['recent30', /한\s*달|30일/g],
+  ['yesterday', /어제/g],
+  ['today', /오늘/g],
+];
+
+export function rangesIn(text: string): FindRangeKey[] {
+  const taken: [number, number][] = [];
+  const found: [number, FindRangeKey][] = [];
+  for (const [key, re] of RANGE_WORDS) {
+    for (const m of text.matchAll(re)) {
+      const a = m.index ?? 0;
+      const b = a + m[0].length;
+      if (taken.some(([x, y]) => a < y && x < b)) continue;
+      taken.push([a, b]);
+      found.push([a, key]);
+    }
+  }
+  return [...new Set(found.sort((x, y) => x[0] - y[0]).map(([, k]) => k))];
+}
+
+/** 견줄 기간을 말하지 않았을 때 — 서버의 _RANGE_B 와 같다 */
+const RANGE_B: Partial<Record<FindRangeKey, FindRangeKey>> = { today: 'yesterday', thisWeek: 'lastWeek', recent7: 'lastWeek', tonight: 'lastNight' };
+const COMPARE_WORDS = /줄었|늘었|많이|적게|덜 |더 |길어|짧아|많아|적어|길었|짧았|비교|차이/;
+
+function measureOf(text: string, what: FindWhat): FindMeasure {
+  if (/몇\s*번|자주|횟수/.test(text)) return 'count';
+  if (/ml|미리|양|얼마나\s*먹/.test(text) || what === 'formula') return 'amount';
+  if (what === 'sleep' || what === 'nap' || what === 'night' || what === 'breast') return 'duration';
+  return 'count';
+}
+
+export type LocalIntent = { kind: 'run'; call: ToolCall } | { kind: 'choose'; calls: ToolCall[] };
+
+/**
+ * 질문에서 기능 고르기 — 두 기간 견주기, 기간 없는 견주기(카드로 묻는다), 수유 간격. 해당하지 않으면 null.
+ * 「이번 주 낮잠이 지난주보다 줄었어?」 → compare_ranges, 「낮잠 줄었어?」 → 카드 셋, 「요즘 몇 시간마다 먹어?」 → feed_gap
+ */
+export function localIntent(text: string): LocalIntent | null {
+  if (/몇\s*시간\s*마다|간격|텀이/.test(text) && !/낮잠|밤잠|잠|기저귀|대변|소변/.test(text)) return { kind: 'run', call: { tool: 'feed_gap' } };
+  if (!COMPARE_WORDS.test(text)) return null;
+  const what = readWhat(text) ?? (/먹|맘마/.test(text) ? 'feed' : null);
+  if (!what) return null;
+  const measure = measureOf(text, what);
+  const ranges = rangesIn(text);
+  if (ranges.length >= 2) return { kind: 'run', call: { tool: 'compare_ranges', what, measure, range: ranges[0], rangeB: ranges[1] } };
+  if (ranges.length === 1 && RANGE_B[ranges[0]]) return { kind: 'run', call: { tool: 'compare_ranges', what, measure, range: ranges[0], rangeB: RANGE_B[ranges[0]] } };
+  if (ranges.length) return null;
+  // 기간이 없으면 뜻이 여럿이다 — 이번 주와 지난주, 오늘과 어제, 방금 것과 그 앞 것
+  const calls: ToolCall[] = [
+    { tool: 'compare_ranges', what, measure, range: 'thisWeek', rangeB: 'lastWeek' },
+    { tool: 'compare_ranges', what, measure, range: 'today', rangeB: 'yesterday' },
+  ];
+  if (['feed', 'formula', 'breast', 'sleep', 'nap', 'night'].includes(what)) calls.push({ tool: 'compare_previous', what });
+  return { kind: 'choose', calls };
+}
+
+/** 못 알아들은 질문에 보일 것 셋 — 문장에 나온 기록 종류에 맞춰 */
+export function suggestFor(text: string): ToolCall[] {
+  const what = readWhat(text);
+  if (what === 'sleep' || what === 'nap' || what === 'night') {
+    return [
+      { tool: 'wake', sleep: what === 'nap' ? 'nap' : what === 'night' ? 'night' : 'any' },
+      { tool: 'total', what, range: 'today', measure: 'duration' },
+      { tool: 'compare_ranges', what, measure: 'duration', range: 'thisWeek', rangeB: 'lastWeek' },
+    ];
+  }
+  if (what === 'feed' || what === 'formula' || what === 'breast') {
+    return [{ tool: 'last', what }, { tool: 'feed_gap' }, { tool: 'compare_ranges', what, measure: measureOf(text, what), range: 'today', rangeB: 'yesterday' }];
+  }
+  if (what === 'diaper' || what === 'pee' || what === 'poo') {
+    return [{ tool: 'last', what }, { tool: 'total', what, range: 'today', measure: 'count' }, { tool: 'who', what }];
+  }
+  if (what) return [{ tool: 'last', what }, { tool: 'day_summary', day: 'today' }, { tool: 'show_week' }];
+  return [
+    { tool: 'day_summary', day: 'today' },
+    { tool: 'compare_ranges', what: 'sleep', measure: 'duration', range: 'thisWeek', rangeB: 'lastWeek' },
+    { tool: 'feed_gap' },
+  ];
+}
+
+const RANGE_WORD: Record<string, string> = {
+  today: '오늘',
+  yesterday: '어제',
+  lastNight: '어젯밤',
+  tonight: '오늘 밤',
+  thisWeek: '이번 주',
+  lastWeek: '지난주',
+  recent7: '최근 일주일',
+  recent30: '최근 한 달',
+};
+const and = (w: string) => `${w}${copula(w) === '이에요' ? '과' : '와'}`;
+
+export type ToolTile = 'sleep' | 'feed' | 'diaper' | 'doc';
+export type ToolLabel = { title: string; sub: string; tile: ToolTile };
+
+/** 카드 한 줄의 글 — 앱이 쓴다(모델이 쓴 글은 보이지 않는다, 헌장 13) */
+export function toolLabel(call: ToolCall): ToolLabel {
+  const what = (call.what ?? 'feed') as FindWhat;
+  const name = WHAT_LABEL[what];
+  const tile: ToolTile = ['sleep', 'nap', 'night'].includes(what) ? 'sleep' : ['diaper', 'pee', 'poo'].includes(what) ? 'diaper' : ['feed', 'formula', 'breast'].includes(what) ? 'feed' : 'doc';
+  const a = RANGE_WORD[call.range ?? ''] ?? '';
+  const b = RANGE_WORD[call.rangeB ?? ''] ?? '';
+  switch (call.tool) {
+    case 'compare_ranges': {
+      const multi = !['today', 'yesterday', 'lastNight', 'tonight'].includes(call.range ?? '') || !['today', 'yesterday', 'lastNight', 'tonight'].includes(call.rangeB ?? '');
+      const sub = multi ? '하루 평균으로 비교해요' : call.range === 'today' ? '지금 시각까지 비교해요' : '하루 합계로 비교해요';
+      return { title: `${and(a)} ${b} ${name}`, sub, tile };
+    }
+    case 'compare_previous':
+      return { title: `방금 ${and(name)} 그 앞 ${name}`, sub: what === 'formula' ? '먹은 양으로 비교해요' : tile === 'sleep' ? '잔 시간으로 비교해요' : '한 번씩 비교해요', tile };
+    case 'total':
+      return { title: `${a} ${name}`, sub: call.measure === 'duration' ? '모두 몇 시간인지와 평소' : call.measure === 'amount' ? '모두 얼마나 먹었는지와 평소' : '몇 번인지와 평소', tile };
+    case 'average':
+      return { title: `${a} ${name} 하루 평균`, sub: '여러 날의 하루 평균', tile };
+    case 'last':
+      return { title: `마지막 ${name}`, sub: '언제였는지와 지난 시간', tile };
+    case 'feed_gap':
+      return { title: '요즘 수유 간격', sub: '최근 사흘 간격과 다음 수유 예상', tile: 'feed' };
+    case 'wake':
+      return { title: call.sleep === 'nap' ? '낮잠에서 깬 시각' : call.sleep === 'night' ? '아침에 깬 시각' : '마지막으로 깬 시각', sub: '깬 시각과 잔 시간', tile: 'sleep' };
+    case 'who':
+      return { title: `마지막 ${name}${copula(name) === '이에요' ? '을' : '를'} 남긴 사람`, sub: '가족과 함께 쓸 때 적혀요', tile };
+    case 'find_name':
+      return { title: `「${call.name ?? ''}」 기록`, sub: '했는지와 마지막 때', tile: 'doc' };
+    case 'day_summary':
+      return { title: `${RANGE_WORD[call.day ?? ''] ?? '그날'} 하루 요약`, sub: '수유, 기저귀, 잠과 루틴', tile: 'doc' };
+    case 'day_draft':
+      return { title: '오늘 하루 기록 초안', sub: '평소 시각으로 채워요', tile: 'doc' };
+    case 'write_diary':
+      return { title: '메모 쓰기', sub: '그날 기록을 보며 써요', tile: 'doc' };
+    case 'show_week':
+      return { title: '일주일 보기', sub: '7일을 한눈에', tile: 'doc' };
+    default:
+      return { title: call.tool, sub: '', tile: 'doc' };
+  }
 }

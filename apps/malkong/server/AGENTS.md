@@ -65,6 +65,8 @@ gcloud run deploy malkong-server --source . --region asia-northeast3 \
 # `gcloud run services update-traffic malkong-server --region asia-northeast3 --to-latest` 와 `--remove-tags <이름>` 으로 넘긴다.
 # --no-traffic 을 한 번 쓰면 트래픽이 그 판에 고정되므로 --to-latest 로 풀어 줘야 다음 배포가 자동으로 넘어간다
 
+# 물어보기의 모델을 끄려면(비용이 걱정되거나 Gemini 가 붐빌 때) --update-env-vars MALKONG_AGENT_ENABLED=false, 다시 켜려면 true.
+# 꺼도 앱은 규칙과 카드로 답한다(decisions/044). 하루 몇 번 모델로 갔는지는 Cloud Run 로그에서 「agent: 답」으로 찾는다
 # 문장 읽기(/v1/parse)는 Secret Manager 의 malkong-gemini-key 를 MALKONG_GEMINI_API_KEY 로 읽는다(2026-11-09, task common/031).
 # 물어보기(/v1/agent)도 같은 키를 쓴다. 이 키가 빠지면 /v1/parse 와 /v1/agent 만 503 이 되고 나머지는 그대로 돈다. 모델을 바꿀 때는 --update-env-vars MALKONG_GEMINI_MODEL=<모델 id> 를 더한다.
 # 배포가 비밀값을 읽을 권한이 없다고 멈추면 Julian 이 서비스 계정(481623022922-compute@…)에

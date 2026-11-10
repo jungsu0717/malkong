@@ -235,6 +235,7 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 평시     ▸ tools 면 줄마다 검사한다 — 목록에 없는 기능, 그 기능의 값이 빠지거나 목록 밖인 줄, 혼잣말 흔적이 있거나 20자를 넘는 `name` 은 버리고,
            그 기능이 쓰지 않는 칸은 비운다. 남은 줄이 없으면 unknown. 요청의 `tools` 가 false 인데 모델이 tools 를 고르면 unknown 이다.
 평시     ▸ 앱은 tools 의 기능을 기기 안의 모든 기록으로 실행하고 답 문장을 쓴다. 보는 날 밖의 기록은 서버로 오지 않는다.
+조건 위반 ▸ 서버에서 물어보기 모델을 꺼 두었으면(`MALKONG_AGENT_ENABLED=false`) 503 `MODEL_UNAVAILABLE`. 앱은 규칙과 카드로 답한다(decisions/044).
 조건 위반 ▸ 키가 없거나 모르는 키면 401 DEVICE_KEY_INVALID. 형식이 틀린 요청(겹친 ref 포함)은 422 INVALID_REQUEST.
 조건 위반 ▸ 기기마다 하루(한국 시간 0시에 바뀐다) 200번을 넘으면 429 LIMIT_EXCEEDED. 문장 읽기의 300번과 따로 센다.
 조건 위반 ▸ 서버에 모델 키가 없거나 모델에 닿지 못하면(네트워크, 15초 시간 초과, 모델 회사의 4xx · 5xx) 503 MODEL_UNAVAILABLE.
@@ -271,3 +272,4 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 - 2026-11-09 `POST /v1/parse` — 물어보기 창의 문장 읽기(한 문장의 기록 여럿, 찾을 조건, health, unknown), 기기마다 하루 300번, 503 MODEL_UNAVAILABLE (decisions/039, task common/031)
 - 2026-11-09 `POST /v1/agent` — 물어보기. 문장, 앞 대화, 동의했을 때 보고 있는 날의 기록과 선택한 기록을 받아 답 글(answer)이나 바꿀 것(add, update, delete, plan), 찾을 조건, health, unknown 을 돌려준다. 기기마다 하루 200번 (decisions/040, task common/032)
 - 2026-11-10 `POST /v1/agent` 에 요청 `tools` 와 응답 `type: tools` · `calls[]` — 모델이 앱 기능(tools.json)과 값만 고르고 앱이 실행한다. `tools` 를 보내지 않는 앱은 지금 그대로 (decisions/043, task today/026)
+- 2026-11-10 `POST /v1/agent` — 서버에서 모델을 꺼 두면 503 `MODEL_UNAVAILABLE` (decisions/044)
