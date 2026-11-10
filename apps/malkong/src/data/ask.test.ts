@@ -67,7 +67,7 @@ test('몇 ml — 합계 문장과 그 기록들', () => {
   assert.match(a.text, /^오늘 분유 260ml예요\./);
   assert.equal(a.keys.length, 2);
   const none = answerFor(parseFind('어제 대변 몇 번?', NOW)!, EVENTS, NOW);
-  assert.equal(none.text, '어제에 찾는 기록이 없어요.');
+  assert.equal(none.text, '어제는 대변 기록이 없어요.');
 });
 
 test('서버 답 — 찾을 조건과 기록 입력', () => {

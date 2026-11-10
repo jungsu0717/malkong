@@ -381,7 +381,7 @@ function lineOf(s: CtxSource): string {
 }
 
 /** 두 기록 비교 — 같은 종류의 분유 양이나 모유 · 잠의 걸린 시간만. 앞이 물은 기록, 뒤가 비교할 기록 */
-function compare(a: CtxSource, b: CtxSource, now: Date): string | null {
+export function compare(a: CtxSource, b: CtxSource, now: Date): string | null {
   if (a.type !== 'event' || b.type !== 'event') return null;
   const x = a.event;
   const y = b.event;

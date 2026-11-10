@@ -6,7 +6,8 @@
  */
 
 import { parseAdd } from './add-parse.ts';
-import { durationLabel } from './event-summary.ts';
+import { nextFeedGuess } from './day-flow.ts';
+import { durationLabel, startOfDay } from './event-summary.ts';
 import { AMOUNT_RANGE, type CareEvent, type EventInput } from './events.ts';
 import { findWhen, parseFind, rangeOf, runFind, WHAT_LABEL, type FindQuery, type FindRangeKey, type FindWhat } from './find-parse.ts';
 
@@ -73,6 +74,41 @@ function daysIn(q: FindQuery, now: Date): number {
   return Math.ceil((Math.min(q.range.to, now.getTime()) - q.range.from) / (24 * 60 * MIN));
 }
 
+const DAY_MS = 24 * 60 * MIN;
+const was = (w: string) => (copula(w) === '이에요' ? '이었어요' : '였어요');
+const valueText = (n: number, unit: 'min' | 'ml' | 'count') =>
+  unit === 'min' ? durationLabel(Math.round(n / 5) * 5) : unit === 'ml' ? `${Math.round(n / 10) * 10}ml` : `${Number(n.toFixed(1))}번`;
+
+/**
+ * 평소와 견준 한 줄 — 우리 아기의 지난 기록에서 나온 값일 뿐 정상 · 이상을 말하지 않는다(헌장 5).
+ * 오늘을 물으면 지난 7일의 「이 시각까지」 평균, 지난 하루(어제 · 그날)를 물으면 그 앞 7일의 하루 평균. 기록이 있던 날이 사흘보다 적으면 null.
+ */
+export function usualLine(q: FindQuery, events: CareEvent[], now: Date): string | null {
+  if (q.measure === 'last') return null;
+  const today = startOfDay(now).getTime();
+  const single = q.range.to - q.range.from <= DAY_MS + 60 * MIN && (q.range.key === 'today' || q.range.key === 'yesterday' || q.range.key === 'date');
+  if (!single) return null;
+  const isToday = q.range.key === 'today';
+  const span = isToday ? now.getTime() - today : DAY_MS;
+  const base = isToday ? today : startOfDay(new Date(q.range.from)).getTime();
+  const recorded = (from: number) => events.some((e) => {
+    const at = new Date(e.startAt).getTime();
+    return at >= from && at < from + DAY_MS;
+  });
+  let unit: 'min' | 'ml' | 'count' | null = null;
+  const vals: number[] = [];
+  for (let d = 1; d <= 7; d++) {
+    const from = startOfDay(new Date(base - d * DAY_MS + 12 * 60 * MIN)).getTime();
+    if (!recorded(from)) continue;
+    const r = runFind({ ...q, range: { key: 'date', from, to: from + span, label: '' } }, events, now);
+    if (r.value) unit = r.value.unit;
+    vals.push(r.value?.n ?? 0);
+  }
+  if (vals.length < 3 || !unit) return null;
+  const avg = valueText(vals.reduce((a, b) => a + b, 0) / vals.length, unit);
+  return isToday ? `지난 ${vals.length}일은 이 시각까지 평균 ${avg}${was(avg)}.` : `그 앞 ${vals.length}일은 하루 평균 ${avg}${was(avg)}.`;
+}
+
 /** 찾을 조건으로 답 문장을 만든다. offset 은 마지막에서 몇 번째 앞인지(그 전 수유는?). average 면 여러 날의 답에 하루 평균을 붙인다 */
 export function answerFor(q: FindQuery, events: CareEvent[], now: Date, offset = 0, average = false): Answer {
   const a = runFind(q, events, now);
@@ -84,8 +120,11 @@ export function answerFor(q: FindQuery, events: CareEvent[], now: Date, offset =
     const ago = Math.max(1, Math.round((now.getTime() - row.at) / MIN));
     const when = findWhen(row.at, now);
     const agoText = ago < 24 * 60 ? ` ${durationLabel(ago)} 전이에요.` : '';
+    // 마지막 수유를 물으면 평소 간격으로 본 다음 수유 — 하루 흐름의 「다음 수유」와 같은 셈
+    const guess = offset === 0 && (q.what === 'feed' || q.what === 'formula' || q.what === 'breast') ? nextFeedGuess(events, now) : null;
+    const next = guess && guess.at.getTime() > now.getTime() ? ` 평소 간격(${durationLabel(guess.gap)})으로 보면 다음은 ${String(guess.at.getHours()).padStart(2, '0')}:${String(guess.at.getMinutes()).padStart(2, '0')}쯤이에요.` : '';
     return {
-      text: `${when}, ${row.title}${copula(row.title)}.${agoText}`,
+      text: `${when}, ${row.title}${copula(row.title)}.${agoText}${next}`,
       keys: [row.key],
       label: offset > 0 ? `그 전 ${what}` : `이전 ${what}`,
       open: { at: row.at, key: row.key, kind: row.kind },
@@ -93,7 +132,12 @@ export function answerFor(q: FindQuery, events: CareEvent[], now: Date, offset =
       offset,
     };
   }
-  if (a.rows.length === 0) return { text: `${q.range.label}에 찾는 기록이 없어요.`, keys: [], label: '', open: null, query: q, offset: 0 };
+  if (a.rows.length === 0) {
+    const usual = usualLine(q, events, now);
+    // 「오늘은 분유 기록이 없어요.」 — 「오늘에 찾는 기록이 없어요」는 조사가 어색했다
+    const topicLabel = `${q.range.label}${copula(q.range.label) === '이에요' ? '은' : '는'}`;
+    return { text: `${topicLabel} ${what} 기록이 없어요.${usual ? ` ${usual}` : ''}`, keys: [], label: '', open: null, query: q, offset: 0 };
+  }
   const lines = [`${q.range.label} ${what} ${a.big}${copula(a.big)}.`];
   const days = daysIn(q, now);
   if (average && a.value && days > 1) {
@@ -101,6 +145,8 @@ export function answerFor(q: FindQuery, events: CareEvent[], now: Date, offset =
     const avg = a.value.unit === 'min' ? durationLabel(Math.round(v)) : a.value.unit === 'ml' ? `${Math.round(v)}ml` : `${Number(v.toFixed(1))}번`;
     lines.push(`하루 평균 ${avg}${copula(avg)}.`);
   } else if (a.line) lines.push(`${a.line}${copula(a.line)}.`);
+  const usual = average ? null : usualLine(q, events, now);
+  if (usual) lines.push(usual);
   return { text: lines.join(' '), keys: a.rows.map((r) => r.key), label: what, open: null, query: q, offset: 0 };
 }
 

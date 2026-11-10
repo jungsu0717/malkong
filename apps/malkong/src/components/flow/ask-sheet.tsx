@@ -29,7 +29,7 @@ import { parseAdd, type AddResult } from '@/data/add-parse';
 import { answerText, asksPlan, changesFrom, dayContext, lastTurns, MAX_CONTEXT, onlyAdds, planFromText, pointsOrEdits, selectedLabel, sourceOfKey, ymd, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
 import { askAgent, type AgentResponse } from '@/data/api';
 import { answerFor, asksAverage, copula, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
-import { asksDaySummary, daySummaryAnswer, findAnswer, knowsTerm, questionFits, type LocalAnswer, type LocalData } from '@/data/ask-local';
+import { asksCompare, asksDaySummary, compareAnswer, daySummaryAnswer, findAnswer, knowsTerm, questionFits, wakeAnswer, whoAnswer, type LocalAnswer, type LocalData } from '@/data/ask-local';
 import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
 import { useBaby } from '@/data/baby-context';
 import { applyChangeToDrafts, asksDraft, dayDrafts, draftContext, draftSummary, draftWhen, negatedDrafts, stripDraftAsk, type Draft, type DraftSet } from '@/data/day-draft';
@@ -440,6 +440,17 @@ export function AskSheet({
         const said = looksMulti(s) ? splitRecords(s, now) : recordOf(s, now);
         if (said.length) return addToDraft(said, now);
       }
+    }
+
+    // 「이거 앞 수유보다 많이 먹은 거야?」 — 선택한 기록(없으면 마지막)과 그 앞 것을 앱이 바로 견준다
+    if (asksCompare(s)) {
+      const a = compareAnswer(s, events, selected?.type === 'event' ? selected.event : null, now);
+      if (a) return localReply(a);
+    }
+    // 「몇 시에 일어났어?」 · 「누가 마지막으로 분유 줬어?」 — 기록으로 답할 수 있는 물음은 모델을 부르지 않는다
+    if (!pointsOrEdits(s) && isQuestion(s)) {
+      const a = wakeAnswer(s, events, now) ?? whoAnswer(s, events, now);
+      if (a) return localReply(a);
     }
 
     // 화면을 가리키거나 고치는 말은 규칙으로 읽지 않는다

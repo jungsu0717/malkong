@@ -8,16 +8,19 @@
  * 빌드 15 에서 「오늘 손톱 잘랐나?」에 기저귀 답이, 「나 오늘 전체 뭐했어?」에 「할 일로 추가」 카드가 나와서 만들었다.
  */
 
+import { compare, type CtxSource } from './agent.ts';
 import { copula } from './ask.ts';
 import { dayFacts, routineDones, todoDones, type Fact } from './day-facts.ts';
-import { hhmm } from './day-flow.ts';
-import { durationLabel, startOfDay, statsBetween } from './event-summary.ts';
+import { feedSessions, hhmm, isNightStart } from './day-flow.ts';
+import { durationLabel, eventTitle, minutesOf, startOfDay, statsBetween } from './event-summary.ts';
+import { findWhen, parseFind, rangeOf, runFind } from './find-parse.ts';
 import type { CareEvent } from './events.ts';
 import type { Routine, RoutineLog } from './routine.ts';
 import type { Memo } from './stage.ts';
 import type { Todo } from './todos.ts';
 
-const DAY = 24 * 60 * 60 * 1000;
+const MIN = 60 * 1000;
+const DAY = 24 * 60 * MIN;
 
 export type LocalData = {
   events: CareEvent[];
@@ -213,4 +216,95 @@ const WHAT_WORDS: Record<string, RegExp> = {
 export function questionFits(text: string, what: string): boolean {
   const re = WHAT_WORDS[what];
   return re ? re.test(text) : true;
+}
+
+const wasWord = (w: string) => (copula(w) === '이에요' ? '이었어요' : '였어요');
+const subj = (w: string) => `${w}${copula(w) === '이에요' ? '이' : '가'}`;
+
+/**
+ * 깬 시각 — 「몇 시에 일어났어?」, 「아까 낮잠 몇 시에 깼어?」. 지난 7일의 같은 잠(밤잠 · 낮잠) 평균을 한 줄 붙인다. 깬 시각을 묻는 말이 아니면 null.
+ */
+export function wakeAnswer(text: string, events: CareEvent[], now: Date): LocalAnswer | null {
+  if (!/(일어났|일어난|깼|깬|깨어났|기상)/.test(text) || /(분유|모유|기저귀|체온)/.test(text)) return null;
+  const sleeps = events.filter((e) => e.kind === 'sleep').sort((a, b) => a.startAt.localeCompare(b.startAt));
+  const running = sleeps.find((e) => !e.endAt);
+  const wantNap = /낮잠/.test(text);
+  const wantNight = /밤잠|아침/.test(text);
+  if (running && !wantNap && !wantNight) {
+    return { text: `지금 자는 중이에요. ${hhmm(running.startAt)}에 잠들었어요.`, keys: [running.id], label: '지금 잠' };
+  }
+  const ended = sleeps.filter((e) => e.endAt && new Date(e.endAt).getTime() <= now.getTime());
+  const pick = [...ended].reverse().find((e) => (wantNap ? !isNightStart(new Date(e.startAt).getTime()) : wantNight ? isNightStart(new Date(e.startAt).getTime()) : true));
+  if (!pick || !pick.endAt) return { text: '깬 기록이 없어요.', keys: [], label: '' };
+  const night = isNightStart(new Date(pick.startAt).getTime());
+  const kind = night ? '밤잠' : '낮잠';
+  const dur = durationLabel(minutesOf(pick, now));
+  const end = new Date(pick.endAt).getTime();
+  const lines = [`${findWhen(end, now)}에 깼어요. ${kind} ${dur}${wasWord(dur)}.`];
+  const weekAgo = now.getTime() - 7 * DAY;
+  const same = ended.filter((e) => e !== pick && new Date(e.startAt).getTime() >= weekAgo && isNightStart(new Date(e.startAt).getTime()) === night);
+  if (same.length >= 3) {
+    const avg = durationLabel(Math.round(same.reduce((s, e) => s + minutesOf(e, now), 0) / same.length / 5) * 5);
+    lines.push(`지난 7일 ${kind}은 평균 ${avg}${wasWord(avg)}.`);
+  }
+  return { text: lines.join(' '), keys: [pick.id], label: kind };
+}
+
+/** 누가 — 「누가 마지막으로 분유 줬어?」. 기록을 남긴 사람(가족과 함께 쓸 때 적힌다). 누구를 묻는 말이 아니면 null */
+export function whoAnswer(text: string, events: CareEvent[], now: Date): LocalAnswer | null {
+  if (!/누가|누구/.test(text)) return null;
+  const q = parseFind(text, now);
+  if (!q) return null;
+  const range = /오늘/.test(text) ? q.range : rangeOf('recent7', now);
+  const row = runFind({ ...q, measure: 'last', range }, events, now).rows[0];
+  if (!row) return { text: '찾는 기록이 없어요.', keys: [], label: '' };
+  const head = `${findWhen(row.at, now)} ${row.title}${copula(row.title) === '이에요' ? '은' : '는'}`;
+  if (row.by) return { text: `${head} ${subj(row.by)} 남긴 기록이에요.`, keys: [row.key], label: row.by };
+  return { text: `${head} 남긴 사람이 적혀 있지 않아요. 가족과 함께 쓰면 남긴 사람이 적혀요.`, keys: [row.key], label: '' };
+}
+
+/** 앞 기록과 비교 — 「이거 앞 수유보다 많이 먹은 거야?」, 「방금 낮잠 앞 낮잠보다 길어?」 */
+export const asksCompare = (text: string) =>
+  /비교/.test(text) || (/(앞|전|이전|지난번|저번|직전)\s*(수유|분유|모유|낮잠|밤잠|잠|거|것|기록)?\s*(보다|이랑|하고|과|와|랑)/.test(text) && /(많|적|길|짧|더|덜|같)/.test(text));
+
+/**
+ * 비교할 기록 — 선택한 기록, 없으면 말한 종류의 마지막 기록. 그 앞의 같은 종류와 견준다(분유는 양, 모유 · 잠은 걸린 시간).
+ * 견줄 수 없으면 null.
+ */
+export function compareAnswer(text: string, events: CareEvent[], selected: CareEvent | null, now: Date): LocalAnswer | null {
+  const src = (e: CareEvent): CtxSource => ({ type: 'event', ref: '', key: e.id, label: eventTitle(e, now), event: e });
+  const kindOf = (): CareEvent['kind'] | null => {
+    if (selected && (selected.kind === 'formula' || selected.kind === 'breast' || selected.kind === 'sleep')) return selected.kind;
+    if (/분유/.test(text)) return 'formula';
+    if (/모유|젖/.test(text)) return 'breast';
+    if (/잠|잤/.test(text)) return 'sleep';
+    if (/수유|먹/.test(text)) {
+      const last = feedSessions(events).filter((s) => s.endAt !== null).pop();
+      return last ? last.kind : null;
+    }
+    return null;
+  };
+  const kind = kindOf();
+  if (!kind) return null;
+  // 모유는 쪽을 바꾼 것까지 한 번 — 첫 줄의 시각에 모두 더한 시간으로 견준다
+  const list: CareEvent[] =
+    kind === 'sleep'
+      ? events.filter((e) => e.kind === 'sleep' && e.endAt).sort((a, b) => a.startAt.localeCompare(b.startAt))
+      : feedSessions(events)
+          .filter((s) => s.kind === kind && s.endAt !== null)
+          .map((s) => {
+            const head = s.parts[0];
+            if (s.kind !== 'breast' || s.parts.length === 1) return head;
+            const min = s.parts.reduce((m, p) => m + minutesOf(p, now), 0);
+            return { ...head, endAt: new Date(new Date(head.startAt).getTime() + min * MIN).toISOString(), side: null };
+          });
+  const at = selected ? list.findIndex((e) => e.id === selected.id) : list.length - 1;
+  if (at < 1) return null;
+  const a = list[at];
+  // 잠은 같은 종류(밤잠은 밤잠, 낮잠은 낮잠)의 앞 것과
+  const night = isNightStart(new Date(a.startAt).getTime());
+  const before = list.slice(0, at).reverse().find((e) => kind !== 'sleep' || isNightStart(new Date(e.startAt).getTime()) === night);
+  if (!before) return null;
+  const line = compare(src(a), src(before), now);
+  return line ? { text: line, keys: [a.id, before.id], label: '비교한 기록' } : null;
 }

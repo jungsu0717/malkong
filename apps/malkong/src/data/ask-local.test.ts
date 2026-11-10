@@ -92,3 +92,56 @@ test('에이전트가 고른 찾기 조건이 물음과 맞아야 쓴다', () =>
   assert.equal(questionFits('마지막 대변은?', 'poo'), true);
   assert.equal(questionFits('어제 몇 시에 잤어?', 'sleep'), true);
 });
+
+test('깬 시각 — 마지막으로 깬 잠과 지난 7일 같은 잠 평균', async () => {
+  const { wakeAnswer } = await import('./ask-local.ts');
+  const nights = [4, 5, 6, 7, 8, 9].map((d) => ev({ kind: 'sleep', startAt: at(21, 0, d), endAt: at(6, 0, d + 1) }));
+  const evs = [...nights, ev({ kind: 'sleep', startAt: at(21, 30, 9), endAt: at(6, 30, 10) }), ...data.events];
+  // 오늘 마지막으로 깬 것은 낮잠(13:10)
+  assert.equal(wakeAnswer('오늘 몇 시에 일어났어?', evs, NOW)?.text, '오늘 13:10에 깼어요. 낮잠 1시간 10분이었어요.');
+  assert.equal(wakeAnswer('오늘 아침에 몇 시에 일어났어?', evs, NOW)?.text, '오늘 06:30에 깼어요. 밤잠 9시간이었어요. 지난 7일 밤잠은 평균 9시간이었어요.');
+  const sleeping = [...evs, ev({ kind: 'sleep', startAt: at(14, 20) })];
+  assert.equal(wakeAnswer('몇 시에 깼어?', sleeping, NOW)?.text, '지금 자는 중이에요. 14:20에 잠들었어요.');
+  assert.equal(wakeAnswer('분유 몇 시에 먹었어?', evs, NOW), null);
+});
+
+test('누가 — 기록을 남긴 사람', async () => {
+  const { whoAnswer } = await import('./ask-local.ts');
+  const evs = [...data.events, ev({ kind: 'formula', startAt: at(14, 10), amount: 120, by: '엄마' })];
+  assert.equal(whoAnswer('누가 마지막으로 분유 줬어?', evs, NOW)?.text, '오늘 14:10 분유 120ml는 엄마가 남긴 기록이에요.');
+  assert.equal(whoAnswer('누가 마지막으로 기저귀 갈았어?', evs, NOW)?.text, '오늘 10:40 대변은 남긴 사람이 적혀 있지 않아요. 가족과 함께 쓰면 남긴 사람이 적혀요.');
+  assert.equal(whoAnswer('마지막 대변은?', evs, NOW), null);
+});
+
+test('앞 기록과 비교 — 선택한 기록, 없으면 마지막', async () => {
+  const { asksCompare, compareAnswer } = await import('./ask-local.ts');
+  const evs = [...data.events, ev({ kind: 'formula', startAt: at(14, 10), amount: 120 })];
+  assert.equal(asksCompare('이거 앞 수유보다 많이 먹은 거야?'), true);
+  assert.equal(asksCompare('분유 120 먹였어'), false);
+  assert.equal(compareAnswer('이거 앞 수유보다 많이 먹은 거야?', evs, null, NOW)?.text, '분유 120ml는 앞 수유(13:30, 140ml)보다 20ml 적어요.');
+  const picked = evs.find((e) => e.kind === 'formula' && e.startAt === at(13, 30))!;
+  assert.equal(compareAnswer('이거 앞 수유보다 많이 먹은 거야?', evs, picked, NOW)?.text, '분유 140ml는 앞 수유(10:30, 140ml)와 같아요.');
+});
+
+test('평소와 견준 한 줄 — 오늘은 지난 7일의 이 시각까지 평균', async () => {
+  const { answerFor } = await import('./ask.ts');
+  const past = [4, 5, 6, 7, 8, 9].flatMap((d) => [ev({ kind: 'formula', startAt: at(9, 0, d), amount: 120 }), ev({ kind: 'formula', startAt: at(12, 0, d), amount: 140 }), ev({ kind: 'formula', startAt: at(18, 0, d), amount: 160 })]);
+  const evs = [...past, ...data.events];
+  const today = { key: 'today' as const, from: new Date(2026, 10, 10).getTime(), to: new Date(2026, 10, 11).getTime(), label: '오늘' };
+  const a = answerFor({ what: 'formula', range: today, measure: 'amount' }, evs, NOW);
+  assert.ok(a.text.endsWith('지난 6일은 이 시각까지 평균 260ml였어요.'), a.text);
+});
+
+test('「초안」이라는 말이 없어도 하루 초안', async () => {
+  const { asksDraft } = await import('./day-draft.ts');
+  assert.equal(asksDraft('오늘 하루에 대해 이전 기록들을 보고 하루 기록 전체 초안 만들어줘'), true);
+  assert.equal(asksDraft('이전 기록 보고 오늘 기록 채워줘'), true);
+  assert.equal(asksDraft('평소대로 오늘 기록 만들어 줘'), true);
+  assert.equal(asksDraft('평소처럼 분유 120 먹였어'), false);
+});
+
+test('초안을 부탁한 말은 기록으로 읽지 않는다 — 모델로 다시 보내지 않게', async () => {
+  const { stripDraftAsk } = await import('./day-draft.ts');
+  assert.equal(stripDraftAsk('이전 기록 보고 오늘 기록 채워줘'), '');
+  assert.equal(stripDraftAsk('오늘 하루 기록 초안으로 작성해 줘. 10시 반에 분유 140 먹었어'), '10시 반에 분유 140 먹었어');
+});

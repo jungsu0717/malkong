@@ -42,14 +42,18 @@ const t = (iso: string) => new Date(iso).getTime();
 const iso = (at: number) => new Date(at).toISOString();
 
 /** 「오늘 하루 기록 초안으로 작성해 줘」 — 초안을 만들어 달라는 말 */
-export const asksDraft = (text: string) => /초안/.test(text) && /작성|만들|써|적어|채워|잡아|짜/.test(text);
+export const asksDraft = (text: string) =>
+  (/초안/.test(text) && /작성|만들|써|적어|채워|잡아|짜/.test(text)) ||
+  // 「이전 기록 보고 오늘 기록 채워 줘」, 「평소대로 하루 기록 만들어 줘」 — 「초안」이라는 말이 없어도(빌드 15 피드백)
+  (/(평소|이전 ?기록|지난 ?기록|전 ?기록|지난 ?7일|지난 ?일주일)/.test(text) && /(오늘|하루|기록)/.test(text) && /(채워|만들|작성|짜|잡아|써 ?줘)/.test(text));
 
 /** 초안을 부탁한 부분을 빼고 남는 말 — 「10시 반에 분유 140 먹었어」. 없으면 빈 글 */
 export function stripDraftAsk(text: string): string {
   return text
     .split(/[.!?。]\s*|(?<=\S)고\s*,?\s+|하고\s+|그리고\s+|,\s*/)
     .map((x) => x.trim())
-    .filter((x) => x && !/초안/.test(x))
+    // 초안을 부탁한 말(「초안」, 「이전 기록 보고」, 「오늘 기록 채워 줘」)은 기록이 아니다 — 남기면 모델로 한 번 더 간다
+    .filter((x) => x && !/초안|평소|이전 ?기록|지난 ?기록|전 ?기록|지난 ?7일|지난 ?일주일|채워|만들어|작성|짜 ?줘/.test(x))
     .join(', ');
 }
 
