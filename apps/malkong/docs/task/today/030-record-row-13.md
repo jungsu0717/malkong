@@ -1,6 +1,6 @@
 # 030 13판 — 기록마다 다른 아이콘, 기록과 루틴 두 줄, 기록은 처음부터 모두
 
-> 상태: 구현 완료 (2026-11-11) · 빌드 20 대기
+> 상태: 구현 완료 (2026-11-11) · 빌드 1.0.0 (20) TestFlight 자동 제출(Julian 「ㅇ」)
 > 근거: [main](../../menu-spec/main.md) SPEC-MAIN-08 · 결정: [047](../../decisions/047-record-row-icons-split.md)
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「13판 시안 — 기록마다 다른 아이콘, 기록과 루틴 나누기, 기록은 처음부터 모두 보이기 (2026-11-11)」
 
