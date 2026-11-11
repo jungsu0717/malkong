@@ -13,10 +13,10 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AdBanner } from '@/components/ad-banner';
-import { BottleIcon, ZzIcon } from '@/components/baby-icons';
+import { ZzIcon } from '@/components/baby-icons';
 import { MemoSheet } from '@/components/growth/memo-sheet';
 import { DiaperGlyph, diaperTone } from '@/components/log/diaper-glyph';
-import { KIND_UI } from '@/components/log/kinds';
+import { Glyph, kindTone } from '@/components/record-icons';
 import { useLogActions } from '@/components/log/use-log-actions';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
@@ -214,16 +214,14 @@ function RecordRow({
   const c = useTheme();
   const it = row.item;
   const icon = (() => {
-    if (it.type === 'feed')
-      return it.session.kind === 'formula' ? (
-        <Tile bg={c.accent}>
-          <BottleIcon size={16} color="#FFFFFF" />
-        </Tile>
-      ) : (
-        <Tile bg={c.accent}>
-          <Ionicons name="heart" size={15} color="#FFFFFF" />
+    if (it.type === 'feed') {
+      const t = kindTone(it.session.kind, c);
+      return (
+        <Tile bg={t.bg}>
+          <Glyph name={it.session.kind} size={16} color={t.fg} />
         </Tile>
       );
+    }
     if (it.type === 'sleep')
       return (
         <Tile bg={c.ink}>
@@ -251,8 +249,8 @@ function RecordRow({
       );
     if (isIntake(k))
       return (
-        <Tile bg={c.accentSoft}>
-          <Ionicons name={KIND_UI[k].icon} size={16} color={c.accent} />
+        <Tile bg={kindTone(k, c).bg}>
+          <Glyph name={k} size={16} color={kindTone(k, c).fg} />
         </Tile>
       );
     return (

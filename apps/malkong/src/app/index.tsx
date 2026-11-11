@@ -76,7 +76,8 @@ export default function FlowScreen() {
   /** 변경 카드가 열려 있는 동안 흐름에 먼저 보일 것 — 물어보기 창과 흐름이 같이 본다(SPEC-MAIN-16, task today/023) */
   const [previews, setPreviews] = useState<Preview[]>([]);
   /** 기록 단추 편집 시트(task today/029) */
-  const [editingBar, setEditingBar] = useState(false);
+  /** 기록 편집 시트 — 「편집」으로 열면 처음부터, 루틴 줄 「추가」로 열면 「루틴 추가」로 */
+  const [editingBar, setEditingBar] = useState<'all' | 'routines' | null>(null);
   const consent = useAskConsent();
   // 비춘 기록이 화면 위쪽에 오게 — 아래는 물어보기 창이 덮는다
   const focusAt = useCallback((y: number) => scroll.current?.scrollTo({ y: Math.max(0, y - 90), animated: true }), []);
@@ -230,7 +231,8 @@ export default function FlowScreen() {
               sleeping={!!runningOf(events, 'sleep')}
               onRecord={log.press}
               onRoutine={pressRoutine}
-              onEdit={() => setEditingBar(true)}
+              onEdit={() => setEditingBar('all')}
+              onAddRoutine={() => setEditingBar('routines')}
             />
           )}
         </View>
@@ -280,7 +282,7 @@ export default function FlowScreen() {
       <AdBanner anchored />
       {log.sheets}
       {routineActs.sheets}
-      <RecordBarSheet open={editingBar} onClose={() => setEditingBar(false)} />
+      <RecordBarSheet open={!!editingBar} focus={editingBar ?? 'all'} onClose={() => setEditingBar(null)} />
       <AskSheet
         open={asking}
         day={askDay}

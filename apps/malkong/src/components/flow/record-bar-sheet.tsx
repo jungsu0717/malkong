@@ -1,36 +1,30 @@
 /**
- * 기록 단추 편집 (SPEC-MAIN-08, task today/029, decisions/046) — 위쪽 기록 단추 줄 맨 끝 「편집」에서 연다.
+ * 기록 편집 (SPEC-MAIN-08, task today/029 · 030, decisions/046 · 047) — 위쪽 기록 줄 끝 「편집」이나 루틴 줄 끝 「추가」에서 연다.
  *
- * 「보이는 단추」는 왼쪽 −로 빼고, 오른쪽 손잡이를 끌어서 순서를 바꾼다. 「추가할 수 있는 단추」는 +로 넣는다.
- * 아직 루틴이 아닌 단추(목욕, 놀이, 병원 …)와 「직접 만들기」는 넣을 때 「반복할까요?」를 묻고 루틴으로 만든다 — 반복하면 할 날에 흐름에 보이고, 알림도 정할 수 있다.
+ * 「기록」과 「루틴」을 나눠 보여 준다. 왼쪽 −로 빼면 「숨긴 기록」, 「숨긴 루틴」으로 내려가고 +로 다시 넣는다. 오른쪽 손잡이를 끌어 순서를 바꾼다.
+ * 「루틴 추가」의 목욕, 놀이, 병원 같은 것과 「직접 만들기」는 넣을 때 「반복할까요?」를 묻고 루틴으로 만든다 — 처음부터 만들어 두지 않는다.
  * 「완료」를 눌러야 줄이 바뀐다. 루틴을 줄에서 빼도 루틴은 지우지 않는다(루틴 화면에 그대로).
  */
 
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { Modal, PanResponder, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { BottleIcon, ZzIcon } from '@/components/baby-icons';
+import { Glyph, kindTone } from '@/components/record-icons';
 import { StepButton } from '@/components/routine/repeat-picker';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import { INLINE_WHEEL, TimeWheel, pickTime } from '@/components/time-picker';
-import { KIND_UI } from '@/components/log/kinds';
 import { tap, Toggle } from '@/components/ui';
-import type { IntakeKind } from '@/data/events';
 import { usePreferences } from '@/data/preferences-context';
 import {
   arrangeBar,
   barAfterEdit,
   BAR_KIND_NAME,
   BAR_KINDS,
-  isBarKind,
   moveKey,
-  routineIdOf,
-  routineKey,
   startersFor,
-  type BarKey,
   type BarKind,
   type Starter,
 } from '@/data/record-bar';
@@ -56,7 +50,7 @@ const KIND_SUB: Record<BarKind, string> = {
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const CUSTOM: Starter = { title: '', everyDays: 0, time: '10:00' };
 
-export function RecordBarSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function RecordBarSheet({ open, focus = 'all', onClose }: { open: boolean; focus?: 'all' | 'routines'; onClose: () => void }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   return (
@@ -65,59 +59,43 @@ export function RecordBarSheet({ open, onClose }: { open: boolean; onClose: () =
         <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: c.scrim }]} onPress={onClose} accessibilityLabel="닫기" />
         <View style={[styles.sheet, { backgroundColor: c.surface, paddingBottom: 12 + insets.bottom }]}>
           <View style={[styles.grabber, { backgroundColor: c.surfaceStrong }]} />
-          {open && <Body onClose={onClose} />}
+          {open && <Body focus={focus} onClose={onClose} />}
         </View>
       </View>
     </Modal>
   );
 }
 
-function Body({ onClose }: { onClose: () => void }) {
+function Body({ focus, onClose }: { focus: 'all' | 'routines'; onClose: () => void }) {
   const c = useTheme();
   const { routines, addRoutine } = useRoutines();
   const { recordBar, setRecordBar } = usePreferences();
   const ids = routines.map((r) => r.id);
-  const [list, setList] = useState<BarKey[]>(() => arrangeBar(recordBar, ids).shown);
+  const [kinds, setKinds] = useState<string[]>(() => arrangeBar(recordBar, ids).kinds);
+  const [shown, setShown] = useState<string[]>(() => arrangeBar(recordBar, ids).routines);
   const [adding, setAdding] = useState<Starter | null>(null);
-  const [drag, setDrag] = useState<{ key: BarKey; start: number; dy: number } | null>(null);
-  const dragRef = useRef<{ key: BarKey; start: number } | null>(null);
-  const listRef = useRef(list);
-  useEffect(() => {
-    listRef.current = list;
-  }, [list]);
+  const [dragging, setDragging] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const jumped = useRef(focus !== 'routines');
 
-  const all: BarKey[] = [...BAR_KINDS, ...ids.map(routineKey)];
-  const more = all.filter((k) => !list.includes(k));
+  const hiddenKinds = BAR_KINDS.filter((k) => !kinds.includes(k));
+  const routineOf = (id: string) => routines.find((r) => r.id === id) ?? null;
+  const shownIds = shown.filter((id) => routineOf(id));
+  const hiddenRoutines = routines.filter((r) => !shown.includes(r.id));
   const starters = startersFor(routines.map((r) => r.title));
-  const routineOf = (k: BarKey) => routines.find((r) => r.id === routineIdOf(k)) ?? null;
 
   const done = () => {
     tap('success');
-    void setRecordBar(barAfterEdit(list, ids)).catch(() => undefined);
+    void setRecordBar(barAfterEdit(kinds as BarKind[], shownIds, ids)).catch(() => undefined);
     onClose();
   };
-
-  // 손잡이의 손짓은 한 번 만들어 두고 쓴다 — 끄는 도중에 바뀌면 움직인 거리를 잃는다
-  const startDrag = useCallback((key: BarKey) => {
-    const start = listRef.current.indexOf(key);
-    dragRef.current = { key, start };
-    setDrag({ key, start, dy: 0 });
-    tap();
-  }, []);
-  const moveDrag = useCallback((dy: number) => {
-    const d = dragRef.current;
-    if (!d) return;
-    setList((prev) => {
-      const target = Math.max(0, Math.min(prev.length - 1, d.start + Math.round(dy / ROW_H)));
-      const from = prev.indexOf(d.key);
-      return from === target ? prev : moveKey(prev, from, target);
-    });
-    setDrag({ ...d, dy });
-  }, []);
-  const endDrag = useCallback(() => {
-    dragRef.current = null;
-    setDrag(null);
-  }, []);
+  // 루틴 줄 끝 「추가」로 열었으면 「루틴 추가」가 보이게 한 번 내려 준다
+  const jumpTo = (y: number) => {
+    if (jumped.current) return;
+    jumped.current = true;
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 8), animated: false });
+  };
+  const divided = (i: number) => (i > 0 ? { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider } : null);
 
   if (adding) {
     return (
@@ -127,8 +105,7 @@ function Body({ onClose }: { onClose: () => void }) {
         onAdd={async (input) => {
           const have = routines.find((r) => titleKey(r.title) === titleKey(input.title));
           const r = have ?? (await addRoutine({ ...input, kind: 'check', items: null }));
-          const key = routineKey(r.id);
-          setList((prev) => (prev.includes(key) ? prev : [...prev, key]));
+          setShown((prev) => (prev.includes(r.id) ? prev : [...prev, r.id]));
           setAdding(null);
         }}
       />
@@ -137,80 +114,141 @@ function Body({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <Header left="취소" title="기록 단추 편집" right="완료" onLeft={onClose} onRight={done} />
-      <ScrollView scrollEnabled={!drag} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        <Section label="보이는 단추" note="끌어서 순서를 바꿔요">
-          {list.map((k, i) => {
-            const r = routineOf(k);
-            const lifted = drag?.key === k;
-            const shift = lifted ? drag.dy - (i - drag.start) * ROW_H : 0;
-            return (
-              <View
-                key={k}
-                style={[
-                  styles.rowWrap,
-                  i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider },
-                  lifted && [styles.lifted, { backgroundColor: c.background, shadowColor: c.text, transform: [{ translateY: shift }] }],
-                ]}>
-                <EditRow
-                  barKey={k}
-                  routine={r}
-                  mode="on"
-                  onToggle={() => {
-                    tap();
-                    setList((prev) => prev.filter((x) => x !== k));
-                  }}
-                  grip={<Grip barKey={k} label={`${isBarKind(k) ? BAR_KIND_NAME[k] : (r?.title ?? '')} 순서 바꾸기`} onStart={startDrag} onMove={moveDrag} onEnd={endDrag} />}
-                />
-              </View>
-            );
-          })}
-          {list.length === 0 && (
+      <Header left="취소" title="기록 편집" right="완료" onLeft={onClose} onRight={done} />
+      <ScrollView ref={scrollRef} scrollEnabled={!dragging} contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <Section label="기록">
+          <DragList
+            keys={kinds}
+            setKeys={setKinds}
+            onDragging={setDragging}
+            label={(k) => BAR_KIND_NAME[k as BarKind]}
+            row={(k, grip) => <EditRow kind={k as BarKind} routine={null} mode="on" onToggle={() => (tap(), setKinds((prev) => prev.filter((x) => x !== k)))} grip={grip} />}
+          />
+          {kinds.length === 0 && (
             <ThemedText type="small" style={[styles.empty, { color: c.textSecondary }]}>
-              아래에서 단추를 추가해 주세요
+              아래 숨긴 기록에서 추가해 주세요
             </ThemedText>
           )}
         </Section>
 
-        <Section label="추가할 수 있는 단추">
-          {more.map((k, i) => (
-            <View key={k} style={i > 0 ? { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider } : null}>
-              <EditRow
-                barKey={k}
-                routine={routineOf(k)}
-                mode="off"
-                onToggle={() => {
-                  tap();
-                  setList((prev) => [...prev, k]);
-                }}
-              />
-            </View>
-          ))}
-          {starters.map((s, i) => (
-            <View key={s.title} style={more.length + i > 0 ? { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider } : null}>
-              <StarterRow
-                title={s.title}
-                sub=""
-                onPress={() => {
-                  tap();
-                  setAdding(s);
-                }}
-              />
-            </View>
-          ))}
-          <View style={{ borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider }}>
-            <StarterRow
-              title="직접 만들기"
-              sub="이름을 정해서 추가해요"
-              custom
-              onPress={() => {
-                tap();
-                setAdding(CUSTOM);
-              }}
+        {hiddenKinds.length > 0 && (
+          <Section label="숨긴 기록">
+            {hiddenKinds.map((k, i) => (
+              <View key={k} style={divided(i)}>
+                <EditRow kind={k} routine={null} mode="off" onToggle={() => (tap(), setKinds((prev) => [...prev, k]))} />
+              </View>
+            ))}
+          </Section>
+        )}
+
+        {shownIds.length > 0 && (
+          <Section label="루틴">
+            <DragList
+              keys={shownIds}
+              setKeys={setShown}
+              onDragging={setDragging}
+              label={(id) => routineOf(id)?.title ?? ''}
+              row={(id, grip) => <EditRow kind={null} routine={routineOf(id)} mode="on" onToggle={() => (tap(), setShown((prev) => prev.filter((x) => x !== id)))} grip={grip} />}
             />
-          </View>
-        </Section>
+          </Section>
+        )}
+
+        {hiddenRoutines.length > 0 && (
+          <Section label="숨긴 루틴">
+            {hiddenRoutines.map((r, i) => (
+              <View key={r.id} style={divided(i)}>
+                <EditRow kind={null} routine={r} mode="off" onToggle={() => (tap(), setShown((prev) => [...prev, r.id]))} />
+              </View>
+            ))}
+          </Section>
+        )}
+
+        <View onLayout={(e) => jumpTo(e.nativeEvent.layout.y)}>
+          <Section label="루틴 추가">
+            {starters.map((s, i) => (
+              <View key={s.title} style={divided(i)}>
+                <StarterRow title={s.title} onPress={() => (tap(), setAdding(s))} />
+              </View>
+            ))}
+            <View style={divided(starters.length)}>
+              <StarterRow title="직접 만들기" custom onPress={() => (tap(), setAdding(CUSTOM))} />
+            </View>
+          </Section>
+        </View>
       </ScrollView>
+    </>
+  );
+}
+
+/** 끌어서 순서를 바꾸는 목록 — 기록과 루틴이 따로 쓴다. 끄는 동안에는 바깥 스크롤을 멈춘다 */
+function DragList({
+  keys,
+  setKeys,
+  onDragging,
+  label,
+  row,
+}: {
+  keys: string[];
+  setKeys: Dispatch<SetStateAction<string[]>>;
+  onDragging: (on: boolean) => void;
+  label: (key: string) => string;
+  row: (key: string, grip: React.ReactNode) => React.ReactNode;
+}) {
+  const c = useTheme();
+  const [drag, setDrag] = useState<{ key: string; start: number; dy: number } | null>(null);
+  const dragRef = useRef<{ key: string; start: number } | null>(null);
+  const listRef = useRef(keys);
+  useEffect(() => {
+    listRef.current = keys;
+  }, [keys]);
+
+  // 손잡이의 손짓은 한 번 만들어 두고 쓴다 — 끄는 도중에 바뀌면 움직인 거리를 잃는다
+  const startDrag = useCallback(
+    (key: string) => {
+      const start = listRef.current.indexOf(key);
+      dragRef.current = { key, start };
+      setDrag({ key, start, dy: 0 });
+      onDragging(true);
+      tap();
+    },
+    [onDragging],
+  );
+  const moveDrag = useCallback(
+    (dy: number) => {
+      const d = dragRef.current;
+      if (!d) return;
+      setKeys((prev) => {
+        const target = Math.max(0, Math.min(prev.length - 1, d.start + Math.round(dy / ROW_H)));
+        const from = prev.indexOf(d.key);
+        return from === target ? prev : moveKey(prev, from, target);
+      });
+      setDrag({ ...d, dy });
+    },
+    [setKeys],
+  );
+  const endDrag = useCallback(() => {
+    dragRef.current = null;
+    setDrag(null);
+    onDragging(false);
+  }, [onDragging]);
+
+  return (
+    <>
+      {keys.map((k, i) => {
+        const lifted = drag?.key === k;
+        const shift = lifted ? drag.dy - (i - drag.start) * ROW_H : 0;
+        return (
+          <View
+            key={k}
+            style={[
+              styles.rowWrap,
+              i > 0 && { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: c.divider },
+              lifted && [styles.lifted, { backgroundColor: c.background, shadowColor: c.text, transform: [{ translateY: shift }] }],
+            ]}>
+            {row(k, <Grip barKey={k} label={`${label(k)} 순서 바꾸기`} onStart={startDrag} onMove={moveDrag} onEnd={endDrag} />)}
+          </View>
+        );
+      })}
     </>
   );
 }
@@ -236,29 +274,21 @@ function Header({ left, title, right, rightDisabled = false, onLeft, onRight }: 
   );
 }
 
-function Section({ label, note, children }: { label: string; note?: string; children: React.ReactNode }) {
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
   const c = useTheme();
   return (
     <View style={styles.section}>
-      <View style={styles.sectionHead}>
-        <ThemedText type="label" style={{ color: c.textSecondary }}>
-          {label}
-        </ThemedText>
-        {note && (
-          <ThemedText type="caption" style={{ color: c.textTertiary }}>
-            {note}
-          </ThemedText>
-        )}
-      </View>
+      <ThemedText type="label" style={[styles.sectionHead, { color: c.textSecondary }]}>
+        {label}
+      </ThemedText>
       <View style={[styles.box, { backgroundColor: c.background }]}>{children}</View>
     </View>
   );
 }
 
-/** 기록 종류 · 루틴 단추 한 줄 — 왼쪽 − / +, 아이콘, 이름과 설명, 오른쪽 손잡이 */
-function EditRow({ barKey, routine, mode, onToggle, grip }: { barKey: BarKey; routine: Routine | null; mode: 'on' | 'off'; onToggle: () => void; grip?: React.ReactNode }) {
+/** 기록 종류나 루틴 한 줄 — 왼쪽 − / +, 아이콘, 이름과 설명, 오른쪽 손잡이 */
+function EditRow({ kind, routine, mode, onToggle, grip }: { kind: BarKind | null; routine: Routine | null; mode: 'on' | 'off'; onToggle: () => void; grip?: React.ReactNode }) {
   const c = useTheme();
-  const kind = isBarKind(barKey) ? barKey : null;
   const name = kind ? BAR_KIND_NAME[kind] : (routine?.title ?? '');
   const sub = kind ? KIND_SUB[kind] : routine ? [scheduleLabel(routine), routine.time ? `${timeLabel(routine.time)} 알림` : null, isTimed(routine) ? '시간 재기' : null].filter(Boolean).join(', ') : '';
   return (
@@ -268,8 +298,8 @@ function EditRow({ barKey, routine, mode, onToggle, grip }: { barKey: BarKey; ro
         accessibilityLabel={mode === 'on' ? `${name} 빼기` : `${name} 추가`}
         hitSlop={8}
         onPress={onToggle}
-        style={[styles.sign, { backgroundColor: mode === 'on' ? c.accent : c.ink }]}>
-        <Ionicons name={mode === 'on' ? 'remove' : 'add'} size={16} color={c.onInk} />
+        style={[styles.sign, { backgroundColor: mode === 'on' ? c.danger : c.ink }]}>
+        <Ionicons name={mode === 'on' ? 'remove' : 'add'} size={16} color={mode === 'on' ? c.onDanger : c.onInk} />
       </Pressable>
       <KindTile kind={kind} title={name} />
       <View style={styles.flex}>
@@ -287,11 +317,11 @@ function EditRow({ barKey, routine, mode, onToggle, grip }: { barKey: BarKey; ro
   );
 }
 
-/** 아직 루틴이 아닌 단추 — 누르면 반복을 묻는다 */
-function StarterRow({ title, sub, custom = false, onPress }: { title: string; sub: string; custom?: boolean; onPress: () => void }) {
+/** 「루틴 추가」의 한 줄 — 누르면 반복을 묻는다 */
+function StarterRow({ title, custom = false, onPress }: { title: string; custom?: boolean; onPress: () => void }) {
   const c = useTheme();
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${title} 추가`} onPress={onPress} style={({ pressed }) => [styles.row, pressed && { backgroundColor: c.surface }]}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${title} 루틴 추가`} onPress={onPress} style={({ pressed }) => [styles.row, pressed && { backgroundColor: c.surface }]}>
       <View style={[styles.sign, { backgroundColor: c.ink }]}>
         <Ionicons name="add" size={16} color={c.onInk} />
       </View>
@@ -302,39 +332,34 @@ function StarterRow({ title, sub, custom = false, onPress }: { title: string; su
       ) : (
         <KindTile kind={null} title={title} />
       )}
-      <View style={styles.flex}>
-        <ThemedText type="body" numberOfLines={1} style={styles.rowTitle}>
-          {title}
-        </ThemedText>
-        {sub ? (
-          <ThemedText type="caption" numberOfLines={1} style={{ color: c.textSecondary }}>
-            {sub}
-          </ThemedText>
-        ) : null}
-      </View>
+      <ThemedText type="body" numberOfLines={1} style={[styles.flex, styles.rowTitle]}>
+        {title}
+      </ThemedText>
       <Ionicons name="chevron-forward" size={16} color={c.textTertiary} />
     </Pressable>
   );
 }
 
+/** 기록 종류는 위쪽 기록 줄과 같은 색과 아이콘, 루틴은 파란색 */
 function KindTile({ kind, title }: { kind: BarKind | null; title: string }) {
   const c = useTheme();
-  if (kind === 'breast') return <View style={[styles.tile, { backgroundColor: c.accent }]}><Ionicons name="heart-outline" size={17} color="#FFFFFF" /></View>;
-  if (kind === 'formula') return <View style={[styles.tile, { backgroundColor: c.accent }]}><BottleIcon size={17} color="#FFFFFF" /></View>;
-  if (kind === 'diaper') return <View style={[styles.tile, { backgroundColor: c.peeBg, borderWidth: 1.5, borderColor: c.peeLine }]}><Ionicons name="water-outline" size={16} color={c.peeFg} /></View>;
-  if (kind === 'sleep') return <View style={[styles.tile, { backgroundColor: c.ink }]}><ZzIcon size={16} color={c.onInk} /></View>;
-  if (kind === 'temp') return <View style={[styles.tile, { backgroundColor: c.tempBg, borderWidth: 1.5, borderColor: c.tempLine }]}><Ionicons name="thermometer-outline" size={16} color={c.tempFg} /></View>;
-  if (kind === 'pumped') return <View style={[styles.tile, { backgroundColor: c.accentSoft }]}><BottleIcon size={17} color={c.accent} /></View>;
-  if (kind) return <View style={[styles.tile, { backgroundColor: c.accentSoft }]}><Ionicons name={KIND_UI[kind as IntakeKind].icon} size={16} color={c.accent} /></View>;
+  if (kind) {
+    const t = kindTone(kind, c);
+    return (
+      <View style={[styles.tile, { backgroundColor: t.bg }, t.line ? { borderWidth: 1.5, borderColor: t.line } : null]}>
+        <Glyph name={kind} size={17} color={t.fg} />
+      </View>
+    );
+  }
   return (
     <View style={[styles.tile, { backgroundColor: c.doneBg, borderWidth: 1.5, borderColor: c.doneLine }]}>
-      <RoutineIcon title={title} size={16} color={c.doneFg} />
+      <RoutineIcon title={title} size={17} color={c.doneFg} />
     </View>
   );
 }
 
 /** 끌어서 순서를 바꾸는 손잡이 — 손잡이를 잡으면 목록 스크롤을 멈춘다 */
-function Grip({ barKey, label, onStart, onMove, onEnd }: { barKey: BarKey; label: string; onStart: (key: BarKey) => void; onMove: (dy: number) => void; onEnd: () => void }) {
+function Grip({ barKey, label, onStart, onMove, onEnd }: { barKey: string; label: string; onStart: (key: string) => void; onMove: (dy: number) => void; onEnd: () => void }) {
   const c = useTheme();
   const pan = useMemo(
     () =>
@@ -358,7 +383,7 @@ function Grip({ barKey, label, onStart, onMove, onEnd }: { barKey: BarKey; label
 
 type RepeatChoice = 'none' | 'daily' | 'every' | 'weekdays';
 
-/** 단추를 추가하면서 반복을 묻는다 — 이름, 「반복할까요?」, 반복하면 알림 */
+/** 루틴을 추가하면서 반복을 묻는다 — 이름, 「반복할까요?」, 반복하면 알림 */
 function AddForm({ starter, onCancel, onAdd }: { starter: Starter; onCancel: () => void; onAdd: (input: { title: string; everyDays: number; weekdays: number[] | null; time: string | null }) => Promise<void> }) {
   const c = useTheme();
   const [title, setTitle] = useState(starter.title);
@@ -397,9 +422,9 @@ function AddForm({ starter, onCancel, onAdd }: { starter: Starter; onCancel: () 
           <TextInput
             value={title}
             onChangeText={setTitle}
-            placeholder="단추 이름"
+            placeholder="루틴 이름"
             placeholderTextColor={c.textTertiary}
-            accessibilityLabel="단추 이름"
+            accessibilityLabel="루틴 이름"
             maxLength={20}
             autoFocus={!starter.title}
             style={[styles.input, { backgroundColor: c.background, borderColor: c.border, color: c.text }]}
@@ -496,7 +521,7 @@ function AddForm({ starter, onCancel, onAdd }: { starter: Starter; onCancel: () 
         )}
 
         <ThemedText type="caption" style={[styles.note, { color: c.textSecondary }]}>
-          {repeating ? '반복하면 할 날마다 흐름에 미리 보여요' : '단추를 누를 때만 기록해요'}
+          {repeating ? '반복하면 할 날마다 흐름에 미리 보여요' : '누를 때만 기록해요'}
         </ThemedText>
       </ScrollView>
     </>
@@ -513,7 +538,7 @@ const styles = StyleSheet.create({
   headTitle: { flex: 1, textAlign: 'center', fontSize: 17 },
   body: { paddingHorizontal: 16, paddingBottom: 16, gap: 14 },
   section: { gap: 6, paddingTop: 4 },
-  sectionHead: { flexDirection: 'row', alignItems: 'baseline', gap: 8, paddingHorizontal: 4 },
+  sectionHead: { paddingHorizontal: 4 },
   box: { borderRadius: 16, overflow: 'visible' },
   rowWrap: { borderRadius: 0 },
   lifted: { zIndex: 10, borderRadius: 14, shadowOpacity: 0.18, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8 },

@@ -1,8 +1,9 @@
 /**
- * 위쪽 기록 단추 줄 (SPEC-MAIN-08, task today/029, decisions/046) — 어떤 단추를 어떤 순서로 보일지.
+ * 위쪽 기록 줄 (SPEC-MAIN-08, task today/029 · 030, decisions/046 · 047) — 어떤 기록과 루틴을 어떤 순서로 보일지.
  *
- * 기록 종류(모유, 분유, 기저귀, 잠, 체온)와 루틴 단추가 한 줄에 놓이고, 옆으로 밀어 더 본다. 줄 끝의 「편집」에서 넣고 빼고 순서를 바꾼다.
- * 이 폰에서만 정한다(설정값 `record.bar`). 순서와 뺀 단추만 저장한다 — 새로 만든 루틴은 뺀 적이 없으면 줄 끝에 붙는다.
+ * 윗줄은 기록 종류 11가지(모유, 분유, 기저귀, 잠, 체온, 이유식, 유축 수유, 유축, 우유, 물, 간식)이고 처음부터 모두 보인다.
+ * 아랫줄은 루틴이다. 둘 다 옆으로 밀어 더 보고, 「편집」에서 빼고 순서를 바꾼다.
+ * 이 폰에서만 정한다(설정값 `record.bar`). 순서와 뺀 것만 저장한다 — 새로 만든 루틴은 뺀 적이 없으면 루틴 줄 끝에 붙는다.
  * 화면 코드를 가져오지 않는 순수 함수(`node --test src/data/record-bar.test.ts`).
  */
 
@@ -12,55 +13,82 @@ import { titleKey } from './routine.ts';
 export type BarKind = 'breast' | 'formula' | 'diaper' | 'sleep' | 'temp' | IntakeKind;
 export const BAR_KINDS: BarKind[] = ['breast', 'formula', 'diaper', 'sleep', 'temp', ...INTAKE_KINDS];
 export const BAR_KIND_NAME: Record<BarKind, string> = { breast: '모유', formula: '분유', diaper: '기저귀', sleep: '잠', temp: '체온', ...INTAKE_NAME };
-/** 처음부터 보이는 기록 단추 — 나머지 기록 종류는 「추가할 수 있는 단추」에서 넣는다 */
-const FIRST_KINDS: BarKind[] = ['breast', 'formula', 'diaper', 'sleep'];
+/** 12판에서 처음부터 보이던 넷 — 그때는 나머지를 넣어야 보였다 */
+const OLD_FIRST: BarKind[] = ['breast', 'formula', 'diaper', 'sleep'];
 
-/** 단추 하나의 이름 — 기록 종류는 그대로(`formula`), 루틴은 `routine:<id>` */
+/** 줄의 칸 하나 — 기록 종류는 그대로(`formula`), 루틴은 `routine:<id>` */
 export type BarKey = string;
-export type BarSetting = { order: BarKey[]; hidden: BarKey[] };
+/** v 2 부터 기록 종류는 모두 처음부터 보인다(13판) */
+export type BarSetting = { v?: number; order: BarKey[]; hidden: BarKey[] };
 
-/** 처음 — 수유 · 기저귀 · 잠 넷, 그 뒤에 루틴. 체온, 이유식, 유축 같은 것은 추가할 수 있는 단추에 둔다 */
-export const DEFAULT_BAR: BarSetting = { order: [...FIRST_KINDS], hidden: [] };
+export const DEFAULT_BAR: BarSetting = { v: 2, order: [...BAR_KINDS], hidden: [] };
 
 export const routineKey = (id: string): BarKey => `routine:${id}`;
 export const routineIdOf = (key: BarKey): string | null => (key.startsWith('routine:') ? key.slice('routine:'.length) : null);
 export const isBarKind = (key: BarKey): key is BarKind => (BAR_KINDS as string[]).includes(key);
 
-/** 저장된 글 → 설정. 없거나 깨졌으면 처음 값 */
+/**
+ * 저장된 글 → 설정. 없거나 깨졌으면 처음 값.
+ * 12판(v 없음)은 편집을 마치면 넣지 않은 기록 종류까지 「뺀 것」으로 저장했다 — 처음 넷이 아닌 기록 종류는 다시 보이게 한다
+ */
 export function barFromText(text: string | null): BarSetting {
   if (!text) return DEFAULT_BAR;
   try {
     const v = JSON.parse(text) as Partial<BarSetting>;
     const list = (x: unknown) => (Array.isArray(x) ? x.filter((k): k is string => typeof k === 'string') : []);
-    return { order: list(v.order), hidden: list(v.hidden) };
+    const hidden = list(v.hidden);
+    return { v: 2, order: list(v.order), hidden: v.v === 2 ? hidden : hidden.filter((k) => !isBarKind(k) || OLD_FIRST.includes(k)) };
   } catch {
     return DEFAULT_BAR;
   }
 }
 
-export const barToText = (s: BarSetting) => JSON.stringify(s);
+export const barToText = (s: BarSetting) => JSON.stringify({ ...s, v: 2 });
+
+export type BarLayout = {
+  /** 윗줄 기록 종류, 순서대로 */
+  kinds: BarKind[];
+  /** 아랫줄 루틴 id, 순서대로 */
+  routines: string[];
+  hiddenKinds: BarKind[];
+  hiddenRoutines: string[];
+};
 
 /**
- * 보이는 단추(순서대로)와 추가할 수 있는 단추 — routineIds 는 지우지 않은 루틴, 루틴 화면의 순서대로.
- * 처음 넷과 루틴은 뺀 적이 없으면 줄 끝에 붙고, 나머지 기록 종류는 넣어야 보인다(새 종류가 생겨도 줄이 저절로 길어지지 않게)
+ * 두 줄에 보일 것과 뺀 것 — routineIds 는 지우지 않은 루틴, 루틴 화면의 순서대로.
+ * 뺀 적이 없는 기록 종류와 루틴은 저장된 순서 뒤에 붙는다
  */
-export function arrangeBar(s: BarSetting, routineIds: string[]): { shown: BarKey[]; more: BarKey[] } {
-  const all = [...BAR_KINDS, ...routineIds.map(routineKey)];
-  const joins = (k: BarKey) => (isBarKind(k) ? FIRST_KINDS.includes(k) : true);
-  const shown: BarKey[] = [];
-  for (const k of s.order) if (all.includes(k) && !s.hidden.includes(k) && !shown.includes(k)) shown.push(k);
-  for (const k of all) if (joins(k) && !shown.includes(k) && !s.hidden.includes(k) && !s.order.includes(k)) shown.push(k);
-  return { shown, more: all.filter((k) => !shown.includes(k)) };
+export function arrangeBar(s: BarSetting, routineIds: string[]): BarLayout {
+  const hidden = new Set(s.hidden);
+  const kinds: BarKind[] = [];
+  const routines: string[] = [];
+  for (const k of s.order) {
+    if (hidden.has(k)) continue;
+    const id = routineIdOf(k);
+    if (isBarKind(k) && !kinds.includes(k)) kinds.push(k);
+    else if (id && routineIds.includes(id) && !routines.includes(id)) routines.push(id);
+  }
+  for (const k of BAR_KINDS) if (!hidden.has(k) && !kinds.includes(k)) kinds.push(k);
+  for (const id of routineIds) if (!hidden.has(routineKey(id)) && !routines.includes(id)) routines.push(id);
+  return {
+    kinds,
+    routines,
+    hiddenKinds: BAR_KINDS.filter((k) => !kinds.includes(k)),
+    hiddenRoutines: routineIds.filter((id) => !routines.includes(id)),
+  };
 }
 
-/** 편집을 마친 뒤 저장할 값 — 보이는 순서, 그리고 보이지 않는 것은 모두 뺀 것으로 */
-export function barAfterEdit(shown: BarKey[], routineIds: string[]): BarSetting {
-  const all = [...BAR_KINDS, ...routineIds.map(routineKey)];
-  return { order: shown, hidden: all.filter((k) => !shown.includes(k)) };
+/** 편집을 마친 뒤 저장할 값 — 두 줄의 순서, 그리고 보이지 않는 것은 모두 뺀 것으로 */
+export function barAfterEdit(kinds: BarKind[], routines: string[], routineIds: string[]): BarSetting {
+  return {
+    v: 2,
+    order: [...kinds, ...routines.map(routineKey)],
+    hidden: [...BAR_KINDS.filter((k) => !kinds.includes(k)), ...routineIds.filter((id) => !routines.includes(id)).map(routineKey)],
+  };
 }
 
 /**
- * 추가할 수 있는 단추 가운데 아직 루틴이 아닌 것 — 누르면 반복을 묻고 루틴으로 만든다.
+ * 「루틴 추가」에 보이는 루틴 — 처음부터 만들어 두지 않고, 누르면 반복을 묻고 루틴으로 만든다(decisions/047).
  * 양을 적는 것(이유식, 유축, 우유, 물, 간식)은 루틴이 아니라 기록 종류다(BAR_KINDS, decisions/046)
  */
 export type Starter = { title: string; everyDays: number; time: string };
@@ -79,7 +107,7 @@ export function startersFor(titles: string[]): Starter[] {
   return STARTERS.filter((s) => !have.has(titleKey(s.title)));
 }
 
-/** 끌어서 옮긴 줄 — from 자리의 단추를 to 자리로 */
+/** 끌어서 옮긴 목록 — from 자리의 것을 to 자리로 */
 export function moveKey(list: BarKey[], from: number, to: number): BarKey[] {
   if (from === to || from < 0 || from >= list.length) return list;
   const next = [...list];

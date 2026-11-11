@@ -25,9 +25,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
-import { BottleIcon, ZzIcon } from '@/components/baby-icons';
+import { ZzIcon } from '@/components/baby-icons';
+import { Glyph, kindTone } from '@/components/record-icons';
 import { DiaperGlyph, diaperTone } from '@/components/log/diaper-glyph';
-import { KIND_UI } from '@/components/log/kinds';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import type { IconName } from '@/components/ui';
@@ -270,17 +270,22 @@ export function nodeTone(kind: ItemKind, c: ReturnType<typeof useTheme>) {
   if (kind === 'temp') return { backgroundColor: c.tempBg, borderColor: c.tempLine, borderWidth: 1.5 };
   if (kind === 'routine' || kind === 'todo') return { backgroundColor: c.doneBg, borderColor: c.doneLine, borderWidth: 1.5 };
   if (kind === 'memo') return { backgroundColor: c.memoBg, borderColor: c.memoLine, borderWidth: 1.5 };
-  // 이유식 · 유축 · 우유 · 물 · 간식 — 수유와 같은 코랄을 옅게(task today/029)
-  if (isIntakeItem(kind)) return { backgroundColor: c.accentSoft, borderColor: c.accentSoft, borderWidth: 1.5 };
+  // 이유식, 유축, 우유, 물, 간식 — 위쪽 기록 줄과 같은 색(record-icons.tsx, task today/030)
+  if (isIntakeItem(kind)) {
+    const t = kindTone(kind, c);
+    return { backgroundColor: t.bg, borderColor: t.line ?? t.bg, borderWidth: 1.5 };
+  }
   return { backgroundColor: c.surface, borderColor: c.flowLine, borderWidth: 1.5 };
 }
 
 /** 초안 — 흰 바탕에 그 기록 색의 점선 테두리 */
 export function draftTone(kind: ItemKind, c: ReturnType<typeof useTheme>) {
   const line =
-    kind === 'breast' || kind === 'formula' || isIntakeItem(kind)
+    kind === 'breast' || kind === 'formula'
       ? c.accent
-      : isDiaper(kind)
+      : isIntakeItem(kind)
+        ? kindTone(kind, c).fg
+        : isDiaper(kind)
         ? diaperTone(kind, c).borderColor
         : kind === 'temp'
           ? c.tempLine
@@ -307,13 +312,13 @@ function Tag({ label, tone }: { label: string; tone: 'accent' | 'danger' }) {
 /** 기록 아이콘 — 수유는 흰 하트 · 젖병, 기저귀는 물방울과 대변, 루틴은 이름에 맞는 아이콘. light 는 흰 바탕(초안) 위라 수유를 코랄로 */
 export function NodeIcon({ kind, title, stool, size, light = false }: { kind: ItemKind; title: string; stool: StoolColor | null; size: number; light?: boolean }) {
   const c = useTheme();
-  if (kind === 'formula') return <BottleIcon size={size} color={light ? c.accent : '#FFFFFF'} />;
+  if (kind === 'formula' || kind === 'breast') return <Glyph name={kind} size={size} color={light ? c.accent : '#FFFFFF'} />;
   if (kind === 'routine' || kind === 'todo') return <RoutineIcon title={title} size={size} color={c.doneFg} />;
-  if (kind === 'pumped') return <BottleIcon size={size} color={c.accent} />;
-  if (isIntakeItem(kind)) return <Ionicons name={KIND_UI[kind].icon} size={size} color={c.accent} />;
+  if (isIntakeItem(kind)) return <Glyph name={kind} size={size} color={kindTone(kind, c).fg} />;
+  if (kind === 'temp') return <Glyph name="temp" size={size} color={c.tempFg} />;
   if (isDiaper(kind)) return <DiaperGlyph diaper={kind} color={stool} size={size} />;
-  const ion: Partial<Record<ItemKind, IconName>> = { breast: 'heart-outline', temp: 'thermometer-outline', weight: 'scale-outline', height: 'resize-outline', memo: 'document-text-outline' };
-  const color = kind === 'breast' ? (light ? c.accent : '#FFFFFF') : kind === 'temp' ? c.tempFg : kind === 'memo' ? c.memoFg : c.text;
+  const ion: Partial<Record<ItemKind, IconName>> = { weight: 'scale-outline', height: 'resize-outline', memo: 'document-text-outline' };
+  const color = kind === 'memo' ? c.memoFg : c.text;
   return <Ionicons name={ion[kind] ?? 'ellipse-outline'} size={size} color={color} />;
 }
 

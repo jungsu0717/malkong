@@ -58,7 +58,7 @@ export function RepeatPicker({
         ? { everyDays: 1, weekdays: null }
         : { everyDays: 7, weekdays: [...days].sort((a, b) => a - b) }
       : { everyDays: choice === 'custom' ? custom : choice, weekdays: null };
-  const caption = result.everyDays <= 0 && !result.weekdays ? '기록 단추를 누를 때만 기록해요' : result.weekdays ? `${scheduleLabel(result)}에 할 루틴이 돼요` : `${scheduleLabel(result)} 할 루틴이 돼요`;
+  const caption = result.everyDays <= 0 && !result.weekdays ? '누를 때만 기록해요' : result.weekdays ? `${scheduleLabel(result)}에 할 루틴이 돼요` : `${scheduleLabel(result)} 할 루틴이 돼요`;
 
   const pick = (next: Choice) => {
     if (next !== choice) tap();
