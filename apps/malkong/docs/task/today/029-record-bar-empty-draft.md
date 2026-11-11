@@ -56,7 +56,7 @@ docs: decisions/046 · 041, main SPEC-MAIN-08 · 16 · 03, api-contract, README
 - [x] 빈칸을 눌러 「지금」으로 기록, 위쪽 기저귀 단추로 기록하면 가까운 기저귀 빈칸이 함께 채워짐, 「오후 낮잠은 안 잤어」로 빈칸 빼기, 「버리기」(웹)
 - [x] 앱 tsc · lint · 시험(189) · copy-check, 서버 ruff · pytest(145)
 - [x] 2단계: 이유식을 줄에 넣고 기록 → 줄에 「80ml 1번」, 흐름에 「이유식 80ml」(웹)
-- [ ] 서버 운영 배포와 빌드 1.0.0 (19) TestFlight — Julian 「다 올려」
+- [x] 서버 운영 배포(revision 00031, `/health` 와 지식 판 2026.10.5 확인, openapi 에 `eventKinds` 와 새 종류)와 빌드 1.0.0 (19) EAS 에 올리고 TestFlight 자동 제출 — Julian 「다 올려」(2026-11-11)
 
 ## 확인
 
