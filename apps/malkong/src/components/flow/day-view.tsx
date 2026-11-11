@@ -61,7 +61,7 @@ import {
 } from '@/data/day-flow';
 import { readSetting, writeSetting } from '@/data/db';
 import { STOOL_COLOR_LABEL, durationLabel, lastFeedStart, startOfDay } from '@/data/event-summary';
-import { runningOf, type CareEvent, type EventKind, type Side } from '@/data/events';
+import { intakeTitle, isIntake, runningOf, type CareEvent, type EventKind, type Side } from '@/data/events';
 import { useEvents } from '@/data/events-context';
 import { useFamily } from '@/data/family-context';
 import { flowLayout, ITEM, type LinkSpec, type PartSpec, type Shape } from '@/data/flow-layout';
@@ -107,6 +107,7 @@ function subTitle(it: SubItem, now: Date): string {
   if (e.kind === 'diaper') return e.diaper === 'pee' ? '소변' : e.diaper === 'poo' ? '대변' : '소변, 대변';
   if (e.kind === 'temp') return e.amount !== null ? `${e.amount}℃` : '체온';
   if (e.kind === 'weight') return e.amount !== null ? `${e.amount}kg` : '몸무게';
+  if (isIntake(e.kind)) return intakeTitle({ kind: e.kind, amount: e.amount });
   return e.amount !== null ? `${e.amount}cm` : '키';
 }
 

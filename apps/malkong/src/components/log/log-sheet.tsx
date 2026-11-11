@@ -22,7 +22,9 @@ import { STOOL_COLOR_LABEL, durationLabel, minutesOf } from '@/data/event-summar
 import {
   AMOUNT_RANGE,
   cleanNumber,
+  isIntake,
   type CareEvent,
+  type IntakeKind,
   type DiaperKind,
   type EventInput,
   type EventKind,
@@ -40,6 +42,16 @@ const MIN = 60 * 1000;
 const STOOL_COLORS: StoolColor[] = ['yellow', 'brown', 'green', 'black', 'red', 'white'];
 /** 눈금 숫자 — 함수가 매번 새로 생기지 않게 밖에 둔다 */
 const mlText = (v: number) => String(v);
+
+/** 먹을거리 · 유축 — 눈금 이름, 처음 값, 때 이름, 메모 예시(task today/029). 간식은 양 없이 */
+const INTAKE_SHEET: Record<IntakeKind, { amount: string | null; start: number; when: string; note: string }> = {
+  solid: { amount: '먹은 양', start: 80, when: '먹은 때', note: '예: 소고기 미음' },
+  pumped: { amount: '수유량', start: 100, when: '수유 시간', note: '예: 냉동해 둔 모유' },
+  pump: { amount: '유축량', start: 100, when: '유축한 때', note: '예: 왼쪽 60, 오른쪽 50' },
+  milk: { amount: '마신 양', start: 150, when: '마신 때', note: '예: 데워서' },
+  water: { amount: '마신 양', start: 50, when: '마신 때', note: '예: 빨대컵' },
+  snack: { amount: null, start: 0, when: '먹은 때', note: '예: 떡뻥 두 개' },
+};
 const hourText = (v: number) => `${v / 60}시간`;
 
 /**
@@ -88,7 +100,7 @@ export function LogSheet({
   // 잠 — 잔 시간(분). 새로 적을 때는 한 시간 전에 잠들어 지금 깬 것으로
   const [slept, setSlept] = useState<number>(() => (editing?.endAt ? Math.max(5, Math.round(minutesOf(editing) / 5) * 5) : 60));
   const now = useNow(false);
-  const [ml, setMl] = useState<number>(() => editing?.amount ?? lastAmount ?? 120);
+  const [ml, setMl] = useState<number>(() => editing?.amount ?? lastAmount ?? (isIntake(kind) ? INTAKE_SHEET[kind].start : 120));
   const [text, setText] = useState<string>(() =>
     editing?.amount != null ? String(editing.amount) : kind !== 'temp' && lastAmount != null ? String(lastAmount) : '',
   );
@@ -103,7 +115,7 @@ export function LogSheet({
   const save = (input: Omit<EventInput, 'kind'>) => {
     tap('success');
     const feed = kind === 'breast' || kind === 'formula';
-    onSave({ kind, ...input, ...(feed ? { note: note.trim() || null } : {}) }, editing?.id ?? null);
+    onSave({ kind, ...input, ...(feed || isIntake(kind) ? { note: note.trim() || null } : {}) }, editing?.id ?? null);
     if (feed && !editing) {
       const when = input.startAt ? new Date(input.startAt) : new Date();
       for (const title of withSel) void logTitle(title, when);
@@ -192,6 +204,32 @@ export function LogSheet({
                 {!editing && <WithChips selected={withSel} onChange={setWithSel} />}
                 <NoteField value={note} onChange={setNote} />
                 <Button size="lg" label="저장" onPress={() => save({ amount: ml, startAt: at.toISOString() })} />
+              </>
+            )}
+
+            {/* 이유식 · 유축 수유 · 유축 · 우유 · 물 — 5ml 단위, 간식은 때와 메모만(task today/029) */}
+            {isIntake(kind) && (
+              <>
+                {INTAKE_SHEET[kind].amount && (
+                  <ValueRuler
+                    label={INTAKE_SHEET[kind].amount!}
+                    value={ml}
+                    onChange={setMl}
+                    big={String(ml)}
+                    unit="ml"
+                    min={5}
+                    max={AMOUNT_RANGE[kind]?.max ?? 400}
+                    step={5}
+                    px={1.4}
+                    tick={5}
+                    mid={25}
+                    every={50}
+                    text={mlText}
+                  />
+                )}
+                <TimeRuler label={INTAKE_SHEET[kind].when} value={at} onChange={setAt} />
+                <NoteField value={note} onChange={setNote} placeholder={INTAKE_SHEET[kind].note} />
+                <Button size="lg" label="저장" onPress={() => save({ amount: INTAKE_SHEET[kind].amount ? ml : null, startAt: at.toISOString() })} />
               </>
             )}
 
@@ -421,7 +459,7 @@ function WithChips({ selected, onChange }: { selected: string[]; onChange: (v: s
 }
 
 /** 수유 메모 — 기록 화면에 함께 보인다 */
-function NoteField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+function NoteField({ value, onChange, placeholder = '예: 트림을 두 번 했어요' }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   const c = useTheme();
   return (
     <View style={styles.group}>
@@ -431,7 +469,7 @@ function NoteField({ value, onChange }: { value: string; onChange: (v: string) =
       <TextInput
         value={value}
         onChangeText={onChange}
-        placeholder="예: 트림을 두 번 했어요"
+        placeholder={placeholder}
         placeholderTextColor={c.textTertiary}
         maxLength={200}
         accessibilityLabel="메모"

@@ -16,6 +16,7 @@ import { AdBanner } from '@/components/ad-banner';
 import { BottleIcon, ZzIcon } from '@/components/baby-icons';
 import { MemoSheet } from '@/components/growth/memo-sheet';
 import { DiaperGlyph, diaperTone } from '@/components/log/diaper-glyph';
+import { KIND_UI } from '@/components/log/kinds';
 import { useLogActions } from '@/components/log/use-log-actions';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
@@ -38,7 +39,7 @@ import {
   type TodoDone,
 } from '@/data/day-flow';
 import { STOOL_COLOR_LABEL, durationLabel, eventTitle, startOfDay } from '@/data/event-summary';
-import type { CareEvent } from '@/data/events';
+import { isIntake, type CareEvent } from '@/data/events';
 import { useEvents } from '@/data/events-context';
 import { useMemos } from '@/data/memos-context';
 import { useRoutines } from '@/data/routines-context';
@@ -246,6 +247,12 @@ function RecordRow({
       return (
         <Tile bg={diaperTone(it.event.diaper, c).backgroundColor}>
           <DiaperGlyph diaper={it.event.diaper} color={it.event.color} size={16} />
+        </Tile>
+      );
+    if (isIntake(k))
+      return (
+        <Tile bg={c.accentSoft}>
+          <Ionicons name={KIND_UI[k].icon} size={16} color={c.accent} />
         </Tile>
       );
     return (

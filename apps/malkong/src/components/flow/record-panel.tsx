@@ -16,7 +16,8 @@ import { ThemedText } from '@/components/themed-text';
 import { tap } from '@/components/ui';
 import { hhmm, type DayTotals } from '@/data/day-flow';
 import { durationLabel, startOfDay } from '@/data/event-summary';
-import type { EventKind } from '@/data/events';
+import { KIND_UI } from '@/components/log/kinds';
+import { isIntake, type EventKind } from '@/data/events';
 import { useEvents } from '@/data/events-context';
 import { usePreferences } from '@/data/preferences-context';
 import { arrangeBar, BAR_KIND_NAME, isBarKind, routineIdOf, type BarKind } from '@/data/record-bar';
@@ -55,12 +56,19 @@ export function RecordPanel({
   const { shown } = arrangeBar(recordBar, routines.map((r) => r.id));
 
   const d0 = startOfDay(date).getTime();
-  const temps = events.filter((e) => e.kind === 'temp' && new Date(e.startAt).getTime() >= d0 && new Date(e.startAt).getTime() < d0 + 24 * 60 * MIN);
+  const ofDay = (kind: EventKind) => events.filter((e) => e.kind === kind && new Date(e.startAt).getTime() >= d0 && new Date(e.startAt).getTime() < d0 + 24 * 60 * MIN);
+  const temps = ofDay('temp');
   const kindCell = (kind: BarKind): Cell => {
     if (kind === 'breast') return { key: kind, name: BAR_KIND_NAME.breast, value: durationLabel(totals.breastMin), sub: `${totals.breastCount}번` };
     if (kind === 'formula') return { key: kind, name: BAR_KIND_NAME.formula, value: `${Math.round(totals.formulaMl)}ml`, sub: `${totals.formulaCount}번` };
     if (kind === 'diaper') return { key: kind, name: BAR_KIND_NAME.diaper, value: `${totals.diapers}번`, sub: `대변 ${totals.poo}번` };
     if (kind === 'sleep') return { key: kind, name: BAR_KIND_NAME.sleep, value: durationLabel(totals.sleepMin), sub: `낮잠 ${totals.naps}번`, wide: true };
+    if (isIntake(kind)) {
+      // 이유식 · 유축 · 우유 · 물은 그날 합계 ml 와 횟수, 간식은 횟수와 마지막 시각
+      const list = ofDay(kind);
+      if (kind === 'snack') return { key: kind, name: BAR_KIND_NAME.snack, value: `${list.length}번`, sub: list.length ? hhmm(list[list.length - 1].startAt) : '' };
+      return { key: kind, name: BAR_KIND_NAME[kind], value: `${Math.round(list.reduce((sum, e) => sum + (e.amount ?? 0), 0))}ml`, sub: `${list.length}번` };
+    }
     const last = temps[temps.length - 1];
     return { key: kind, name: BAR_KIND_NAME.temp, value: `${temps.length}번`, sub: last?.amount != null ? `${last.amount}℃` : '' };
   };
@@ -85,6 +93,8 @@ export function RecordPanel({
     if (kind === 'formula') return <BottleIcon size={22} color="#FFFFFF" />;
     if (kind === 'diaper') return <Ionicons name="water-outline" size={21} color={c.peeFg} />;
     if (kind === 'temp') return <Ionicons name="thermometer-outline" size={21} color={c.tempFg} />;
+    if (kind === 'pumped') return <BottleIcon size={22} color={c.accent} />;
+    if (isIntake(kind)) return <Ionicons name={KIND_UI[kind].icon} size={21} color={c.accent} />;
     return sleeping ? <Ionicons name="sunny-outline" size={22} color={c.accent} /> : <ZzIcon size={21} color={c.onInk} />;
   };
   const look = (kind: BarKind) =>
@@ -94,7 +104,9 @@ export function RecordPanel({
         ? { backgroundColor: c.peeBg, borderWidth: 1.5, borderColor: c.peeLine }
         : kind === 'temp'
           ? { backgroundColor: c.tempBg, borderWidth: 1.5, borderColor: c.tempLine }
-          : sleeping
+          : isIntake(kind)
+            ? { backgroundColor: c.accentSoft }
+            : sleeping
             ? { backgroundColor: c.accentSoft }
             : { backgroundColor: c.ink };
 
@@ -103,7 +115,7 @@ export function RecordPanel({
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cols}>
         {cells.map(({ cell, kind, routine }) => {
           const stop = kind === 'sleep' && sleeping;
-          const graph = kind && kind !== 'temp';
+          const graph = kind === 'breast' || kind === 'formula' || kind === 'diaper' || kind === 'sleep';
           return (
             <View key={cell.key} style={[styles.col, cell.wide && styles.wide]}>
               <Pressable

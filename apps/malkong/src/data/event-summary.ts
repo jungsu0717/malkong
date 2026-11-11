@@ -4,13 +4,14 @@
  * 모두 기기 안에서 규칙으로 센다(모델을 부르지 않는다). 숫자로 정상 · 이상을 판정하지 않고, 우리 아기의 평소와 나란히 보일 뿐이다(헌장 5).
  */
 
-import { runningOf, type CareEvent, type StoolColor } from './events.ts';
+import { intakeTitle, isIntake, runningOf, type CareEvent, type StoolColor } from './events.ts';
 
 const MIN = 60 * 1000;
 const DAY = 24 * 60 * MIN;
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
-const isFeed = (e: CareEvent) => e.kind === 'breast' || e.kind === 'formula';
+/** 수유 — 유축한 모유를 젖병으로 먹인 것도 수유다(task today/029) */
+const isFeed = (e: CareEvent) => e.kind === 'breast' || e.kind === 'formula' || e.kind === 'pumped';
 
 /** 변 색 이름 */
 export const STOOL_COLOR_LABEL: Record<StoolColor, string> = {
@@ -71,6 +72,7 @@ const trim = (n: number, digits: number) => String(Number(n.toFixed(digits)));
 
 /** 기록 한 줄의 이름 — 「분유 120ml」 · 「모유 왼쪽 15분」 · 「잠 1시간 20분」 */
 export function eventTitle(e: CareEvent, now = new Date()): string {
+  if (isIntake(e.kind)) return intakeTitle({ kind: e.kind, amount: e.amount });
   switch (e.kind) {
     case 'breast': {
       const side = e.side === 'left' ? '왼쪽' : e.side === 'right' ? '오른쪽' : '';
@@ -140,7 +142,7 @@ export function statsBetween(events: CareEvent[], from: Date, to: Date, now = ne
     if (isFeed(e)) {
       if (!sameFeed) s.feeds += 1;
       if (e.kind === 'formula') s.formulaMl += e.amount ?? 0;
-      else s.breastMin += minutesOf(e, now);
+      else if (e.kind === 'breast') s.breastMin += minutesOf(e, now);
     } else if (e.kind === 'diaper') {
       s.diapers += 1;
       if (e.diaper === 'pee' || e.diaper === 'both') s.pee += 1;

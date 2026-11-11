@@ -46,7 +46,7 @@
 | `POST /v1/family/join` | 초대 코드로 들어가기 | `{ code, consentedAt }` → `{ familyId, inviteCode, members }`. 404 `INVITE_NOT_FOUND` · 409 `FAMILY_FULL`(6명) · 409 `ALREADY_IN_FAMILY`(다른 가족) · 429 `TOO_MANY_ATTEMPTS`(기기마다 하루 20번) |
 | `GET /v1/family` | 내 가족 | `{ familyId, inviteCode, members }`. 없으면 404 `NOT_IN_FAMILY` |
 | `DELETE /v1/family/me` | 나가기 | 204. 마지막 구성원이 나가면 가족과 데이터를 지운다 |
-| `POST /v1/family/sync` | 아기 · 기록 · 빠른 기록 · 할 일 · 루틴 · 메모 맞추기 | `{ since, baby?, records[], events[], items[] }` → `{ seq, baby, records[], events[], items[], itemKinds, members }` |
+| `POST /v1/family/sync` | 아기 · 기록 · 빠른 기록 · 할 일 · 루틴 · 메모 맞추기 | `{ since, baby?, records[], events[], items[], eventKinds? }` → `{ seq, baby, records[], events[], items[], itemKinds, eventKinds, members }` |
 
 `consentedAt` 은 아기 · 건강 기록의 서버 저장 · 가족 공유에 동의한 때(ISO) — 구성원 행에 남는다.
 `baby` 는 기기 DB 의 `baby` 행 그대로(`id` · `name` · `birthDate` · `createdAt` · `updatedAt`), `records[]` 는 `record` 행 그대로에
@@ -59,6 +59,9 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 `data` 는 기기 DB 의 줄 그대로(할 일에는 주제 kind 를 `topicKind` 로 더한다)이고 서버는 읽지 않는다(한 줄 4000자까지, 한 번에 2000줄).
 기록과 같은 표 · 같은 번호 · 같은 규칙(늦게 고친 쪽이 이긴다)으로 맞춘다. 응답에 `items` 가 없으면 옛 서버다(앱은 할 일 · 루틴을 올린 때를 넘기지 않는다).
 응답의 `itemKinds` 는 이 서버가 받는 `kind` 목록이다 — 앱은 여기 있는 종류만 올린다(옛 서버에 `memo` 를 보내 요청 전체가 422 로 거절되지 않게).
+빠른 기록 종류도 같다(2026-11-11) — 응답의 `eventKinds` 는 서버가 받는 종류(`breast` … `height`, 그리고 `solid` 이유식, `pumped` 유축 수유, `pump` 유축, `milk` 우유, `water` 물, `snack` 간식)이고,
+요청의 `eventKinds` 는 그 앱이 아는 종류다. 서버는 그 종류의 `events` 만 내려보내고, `eventKinds` 를 보내지 않는 옛 앱에는 옛 일곱 종류만 보낸다(지운 표시는 늘 보낸다).
+앱은 알리는 종류가 바뀌면(새 빌드) 한 번 `since: 0` 으로 다시 받는다.
 
 ```
 평시 ▸ 늦게 고친 쪽이 이긴다 — 기록 · 아기 모두 updatedAt(ISO) 비교. 서버는 기록마다 늘어나는 번호(seq)를 매기고,
@@ -267,6 +270,7 @@ breast · formula · diaper · sleep · temp · weight · height 가운데 하�
 - 2026-10-12 `/v1/ask` 요청에 `conversationSummary`, 답 · 되묻기 응답에 `conversationSummary` — 대화 요약은 폰이 들고 다닌다. `baby.records` 는 질문 주제에 닿는 것만 (decisions/022, task ask/013)
 - 2026-10-12 `/v1/family/sync` 에 `events[]` — 기록 탭의 빠른 기록(care_event 모양 + deleted). 서버는 기록과 같은 표 · 같은 번호로 맞추고 돌려줄 때 가른다. 옛 앱은 보내지 않아도 된다 (SPEC-LOG-07, task log/001)
 - 2026-10-30 `events[]` 에 `by`(누가 남겼는지) (SPEC-LOG-07, task log/003)
+- 2026-11-11 빠른 기록 종류 여섯(이유식, 유축 수유, 유축, 우유, 물, 간식)과 요청 · 응답의 `eventKinds` — 아는 종류만 내려보낸다 (task today/029, decisions/046)
 - 2026-10-22 질문 답변 · 보상 광고 · 피드백 · 또래 질문을 뺌, 자격은 `{ ads, operator }` 만, 가족 맞추기에 메모(`memo`)와 `itemKinds` (task common/022 · 024)
 - 2026-10-22 `GET /privacy` · `/terms` 웹 페이지 (task common/024)
 - 2026-11-09 `POST /v1/parse` — 물어보기 창의 문장 읽기(한 문장의 기록 여럿, 찾을 조건, health, unknown), 기기마다 하루 300번, 503 MODEL_UNAVAILABLE (decisions/039, task common/031)

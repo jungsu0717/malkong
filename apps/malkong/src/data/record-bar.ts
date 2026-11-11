@@ -6,18 +6,21 @@
  * 화면 코드를 가져오지 않는 순수 함수(`node --test src/data/record-bar.test.ts`).
  */
 
+import { INTAKE_KINDS, INTAKE_NAME, type IntakeKind } from './events.ts';
 import { titleKey } from './routine.ts';
 
-export type BarKind = 'breast' | 'formula' | 'diaper' | 'sleep' | 'temp';
-export const BAR_KINDS: BarKind[] = ['breast', 'formula', 'diaper', 'sleep', 'temp'];
-export const BAR_KIND_NAME: Record<BarKind, string> = { breast: '모유', formula: '분유', diaper: '기저귀', sleep: '잠', temp: '체온' };
+export type BarKind = 'breast' | 'formula' | 'diaper' | 'sleep' | 'temp' | IntakeKind;
+export const BAR_KINDS: BarKind[] = ['breast', 'formula', 'diaper', 'sleep', 'temp', ...INTAKE_KINDS];
+export const BAR_KIND_NAME: Record<BarKind, string> = { breast: '모유', formula: '분유', diaper: '기저귀', sleep: '잠', temp: '체온', ...INTAKE_NAME };
+/** 처음부터 보이는 기록 단추 — 나머지 기록 종류는 「추가할 수 있는 단추」에서 넣는다 */
+const FIRST_KINDS: BarKind[] = ['breast', 'formula', 'diaper', 'sleep'];
 
 /** 단추 하나의 이름 — 기록 종류는 그대로(`formula`), 루틴은 `routine:<id>` */
 export type BarKey = string;
 export type BarSetting = { order: BarKey[]; hidden: BarKey[] };
 
-/** 처음 — 수유 · 기저귀 · 잠 넷, 그 뒤에 루틴. 체온은 추가할 수 있는 단추에 둔다 */
-export const DEFAULT_BAR: BarSetting = { order: ['breast', 'formula', 'diaper', 'sleep'], hidden: ['temp'] };
+/** 처음 — 수유 · 기저귀 · 잠 넷, 그 뒤에 루틴. 체온, 이유식, 유축 같은 것은 추가할 수 있는 단추에 둔다 */
+export const DEFAULT_BAR: BarSetting = { order: [...FIRST_KINDS], hidden: [] };
 
 export const routineKey = (id: string): BarKey => `routine:${id}`;
 export const routineIdOf = (key: BarKey): string | null => (key.startsWith('routine:') ? key.slice('routine:'.length) : null);
@@ -37,12 +40,16 @@ export function barFromText(text: string | null): BarSetting {
 
 export const barToText = (s: BarSetting) => JSON.stringify(s);
 
-/** 보이는 단추(순서대로)와 추가할 수 있는 단추 — routineIds 는 지우지 않은 루틴, 루틴 화면의 순서대로 */
+/**
+ * 보이는 단추(순서대로)와 추가할 수 있는 단추 — routineIds 는 지우지 않은 루틴, 루틴 화면의 순서대로.
+ * 처음 넷과 루틴은 뺀 적이 없으면 줄 끝에 붙고, 나머지 기록 종류는 넣어야 보인다(새 종류가 생겨도 줄이 저절로 길어지지 않게)
+ */
 export function arrangeBar(s: BarSetting, routineIds: string[]): { shown: BarKey[]; more: BarKey[] } {
   const all = [...BAR_KINDS, ...routineIds.map(routineKey)];
+  const joins = (k: BarKey) => (isBarKind(k) ? FIRST_KINDS.includes(k) : true);
   const shown: BarKey[] = [];
   for (const k of s.order) if (all.includes(k) && !s.hidden.includes(k) && !shown.includes(k)) shown.push(k);
-  for (const k of all) if (!shown.includes(k) && !s.hidden.includes(k) && !s.order.includes(k)) shown.push(k);
+  for (const k of all) if (joins(k) && !shown.includes(k) && !s.hidden.includes(k) && !s.order.includes(k)) shown.push(k);
   return { shown, more: all.filter((k) => !shown.includes(k)) };
 }
 
@@ -54,7 +61,7 @@ export function barAfterEdit(shown: BarKey[], routineIds: string[]): BarSetting 
 
 /**
  * 추가할 수 있는 단추 가운데 아직 루틴이 아닌 것 — 누르면 반복을 묻고 루틴으로 만든다.
- * 양을 적는 기록(이유식, 유축, 우유, 물, 간식)은 기록 종류가 새로 생겨야 해서 다음 단계다(decisions/046)
+ * 양을 적는 것(이유식, 유축, 우유, 물, 간식)은 루틴이 아니라 기록 종류다(BAR_KINDS, decisions/046)
  */
 export type Starter = { title: string; everyDays: number; time: string };
 export const STARTERS: Starter[] = [

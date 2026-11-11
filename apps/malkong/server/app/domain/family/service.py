@@ -10,6 +10,7 @@ from http import HTTPStatus
 from app.common.core.exception import ApiException
 from app.domain.entitlements.service import Device
 from app.domain.family.schema import (
+    OLD_EVENT_KINDS,
     BabyIn,
     EventIn,
     FamilyInfo,
@@ -158,7 +159,14 @@ class FamilyService:
             rows = self._store.records_since(family.id, req.since)
             baby = self._store.baby(family.id)
             records = [r for r in rows if not r.data.get(EVENT_MARK) and not r.data.get(ITEM_MARK)]
-            events = [r for r in rows if r.data.get(EVENT_MARK)]
+            # 이 앱이 아는 종류만 — 옛 앱(종류를 알려 주지 않음)에는 옛 종류만.
+            # 지운 표시는 늘 보낸다
+            known = set(req.event_kinds) if req.event_kinds is not None else set(OLD_EVENT_KINDS)
+            events = [
+                r
+                for r in rows
+                if r.data.get(EVENT_MARK) and (r.deleted or r.data.get("kind") in known)
+            ]
             items = [r for r in rows if r.data.get(ITEM_MARK)]
             return SyncResponse(
                 seq=rows[-1].seq if rows else req.since,

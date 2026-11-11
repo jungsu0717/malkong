@@ -9,7 +9,7 @@ import { parseAdd } from './add-parse.ts';
 import { copula, inputsFromServer, type ParsedInput } from './ask.ts';
 import { feedSessions, hhmm } from './day-flow.ts';
 import { durationLabel, eventTitle, minutesOf, STOOL_COLOR_LABEL } from './event-summary.ts';
-import { AMOUNT_RANGE, type CareEvent, type DiaperKind, type Side, type StoolColor } from './events.ts';
+import { AMOUNT_RANGE, isIntake, type CareEvent, type DiaperKind, type Side, type StoolColor } from './events.ts';
 import type { RoutineLog } from './routine.ts';
 import type { Memo } from './stage.ts';
 
@@ -78,6 +78,8 @@ export function dayContext(
     const end = e.endAt ? new Date(e.endAt).getTime() : null;
     const sleepInto = e.kind === 'sleep' && start < from && (end === null ? now.getTime() >= from : inDay(end));
     if (!inDay(start) && !sleepInto) continue;
+    // 이유식 · 유축 · 우유 · 물 · 간식은 아직 모델이 모르는 종류라 보내지 않는다(서버 kind 목록, task today/029)
+    if (isIntake(e.kind)) continue;
     const key = e.kind === 'breast' || e.kind === 'formula' ? (sessionOf.get(e.id) ?? e.id) : e.id;
     drafts.push({
       at: start,
@@ -412,7 +414,21 @@ export function compare(a: CtxSource, b: CtxSource, now: Date): string | null {
   return `${head}보다 ${diff} ${verb}.`;
 }
 
-const KIND_WORD: Record<CareEvent['kind'], string> = { breast: '수유', formula: '수유', diaper: '기저귀', sleep: '잠', temp: '체온', weight: '몸무게', height: '키' };
+const KIND_WORD: Record<CareEvent['kind'], string> = {
+  breast: '수유',
+  formula: '수유',
+  diaper: '기저귀',
+  sleep: '잠',
+  temp: '체온',
+  weight: '몸무게',
+  height: '키',
+  solid: '이유식',
+  pumped: '수유',
+  pump: '유축',
+  milk: '우유',
+  water: '물',
+  snack: '간식',
+};
 
 /**
  * 에이전트가 고른 기록으로 답 문장 — 비교를 물었고 두 기록이 같은 종류면 차이를, 아니면 그 기록들을 시각과 함께.

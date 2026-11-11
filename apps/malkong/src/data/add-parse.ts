@@ -8,7 +8,7 @@
  */
 
 import { parseDue } from './due-parse.ts';
-import type { DiaperKind, EventInput, EventKind, Side } from './events.ts';
+import { AMOUNT_RANGE, intakeTitle, isIntake, type DiaperKind, type EventInput, type EventKind, type Side } from './events.ts';
 import { repeatLabel, type Repeat } from './repeat.ts';
 
 const MIN = 60 * 1000;
@@ -100,7 +100,14 @@ function readRecord(raw: string, now: Date): AddResult | null {
   // 반복이나 살 것 · 예약은 기록이 아니라 할 일 — 「매달 1일 분유 주문」
   if (/매일|매주|매달|매월|마다|주문|사기|사야|구매|예약|챙기/.test(text)) return null;
   let kind: EventKind | null = null;
-  if (/분유/.test(text)) kind = 'formula';
+  // 이유식 · 유축 · 우유 · 물 · 간식(task today/029) — 「유축한 모유」는 모유보다 먼저 본다
+  if (/유축\s*(수유|모유|젖)|유축한\s*(모유|젖|거)/.test(text)) kind = 'pumped';
+  else if (/유축/.test(text)) kind = 'pump';
+  else if (/이유식/.test(text)) kind = 'solid';
+  else if (/간식/.test(text)) kind = 'snack';
+  else if (/우유/.test(text)) kind = 'milk';
+  else if (/\s물(을|\s|\d)/.test(text) && !/물티슈|물수건|물병/.test(text)) kind = 'water';
+  else if (/분유/.test(text)) kind = 'formula';
   else if (/모유|젖/.test(text)) kind = 'breast';
   else if (/수유/.test(text)) kind = /\d+\s*(ml|미리|cc)/i.test(text) ? 'formula' : 'breast';
   else if (/기저귀|소변|대변|응가|똥|오줌|쉬했|쉬\s/.test(text)) kind = 'diaper';
@@ -116,6 +123,13 @@ function readRecord(raw: string, now: Date): AddResult | null {
   const when = whenLabel(at, now);
   const startAt = at.toISOString();
 
+  if (isIntake(kind)) {
+    if (kind === 'snack') return { type: 'record', kind, input: { kind, startAt }, complete: true, title: '간식', when };
+    const ml = number(rest.replace(/\d+\s*분/g, ''));
+    const max = AMOUNT_RANGE[kind]?.max ?? 400;
+    const ok = ml !== null && ml >= 1 && ml <= max;
+    return { type: 'record', kind, input: { kind, amount: ok ? ml : null, startAt }, complete: ok, title: intakeTitle({ kind, amount: ok ? ml : null }), when };
+  }
   if (kind === 'formula') {
     const ml = number(rest.replace(/\d+\s*분/g, ''));
     const ok = ml !== null && ml >= 1 && ml <= 400;

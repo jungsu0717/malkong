@@ -7,7 +7,7 @@
 
 import { dayFlow, feedTitle, hhmm, sleepTitle, type RoutineDone, type SleepSpan, type TodoDone } from './day-flow.ts';
 import { durationLabel, startOfDay, statsBetween } from './event-summary.ts';
-import type { CareEvent } from './events.ts';
+import { intakeTitle, isIntake, type CareEvent, type IntakeKind } from './events.ts';
 import { isCheckMemo } from './growth-plus.ts';
 import { isTimed, logsOn, type Routine, type RoutineLog } from './routine.ts';
 import type { Memo } from './stage.ts';
@@ -16,7 +16,7 @@ import type { Todo } from './todos.ts';
 const MIN = 60 * 1000;
 const DAY = 24 * 60 * MIN;
 
-export type FactKind = 'breast' | 'formula' | 'pee' | 'poo' | 'both' | 'sleep' | 'routine' | 'todo' | 'temp' | 'weight' | 'height' | 'check';
+export type FactKind = 'breast' | 'formula' | 'pee' | 'poo' | 'both' | 'sleep' | 'routine' | 'todo' | 'temp' | 'weight' | 'height' | 'check' | IntakeKind;
 
 export type Fact = {
   key: string;
@@ -68,6 +68,7 @@ export function dayFacts(events: CareEvent[], routines: RoutineDone[], todos: To
         else if (e.kind === 'temp') push(it.key, it.at, hhmm(it.at), e.amount !== null ? `체온 ${e.amount}℃` : '체온', 'temp');
         else if (e.kind === 'weight') push(it.key, it.at, hhmm(it.at), e.amount !== null ? `몸무게 ${e.amount}kg` : '몸무게', 'weight');
         else if (e.kind === 'height') push(it.key, it.at, hhmm(it.at), e.amount !== null ? `키 ${e.amount}cm` : '키', 'height');
+        else if (isIntake(e.kind)) push(it.key, it.at, hhmm(it.at), intakeTitle({ kind: e.kind, amount: e.amount }), e.kind);
       }
     }
   }

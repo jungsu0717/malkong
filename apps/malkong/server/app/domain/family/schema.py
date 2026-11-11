@@ -49,11 +49,34 @@ class RecordIn(ApiModel):
     deleted: bool = False
 
 
+EventKind = Literal[
+    "breast",
+    "formula",
+    "diaper",
+    "sleep",
+    "temp",
+    "weight",
+    "height",
+    # 이유식 · 유축 수유 · 유축 · 우유 · 물 · 간식(task today/029)
+    "solid",
+    "pumped",
+    "pump",
+    "milk",
+    "water",
+    "snack",
+]
+# 이 서버가 받는 빠른 기록 종류 — 응답에 실어 보낸다. 앱은 여기에 있는 종류만 올린다
+EVENT_KINDS: list[str] = list(EventKind.__args__)
+# 종류를 알려 주지 않는 옛 앱이 아는 종류 — 옛 앱에는 이것만 내려보낸다
+# (옛 앱은 모르는 종류를 받으면 키로 그린다)
+OLD_EVENT_KINDS: list[str] = ["breast", "formula", "diaper", "sleep", "temp", "weight", "height"]
+
+
 class EventIn(ApiModel):
     """빠른 기록 한 줄(SPEC-LOG-07) — 폰의 care_event 모양 그대로."""
 
     id: NonEmptyStr = Field(max_length=100)
-    kind: Literal["breast", "formula", "diaper", "sleep", "temp", "weight", "height"]
+    kind: EventKind
     start_at: NonEmptyStr = Field(max_length=40)
     # 비어 있으면 재는 중
     end_at: str | None = Field(default=None, max_length=40)
@@ -108,6 +131,9 @@ class SyncRequest(ApiModel):
     events: list[EventIn] = Field(default=[], max_length=2000)
     # 할 일 · 주제 · 루틴 · 루틴 기록(task my/009) — 옛 앱은 보내지 않는다
     items: list[ItemIn] = Field(default=[], max_length=2000)
+    # 이 앱이 아는 빠른 기록 종류 — 이 종류만 내려보낸다.
+    # 옛 앱은 보내지 않는다(그러면 OLD_EVENT_KINDS)
+    event_kinds: list[str] | None = Field(default=None, max_length=50)
 
 
 class SyncResponse(ApiModel):
@@ -119,4 +145,6 @@ class SyncResponse(ApiModel):
     items: list[ItemIn] = []
     # 이 서버가 받는 줄 종류 — 앱은 여기에 있는 종류만 올린다(메모는 2026-10-22 부터)
     item_kinds: list[str] = Field(default_factory=lambda: list(ITEM_KINDS))
+    # 이 서버가 받는 빠른 기록 종류(task today/029)
+    event_kinds: list[str] = Field(default_factory=lambda: list(EVENT_KINDS))
     members: int

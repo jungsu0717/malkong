@@ -27,10 +27,11 @@ import Svg, { Path } from 'react-native-svg';
 
 import { BottleIcon, ZzIcon } from '@/components/baby-icons';
 import { DiaperGlyph, diaperTone } from '@/components/log/diaper-glyph';
+import { KIND_UI } from '@/components/log/kinds';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import type { IconName } from '@/components/ui';
-import type { StoolColor } from '@/data/events';
+import { INTAKE_KINDS, type IntakeKind, type StoolColor } from '@/data/events';
 import { DOT, HEAD, ITEM, SLEEP_NOW_H, type FlowGeo, type Rect } from '@/data/flow-layout';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -181,7 +182,8 @@ export function BlockFrame({
   );
 }
 
-export type ItemKind = 'breast' | 'formula' | 'pee' | 'poo' | 'both' | 'temp' | 'weight' | 'height' | 'routine' | 'todo' | 'memo';
+export type ItemKind = 'breast' | 'formula' | 'pee' | 'poo' | 'both' | 'temp' | 'weight' | 'height' | 'routine' | 'todo' | 'memo' | IntakeKind;
+const isIntakeItem = (kind: ItemKind): kind is IntakeKind => (INTAKE_KINDS as string[]).includes(kind);
 
 /** 묶음 안 기록 하나 — 수유는 코랄 네모, 기저귀는 동그라미(소변 노랑, 대변 갈색), 체온 빨강, 루틴과 할 일은 파랑 네모에 체크, 메모 보라. gap 은 셋째 줄 간격 */
 export function ItemNode({
@@ -268,13 +270,15 @@ export function nodeTone(kind: ItemKind, c: ReturnType<typeof useTheme>) {
   if (kind === 'temp') return { backgroundColor: c.tempBg, borderColor: c.tempLine, borderWidth: 1.5 };
   if (kind === 'routine' || kind === 'todo') return { backgroundColor: c.doneBg, borderColor: c.doneLine, borderWidth: 1.5 };
   if (kind === 'memo') return { backgroundColor: c.memoBg, borderColor: c.memoLine, borderWidth: 1.5 };
+  // 이유식 · 유축 · 우유 · 물 · 간식 — 수유와 같은 코랄을 옅게(task today/029)
+  if (isIntakeItem(kind)) return { backgroundColor: c.accentSoft, borderColor: c.accentSoft, borderWidth: 1.5 };
   return { backgroundColor: c.surface, borderColor: c.flowLine, borderWidth: 1.5 };
 }
 
 /** 초안 — 흰 바탕에 그 기록 색의 점선 테두리 */
 export function draftTone(kind: ItemKind, c: ReturnType<typeof useTheme>) {
   const line =
-    kind === 'breast' || kind === 'formula'
+    kind === 'breast' || kind === 'formula' || isIntakeItem(kind)
       ? c.accent
       : isDiaper(kind)
         ? diaperTone(kind, c).borderColor
@@ -305,6 +309,8 @@ export function NodeIcon({ kind, title, stool, size, light = false }: { kind: It
   const c = useTheme();
   if (kind === 'formula') return <BottleIcon size={size} color={light ? c.accent : '#FFFFFF'} />;
   if (kind === 'routine' || kind === 'todo') return <RoutineIcon title={title} size={size} color={c.doneFg} />;
+  if (kind === 'pumped') return <BottleIcon size={size} color={c.accent} />;
+  if (isIntakeItem(kind)) return <Ionicons name={KIND_UI[kind].icon} size={size} color={c.accent} />;
   if (isDiaper(kind)) return <DiaperGlyph diaper={kind} color={stool} size={size} />;
   const ion: Partial<Record<ItemKind, IconName>> = { breast: 'heart-outline', temp: 'thermometer-outline', weight: 'scale-outline', height: 'resize-outline', memo: 'document-text-outline' };
   const color = kind === 'breast' ? (light ? c.accent : '#FFFFFF') : kind === 'temp' ? c.tempFg : kind === 'memo' ? c.memoFg : c.text;

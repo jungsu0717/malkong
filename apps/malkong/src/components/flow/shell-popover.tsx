@@ -17,6 +17,7 @@ import { tap } from '@/components/ui';
 import { dateOfYmd, shellTitle, sourceWord, type Shell, type ShellSet } from '@/data/day-draft';
 import { hhmm } from '@/data/day-flow';
 import { durationLabel } from '@/data/event-summary';
+import { AMOUNT_RANGE, isIntake } from '@/data/events';
 import { ITEM } from '@/data/flow-layout';
 import type { ShellPatch } from '@/hooks/use-day-shells';
 import { useTheme } from '@/hooks/use-theme';
@@ -34,7 +35,19 @@ export function shellItemKind(s: Shell): ItemKind | 'sleep' {
   return s.kind;
 }
 
-const ASK: Record<Shell['kind'], string> = { formula: '언제 먹었어요?', breast: '언제 먹었어요?', diaper: '언제 갈았어요?', sleep: '언제 잠들었어요?', routine: '언제 했어요?' };
+const ASK: Record<Shell['kind'], string> = {
+  formula: '언제 먹었어요?',
+  breast: '언제 먹었어요?',
+  diaper: '언제 갈았어요?',
+  sleep: '언제 잠들었어요?',
+  routine: '언제 했어요?',
+  solid: '언제 먹었어요?',
+  pumped: '언제 먹었어요?',
+  pump: '언제 유축했어요?',
+  milk: '언제 마셨어요?',
+  water: '언제 마셨어요?',
+  snack: '언제 먹었어요?',
+};
 
 export function ShellPopover({
   set,
@@ -81,6 +94,8 @@ export function ShellPopover({
   // 기록은 지나간 일이다 — 오늘이면 지금보다 늦은 시각은 고르지 못한다
   const late = (x: number) => isToday && x > now.getTime() + MIN;
   const timed = (shell.kind === 'breast' || shell.kind === 'sleep') && minutes !== null;
+  // 양을 고치는 것 — 분유와 이유식 · 유축 · 우유 · 물(간식은 양 없이)
+  const amountMax = shell.kind === 'formula' ? 400 : shell.kind !== 'snack' && shell.kind !== 'routine' && isIntake(shell.kind) ? (AMOUNT_RANGE[shell.kind]?.max ?? 400) : null;
   const patch: ShellPatch = { amount, minutes };
   const title = shellTitle(shell, patch);
 
@@ -122,14 +137,14 @@ export function ShellPopover({
         </Pressable>
       </View>
 
-      {shell.kind === 'formula' && (
+      {amountMax !== null && (
         <Stepper
           label="양"
           value={`${amount ?? 0}ml`}
           minusLabel="10ml 줄이기"
           plusLabel="10ml 늘리기"
           onMinus={(amount ?? 0) > 10 ? () => setAmount((amount ?? 0) - 10) : null}
-          onPlus={(amount ?? 0) < 400 ? () => setAmount((amount ?? 0) + 10) : null}
+          onPlus={(amount ?? 0) < amountMax ? () => setAmount((amount ?? 0) + 10) : null}
         />
       )}
       {timed && (

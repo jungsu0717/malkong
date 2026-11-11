@@ -11,16 +11,18 @@ import { arrangeBar, barAfterEdit, barFromText, barToText, DEFAULT_BAR, moveKey,
 test('처음에는 수유 · 기저귀 · 잠 넷과 루틴, 체온은 추가할 수 있는 단추', () => {
   const { shown, more } = arrangeBar(DEFAULT_BAR, ['rt-a', 'rt-b']);
   assert.deepEqual(shown, ['breast', 'formula', 'diaper', 'sleep', 'routine:rt-a', 'routine:rt-b']);
-  assert.deepEqual(more, ['temp']);
+  assert.deepEqual(more, ['temp', 'solid', 'pumped', 'pump', 'milk', 'water', 'snack']);
 });
 
 test('편집한 순서와 뺀 단추 — 새로 만든 루틴은 줄 끝에, 지운 루틴은 빠진다', () => {
   const saved = barAfterEdit(['routine:rt-b', 'formula', 'sleep', 'temp'], ['rt-a', 'rt-b']);
-  assert.deepEqual(saved.hidden, ['breast', 'diaper', 'routine:rt-a']);
+  assert.deepEqual(saved.hidden, ['breast', 'diaper', 'solid', 'pumped', 'pump', 'milk', 'water', 'snack', 'routine:rt-a']);
   const s = barFromText(barToText(saved));
   assert.deepEqual(arrangeBar(s, ['rt-a', 'rt-b', 'rt-c']).shown, ['routine:rt-b', 'formula', 'sleep', 'temp', 'routine:rt-c']);
   assert.deepEqual(arrangeBar(s, ['rt-a']).shown, ['formula', 'sleep', 'temp']);
-  assert.deepEqual(arrangeBar(s, ['rt-a']).more, ['breast', 'diaper', 'routine:rt-a']);
+  assert.deepEqual(arrangeBar(s, ['rt-a']).more, ['breast', 'diaper', 'solid', 'pumped', 'pump', 'milk', 'water', 'snack', 'routine:rt-a']);
+  // 옛 설정에 없던 기록 종류는 저절로 보이지 않는다 — 처음 넷과 루틴만 줄 끝에 붙는다
+  assert.deepEqual(arrangeBar({ order: ['formula'], hidden: [] }, ['rt-a']).shown, ['formula', 'breast', 'diaper', 'sleep', 'routine:rt-a']);
   assert.deepEqual(barFromText('{깨짐'), DEFAULT_BAR);
   assert.deepEqual(barFromText(null), DEFAULT_BAR);
 });

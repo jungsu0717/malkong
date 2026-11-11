@@ -171,6 +171,8 @@ export type SyncRequest = {
   /** 기록을 가족과 함께 보는 데 동의한 폰만 싣는다(decisions/036) */
   events?: SyncEvent[];
   items?: import('./family-items').SyncItem[];
+  /** 이 앱이 아는 빠른 기록 종류 — 서버는 이 종류만 내려보낸다(task today/029) */
+  eventKinds?: string[];
 };
 export type SyncResponse = {
   seq: number;
@@ -180,6 +182,8 @@ export type SyncResponse = {
   items?: import('./family-items').SyncItem[];
   /** 서버가 받는 줄 종류 — 여기에 'memo' 가 있어야 메모를 올린다(task common/024) */
   itemKinds?: string[];
+  /** 서버가 받는 빠른 기록 종류 — 여기에 있는 종류만 올린다. 옛 서버는 보내지 않는다(그러면 옛 종류만) */
+  eventKinds?: string[];
   members: number;
 };
 

@@ -92,3 +92,23 @@ test('할 일 이름에서 부탁하는 말과 끝의 「일정」을 뺀다', (
   assert.equal(parseAdd('다음 주 화요일 병원 예약 일정 추가해 줘', NOW)?.title, '병원 예약');
   assert.equal(parseAdd('11월 20일 BCG 접종', NOW)?.title, 'BCG 접종');
 });
+
+test('기록 — 이유식 · 유축 · 우유 · 물 · 간식(task today/029)', () => {
+  const read = (s: string) => {
+    const r = parseAdd(s, NOW);
+    return r?.type === 'record' ? { kind: r.kind, amount: r.input.amount ?? null, title: r.title, complete: r.complete } : null;
+  };
+  assert.deepEqual(read('11시에 이유식 80 먹었어'), { kind: 'solid', amount: 80, title: '이유식 80ml', complete: true });
+  assert.deepEqual(read('유축한 모유 100 먹였어'), { kind: 'pumped', amount: 100, title: '유축 수유 100ml', complete: true });
+  assert.deepEqual(read('유축 수유 90'), { kind: 'pumped', amount: 90, title: '유축 수유 90ml', complete: true });
+  assert.deepEqual(read('유축 120 했어'), { kind: 'pump', amount: 120, title: '유축 120ml', complete: true });
+  assert.deepEqual(read('우유 150 마셨어'), { kind: 'milk', amount: 150, title: '우유 150ml', complete: true });
+  assert.deepEqual(read('물 50 마셨어'), { kind: 'water', amount: 50, title: '물 50ml', complete: true });
+  assert.deepEqual(read('간식 먹었어'), { kind: 'snack', amount: null, title: '간식', complete: true });
+  // 양이 없으면 입력 창에서 마저 적는다. 물티슈는 물이 아니다
+  assert.deepEqual(read('이유식 먹었어'), { kind: 'solid', amount: null, title: '이유식', complete: false });
+  assert.notEqual(read('물티슈 갈았어')?.kind, 'water');
+  // 모유와 분유는 그대로
+  assert.equal(read('모유 15분 먹였어')?.kind, 'breast');
+  assert.equal(read('분유 120 먹였어')?.kind, 'formula');
+});

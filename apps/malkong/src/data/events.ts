@@ -1,12 +1,14 @@
 /**
- * 빠른 기록 (SPEC-LOG-01~03, decisions/023 · 036) — 수유 · 기저귀 · 잠 · 체온 · 키와 몸무게.
+ * 빠른 기록 (SPEC-LOG-01~03, decisions/023 · 036 · 046) — 수유, 기저귀, 잠, 체온, 키와 몸무게, 그리고 이유식, 유축 수유, 유축, 우유, 물, 간식.
  *
  * 한 줄이 한 번의 일이다. 모유 · 잠은 시작과 끝이 있고, 끝이 비어 있으면 재는 중이다(종류마다 하나까지).
  * 기기 DB `care_event`(backend 「기기 DB 스키마」, 읽고 쓰기는 db.ts). 가족 공유를 켜면 맞춰지고, 누가 남겼는지(by)가 가족에게 보인다(family.ts).
  * 이 파일은 저장소를 부르지 않는다 — node 시험(event-summary.test.ts)이 바로 읽는다.
  */
 
-export type EventKind = 'breast' | 'formula' | 'diaper' | 'sleep' | 'temp' | 'weight' | 'height';
+/** 먹을거리와 유축 — 위쪽 기록 단추 줄에서 넣는 종류(task today/029 2단계). 간식 말고는 양(ml)을 적는다 */
+export type IntakeKind = 'solid' | 'pumped' | 'pump' | 'milk' | 'water' | 'snack';
+export type EventKind = 'breast' | 'formula' | 'diaper' | 'sleep' | 'temp' | 'weight' | 'height' | IntakeKind;
 export type Side = 'left' | 'right';
 export type DiaperKind = 'pee' | 'poo' | 'both';
 /** 변 색 — 대변 · 둘 다일 때 고른다(SPEC-LOG-01) */
@@ -33,7 +35,18 @@ export type CareEvent = {
   updatedAt: string;
 };
 
-export const EVENT_KINDS: EventKind[] = ['breast', 'formula', 'diaper', 'sleep', 'temp', 'weight', 'height'];
+export const INTAKE_KINDS: IntakeKind[] = ['solid', 'pumped', 'pump', 'milk', 'water', 'snack'];
+export const EVENT_KINDS: EventKind[] = ['breast', 'formula', 'diaper', 'sleep', 'temp', 'weight', 'height', ...INTAKE_KINDS];
+/** 옛 서버가 받던 종류 — 서버가 받는 종류를 알려 주지 않으면 이것만 올린다(family.ts) */
+export const OLD_EVENT_KINDS: EventKind[] = ['breast', 'formula', 'diaper', 'sleep', 'temp', 'weight', 'height'];
+export const isIntake = (k: EventKind): k is IntakeKind => (INTAKE_KINDS as EventKind[]).includes(k);
+/** 기록 이름 — 「이유식」 「유축 수유」 */
+export const INTAKE_NAME: Record<IntakeKind, string> = { solid: '이유식', pumped: '유축 수유', pump: '유축', milk: '우유', water: '물', snack: '간식' };
+
+/** 먹을거리 · 유축 기록의 이름 — 「이유식 80ml」, 「간식」 */
+export function intakeTitle(e: { kind: IntakeKind; amount: number | null }): string {
+  return e.amount != null && e.kind !== 'snack' ? `${INTAKE_NAME[e.kind]} ${Math.round(e.amount)}ml` : INTAKE_NAME[e.kind];
+}
 
 /** 시작과 끝으로 재는 기록 */
 export const TIMED_KINDS: EventKind[] = ['breast', 'sleep'];
@@ -44,6 +57,11 @@ export const AMOUNT_RANGE: Partial<Record<EventKind, { min: number; max: number;
   temp: { min: 34, max: 43, unit: '℃' },
   weight: { min: 1, max: 30, unit: 'kg' },
   height: { min: 30, max: 130, unit: 'cm' },
+  solid: { min: 1, max: 500, unit: 'ml' },
+  pumped: { min: 1, max: 400, unit: 'ml' },
+  pump: { min: 1, max: 600, unit: 'ml' },
+  milk: { min: 1, max: 500, unit: 'ml' },
+  water: { min: 1, max: 500, unit: 'ml' },
 };
 
 /** 숫자 칸 입력 — 쉼표를 점으로, 숫자와 점만 남긴다 */

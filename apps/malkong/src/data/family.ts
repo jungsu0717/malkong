@@ -38,7 +38,7 @@ import {
   upsertTopicRow,
   writeSetting,
 } from './db';
-import type { CareEvent } from './events';
+import { EVENT_KINDS, OLD_EVENT_KINDS, type CareEvent, type EventKind } from './events';
 import { itemKindOfId, outgoingItems, planIncoming } from './family-items';
 import { loadRecords, removeRecord, upsertRecords, type BabyRecord } from './records';
 import { emitRemoteChange, type RemoteKind } from './sync-events';
@@ -63,6 +63,13 @@ const EVENTS_PUSHED_KEY = 'family.eventsPushedAt';
  * 따로 동의해야 올린다. 가족이 남긴 기록은 동의와 상관없이 받는다
  */
 const EVENTS_CONSENT_KEY = 'family.eventsConsentedAt';
+/**
+ * 서버가 받는 빠른 기록 종류(응답의 eventKinds, task today/029) — 옛 서버에 모르는 종류(이유식 같은 것)를 올리면 맞추기 전체가 거절된다.
+ * 받는 종류가 늘면 올린 때를 비워 그동안 못 올린 기록을 다시 올린다
+ */
+const SERVER_EVENT_KINDS_KEY = 'family.serverEventKinds';
+/** 서버에 알린 이 앱의 종류 — 바뀌면(새 빌드) 처음부터 다시 받는다. 옛 앱일 때 서버가 내려보내지 않은 새 종류를 받으려고 */
+const ASKED_EVENT_KINDS_KEY = 'family.askedEventKinds';
 /** 지운 표시는 올린 뒤 지우지만, 혹시 남아도 이만큼만 */
 const MAX_TOMBSTONES = 300;
 
@@ -77,6 +84,10 @@ export type FamilyState = {
 };
 
 type Tombstone = { id: string; deletedAt: string };
+
+/** 저장된 종류 목록(쉼표로) — 없으면 null */
+const kindsOf = (text: string | null): EventKind[] | null =>
+  text ? (text.split(',').filter((k) => (EVENT_KINDS as string[]).includes(k)) as EventKind[]) : null;
 
 /** 빠른 기록의 id 는 `ev-` 로 시작한다(events.ts newEventId) — 지운 표시를 기록과 가른다 */
 const isEventId = (id: string) => id.startsWith('ev-');
@@ -276,9 +287,12 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   // 빠른 기록(SPEC-LOG-07) — 동의한 폰만, 따로 센 때부터 고친 것과 지운 표시. 들어간 직후(null)면 전부
   const eventsOk = await eventsConsented();
   const eventsPushedAt = state.pushedAt === null ? '' : ((await readSetting(EVENTS_PUSHED_KEY)) ?? '');
+  const serverKinds = kindsOf(await readSetting(SERVER_EVENT_KINDS_KEY)) ?? OLD_EVENT_KINDS;
+  const askedKinds = EVENT_KINDS.join(',');
+  const since = (await readSetting(ASKED_EVENT_KINDS_KEY)) === askedKinds ? state.seq : 0;
   const dirtyEvents: SyncEvent[] = eventsOk
     ? [
-        ...events.filter((e) => e.updatedAt > eventsPushedAt).map((e) => ({ ...e, deleted: false })),
+        ...events.filter((e) => e.updatedAt > eventsPushedAt && serverKinds.includes(e.kind)).map((e) => ({ ...e, deleted: false })),
         ...tombstones.filter((t) => isEventId(t.id) && t.deletedAt > eventsPushedAt).map(eventTombstone),
       ]
     : [];
@@ -286,7 +300,8 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   const pushBaby = baby && !first && baby.updatedAt > pushedAt;
 
   let res = await syncFamily({
-    since: state.seq,
+    since,
+    eventKinds: EVENT_KINDS,
     records: [...dirty, ...deleted],
     ...(eventsOk ? { events: dirtyEvents } : {}),
     items,
@@ -394,6 +409,13 @@ export async function syncOnce(state: FamilyState): Promise<SyncOutcome> {
   // 빠른 기록을 서버가 받아 줬는지 — 동의 전이거나 옛 서버면 올린 때와 지운 표시를 남겨 둔다
   const eventsSent = eventsOk && res.events !== undefined;
   if (eventsSent) await writeSetting(EVENTS_PUSHED_KEY, now);
+  // 서버가 받는 종류가 늘었으면 그동안 못 올린 기록을 다음에 다시 올린다
+  const nextKinds = res.eventKinds ? (res.eventKinds.filter((k) => (EVENT_KINDS as string[]).includes(k)) as EventKind[]) : OLD_EVENT_KINDS;
+  if (nextKinds.some((k) => !serverKinds.includes(k))) {
+    await writeSetting(SERVER_EVENT_KINDS_KEY, nextKinds.join(','));
+    if (eventsSent) await writeSetting(EVENTS_PUSHED_KEY, '');
+  }
+  await writeSetting(ASKED_EVENT_KINDS_KEY, askedKinds);
   await saveTombstones(
     tombstones.filter((t) => {
       if (t.deletedAt > now) return true;

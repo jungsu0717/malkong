@@ -10,7 +10,7 @@
 
 import { feedSessions, hhmm, isNightStart, type RoutineDone } from './day-flow.ts';
 import { durationLabel, minutesOf, startOfDay } from './event-summary.ts';
-import type { CareEvent, DiaperKind, EventInput, Side } from './events.ts';
+import { intakeTitle, isIntake, type CareEvent, type DiaperKind, type EventInput, type IntakeKind, type Side } from './events.ts';
 
 const MIN = 60 * 1000;
 const DAY = 24 * 60 * MIN;
@@ -21,7 +21,7 @@ const FILL_WINDOW = 2 * 60 * MIN;
 /** 낮잠과 밤잠을 함께 복사하되, 이보다 길게 이어진 잠(재다가 잊은 것)은 뺀다(분) */
 const SLEEP_MAX = 16 * 60;
 
-export type ShellKind = 'formula' | 'breast' | 'diaper' | 'sleep' | 'routine';
+export type ShellKind = 'formula' | 'breast' | 'diaper' | 'sleep' | 'routine' | IntakeKind;
 
 /** 시간을 비운 빈칸 하나 */
 export type Shell = {
@@ -29,7 +29,7 @@ export type Shell = {
   kind: ShellKind;
   /** 복사한 날의 시각 — 그날 0시부터 분. 빈칸의 순서와 「어제 10:30」에 쓴다 */
   minute: number;
-  /** 분유 ml */
+  /** 분유 · 이유식 · 유축 · 우유 · 물 ml */
   amount: number | null;
   /** 모유 · 잠의 걸린 시간(분) */
   minutes: number | null;
@@ -61,6 +61,7 @@ export const dateOfYmd = (s: string) => {
   return new Date(y, m - 1, d);
 };
 const t = (iso: string) => new Date(iso).getTime();
+const intakeShell = (k: ShellKind): k is IntakeKind => k !== 'routine' && isIntake(k);
 
 /** 「오늘 하루 기록 초안으로 작성해 줘」 — 초안을 만들어 달라는 말 */
 export const asksDraft = (text: string) =>
@@ -84,7 +85,7 @@ export function stripDraftAsk(text: string): string {
 
 const inDay = (at: number, d0: number) => at >= d0 && at < d0 + DAY;
 
-/** 빈칸으로 옮길 기록 — 수유(한 번씩), 기저귀, 잠, 루틴 완료. 체온 · 키 · 몸무게와 메모는 날마다 되풀이되는 일이 아니라 뺀다 */
+/** 빈칸으로 옮길 기록 — 수유(한 번씩), 기저귀, 잠, 이유식 · 유축 · 우유 · 물 · 간식, 루틴 완료. 체온 · 키 · 몸무게와 메모는 날마다 되풀이되는 일이 아니라 뺀다 */
 function sourceShells(events: CareEvent[], dones: RoutineDone[], d0: number, now: Date): Omit<Shell, 'id'>[] {
   const out: Omit<Shell, 'id'>[] = [];
   const minuteOf = (at: number) => Math.round((at - d0) / MIN);
@@ -104,6 +105,10 @@ function sourceShells(events: CareEvent[], dones: RoutineDone[], d0: number, now
     if (!inDay(at, d0)) continue;
     if (e.kind === 'diaper' && e.diaper) {
       out.push({ kind: 'diaper', minute: minuteOf(at), amount: null, minutes: null, side: null, diaper: e.diaper, routineId: null, title: DIAPER_TITLE[e.diaper] });
+    }
+    if (isIntake(e.kind)) {
+      const amount = e.kind === 'snack' ? null : e.amount;
+      out.push({ kind: e.kind, minute: minuteOf(at), amount, minutes: null, side: null, diaper: null, routineId: null, title: intakeTitle({ kind: e.kind, amount }) });
     }
     if (e.kind === 'sleep' && e.endAt) {
       const min = Math.round(minutesOf(e, now));
@@ -158,8 +163,8 @@ export function liveShellSet(set: ShellSet | null, now: Date): ShellSet | null {
 export type DayRecord = { id: string; ids: string[]; group: string; at: number };
 
 const routineGroup = (title: string) => `routine:${title.replace(/\s+/g, '').toLowerCase()}`;
-/** 수유는 모유와 분유를 같은 종류로 본다 — 어제 분유 먹던 때에 오늘 모유를 먹였어도 그 빈칸이 채워진다 */
-const groupOf = (s: Shell) => (s.kind === 'formula' || s.kind === 'breast' ? 'feed' : s.kind === 'routine' ? routineGroup(s.title) : s.kind);
+/** 수유는 모유, 분유, 유축 수유를 같은 종류로 본다 — 어제 분유 먹던 때에 오늘 모유를 먹였어도 그 빈칸이 채워진다 */
+const groupOf = (s: Shell) => (s.kind === 'formula' || s.kind === 'breast' || s.kind === 'pumped' ? 'feed' : s.kind === 'routine' ? routineGroup(s.title) : s.kind);
 
 /** 그날 기록을 빈칸과 맞출 모양으로 — 수유는 한 번씩(쪽을 바꾼 모유는 한 번), 기저귀, 잠, 루틴 완료 */
 export function dayRecords(events: CareEvent[], dones: RoutineDone[], day: Date): DayRecord[] {
@@ -173,6 +178,7 @@ export function dayRecords(events: CareEvent[], dones: RoutineDone[], day: Date)
     const at = t(e.startAt);
     if (!inDay(at, d0)) continue;
     if (e.kind === 'diaper' || e.kind === 'sleep') out.push({ id: e.id, ids: [e.id], group: e.kind, at });
+    if (isIntake(e.kind)) out.push({ id: e.id, ids: [e.id], group: e.kind === 'pumped' ? 'feed' : e.kind, at });
   }
   for (const r of dones) {
     const at = t(r.at);
@@ -216,6 +222,7 @@ export function shellInput(s: Shell, at: number, patch: { amount?: number | null
   const startAt = new Date(at).toISOString();
   if (s.kind === 'formula') return { kind: 'formula', startAt, amount: patch.amount ?? s.amount };
   if (s.kind === 'diaper') return { kind: 'diaper', startAt, diaper: s.diaper };
+  if (intakeShell(s.kind)) return { kind: s.kind, startAt, amount: s.kind === 'snack' ? null : (patch.amount ?? s.amount) };
   if (s.kind === 'breast' || s.kind === 'sleep') {
     const min = patch.minutes ?? s.minutes ?? 10;
     const end = at + min * MIN;
@@ -226,6 +233,7 @@ export function shellInput(s: Shell, at: number, patch: { amount?: number | null
 
 /** 빈칸의 이름 — 양이나 걸린 시간을 고치면 따라 바뀐다 */
 export function shellTitle(s: Shell, patch: { amount?: number | null; minutes?: number | null } = {}): string {
+  if (intakeShell(s.kind)) return intakeTitle({ kind: s.kind, amount: patch.amount ?? s.amount });
   if (s.kind === 'formula') {
     const ml = patch.amount ?? s.amount;
     return ml != null ? `분유 ${Math.round(ml)}ml` : '분유';

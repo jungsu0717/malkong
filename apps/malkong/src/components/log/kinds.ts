@@ -10,6 +10,12 @@ export const KIND_UI: Record<EventKind, { label: string; icon: IconName }> = {
   temp: { label: '체온', icon: 'thermometer-outline' },
   weight: { label: '몸무게', icon: 'scale-outline' },
   height: { label: '키', icon: 'resize-outline' },
+  solid: { label: '이유식', icon: 'nutrition-outline' },
+  pumped: { label: '유축 수유', icon: 'beaker-outline' },
+  pump: { label: '유축', icon: 'flask-outline' },
+  milk: { label: '우유', icon: 'pint-outline' },
+  water: { label: '물', icon: 'cafe-outline' },
+  snack: { label: '간식', icon: 'ice-cream-outline' },
 };
 
 /**

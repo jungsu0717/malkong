@@ -338,6 +338,43 @@ def test_sync_rejects_unknown_event_kind(app) -> None:
     assert res.status_code == 422
 
 
+def test_sync_new_event_kinds_only_to_apps_that_know_them(app) -> None:
+    """이유식 · 유축 같은 새 종류(task today/029) — 종류를 알려 주는 앱에만 내려간다."""
+    a, old = phone(app), phone(app)
+    code = a.post("/v1/family", json=CONSENT).json()["inviteCode"]
+    old.post("/v1/family/join", json={"code": code, **CONSENT})
+    res = a.post(
+        "/v1/family/sync",
+        json={
+            "since": 0,
+            "eventKinds": ["formula", "solid", "pumped"],
+            "events": [
+                event("ev-1", "formula", "2026-11-11T10:00:00.000Z", amount=120),
+                event("ev-2", "solid", "2026-11-11T11:00:00.000Z", amount=80),
+                event("ev-3", "pumped", "2026-11-11T12:00:00.000Z", amount=100),
+                event("ev-4", "snack", "2026-11-11T13:00:00.000Z"),
+            ],
+        },
+    ).json()
+    # 서버가 받는 종류를 알려 준다
+    assert {"solid", "pumped", "pump", "milk", "water", "snack"} <= set(res["eventKinds"])
+    # 알려 준 종류만 받는다 — 간식은 이 앱이 모른다고 했다
+    assert sorted(e["id"] for e in res["events"]) == ["ev-1", "ev-2", "ev-3"]
+    # 종류를 알려 주지 않는 옛 앱에는 옛 종류만
+    got = old.post("/v1/family/sync", json={"since": 0}).json()
+    assert [e["id"] for e in got["events"]] == ["ev-1"]
+    # 지운 표시는 옛 앱에도 간다
+    a.post(
+        "/v1/family/sync",
+        json={
+            "since": got["seq"],
+            "events": [event("ev-2", "solid", "2026-11-11T14:00:00.000Z", deleted=True)],
+        },
+    )
+    after = old.post("/v1/family/sync", json={"since": got["seq"]}).json()
+    assert [(e["id"], e["deleted"]) for e in after["events"]] == [("ev-2", True)]
+
+
 def item(item_kind: str, id_: str, updated: str, **data) -> dict:
     return {
         "kind": item_kind,

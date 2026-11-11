@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottleIcon, ZzIcon } from '@/components/baby-icons';
 import { DiaperGlyph, diaperTone } from '@/components/log/diaper-glyph';
 import { RoutineIcon } from '@/components/routine/routine-icon';
+import { NodeIcon } from '@/components/flow/flow-graph';
 import { ThemedText } from '@/components/themed-text';
 import { Button, tap } from '@/components/ui';
 import { FontFamily, Radius, Spacing } from '@/constants/theme';
@@ -133,6 +134,13 @@ function Tile({ kind, title }: { kind: FactKind; title: string }) {
     return (
       <View style={[styles.tile, styles.round, diaperTone(kind, c), styles.lined]}>
         <DiaperGlyph diaper={kind} color={null} size={ICON} />
+      </View>
+    );
+  }
+  if (kind === 'solid' || kind === 'pumped' || kind === 'pump' || kind === 'milk' || kind === 'water' || kind === 'snack') {
+    return (
+      <View style={[styles.tile, { backgroundColor: c.accentSoft }]}>
+        <NodeIcon kind={kind} title={title} stool={null} size={ICON} />
       </View>
     );
   }

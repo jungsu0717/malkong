@@ -1,6 +1,6 @@
 # 029 12판 — 기록 단추를 넣고 빼는 줄, 루틴도 한 줄에, 시간을 비운 하루 초안
 
-> 상태: 구현 완료 (2026-11-11) · Julian 확인 기다림
+> 상태: 구현 완료 (2026-11-11) · 2단계(양을 적는 기록)까지 Julian 「다 올려」 — 서버 운영 배포와 빌드 19
 > 근거: [main](../../menu-spec/main.md) SPEC-MAIN-08 · 16 · 03 · 결정: [046](../../decisions/046-record-bar-and-empty-draft.md)
 > 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「12판 시안 — 기록 단추를 넣고 빼는 줄, 루틴도 한 줄에, 시간을 비운 하루 초안 (2026-11-11)」
 
@@ -21,9 +21,14 @@ Julian(2026-11-11): 베이비타임처럼 위쪽 기록 단추를 넣고 빼는 
 - 초안은 그날 끝까지 폰에 저장, 다음 날 사라짐. 물어보기의 초안 카드는 「빈칸 N개」와 「버리기」, 입력 칸 안내 「빈칸을 채울 기록을 말해 주세요」
 - 기록 단추 아이콘: 병원(구급상자), 투약(약), 기타(점 셋)
 
-## 다음 단계(이번에 하지 않음)
+## 2단계 — 양을 적는 기록(Julian 「다 올려」)
 
-- 양을 적는 기록 — 이유식, 유축, 유축 수유, 우유, 물, 간식. 새 기록 종류라 앱과 가족 공유 서버(kind 목록)를 함께 고치고 운영 배포 승인이 필요하다
+- 새 기록 종류 여섯: 이유식(`solid`), 유축 수유(`pumped`), 유축(`pump`), 우유(`milk`), 물(`water`)은 ml 눈금과 메모, 간식(`snack`)은 때와 메모
+- 「추가할 수 있는 단추」에 놓이고, 넣으면 줄에 그날 합계 ml 와 횟수(간식은 횟수와 마지막 시각). 흐름 노드는 옅은 코랄
+- 유축 수유는 수유로 센다(「먹은 지」, 수유 횟수, 빈칸 맞추기). 하루 초안의 빈칸으로도 복사한다
+- 물어보기 규칙이 「이유식 80 먹었어」 같은 말을 읽는다. 새 종류는 모델에 보내지 않는다(서버 모델 쪽 종류는 그대로)
+- 가족 공유: 서버가 새 종류를 받고, 앱이 아는 종류만 내려보낸다(옛 앱에는 옛 종류만). 앱은 서버가 받는 종류만 올리고, 새 빌드로 처음 맞출 때 한 번 처음부터 받는다
+- 처음 넷과 루틴만 줄 끝에 저절로 붙는다 — 새 기록 종류가 생겨도 줄이 저절로 길어지지 않는다
 
 ## 손댄 파일
 
@@ -36,7 +41,10 @@ src/hooks/use-day-shells.ts(새 파일) — 초안 저장과 채우기 · src/co
 src/components/flow/day-view.tsx · day-list.tsx · flow-graph.tsx(ShellNode) · ask-sheet.tsx · src/app/index.tsx
 src/data/routine.ts · routine.test.ts · family-items.ts · routines-context.tsx · events-context.tsx · preferences-context.tsx
 src/components/routine/repeat-picker.tsx · routine-icon.tsx · src/app/routines.tsx · src/data/agent-tools.ts
-docs: decisions/046 · 041, main SPEC-MAIN-08 · 16 · 03, README
+src/data/events.ts · event-summary.ts · day-flow.ts · day-facts.ts · add-parse.ts(+시험) · agent.ts · family.ts · api.ts
+src/components/log/kinds.ts · log-sheet.tsx · src/app/records.tsx · src/components/growth/memo-sheet.tsx
+server/app/domain/family/schema.py · service.py · tests/test_family.py
+docs: decisions/046 · 041, main SPEC-MAIN-08 · 16 · 03, api-contract, README
 ```
 
 ## 완료 조건
@@ -46,8 +54,9 @@ docs: decisions/046 · 041, main SPEC-MAIN-08 · 16 · 03, README
 - [x] 루틴 단추 한 번 = 지금 완료 한 줄
 - [x] 「전체 기록 작성해줘」 → 가장 바쁜 날을 빈칸으로, 다시 켜도 남아 있음(웹)
 - [x] 빈칸을 눌러 「지금」으로 기록, 위쪽 기저귀 단추로 기록하면 가까운 기저귀 빈칸이 함께 채워짐, 「오후 낮잠은 안 잤어」로 빈칸 빼기, 「버리기」(웹)
-- [x] 앱 tsc · lint · 시험(188) · copy-check
-- [ ] Julian 확인 뒤 빌드(빌드는 매번 승인)
+- [x] 앱 tsc · lint · 시험(189) · copy-check, 서버 ruff · pytest(145)
+- [x] 2단계: 이유식을 줄에 넣고 기록 → 줄에 「80ml 1번」, 흐름에 「이유식 80ml」(웹)
+- [ ] 서버 운영 배포와 빌드 1.0.0 (19) TestFlight — Julian 「다 올려」
 
 ## 확인
 

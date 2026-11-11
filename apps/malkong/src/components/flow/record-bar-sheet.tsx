@@ -16,12 +16,15 @@ import { StepButton } from '@/components/routine/repeat-picker';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { ThemedText } from '@/components/themed-text';
 import { INLINE_WHEEL, TimeWheel, pickTime } from '@/components/time-picker';
+import { KIND_UI } from '@/components/log/kinds';
 import { tap, Toggle } from '@/components/ui';
+import type { IntakeKind } from '@/data/events';
 import { usePreferences } from '@/data/preferences-context';
 import {
   arrangeBar,
   barAfterEdit,
   BAR_KIND_NAME,
+  BAR_KINDS,
   isBarKind,
   moveKey,
   routineIdOf,
@@ -37,7 +40,19 @@ import { useTheme } from '@/hooks/use-theme';
 
 /** 한 줄 높이 — 끌 때 몇 줄 옮겼는지 센다 */
 const ROW_H = 58;
-const KIND_SUB: Record<BarKind, string> = { breast: '시간 재기, 왼쪽과 오른쪽', formula: '양', diaper: '소변, 대변, 변 색', sleep: '시간 재기', temp: '온도' };
+const KIND_SUB: Record<BarKind, string> = {
+  breast: '시간 재기, 왼쪽과 오른쪽',
+  formula: '양',
+  diaper: '소변, 대변, 변 색',
+  sleep: '시간 재기',
+  temp: '온도',
+  solid: '양과 메뉴',
+  pumped: '양',
+  pump: '양',
+  milk: '양',
+  water: '양',
+  snack: '메모',
+};
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
 const CUSTOM: Starter = { title: '', everyDays: 0, time: '10:00' };
 
@@ -71,7 +86,7 @@ function Body({ onClose }: { onClose: () => void }) {
     listRef.current = list;
   }, [list]);
 
-  const all: BarKey[] = [...(['breast', 'formula', 'diaper', 'sleep', 'temp'] as BarKey[]), ...ids.map(routineKey)];
+  const all: BarKey[] = [...BAR_KINDS, ...ids.map(routineKey)];
   const more = all.filter((k) => !list.includes(k));
   const starters = startersFor(routines.map((r) => r.title));
   const routineOf = (k: BarKey) => routines.find((r) => r.id === routineIdOf(k)) ?? null;
@@ -309,6 +324,8 @@ function KindTile({ kind, title }: { kind: BarKind | null; title: string }) {
   if (kind === 'diaper') return <View style={[styles.tile, { backgroundColor: c.peeBg, borderWidth: 1.5, borderColor: c.peeLine }]}><Ionicons name="water-outline" size={16} color={c.peeFg} /></View>;
   if (kind === 'sleep') return <View style={[styles.tile, { backgroundColor: c.ink }]}><ZzIcon size={16} color={c.onInk} /></View>;
   if (kind === 'temp') return <View style={[styles.tile, { backgroundColor: c.tempBg, borderWidth: 1.5, borderColor: c.tempLine }]}><Ionicons name="thermometer-outline" size={16} color={c.tempFg} /></View>;
+  if (kind === 'pumped') return <View style={[styles.tile, { backgroundColor: c.accentSoft }]}><BottleIcon size={17} color={c.accent} /></View>;
+  if (kind) return <View style={[styles.tile, { backgroundColor: c.accentSoft }]}><Ionicons name={KIND_UI[kind as IntakeKind].icon} size={16} color={c.accent} /></View>;
   return (
     <View style={[styles.tile, { backgroundColor: c.doneBg, borderWidth: 1.5, borderColor: c.doneLine }]}>
       <RoutineIcon title={title} size={16} color={c.doneFg} />

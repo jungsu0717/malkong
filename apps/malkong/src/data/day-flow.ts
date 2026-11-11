@@ -6,7 +6,7 @@
  */
 
 import { durationLabel, minutesOf, startOfDay } from './event-summary.ts';
-import type { CareEvent } from './events.ts';
+import { isIntake, type CareEvent } from './events.ts';
 
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
@@ -330,7 +330,7 @@ export function itemsBetween(events: CareEvent[], routines: RoutineDone[], todos
     if (inDay(at)) items.push({ type: 'feed', key: s.id, at, session: s });
   }
   for (const e of events) {
-    if (e.kind === 'diaper' || e.kind === 'temp' || e.kind === 'weight' || e.kind === 'height') {
+    if (e.kind === 'diaper' || e.kind === 'temp' || e.kind === 'weight' || e.kind === 'height' || isIntake(e.kind)) {
       const at = t(e.startAt);
       if (inDay(at)) items.push({ type: 'side', key: e.id, at, event: e });
     }
@@ -494,7 +494,7 @@ export function itemGaps(events: CareEvent[], routines: RoutineDone[] = []): Map
   const byStart = <T extends { startAt: string }>(list: T[]) => [...list].sort((a, b) => t(a.startAt) - t(b.startAt));
   const feeds = byStart(feedSessions(events));
   feeds.forEach((s, i) => put(s.id, t(s.startAt), i > 0 ? t(feeds[i - 1].startAt) : null));
-  for (const kind of ['diaper', 'temp', 'weight', 'height'] as const) {
+  for (const kind of ['diaper', 'temp', 'weight', 'height', 'solid', 'pumped', 'pump', 'milk', 'water', 'snack'] as const) {
     const list = byStart(events.filter((e) => e.kind === kind));
     list.forEach((e, i) => put(e.id, t(e.startAt), i > 0 ? t(list[i - 1].startAt) : null));
   }
