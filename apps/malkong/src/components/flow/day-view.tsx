@@ -5,18 +5,18 @@
  * 오늘이면 마지막이 지금 묶음(코랄 틀)이고, 그 뒤로 흐린 점선 네모(다음 수유 예상 · 오늘 할 루틴과 할 일 · 그날 아기 일정 · 오늘 소식 · 가족과 함께 보기)가 이어진다.
  * 틀이나 노드를 누르면 그 시간의 기록 화면(`/records`)이 열린다. 자리와 선은 flow-layout.ts 가 계산한다.
  * 기록 단추와 합계는 위쪽 기록 칸(index.tsx)에 있다 — 지금 묶음에는 모유를 재는 중일 때의 종료 · 반대쪽만 둔다.
- * 물어보기의 하루 초안은 점선 노드로 같은 흐름에 끼워 보이고, 누르면 작은 창에서 고친다. 변경 카드가 열린 기록은 바뀔 값을 먼저 보인다(SPEC-MAIN-16).
+ * 하루 초안의 빈칸은 앞으로 올 것 줄에 점선 노드로 놓이고, 누르면 작은 창에서 시각을 골라 기록한다(task today/029). 맨 위에 어느 날을 복사했는지 보인다.
+ * 변경 카드가 열린 기록은 바뀔 값을 먼저 보인다(SPEC-MAIN-16).
  */
 
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View, type LayoutChangeEvent } from 'react-native';
+import { Pressable, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Defs, Pattern, Rect } from 'react-native-svg';
 
 import { BottleIcon } from '@/components/baby-icons';
 import { careWarnings, WarnCard } from '@/components/flow/care-warn';
-import { DraftPopover } from '@/components/flow/draft-popover';
 import { DayList, ViewToggle } from '@/components/flow/day-list';
 import {
   BlockFrame,
@@ -26,10 +26,12 @@ import {
   GhostNode,
   ItemNode,
   NowDot,
+  ShellNode,
   SleepNode,
   SleepNowNode,
   type ItemKind,
 } from '@/components/flow/flow-graph';
+import { ShellPopover, shellItemKind } from '@/components/flow/shell-popover';
 import { DayNewsSheet } from '@/components/log/day-news-card';
 import { RoutineIcon } from '@/components/routine/routine-icon';
 import { useRoutineActions } from '@/components/routine/use-routine-actions';
@@ -37,7 +39,7 @@ import { ThemedText } from '@/components/themed-text';
 import { useBabyRows } from '@/components/todo/baby-schedule';
 import { Button, Card, tap } from '@/components/ui';
 import { useBaby } from '@/data/baby-context';
-import { draftFlow, draftIdOfKey, type Draft, type DraftPatch } from '@/data/day-draft';
+import { dateOfYmd, shellAt, shellHint, type Shell, type ShellSet } from '@/data/day-draft';
 import { dayNews } from '@/data/day-news';
 import {
   awakeLabel,
@@ -69,6 +71,7 @@ import { isTimed, logsOn, todayPlan } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { randomPose, type BuddyPose } from '@/data/stage';
 import { useTodos } from '@/data/todos-context';
+import type { ShellPatch } from '@/hooks/use-day-shells';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -78,8 +81,8 @@ const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일
 const FAMILY_HIDDEN_KEY = 'home.familyCardHidden';
 
 const MIN = 60 * 1000;
-/** 초안 고치기 창의 높이쯤 — 창이 노드 위에 뜨니 그만큼 위가 보이게 스크롤한다 */
-const POP_H = 190;
+/** 빈칸 채우기 창의 높이쯤 — 창이 노드 위에 뜨니 그만큼 위가 보이게 스크롤한다 */
+const POP_H = 280;
 
 function subKind(it: SubItem): ItemKind {
   if (it.type === 'feed') return it.session.kind;
@@ -116,7 +119,19 @@ function stopwatch(from: string, now: Date): string {
   return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${r}` : `${m}:${r}`;
 }
 
-type Future = { key: string; at: number; icon: React.ReactNode; accent?: boolean; title: string; sub: string; aria: string; onPress?: () => void; onLongPress?: () => void };
+type Future = {
+  key: string;
+  at: number;
+  icon: React.ReactNode;
+  accent?: boolean;
+  title: string;
+  sub: string;
+  aria: string;
+  onPress?: () => void;
+  onLongPress?: () => void;
+  /** 하루 초안의 빈칸 — 점선 노드로 따로 그린다 */
+  shell?: Shell;
+};
 
 /** 화면에 놓는 토막 — 묶음(지금 묶음 포함), 틀 없는 잠 줄, 기록 없이 지금만 있는 묶음, 자는 중 */
 type Disp =
@@ -172,7 +187,7 @@ export type Highlight = { keys: string[]; label: string };
 /** 변경 카드가 열려 있는 동안 흐름에 먼저 보이는 것 — 「초안」 표시와 「~~13:50~~ 13:40」, 지울 기록은 「삭제」와 줄 긋기(SPEC-MAIN-16) */
 export type Preview = { key: string; badge: string; tone?: 'accent' | 'danger'; subFrom?: string | null; sub?: string | null; strike?: boolean };
 
-const NO_DRAFTS: Draft[] = [];
+const NO_SHELLS: Shell[] = [];
 const NO_PREVIEWS: Preview[] = [];
 
 export function DayView({
@@ -180,11 +195,13 @@ export function DayView({
   now,
   highlight = null,
   selected = null,
-  drafts = NO_DRAFTS,
+  shellSet = null,
+  shells = NO_SHELLS,
   previews = NO_PREVIEWS,
   onPick,
-  onEditDraft,
-  onRemoveDraft,
+  onFillShell,
+  onRemoveShell,
+  onDropShells,
   onFocus,
   onStart,
   onStop,
@@ -194,13 +211,15 @@ export function DayView({
   highlight?: Highlight | null;
   /** 물어보기 창을 연 채 누른 기록의 key — 「선택」으로 비춘다(task today/022) */
   selected?: string | null;
-  /** 아직 저장하지 않은 초안 — 점선 노드로 흐름에 놓는다. 누르면 작은 창에서 고친다(SPEC-MAIN-16) */
-  drafts?: Draft[];
+  /** 그날의 하루 초안과 아직 채우지 않은 빈칸 — 앞으로 올 것 줄에 점선 노드로 놓는다(task today/029) */
+  shellSet?: ShellSet | null;
+  shells?: Shell[];
   previews?: Preview[];
   /** 물어보기 창이 열려 있으면 기록을 누를 때 입력 시트 대신 이것을 부른다 */
   onPick?: (key: string) => void;
-  onEditDraft?: (id: string, patch: DraftPatch) => void;
-  onRemoveDraft?: (id: string) => void;
+  onFillShell?: (shell: Shell, at: Date, patch: ShellPatch) => void;
+  onRemoveShell?: (id: string) => void;
+  onDropShells?: () => void;
   /** 비춘 기록이 있는 높이(이 화면 맨 위에서) — 물어보기 창에 가리지 않게 부르는 쪽이 스크롤한다 */
   onFocus?: (y: number) => void;
   /** 모유 재기 시작(반대쪽) */
@@ -225,7 +244,7 @@ export function DayView({
   const [familyHidden, setFamilyHidden] = useState(true);
   // 「흐름 | 목록」은 마지막으로 고른 것 — 앱을 켤 때 한 번 읽어 두어서 날짜를 넘겨도 흐름으로 먼저 그리지 않는다
   const { dayView: mode, setDayView } = usePreferences();
-  /** 고치는 중인 초안의 id — 작은 창이 그 노드 옆에 뜬다 */
+  /** 채우는 중인 빈칸의 id — 작은 창이 그 노드 옆에 뜬다 */
   const [editing, setEditing] = useState<string | null>(null);
   useEffect(() => {
     void readSetting(FAMILY_HIDDEN_KEY).then((v) => setFamilyHidden(v === 'yes'));
@@ -244,9 +263,8 @@ export function DayView({
     () =>
       routines.flatMap((r) => {
         const done = logsOn(r.id, logs, date).filter((l) => l.step == null && !l.skip);
-        // 터미타임처럼 시간을 재는 루틴은 그날 한 것 모두, 나머지는 첫 줄 하나(task today/020)
-        const list = isTimed(r) ? done : done.slice(0, 1);
-        return list.map((l) => ({ routineId: r.id, logId: l.id, title: r.title, at: l.at, by: l.by, endAt: l.endAt ?? null }));
+        // 그날 한 것 모두 — 기록 단추로 하루에 여러 번 누를 수 있다(task today/020 · 029)
+        return done.map((l) => ({ routineId: r.id, logId: l.id, title: r.title, at: l.at, by: l.by, endAt: l.endAt ?? null }));
       }),
     [routines, logs, date],
   );
@@ -256,13 +274,7 @@ export function DayView({
   );
   // 그날 쓴 메모 — 발달 체크에서 남긴 줄(ref)은 빼고 사람이 쓴 것만
   const dayMemos = useMemo<DayMemo[]>(() => memos.filter((m) => m.ref === null).map((m) => ({ memoId: m.id, text: m.text, at: m.at })), [memos]);
-  // 초안은 기록 · 루틴 완료 · 메모 모양으로 흐름에 끼운다 — 저장한 기록과 같은 자리 계산을 쓴다
-  const draftParts = useMemo(() => draftFlow(drafts), [drafts]);
-  const flowEvents = useMemo(() => (draftParts.events.length ? [...events, ...draftParts.events].sort((a, b) => a.startAt.localeCompare(b.startAt)) : events), [events, draftParts]);
-  const flow = useMemo(
-    () => dayFlow(flowEvents, draftParts.routines.length ? [...dones, ...draftParts.routines] : dones, doneTodos, date, now, draftParts.memos.length ? [...dayMemos, ...draftParts.memos] : dayMemos),
-    [flowEvents, draftParts, dones, doneTodos, date, now, dayMemos],
-  );
+  const flow = useMemo(() => dayFlow(events, dones, doneTodos, date, now, dayMemos), [events, dones, doneTodos, date, now, dayMemos]);
   // 같은 기록끼리 간격 — 루틴은 그날 한 줄 모두로 센다
   const gaps = useMemo(() => {
     const all: RoutineDone[] = logs
@@ -274,28 +286,17 @@ export function DayView({
     return itemGaps(events, all);
   }, [events, logs, routines]);
   const lit = (key: string) => (selected === key ? '선택' : highlight && highlight.keys.includes(key) ? highlight.label : null);
-  const draftOf = (key: string): Draft | null => {
-    const id = draftIdOfKey(key);
-    return id ? (drafts.find((d) => d.id === id) ?? null) : null;
-  };
   const previewOf = (key: string): Preview | null => previews.find((x) => x.key === key) ?? null;
-  /** 초안과 변경 카드의 표시 — 노드에 그대로 펼친다 */
+  /** 변경 카드의 표시 — 노드에 그대로 펼친다 */
   const decor = (key: string) => {
-    const d = draftOf(key);
     const pv = previewOf(key);
-    return { draft: !!d, badge: d ? '초안' : (pv?.badge ?? null), badgeTone: pv?.tone ?? ('accent' as const), subFrom: pv?.subFrom ?? null, strike: pv?.strike ?? false };
+    return { badge: pv?.badge ?? null, badgeTone: pv?.tone ?? ('accent' as const), subFrom: pv?.subFrom ?? null, strike: pv?.strike ?? false };
   };
-  /** 초안 노드를 누르면 고치기 창, 아니면 하던 대로 */
-  const pressKey = (key: string, open: () => void) => {
-    const id = draftIdOfKey(key);
-    if (id && onEditDraft) {
-      tap();
-      setEditing((prev) => (prev === id ? null : id));
-      return;
-    }
-    open();
+  const pressShell = (id: string) => {
+    tap();
+    setEditing((prev) => (prev === id ? null : id));
   };
-  const editingDraft = editing ? (drafts.find((d) => d.id === editing) ?? null) : null;
+  const editingShell = editing ? (shells.find((x) => x.id === editing) ?? null) : null;
   const gapOf = (key: string) => {
     const m = gaps.get(key);
     return m === undefined ? null : gapLabel(m);
@@ -311,8 +312,7 @@ export function DayView({
   const all = displayParts(flow, isToday, now);
   // 오늘은 지난 묶음 둘과 지금만 — 그 앞은 접는다
   const pastBlocks = all.parts.flatMap((d, i) => (d.type === 'block' && !d.now ? [i] : []));
-  // 초안이 있으면 하루를 다 펼친다 — 아침 초안이 접힌 묶음에 숨지 않게
-  const cut = isToday && !showAll && drafts.length === 0 && pastBlocks.length > 2 ? pastBlocks[pastBlocks.length - 2] : 0;
+  const cut = isToday && !showAll && pastBlocks.length > 2 ? pastBlocks[pastBlocks.length - 2] : 0;
   const shown = all.parts.slice(cut);
   const shownLinks = all.links.slice(cut);
 
@@ -382,8 +382,16 @@ export function DayView({
         onPress: () => schedule.open(r),
       });
     }
-    future.sort((a, b) => a.at - b.at);
   }
+  // 하루 초안의 빈칸 — 오늘 할 루틴으로 이미 보이는 루틴은 한 번만
+  if (shellSet) {
+    for (const sh of shells) {
+      if (sh.kind === 'routine' && future.some((f) => f.key === `routine-${sh.routineId}`)) continue;
+      const hint = shellHint(shellSet, sh);
+      future.push({ key: `shell-${sh.id}`, at: shellAt(shellSet, sh), icon: null, title: sh.title, sub: hint, aria: `초안 ${sh.title}, ${hint}. 누르면 시각을 골라 기록`, shell: sh });
+    }
+  }
+  future.sort((a, b) => a.at - b.at);
   if (news) {
     future.push({
       key: 'news',
@@ -471,30 +479,48 @@ export function DayView({
     const li = shownLinks.findIndex((l) => l.kind === 'sleep' && l.sleep && match(l.sleep.event.id));
     return li >= 0 && geo.links[li] ? { cx: geo.links[li].cx, cy: geo.links[li].cy } : null;
   };
-  const editAnchor = editingDraft ? nodeAt((key) => draftIdOfKey(key) === editingDraft.id) : null;
+  const futureAt = (id: string) => {
+    const k = future.findIndex((f) => f.shell?.id === id);
+    return geo && k >= 0 ? (geo.future[k] ?? null) : null;
+  };
+  const editAnchor = editingShell ? futureAt(editingShell.id) : null;
   const litAt = highlight && highlight.keys.length > 0 ? nodeAt((key) => highlight.keys.includes(key)) : null;
-  // 고치기 창은 노드 위에 뜨므로 창 위쪽이 화면 위에 오게, 아니면 비춘 기록으로
-  const focusY = editAnchor ? canvasY + Math.max(0, editAnchor.cy - ITEM / 2 - POP_H - 12) + 82 : litAt ? canvasY + litAt.cy : null;
-  // 초안이 처음 생기면 첫 초안으로 한 번 스크롤한다(DraftFocus)
-  const firstDraftAt = drafts.length ? nodeAt((key) => draftIdOfKey(key) !== null) : null;
-  const firstDraftY = firstDraftAt ? canvasY + firstDraftAt.cy : null;
-  const draftMax = isToday ? now.getTime() : dayStart + DAY - MIN;
-  const popover = editingDraft ? (
-    <DraftPopover
-      key={editingDraft.id}
-      draft={editingDraft}
-      anchor={mode === 'flow' ? editAnchor : null}
-      width={width}
-      height={geo?.height ?? 0}
-      max={draftMax}
-      onChange={(patch) => onEditDraft?.(editingDraft.id, patch)}
-      onRemove={() => {
-        onRemoveDraft?.(editingDraft.id);
-        setEditing(null);
-      }}
-      onClose={() => setEditing(null)}
-    />
-  ) : null;
+  // 채우기 창은 노드 위에 뜨면 창 위쪽이 화면 위에 오게, 아니면 비춘 기록으로
+  // 창이 노드 아래에 뜨면(위가 모자라면) 노드가 화면 위쪽에 오게 — 창 아래까지 보이게
+  const popAbove = editAnchor !== null && editAnchor.cy - ITEM / 2 - POP_H - 12 >= 0;
+  const focusY = editAnchor
+    ? popAbove
+      ? canvasY + Math.max(0, editAnchor.cy - ITEM / 2 - POP_H - 12) + 82
+      : canvasY + editAnchor.cy - ITEM / 2 + 70
+    : litAt
+      ? canvasY + litAt.cy
+      : null;
+  // 초안이 처음 생기면 첫 빈칸으로 한 번 스크롤한다(DraftFocus)
+  const firstShell = future.find((f) => f.shell);
+  const firstShellAt = firstShell?.shell ? futureAt(firstShell.shell.id) : null;
+  const firstDraftY = firstShellAt ? canvasY + firstShellAt.cy : null;
+  const popover =
+    editingShell && shellSet ? (
+      <ShellPopover
+        key={editingShell.id}
+        set={shellSet}
+        shell={editingShell}
+        anchor={mode === 'flow' ? editAnchor : null}
+        above={popAbove}
+        width={width}
+        height={geo?.height ?? 0}
+        now={now}
+        onRecord={(at, patch) => {
+          onFillShell?.(editingShell, at, patch);
+          setEditing(null);
+        }}
+        onRemove={() => {
+          onRemoveShell?.(editingShell.id);
+          setEditing(null);
+        }}
+        onClose={() => setEditing(null)}
+      />
+    ) : null;
   const warns = isToday ? careWarnings(events, age.month, now) : [];
   const nextFeed = future.find((x) => x.key === 'next-feed') ?? null;
   const weekday = WEEKDAYS[date.getDay()];
@@ -515,6 +541,8 @@ export function DayView({
           <Button label="동의하고 함께 보기" size="md" onPress={() => void family.allowEvents()} />
         </Card>
       )}
+
+      {shellSet && shells.length > 0 && <ShellBanner set={shellSet} count={shells.length} onDrop={onDropShells} />}
 
       {mode === 'list' ? (
         <View style={styles.listWrap} onLayout={(e: LayoutChangeEvent) => setWidth(Math.round(e.nativeEvent.layout.width))}>
@@ -546,9 +574,13 @@ export function DayView({
             gapOf={gapOf}
             awakeOf={awakeOf}
             lit={lit}
-            draftOf={draftOf}
-            onOpenItem={(b, key) => pressKey(key, () => (onPick && !key.startsWith('todo-') ? onPick(key) : openRecords(blockParams(b, flow.live?.key === b.key, key))))}
-            onOpenSleep={(s) => pressKey(s.event.id, () => (onPick ? onPick(s.event.id) : openSleep(s)))}
+            shells={
+              shellSet
+                ? shells.map((sh) => ({ key: sh.id, kind: shellItemKind(sh), title: sh.title, hint: shellHint(shellSet, sh), onPress: () => pressShell(sh.id) }))
+                : []
+            }
+            onOpenItem={(b, key) => (onPick && !key.startsWith('todo-') ? onPick(key) : openRecords(blockParams(b, flow.live?.key === b.key, key)))}
+            onOpenSleep={(s) => (onPick ? onPick(s.event.id) : openSleep(s))}
           />
         </View>
       ) : (
@@ -614,11 +646,11 @@ export function DayView({
                         cx={g.nodes[k].cx}
                         cy={g.nodes[k].cy}
                         title={sleepTitle(s, now)}
-                        sub={previewOf(s.event.id)?.sub ?? `${spanRange(s.from, s.to, dayStart)}${draftOf(s.event.id)?.guessed ? '쯤' : ''}`}
+                        sub={previewOf(s.event.id)?.sub ?? spanRange(s.from, s.to, dayStart)}
                         gap={awakeOf(s.event.id)}
                         highlight={lit(s.event.id)}
                         {...decor(s.event.id)}
-                        onPress={() => pressKey(s.event.id, () => (onPick ? onPick(s.event.id) : openSleep(s)))}
+                        onPress={() => (onPick ? onPick(s.event.id) : openSleep(s))}
                       />
                     ))}
                   </View>
@@ -641,13 +673,13 @@ export function DayView({
                         cy={n.cy}
                         kind={subKind(it)}
                         title={title}
-                        sub={previewOf(it.key)?.sub ?? `${it.type === 'routine' && it.end !== null && it.end > it.at ? spanRange(it.at, it.end, dayStart) : hhmm(it.at)}${draftOf(it.key)?.guessed ? '쯤' : ''}`}
-                        aria={`${hhmm(it.at)} ${title}${it.type === 'memo' ? ` ${it.text}` : ''}${stool ? ` ${STOOL_COLOR_LABEL[stool]}` : ''}${by ? `, ${by}` : ''}${draftOf(it.key) ? ', 초안 고치기' : ''}`}
+                        sub={previewOf(it.key)?.sub ?? (it.type === 'routine' && it.end !== null && it.end > it.at ? spanRange(it.at, it.end, dayStart) : hhmm(it.at))}
+                        aria={`${hhmm(it.at)} ${title}${it.type === 'memo' ? ` ${it.text}` : ''}${stool ? ` ${STOOL_COLOR_LABEL[stool]}` : ''}${by ? `, ${by}` : ''}`}
                         stool={stool}
                         gap={gapOf(it.key)}
                         highlight={lit(it.key)}
                         {...decor(it.key)}
-                        onPress={() => pressKey(it.key, () => (onPick && it.type !== 'todo' ? onPick(it.key) : d.type === 'block' && openRecords(blockParams(d.block, d.now, it.key))))}
+                        onPress={() => (onPick && it.type !== 'todo' ? onPick(it.key) : d.type === 'block' && openRecords(blockParams(d.block, d.now, it.key)))}
                       />
                     );
                   })}
@@ -668,11 +700,11 @@ export function DayView({
                     cx={at.cx}
                     cy={at.cy}
                     title={sleepTitle(s, now)}
-                    sub={previewOf(s.event.id)?.sub ?? `${spanRange(s.from, s.to, dayStart)}${draftOf(s.event.id)?.guessed ? '쯤' : ''}`}
+                    sub={previewOf(s.event.id)?.sub ?? spanRange(s.from, s.to, dayStart)}
                     gap={awakeOf(s.event.id)}
                     highlight={lit(s.event.id)}
                     {...decor(s.event.id)}
-                    onPress={() => pressKey(s.event.id, () => (onPick ? onPick(s.event.id) : openSleep(s)))}
+                    onPress={() => (onPick ? onPick(s.event.id) : openSleep(s))}
                   />
                 );
               }
@@ -680,6 +712,10 @@ export function DayView({
             })}
             {future.map((f, k) => {
               const n = geo.future[k];
+              if (f.shell) {
+                const sh = f.shell;
+                return <ShellNode key={f.key} cx={n.cx} cy={n.cy} kind={shellItemKind(sh)} title={f.title} hint={f.sub} aria={f.aria} onPress={() => pressShell(sh.id)} />;
+              }
               return (
                 <GhostNode
                   key={f.key}
@@ -702,7 +738,7 @@ export function DayView({
       )}
 
       {mode === 'flow' && onFocus && focusY !== null && <FocusReporter y={focusY} onFocus={onFocus} />}
-      {mode === 'flow' && onFocus && <DraftFocus count={drafts.length} y={firstDraftY} onFocus={onFocus} />}
+      {mode === 'flow' && onFocus && <DraftFocus count={shells.length} y={firstDraftY} onFocus={onFocus} />}
       {routine.sheets}
       {schedule.sheets}
       <DayNewsSheet
@@ -711,6 +747,38 @@ export function DayView({
         pose={sharePose}
         onClose={() => setSharing(false)}
       />
+    </View>
+  );
+}
+
+/** 하루 초안의 머리 — 어느 날을 복사했는지, 「버리기」 */
+function ShellBanner({ set, count, onDrop }: { set: ShellSet; count: number; onDrop?: () => void }) {
+  const c = useTheme();
+  const src = dateOfYmd(set.source);
+  return (
+    <View style={[styles.banner, { backgroundColor: c.card, borderColor: c.accent }]}>
+      <View style={styles.flex}>
+        <ThemedText type="heading" style={styles.bannerTitle}>
+          {`${src.getMonth() + 1}월 ${src.getDate()}일 기록으로 만든 초안 ${count}개`}
+        </ThemedText>
+        <ThemedText type="caption" style={{ color: c.textSecondary }}>
+          시간은 비워 뒀어요. 누르거나 말해서 채워요
+        </ThemedText>
+      </View>
+      {onDrop && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="초안 버리기"
+          onPress={() => {
+            tap();
+            onDrop();
+          }}
+          style={({ pressed }) => [styles.bannerBtn, { borderColor: c.border, backgroundColor: pressed ? c.surface : c.card }]}>
+          <ThemedText type="label" style={{ fontWeight: 700 }}>
+            버리기
+          </ThemedText>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -763,4 +831,7 @@ const styles = StyleSheet.create({
   toggleRow: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, paddingVertical: 11 },
   toggleAbs: { position: 'absolute', top: 11, right: 16, zIndex: 5 },
   listRun: { flexDirection: 'row', gap: 8 },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', paddingVertical: 11, paddingHorizontal: 14 },
+  bannerTitle: { fontSize: 14.5, lineHeight: 20 },
+  bannerBtn: { height: 32, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1.5, justifyContent: 'center' },
 });

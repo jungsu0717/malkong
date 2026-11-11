@@ -1,45 +1,66 @@
 /**
- * 하루 초안 (SPEC-MAIN-16, task today/023, decisions/041) — 「오늘 하루 기록 초안으로 작성해 줘」.
+ * 하루 초안 (SPEC-MAIN-16, task today/029, decisions/046) — 「오늘 하루 기록 초안 작성해 줘」.
  *
- * 말한 기록은 말한 그대로, 말하지 않은 때는 지난 7일 기록에서 평소 시각을 찾아 채운다(시각에 「쯤」). 모두 기기 안에서 규칙으로 세고 모델을 부르지 않는다.
- * 초안은 아직 저장하지 않은 기록이라 흐름에 점선 노드로 보이고, 「모두 저장」을 눌러야 기록이 된다. 흐름에서 눌러 고치거나 말로 고쳐 달라고 할 수 있다.
- * 화면 코드를 가져오지 않는 순수 함수(`node --test src/data/day-draft.test.ts`).
+ * 지난 7일 가운데 기록이 가장 많았던 날(같으면 가장 최근 날)을 복사해서, 시간을 비운 빈칸으로 둔다. 빈칸은 기록이 아니다.
+ * 빈칸을 눌러 시각을 고르거나 물어보기로 말하면 그때 기록이 된다. 위쪽 단추나 물어보기로 같은 종류를 기록하면 시각이 가장 가까운 빈칸이 함께 채워진다.
+ * 그래서 사람은 평소와 다른 것만 적으면 된다(Julian, 2026-11-11).
+ * 어느 빈칸이 채워졌는지는 저장하지 않고 그날 기록과 맞춰 볼 때마다 센다(헌장 3) — 기록을 지우면 빈칸이 다시 보인다.
+ * 모두 기기 안에서 규칙으로 세고 모델을 부르지 않는다. 화면 코드를 가져오지 않는 순수 함수(`node --test src/data/day-draft.test.ts`).
  */
 
-import type { Change, CtxRecord, CtxSource } from './agent.ts';
-import { copula, type ParsedInput } from './ask.ts';
-import { feedSessions, hhmm, isNightStart, type DayMemo, type RoutineDone } from './day-flow.ts';
+import { feedSessions, hhmm, isNightStart, type RoutineDone } from './day-flow.ts';
 import { durationLabel, minutesOf, startOfDay } from './event-summary.ts';
-import { AMOUNT_RANGE, type CareEvent, type DiaperKind } from './events.ts';
+import type { CareEvent, DiaperKind, EventInput, Side } from './events.ts';
 
 const MIN = 60 * 1000;
 const DAY = 24 * 60 * MIN;
-/** 평소 시각을 찾는 지난 날수 */
-export const USUAL_DAYS = 7;
-/** 같은 평소 시각으로 묶는 폭(분) */
-const CLUSTER = 90;
-/** 그 때 앞뒤로 이만큼 안에 이미 기록이 있으면 채우지 않는다 */
-const NEAR = 60 * MIN;
-/** 낮잠 — 이보다 길면 평소 낮잠으로 보지 않는다(분) */
-const NAP_MAX = 4 * 60;
+/** 복사할 날을 찾는 지난 날수 */
+export const SOURCE_DAYS = 7;
+/** 새 기록이 채우는 빈칸 — 시각이 이만큼 안에서 가장 가까운 것 */
+const FILL_WINDOW = 2 * 60 * MIN;
+/** 낮잠과 밤잠을 함께 복사하되, 이보다 길게 이어진 잠(재다가 잊은 것)은 뺀다(분) */
+const SLEEP_MAX = 16 * 60;
 
-export type Draft = {
+export type ShellKind = 'formula' | 'breast' | 'diaper' | 'sleep' | 'routine';
+
+/** 시간을 비운 빈칸 하나 */
+export type Shell = {
   id: string;
-  input: ParsedInput;
+  kind: ShellKind;
+  /** 복사한 날의 시각 — 그날 0시부터 분. 빈칸의 순서와 「어제 10:30」에 쓴다 */
+  minute: number;
+  /** 분유 ml */
+  amount: number | null;
+  /** 모유 · 잠의 걸린 시간(분) */
+  minutes: number | null;
+  side: Side | null;
+  diaper: DiaperKind | null;
+  /** 루틴이면 그 루틴 — 이름은 그 루틴을 지웠다가 다시 만들어도 맞추려고 함께 둔다 */
+  routineId: string | null;
   title: string;
-  at: number;
-  /** 평소 기록으로 짐작한 것 — 시각에 「쯤」 */
-  guessed: boolean;
-  /** 사람이 고친 것 — 카드에 「고침」 */
-  edited: boolean;
 };
-/** 한 날의 초안 묶음 — day 는 YYYY-MM-DD */
-export type DraftSet = { day: string; items: Draft[] };
 
-let seq = 0;
-const draftId = () => `draft-${++seq}`;
+/** 한 날의 초안 — 날짜는 모두 YYYY-MM-DD */
+export type ShellSet = {
+  /** 초안을 놓은 날 */
+  day: string;
+  /** 복사한 날 */
+  source: string;
+  /** 만든 날 — 이 날이 지나면 채우지 않은 빈칸은 버린다 */
+  made: string;
+  items: Shell[];
+  /** 「초안에서 빼기」로 뺀 빈칸 */
+  removed: string[];
+  /** 눌러서 채운 빈칸 → 그때 만든 기록 id(수유는 첫 줄, 루틴은 완료 줄) */
+  filled: Record<string, string>;
+};
+
+export const ymdOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+export const dateOfYmd = (s: string) => {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
 const t = (iso: string) => new Date(iso).getTime();
-const iso = (at: number) => new Date(at).toISOString();
 
 /** 「오늘 하루 기록 초안으로 작성해 줘」 — 초안을 만들어 달라는 말 */
 export const asksDraft = (text: string) =>
@@ -59,267 +80,181 @@ export function stripDraftAsk(text: string): string {
     .join(', ');
 }
 
-// ---------- 평소 시각 ----------
+// ---------- 복사할 날 ----------
 
-export type UsualKind = 'formula' | 'breast' | DiaperKind | 'nap';
-/** 지난 7일에 되풀이된 기록 하나 — minute 은 그날 0시부터 분 */
-export type Usual = { kind: UsualKind; minute: number; amount: number | null; minutes: number | null; days: number };
+const inDay = (at: number, d0: number) => at >= d0 && at < d0 + DAY;
 
-type Entry = { day: number; minute: number; value: number | null };
-
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-};
-const roundTo = (v: number, step: number) => Math.round(v / step) * step;
-
-/**
- * 그날 앞 7일에서 평소 시각을 찾는다 — 같은 종류의 기록을 시각순으로 놓고 90분 안에 모인 것(하루에 하나씩)이
- * 기록한 날의 절반 넘게(적어도 사흘) 되풀이되면 평소로 본다. 시각은 가운데 값(5분 단위), 분유 양은 10ml 단위, 걸린 시간은 5분 단위.
- */
-export function usualTimes(events: CareEvent[], day: Date, now = new Date(), days = USUAL_DAYS): Usual[] {
-  const D0 = startOfDay(day).getTime();
-  const from = D0 - days * DAY;
-  const entries = new Map<UsualKind, Entry[]>();
-  const put = (kind: UsualKind, at: number, value: number | null) => {
-    if (at < from || at >= D0) return;
-    const dayStart = startOfDay(new Date(at)).getTime();
-    const list = entries.get(kind) ?? [];
-    list.push({ day: Math.round((dayStart - from) / DAY), minute: Math.round((at - dayStart) / MIN), value });
-    entries.set(kind, list);
-  };
+/** 빈칸으로 옮길 기록 — 수유(한 번씩), 기저귀, 잠, 루틴 완료. 체온 · 키 · 몸무게와 메모는 날마다 되풀이되는 일이 아니라 뺀다 */
+function sourceShells(events: CareEvent[], dones: RoutineDone[], d0: number, now: Date): Omit<Shell, 'id'>[] {
+  const out: Omit<Shell, 'id'>[] = [];
+  const minuteOf = (at: number) => Math.round((at - d0) / MIN);
   for (const s of feedSessions(events)) {
-    if (s.endAt === null) continue;
-    if (s.kind === 'formula') put('formula', t(s.startAt), s.parts[0].amount);
-    else put('breast', t(s.startAt), s.parts.reduce((sum, p) => sum + minutesOf(p, now), 0));
+    const at = t(s.startAt);
+    if (!inDay(at, d0) || s.endAt === null) continue;
+    if (s.kind === 'formula') {
+      const ml = s.parts[0].amount;
+      out.push({ kind: 'formula', minute: minuteOf(at), amount: ml, minutes: null, side: null, diaper: null, routineId: null, title: ml != null ? `분유 ${Math.round(ml)}ml` : '분유' });
+    } else {
+      const min = Math.max(1, Math.round(s.parts.reduce((sum, p) => sum + minutesOf(p, now), 0)));
+      out.push({ kind: 'breast', minute: minuteOf(at), amount: null, minutes: min, side: s.parts[0].side, diaper: null, routineId: null, title: `모유 ${durationLabel(min)}` });
+    }
   }
   for (const e of events) {
-    if (e.kind === 'diaper' && e.diaper) put(e.diaper, t(e.startAt), null);
-    if (e.kind === 'sleep' && e.endAt && !isNightStart(t(e.startAt))) {
-      const min = minutesOf(e, now);
-      if (min > 0 && min <= NAP_MAX) put('nap', t(e.startAt), min);
+    const at = t(e.startAt);
+    if (!inDay(at, d0)) continue;
+    if (e.kind === 'diaper' && e.diaper) {
+      out.push({ kind: 'diaper', minute: minuteOf(at), amount: null, minutes: null, side: null, diaper: e.diaper, routineId: null, title: DIAPER_TITLE[e.diaper] });
+    }
+    if (e.kind === 'sleep' && e.endAt) {
+      const min = Math.round(minutesOf(e, now));
+      if (min < 1 || min > SLEEP_MAX) continue;
+      out.push({ kind: 'sleep', minute: minuteOf(at), amount: null, minutes: min, side: null, diaper: null, routineId: null, title: `${isNightStart(at) ? '밤잠' : '낮잠'} ${durationLabel(min)}` });
     }
   }
-  const out: Usual[] = [];
-  for (const [kind, list] of entries) {
-    const kindDays = new Set(list.map((x) => x.day)).size;
-    const need = Math.max(3, Math.ceil(kindDays / 2));
-    const sorted = [...list].sort((a, b) => a.minute - b.minute);
-    let group: Entry[] = [];
-    const flush = () => {
-      if (group.length >= need) {
-        const values = group.flatMap((g) => (g.value !== null ? [g.value] : []));
-        out.push({
-          kind,
-          minute: roundTo(median(group.map((g) => g.minute)), 5),
-          amount: kind === 'formula' && values.length ? roundTo(median(values), 10) : null,
-          minutes: (kind === 'breast' || kind === 'nap') && values.length ? Math.max(5, roundTo(median(values), 5)) : null,
-          days: group.length,
-        });
-      }
-      group = [];
-    };
-    for (const en of sorted) {
-      const first = group[0];
-      if (first && (en.minute - first.minute > CLUSTER || group.some((g) => g.day === en.day))) flush();
-      group.push(en);
-    }
-    flush();
+  for (const r of dones) {
+    const at = t(r.at);
+    if (!inDay(at, d0)) continue;
+    out.push({ kind: 'routine', minute: minuteOf(at), amount: null, minutes: r.endAt ? Math.max(1, Math.round((t(r.endAt) - at) / MIN)) : null, side: null, diaper: null, routineId: r.routineId, title: r.title });
   }
   return out.sort((a, b) => a.minute - b.minute);
 }
 
-// ---------- 초안 만들기 ----------
-
 const DIAPER_TITLE: Record<DiaperKind, string> = { pee: '소변', poo: '대변', both: '소변, 대변' };
 
-/** 초안의 이름 — 「분유 140ml」 「모유 왼쪽 15분」 「낮잠 50분」 「소변」 */
-export function draftTitle(p: ParsedInput): string {
-  if (p.type === 'routine') return p.title;
-  if (p.type === 'memo') return `메모 ${p.text.split('\n')[0].trim().slice(0, 40)}`;
-  const e = p.input;
-  const span = e.startAt && e.endAt ? Math.max(0, (t(e.endAt) - t(e.startAt)) / MIN) : null;
-  if (e.kind === 'formula') return e.amount != null ? `분유 ${Math.round(e.amount)}ml` : '분유';
-  if (e.kind === 'breast') return `모유${e.side === 'left' ? ' 왼쪽' : e.side === 'right' ? ' 오른쪽' : ''}${span ? ` ${durationLabel(span)}` : ''}`;
-  if (e.kind === 'sleep') return `${e.startAt && isNightStart(t(e.startAt)) ? '밤잠' : '낮잠'}${span ? ` ${durationLabel(span)}` : ''}`;
-  if (e.kind === 'diaper') return e.diaper ? DIAPER_TITLE[e.diaper] : '기저귀';
-  const unit = AMOUNT_RANGE[e.kind]?.unit ?? '';
-  const name = e.kind === 'temp' ? '체온' : e.kind === 'weight' ? '몸무게' : '키';
-  return e.amount != null ? `${e.kind === 'temp' ? '' : `${name} `}${e.amount}${unit}` : name;
+/**
+ * 복사할 날 — 그날 앞 7일 가운데 빈칸으로 옮길 기록이 가장 많았던 날. 같으면 가장 최근 날. 기록이 없으면 null.
+ * 어제가 바빴으면 어제를, 어제 기록을 깜빡했으면 그 전의 바빴던 날을 고른다
+ */
+export function busiestDay(events: CareEvent[], dones: RoutineDone[], day: Date, now = new Date(), days = SOURCE_DAYS): { day: Date; count: number } | null {
+  const D0 = startOfDay(day);
+  let best: { day: Date; count: number } | null = null;
+  for (let i = 1; i <= days; i++) {
+    const d = new Date(D0.getFullYear(), D0.getMonth(), D0.getDate() - i);
+    const count = sourceShells(events, dones, d.getTime(), now).length;
+    if (count > 0 && (!best || count > best.count)) best = { day: d, count };
+  }
+  return best;
 }
 
-const atOf = (p: ParsedInput, now: Date): number => (p.type === 'event' ? (p.input.startAt ? t(p.input.startAt) : now.getTime()) : t(p.at));
-const endOfInput = (p: ParsedInput): number | null => (p.type === 'event' && p.input.endAt ? t(p.input.endAt) : null);
-const kindOf = (p: ParsedInput): string => (p.type === 'event' ? p.input.kind : p.type);
-const isFeedKind = (k: string) => k === 'formula' || k === 'breast';
+let seq = 0;
+const shellId = () => `shell-${Date.now().toString(36)}-${++seq}`;
 
-function inputOf(u: Usual, at: number): ParsedInput {
-  const startAt = iso(at);
-  if (u.kind === 'formula') return { type: 'event', input: { kind: 'formula', amount: u.amount, startAt }, complete: true, title: '' };
-  if (u.kind === 'breast') return { type: 'event', input: { kind: 'breast', startAt, endAt: iso(at + (u.minutes ?? 10) * MIN) }, complete: true, title: '' };
-  if (u.kind === 'nap') return { type: 'event', input: { kind: 'sleep', startAt, endAt: iso(at + (u.minutes ?? 30) * MIN) }, complete: true, title: '' };
-  return { type: 'event', input: { kind: 'diaper', diaper: u.kind, startAt }, complete: true, title: '' };
+/** 초안 — 그날 앞 7일 가운데 가장 바빴던 날을 복사한 빈칸. 복사할 날이 없으면 null */
+export function makeShellSet(events: CareEvent[], dones: RoutineDone[], day: Date, now = new Date()): ShellSet | null {
+  const src = busiestDay(events, dones, day, now);
+  if (!src) return null;
+  const items = sourceShells(events, dones, src.day.getTime(), now).map((s) => ({ ...s, id: shellId() }));
+  return { day: ymdOf(day), source: ymdOf(src.day), made: ymdOf(now), items, removed: [], filled: {} };
 }
 
-const make = (input: ParsedInput, at: number, guessed: boolean): Draft => {
-  const title = draftTitle(input);
-  return { id: draftId(), input: input.type === 'event' ? { ...input, title } : input, title, at, guessed, edited: false };
-};
+/** 그날 끝나기 전까지만 — 만든 날이 지나면 null */
+export function liveShellSet(set: ShellSet | null, now: Date): ShellSet | null {
+  return set && set.made === ymdOf(now) ? set : null;
+}
 
-export type DraftOpts = {
-  events: CareEvent[];
-  day: Date;
-  now: Date;
-  /** 말한 기록 — 규칙이나 에이전트가 읽은 것 */
-  said: ParsedInput[];
-  /** 말하지 않은 때를 평소 기록으로 채울지(decisions/041) */
-  fill: boolean;
-};
+// ---------- 그날 기록과 맞추기 ----------
+
+/** 빈칸을 채우는 기록 하나 — group 이 같으면 같은 종류다 */
+export type DayRecord = { id: string; ids: string[]; group: string; at: number };
+
+const routineGroup = (title: string) => `routine:${title.replace(/\s+/g, '').toLowerCase()}`;
+/** 수유는 모유와 분유를 같은 종류로 본다 — 어제 분유 먹던 때에 오늘 모유를 먹였어도 그 빈칸이 채워진다 */
+const groupOf = (s: Shell) => (s.kind === 'formula' || s.kind === 'breast' ? 'feed' : s.kind === 'routine' ? routineGroup(s.title) : s.kind);
+
+/** 그날 기록을 빈칸과 맞출 모양으로 — 수유는 한 번씩(쪽을 바꾼 모유는 한 번), 기저귀, 잠, 루틴 완료 */
+export function dayRecords(events: CareEvent[], dones: RoutineDone[], day: Date): DayRecord[] {
+  const d0 = startOfDay(day).getTime();
+  const out: DayRecord[] = [];
+  for (const s of feedSessions(events)) {
+    const at = t(s.startAt);
+    if (inDay(at, d0)) out.push({ id: s.id, ids: s.parts.map((p) => p.id), group: 'feed', at });
+  }
+  for (const e of events) {
+    const at = t(e.startAt);
+    if (!inDay(at, d0)) continue;
+    if (e.kind === 'diaper' || e.kind === 'sleep') out.push({ id: e.id, ids: [e.id], group: e.kind, at });
+  }
+  for (const r of dones) {
+    const at = t(r.at);
+    const id = r.logId ?? `${r.routineId}-${r.at}`;
+    if (inDay(at, d0)) out.push({ id, ids: [id], group: routineGroup(r.title), at });
+  }
+  return out.sort((a, b) => a.at - b.at);
+}
+
+export const shellAt = (set: Pick<ShellSet, 'day'>, s: Shell) => dateOfYmd(set.day).getTime() + s.minute * MIN;
 
 /**
- * 그날의 초안 — 말한 기록(그날 것만, 다 적힌 것만)과, 채우기로 했으면 평소 시각 가운데 아직 기록이 없는 때.
- * 오늘이면 지금까지만 채운다(기록은 지나간 일이다). 그 때 앞뒤 1시간 안에 같은 종류의 기록이나 말한 기록이 있으면 채우지 않는다.
+ * 아직 채우지 않은 빈칸 — 뺀 것과 눌러서 채운 것을 빼고, 남은 기록은 시각순으로 같은 종류의 가장 가까운 빈칸(2시간 안)을 하나씩 채운다.
+ * 눌러서 채운 기록을 지우면 그 빈칸이 다시 보인다
  */
-export function dayDrafts({ events, day, now, said, fill }: DraftOpts): Draft[] {
-  const D0 = startOfDay(day).getTime();
-  const isToday = now.getTime() >= D0 && now.getTime() < D0 + DAY;
-  const limit = isToday ? now.getTime() : D0 + DAY;
-  const items: Draft[] = [];
-  for (const p of said) {
-    if (p.type === 'event' && !p.complete) continue;
-    const at = atOf(p, now);
-    if (at < D0 || at >= D0 + DAY || at > limit) continue;
-    items.push(make(p, at, false));
-  }
-  if (fill) {
-    const near = (a: number, b: number) => Math.abs(a - b) <= NEAR;
-    const taken = (u: Usual, at: number, end: number | null) => {
-      const group = u.kind === 'nap' ? 'sleep' : isFeedKind(u.kind) ? 'feed' : 'diaper';
-      const sameGroup = (k: string) => (group === 'feed' ? isFeedKind(k) : k === group);
-      for (const e of events) {
-        if (!sameGroup(e.kind)) continue;
-        const s = t(e.startAt);
-        if (near(s, at)) return true;
-        if (group === 'sleep' && end !== null && e.endAt && s < end && t(e.endAt) > at) return true;
+export function openShells(set: ShellSet, records: DayRecord[]): Shell[] {
+  const live = new Set(records.flatMap((r) => r.ids));
+  const used = new Set(Object.values(set.filled).filter((id) => live.has(id)));
+  let open = set.items.filter((s) => !set.removed.includes(s.id) && !(set.filled[s.id] && live.has(set.filled[s.id])));
+  for (const r of records) {
+    if (r.ids.some((id) => used.has(id))) continue;
+    let best: Shell | null = null;
+    let bestGap = Infinity;
+    for (const s of open) {
+      if (groupOf(s) !== r.group) continue;
+      const gap = Math.abs(shellAt(set, s) - r.at);
+      if (gap <= FILL_WINDOW && gap < bestGap) {
+        best = s;
+        bestGap = gap;
       }
-      for (const d of items) {
-        const k = kindOf(d.input);
-        if (!d.guessed && sameGroup(k) && near(d.at, at)) return true;
-        if (d.guessed && k === (u.kind === 'nap' ? 'sleep' : isFeedKind(u.kind) ? u.kind : 'diaper') && Math.abs(d.at - at) <= 30 * MIN) return true;
-        if (group === 'sleep' && k === 'sleep' && end !== null) {
-          const de = endOfInput(d.input);
-          if (de !== null && d.at < end && de > at) return true;
-        }
-      }
-      return false;
-    };
-    for (const u of usualTimes(events, day, now)) {
-      const at = D0 + u.minute * MIN;
-      const end = u.minutes !== null ? at + u.minutes * MIN : null;
-      if (at > limit || (end !== null && end > limit)) continue;
-      if (taken(u, at, end)) continue;
-      items.push(make(inputOf(u, at), at, true));
     }
+    if (best) open = open.filter((s) => s !== best);
   }
-  return items.sort((a, b) => a.at - b.at);
+  return open.sort((a, b) => a.minute - b.minute);
 }
 
-/** 「07:35쯤」 「10:30」 */
-export const draftWhen = (d: Draft) => `${hhmm(d.at)}${d.guessed ? '쯤' : ''}`;
+// ---------- 빈칸 채우기 ----------
 
-/** 흐름 · 목록의 key 가 초안이면 그 id — 수유 · 기저귀 · 잠은 id 그대로, 루틴은 `routine-<id>`, 메모는 `memo-<id>` */
-export function draftIdOfKey(key: string | null): string | null {
-  if (!key) return null;
-  const m = /^(?:routine-|memo-)?(draft-\d+)$/.exec(key);
-  return m ? m[1] : null;
-}
-
-/** 초안을 흐름에 놓을 모양 — 기록 · 루틴 완료 · 메모로 */
-export function draftFlow(items: Draft[]): { events: CareEvent[]; routines: RoutineDone[]; memos: DayMemo[] } {
-  const events: CareEvent[] = [];
-  const routines: RoutineDone[] = [];
-  const memos: DayMemo[] = [];
-  for (const d of items) {
-    const p = d.input;
-    if (p.type === 'event') events.push(draftEvent(d.id, p));
-    else if (p.type === 'routine') routines.push({ routineId: d.id, logId: d.id, title: p.title, at: p.at, by: null, endAt: null });
-    else memos.push({ memoId: d.id, text: p.text, at: p.at });
+/** 빈칸을 채울 기록 — 시각을 고르고 양이나 걸린 시간을 고친 값으로. 모유 · 잠이 지금보다 늦게 끝나면 재는 중으로 둔다. 루틴은 null */
+export function shellInput(s: Shell, at: number, patch: { amount?: number | null; minutes?: number | null }, now: number): EventInput | null {
+  const startAt = new Date(at).toISOString();
+  if (s.kind === 'formula') return { kind: 'formula', startAt, amount: patch.amount ?? s.amount };
+  if (s.kind === 'diaper') return { kind: 'diaper', startAt, diaper: s.diaper };
+  if (s.kind === 'breast' || s.kind === 'sleep') {
+    const min = patch.minutes ?? s.minutes ?? 10;
+    const end = at + min * MIN;
+    return { kind: s.kind, startAt, endAt: end > now ? null : new Date(end).toISOString(), side: s.kind === 'breast' ? (s.side ?? 'left') : null };
   }
-  return { events, routines, memos };
+  return null;
 }
 
-function draftEvent(id: string, p: Extract<ParsedInput, { type: 'event' }>): CareEvent {
-  const e = p.input;
-  const start = e.startAt ?? iso(Date.now());
-  return { id, kind: e.kind, startAt: start, endAt: e.endAt ?? null, amount: e.amount ?? null, side: e.side ?? null, diaper: e.diaper ?? null, color: e.color ?? null, note: e.note ?? null, by: null, createdAt: start, updatedAt: start };
-}
-
-// ---------- 고치기 ----------
-
-export type DraftPatch = { at?: number; amount?: number; minutes?: number };
-
-/** 흐름의 작은 창에서 고친 것 — 시각(끝도 함께 옮긴다), 분유 양, 모유 · 잠의 걸린 시간 */
-export function editDraft(d: Draft, patch: DraftPatch): Draft {
-  let input = d.input;
-  let at = d.at;
-  if (patch.at !== undefined && patch.at !== d.at) {
-    const delta = patch.at - d.at;
-    at = patch.at;
-    if (input.type === 'event') input = { ...input, input: { ...input.input, startAt: iso(at), endAt: input.input.endAt ? iso(t(input.input.endAt) + delta) : input.input.endAt } };
-    else input = { ...input, at: iso(at) };
+/** 빈칸의 이름 — 양이나 걸린 시간을 고치면 따라 바뀐다 */
+export function shellTitle(s: Shell, patch: { amount?: number | null; minutes?: number | null } = {}): string {
+  if (s.kind === 'formula') {
+    const ml = patch.amount ?? s.amount;
+    return ml != null ? `분유 ${Math.round(ml)}ml` : '분유';
   }
-  if (input.type === 'event') {
-    const e = input.input;
-    const range = AMOUNT_RANGE[e.kind];
-    if (patch.amount !== undefined && range) input = { ...input, input: { ...e, amount: Math.min(range.max, Math.max(range.min, Math.round(patch.amount))) } };
-    if (patch.minutes !== undefined && (e.kind === 'breast' || e.kind === 'sleep')) {
-      const min = Math.min(16 * 60, Math.max(1, Math.round(patch.minutes)));
-      input = { ...input, input: { ...input.input, endAt: iso(at + min * MIN) } };
-    }
+  if (s.kind === 'breast' || s.kind === 'sleep') {
+    const min = patch.minutes ?? s.minutes;
+    const name = s.kind === 'breast' ? '모유' : s.title.startsWith('밤잠') ? '밤잠' : '낮잠';
+    return min ? `${name} ${durationLabel(min)}` : name;
   }
-  const title = draftTitle(input);
-  return { ...d, input: input.type === 'event' ? { ...input, title } : input, title, at, edited: true };
+  return s.title;
 }
 
-/** 초안의 걸린 시간(분) — 모유 · 잠만 */
-export function draftMinutes(d: Draft): number | null {
-  const end = endOfInput(d.input);
-  return end !== null ? Math.round((end - d.at) / MIN) : null;
+/** 복사한 날을 초안을 놓은 날에서 부르는 말 — 「어제」, 「11월 8일」 */
+export function sourceWord(set: Pick<ShellSet, 'day' | 'source'>): string {
+  const gap = Math.round((dateOfYmd(set.day).getTime() - dateOfYmd(set.source).getTime()) / DAY);
+  if (gap === 1) return '어제';
+  const d = dateOfYmd(set.source);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
-const objectOf = (w: string) => (copula(w) === '이에요' ? '을' : '를');
-const towardOf = (w: string) => {
-  const code = w.charCodeAt(w.length - 1) - 0xac00;
-  if (code < 0 || code > 11171) return '로';
-  const jong = code % 28;
-  return jong === 0 || jong === 8 ? '로' : '으로';
-};
+/** 빈칸 아래 작은 글 — 「어제 10:30」 */
+export function shellHint(set: Pick<ShellSet, 'day' | 'source'>, s: Shell): string {
+  return `${sourceWord(set)} ${hhmm(dateOfYmd(set.source).getTime() + s.minute * MIN)}`;
+}
 
-/**
- * 에이전트가 돌려준 바꿀 것 가운데 초안을 가리키는 것 — 카드 없이 초안에 바로 반영하고 한 줄로 알린다.
- * 「✓ 초안에서 15:30쯤 낮잠을 뺐어요」, 「✓ 초안의 분유 140ml를 160ml로 고쳤어요」. 초안이 아니면 null
- */
-export function applyChangeToDrafts(items: Draft[], ch: Change): { items: Draft[]; line: string } | null {
-  if (ch.op !== 'update' && ch.op !== 'delete') return null;
-  const id = draftIdOfKey(ch.src.key);
-  const d = id ? items.find((x) => x.id === id) : undefined;
-  if (!d) return null;
-  if (ch.op === 'delete') return { items: items.filter((x) => x.id !== d.id), line: `초안에서 ${draftWhen(d)} ${d.title}${objectOf(d.title)} 뺐어요` };
-  let next = d;
-  const p = ch.patch;
-  if (d.input.type === 'event' && !('at' in p) && !('text' in p)) {
-    const e = { ...d.input.input, ...p };
-    const at = e.startAt ? t(e.startAt) : d.at;
-    const input = { ...d.input, input: e };
-    next = { ...d, input: { ...input, title: draftTitle(input) }, title: draftTitle(input), at, edited: true };
-  } else if (d.input.type === 'routine' && 'at' in p) {
-    next = editDraft(d, { at: t(p.at) });
-  } else if (d.input.type === 'memo' && 'text' in p) {
-    const input = { ...d.input, text: p.text };
-    next = { ...d, input, title: draftTitle(input), edited: true };
-  } else return null;
-  return { items: items.map((x) => (x.id === d.id ? next : x)).sort((a, b) => a.at - b.at), line: `초안의 ${d.title}${objectOf(d.title)} ${ch.to}${towardOf(ch.to)} 고쳤어요` };
+/** 앞 대화에 남기는 한 줄 — 「초안 빈칸 9개: 어제 06:40 분유 160ml …」 */
+export function shellSummary(set: ShellSet, items: Shell[]): string {
+  const head = items.slice(0, 6).map((s) => `${shellHint(set, s)} ${s.title}`);
+  return `초안 빈칸 ${items.length}개: ${head.join(', ')}${items.length > 6 ? ' …' : ''}`;
 }
 
 const PERIODS: [RegExp, number, number][] = [
@@ -333,12 +268,12 @@ const PERIODS: [RegExp, number, number][] = [
 ];
 
 /**
- * 「오후 낮잠은 안 잤어」, 「10시 분유는 안 먹였어」 — 규칙으로 초안에서 뺄 것을 고른다(decisions/040 「규칙이 먼저다」).
- * 종류와 때로 하나가 정해지면 그것, 「다」 「전부」 「모두」면 맞는 것 모두, 정하지 못하면 빈 목록(에이전트에게 보낸다)
+ * 「오후 낮잠은 안 잤어」, 「10시 분유는 안 먹였어」 — 규칙으로 초안에서 뺄 빈칸을 고른다(decisions/040 「규칙이 먼저다」).
+ * 종류와 때로 하나가 정해지면 그것, 「다」 「전부」 「모두」면 맞는 것 모두, 정하지 못하면 빈 목록
  */
-export function negatedDrafts(text: string, items: Draft[]): Draft[] {
+export function negatedShells(text: string, items: Shell[]): Shell[] {
   if (!/안 |않았|없었|없어/.test(text)) return [];
-  const kind = /낮잠|밤잠|잠|잤/.test(text)
+  const kind: ShellKind | null = /낮잠|밤잠|잠|잤/.test(text)
     ? 'sleep'
     : /분유/.test(text)
       ? 'formula'
@@ -348,56 +283,35 @@ export function negatedDrafts(text: string, items: Draft[]): Draft[] {
           ? 'diaper'
           : null;
   if (!kind) return [];
-  const dayStart = items.length ? startOfDay(new Date(items[0].at)).getTime() : 0;
-  let list = items.filter((d) => kindOf(d.input) === kind);
+  let list = items.filter((s) => s.kind === kind);
+  if (kind === 'sleep' && /낮잠/.test(text)) list = list.filter((s) => s.title.startsWith('낮잠'));
+  if (kind === 'sleep' && /밤잠/.test(text)) list = list.filter((s) => s.title.startsWith('밤잠'));
   if (kind === 'diaper') {
     const which: DiaperKind | null = /대소변|둘 다/.test(text) ? 'both' : /소변|쉬|오줌/.test(text) ? 'pee' : /대변|응가|똥/.test(text) ? 'poo' : null;
-    if (which) list = list.filter((d) => d.input.type === 'event' && (d.input.input.diaper === which || d.input.input.diaper === 'both'));
+    if (which) list = list.filter((s) => s.diaper === which || s.diaper === 'both');
   }
   const hour = /(\d{1,2})\s*시/.exec(text);
   if (hour) {
     let h = Number(hour[1]);
     if (/오후|저녁|밤/.test(text) && h < 12) h += 12;
-    const half = /반/.test(text) ? 30 : 0;
-    const at = dayStart + (h * 60 + half) * MIN;
-    list = list.filter((d) => Math.abs(d.at - at) <= 90 * MIN);
+    const at = h * 60 + (/반/.test(text) ? 30 : 0);
+    list = list.filter((s) => Math.abs(s.minute - at) <= 90);
   } else {
     const period = PERIODS.find(([re]) => re.test(text));
-    if (period) list = list.filter((d) => {
-      const h = (d.at - dayStart) / (60 * MIN);
-      return h >= period[1] && h < period[2];
-    });
+    if (period) list = list.filter((s) => s.minute / 60 >= period[1] && s.minute / 60 < period[2]);
   }
   if (list.length === 1 || (list.length > 1 && /\b다\b|전부|모두|다 안/.test(text))) return list;
   return [];
 }
 
-// ---------- 에이전트에 보내기 ----------
-
-/** 초안을 보는 날의 기록 뒤에 이어 번호를 붙여 보낸다 — 모델이 「그 낮잠」을 가리켜 고치거나 뺄 수 있게 */
-export function draftContext(items: Draft[], from: number): { records: CtxRecord[]; sources: CtxSource[] } {
-  const records: CtxRecord[] = [];
-  const sources: CtxSource[] = [];
-  items.forEach((d, i) => {
-    const ref = `r${from + i}`;
-    const p = d.input;
-    if (p.type === 'event') {
-      const e = draftEvent(d.id, p);
-      records.push({ ref, kind: e.kind, startAt: e.startAt, endAt: e.endAt, amount: e.amount, side: e.side, diaper: e.diaper, color: e.color, title: null, note: null, by: null });
-      sources.push({ type: 'event', ref, key: d.id, label: d.title, event: e });
-    } else if (p.type === 'routine') {
-      records.push({ ref, kind: 'routine', startAt: p.at, endAt: null, amount: null, side: null, diaper: null, color: null, title: p.title.slice(0, 300), note: null, by: null });
-      sources.push({ type: 'routine', ref, key: `routine-${d.id}`, label: d.title, log: { id: d.id, routineId: d.id, at: p.at, by: null, step: null, skip: false, createdAt: p.at, endAt: null }, title: p.title });
-    } else {
-      records.push({ ref, kind: 'memo', startAt: p.at, endAt: null, amount: null, side: null, diaper: null, color: null, title: p.text.slice(0, 300), note: null, by: null });
-      sources.push({ type: 'memo', ref, key: `memo-${d.id}`, label: d.title, memo: { id: d.id, at: p.at, text: p.text, ref: null, createdAt: p.at, updatedAt: p.at } });
-    }
-  });
-  return { records, sources };
-}
-
-/** 앞 대화에 남기는 한 줄 — 「초안 8개: 07:35쯤 소변, 10:30 분유 140ml …」 */
-export function draftSummary(items: Draft[]): string {
-  const head = items.slice(0, 6).map((d) => `${draftWhen(d)} ${d.title}`);
-  return `초안 ${items.length}개: ${head.join(', ')}${items.length > 6 ? ' …' : ''}`;
+/** 저장된 글 → 초안. 깨졌으면 null */
+export function shellSetFromText(text: string | null): ShellSet | null {
+  if (!text) return null;
+  try {
+    const v = JSON.parse(text) as Partial<ShellSet>;
+    if (typeof v.day !== 'string' || typeof v.source !== 'string' || typeof v.made !== 'string' || !Array.isArray(v.items)) return null;
+    return { day: v.day, source: v.source, made: v.made, items: v.items as Shell[], removed: Array.isArray(v.removed) ? v.removed : [], filled: v.filled && typeof v.filled === 'object' ? v.filled : {} };
+  } catch {
+    return null;
+  }
 }

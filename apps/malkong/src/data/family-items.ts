@@ -207,7 +207,8 @@ export function planIncoming(args: {
       title: str(d.title) ?? '',
       // 옛 타이머 루틴은 체크로(task today/006)
       kind: routineKindOf(d.kind),
-      everyDays: Math.max(1, num(d.everyDays, 1)),
+      // 0 은 반복 안 함(task today/029)
+      everyDays: Math.max(0, num(d.everyDays, 1)),
       weekdays: Array.isArray(d.weekdays)
         ? d.weekdays.filter((x): x is number => typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= 6)
         : null,

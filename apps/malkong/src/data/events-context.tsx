@@ -21,7 +21,8 @@ type EventsContextValue = {
   /** 시작 순서 */
   events: CareEvent[];
   loading: boolean;
-  add: (input: EventInput) => Promise<CareEvent>;
+  /** id 를 주면 그 id 로 — 하루 초안의 빈칸을 채울 때 어느 기록이 그 칸을 채웠는지 미리 적어 둔다(task today/029) */
+  add: (input: EventInput, id?: string) => Promise<CareEvent>;
   /** 고치기 · 재는 중 끝내기 */
   update: (id: string, patch: Partial<Omit<CareEvent, 'id' | 'createdAt' | 'updatedAt'>>) => Promise<void>;
   remove: (id: string) => Promise<void>;
@@ -69,9 +70,10 @@ export function EventsProvider({ children }: { children: React.ReactNode }) {
     void scheduleSleepReminder(sleep?.at ?? null, durationLabel(sleep?.minutes ?? 0)).catch(() => undefined);
   }, [events, careReminders, month, loading, prefsLoading]);
 
-  const add = useCallback<EventsContextValue['add']>(async (input) => {
+  const add = useCallback<EventsContextValue['add']>(async (input, id) => {
     // 누가 남겼는지 — 가족 공유를 켠 폰에서만 이름이 있다
-    const event = makeEvent({ ...input, by: input.by ?? (await memberName()) });
+    const made = makeEvent({ ...input, by: input.by ?? (await memberName()) });
+    const event = id ? { ...made, id } : made;
     await upsertEventRow(event);
     setEvents((prev) => sortEvents([...prev, event]));
     requestSync();

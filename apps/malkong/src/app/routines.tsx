@@ -33,12 +33,14 @@ import {
   dateLabel,
   hasSteps,
   nextDayLabel,
+  noRepeat,
   scheduleLabel,
   templateInput,
   timeLabel,
   todayPlan,
   type Routine,
   type RoutineTemplate,
+  type TodayItem,
 } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { useNow } from '@/hooks/use-now';
@@ -106,7 +108,9 @@ export default function RoutinesScreen() {
   const suggestions = arranging ? [] : gridSuggestions(age.month, routines.map((r) => r.title), hiddenSuggestions);
   const onAction = (r: Routine) => onCheck(r.id);
   const first = plan.later[0];
-  const laterText = first ? `${nextDayLabel(first.s.nextInDays, now)} ${first.r.title}` : null;
+  // 반복 안 함은 할 날이 없어서 「내일」 대신 이름만
+  const whenOf = (x: TodayItem) => (noRepeat(x.r) ? scheduleLabel(x.r) : nextDayLabel(x.s.nextInDays, now));
+  const laterText = first ? (noRepeat(first.r) ? first.r.title : `${whenOf(first)} ${first.r.title}`) : null;
 
   // 머리 글 — 남은 개수와 다음 루틴. 오늘 할 루틴이 없으면 고리 없이 한 줄
   const left = plan.total - plan.done;
@@ -215,18 +219,18 @@ export default function RoutinesScreen() {
                 <Ionicons name={showLater ? 'chevron-up' : 'chevron-down'} size={16} color={c.textTertiary} />
               </Pressable>
               {showLater &&
-                plan.later.map(({ r, s }) => (
+                plan.later.map((x) => (
                   <Pressable
-                    key={r.id}
+                    key={x.r.id}
                     accessibilityRole="button"
-                    accessibilityLabel={`${r.title} 편집`}
-                    onPress={() => edit(r)}
+                    accessibilityLabel={`${x.r.title} 편집`}
+                    onPress={() => edit(x.r)}
                     style={[styles.laterRow, { borderTopColor: c.divider }]}>
                     <ThemedText type="body" style={styles.flex}>
-                      {r.title}
+                      {x.r.title}
                     </ThemedText>
                     <ThemedText type="caption" style={{ color: c.textSecondary }}>
-                      {scheduleLabel(r)} · {nextDayLabel(s.nextInDays, now)}
+                      {noRepeat(x.r) ? scheduleLabel(x.r) : `${scheduleLabel(x.r)} · ${nextDayLabel(x.s.nextInDays, now)}`}
                     </ThemedText>
                   </Pressable>
                 ))}

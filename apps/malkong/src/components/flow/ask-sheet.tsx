@@ -20,20 +20,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AssistantIcon, ZzIcon } from '@/components/baby-icons';
 import { NodeIcon, nodeTone, type ItemKind } from '@/components/flow/flow-graph';
+import { shellItemKind } from '@/components/flow/shell-popover';
 import { MemoSheet } from '@/components/growth/memo-sheet';
 import { KIND_UI } from '@/components/log/kinds';
 import { ThemedText } from '@/components/themed-text';
 import { Button, tap } from '@/components/ui';
 import { FontFamily } from '@/constants/theme';
 import { parseAdd, type AddResult } from '@/data/add-parse';
-import { answerText, asksPlan, changesFrom, dayContext, lastTurns, MAX_CONTEXT, onlyAdds, planFromText, pointsOrEdits, selectedLabel, sourceOfKey, ymd, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
+import { answerText, asksPlan, changesFrom, dayContext, lastTurns, onlyAdds, planFromText, pointsOrEdits, selectedLabel, sourceOfKey, ymd, type Change, type CtxSource, type DayContext, type Turn } from '@/data/agent';
 import { askAgent, type AgentResponse } from '@/data/api';
 import { answerFor, asksAverage, copula, followUp, HEALTH_REPLY, isHealth, isQuestion, looksMulti, queryFromServer, splitAll, splitRecords, type Answer, type ParsedInput } from '@/data/ask';
 import { isActionCall, localIntent, offerHead, queryLabel, runTool, suggestFor, toolLabel, type ToolCall, type ToolLabel, type ToolResult } from '@/data/agent-tools';
 import { asksCompare, asksDaySummary, compareAnswer, daySummaryAnswer, findAnswer, knowsTerm, questionFits, searchTerms, wakeAnswer, wakeWhich, whoAnswer, type LocalAnswer, type LocalData } from '@/data/ask-local';
 import { saveAskConsent, useAskConsent } from '@/data/ask-consent';
 import { useBaby } from '@/data/baby-context';
-import { applyChangeToDrafts, asksDraft, dayDrafts, draftContext, draftSummary, draftWhen, negatedDrafts, stripDraftAsk, type Draft, type DraftSet } from '@/data/day-draft';
+import { asksDraft, makeShellSet, negatedShells, shellHint, shellSummary, sourceWord, stripDraftAsk, type Shell, type ShellSet } from '@/data/day-draft';
 import { asksDiary } from '@/data/day-facts';
 import { hhmm } from '@/data/day-flow';
 import type { CareEvent, EventInput, EventKind } from '@/data/events';
@@ -61,8 +62,8 @@ type Msg =
   | { id: string; from: 'app'; type: 'answer'; answer: Answer; steps?: string[] }
   | { id: string; from: 'app'; type: 'saved'; saved: Saved[]; undone: boolean; steps?: string[] }
   | { id: string; from: 'app'; type: 'changes'; changes: Change[]; reply: string | null; steps: string[]; state: ChangeState }
-  /** 하루 초안 카드 — 초안 목록은 화면 상태(drafts)에서 읽고, 저장한 뒤에는 적은 기록을 둔다. replaced 는 새 카드로 바뀌어 보이지 않는 것 */
-  | { id: string; from: 'app'; type: 'draft'; steps: string[]; state: 'open' | 'saved' | 'dropped' | 'replaced'; saved: Saved[]; undone: boolean }
+  /** 하루 초안 카드 — 빈칸은 화면 상태(shells)에서 읽는다. replaced 는 새 카드로 바뀌어 보이지 않는 것 */
+  | { id: string; from: 'app'; type: 'draft'; steps: string[]; state: 'open' | 'dropped' | 'replaced' }
   /**
    * 되묻는 카드(decisions/045) — 무엇이든 실행하기 전에 보기를 보이고, 누른 보기의 go 를 그때 실행한다. picked 'direct' 는 「직접 입력」.
    * records 가 있으면 「이렇게 기록할까요?」 — 읽은 기록 목록과 「저장」 · 「모두 저장」(offers 첫째)
@@ -128,7 +129,7 @@ function previewsOf(changes: Change[]): Preview[] {
 }
 
 /** 앞 대화 — 에이전트가 「그 수유」를 알아듣게 */
-function turnsOf(list: Msg[], drafts: Draft[]): Turn[] {
+function turnsOf(list: Msg[], shellSet: ShellSet | null, shells: Shell[]): Turn[] {
   return list.flatMap((m): Turn[] => {
     if (m.from === 'me') return [{ role: 'user', text: m.text }];
     if (m.type === 'text') return [{ role: 'app', text: m.text }];
@@ -144,8 +145,7 @@ function turnsOf(list: Msg[], drafts: Draft[]): Turn[] {
       return [{ role: 'app', text: `${m.head} ${what.join(', ')}${m.picked === 'direct' ? '(직접 입력을 고름)' : ''}` }];
     }
     if (m.type === 'draft') {
-      if (m.state === 'open') return drafts.length ? [{ role: 'app', text: `${draftSummary(drafts)}(확인 기다림)` }] : [];
-      if (m.state === 'saved') return [{ role: 'app', text: `초안 ${m.saved.length}개를 저장함` }];
+      if (m.state === 'open') return shellSet && shells.length ? [{ role: 'app', text: `${shellSummary(shellSet, shells)}(채우는 중)` }] : [];
       return m.state === 'dropped' ? [{ role: 'app', text: '초안을 버림' }] : [];
     }
     return [];
@@ -161,8 +161,11 @@ export function AskSheet({
   onHighlight,
   onOpenKind,
   onShowWeek,
-  drafts,
-  onDrafts,
+  shellSet,
+  shells,
+  onMakeShells,
+  onRemoveShells,
+  onDropShells,
   onPreview,
 }: {
   open: boolean;
@@ -178,9 +181,12 @@ export function AskSheet({
   onOpenKind: (kind: EventKind, editing?: CareEvent) => void;
   /** 「일주일 보기로」 */
   onShowWeek: () => void;
-  /** 하루 초안 — 흐름(DayView)과 같이 보는 화면 상태(SPEC-MAIN-16) */
-  drafts: DraftSet | null;
-  onDrafts: (next: DraftSet | null) => void;
+  /** 보는 날의 하루 초안과 아직 채우지 않은 빈칸 — 흐름(DayView)과 같이 보는 화면 상태(SPEC-MAIN-16, task today/029) */
+  shellSet: ShellSet | null;
+  shells: Shell[];
+  onMakeShells: (set: ShellSet) => void;
+  onRemoveShells: (ids: string[]) => void;
+  onDropShells: () => void;
   /** 변경 카드가 열려 있는 동안 흐름에 먼저 보일 것 */
   onPreview: (list: Preview[]) => void;
 }) {
@@ -211,18 +217,10 @@ export function AskSheet({
     const r = routines.find((x) => x.id === l.routineId);
     return r ? [{ log: l, title: r.title }] : [];
   });
-  const dayKey = ymd(day);
-  const draftItems: Draft[] = drafts && drafts.day === dayKey ? drafts.items : [];
-  /** 하루 초안이 열려 있는가 — 기록하는 말은 초안에 넣고, 입력 칸 안내가 바뀐다 */
-  const drafting = draftItems.length > 0;
-  // 함께 읽기로 했으면 그날 기록, 초안이 있으면 그 뒤에 이어 번호를 붙여 — 모델이 「그 낮잠」을 가리켜 초안을 고치게
-  const context = (now: Date): DayContext | null => {
-    if (consent !== 'yes') return null;
-    const ctx = dayContext(day, events, routineLogs, memos, now);
-    if (!draftItems.length) return ctx;
-    const extra = draftContext(draftItems.slice(0, Math.max(0, MAX_CONTEXT - ctx.records.length)), ctx.records.length + 1);
-    return { ...ctx, records: [...ctx.records, ...extra.records], sources: [...ctx.sources, ...extra.sources] };
-  };
+  /** 하루 초안에 빈칸이 남아 있는가 — 「오후 낮잠은 안 잤어」로 빈칸을 빼고, 입력 칸 안내가 바뀐다. 기록하는 말은 그대로 기록이 되고 가까운 빈칸이 채워진다 */
+  const drafting = !!shellSet && shells.length > 0;
+  // 함께 읽기로 했으면 그날 기록 — 빈칸은 기록이 아니라서 보내지 않는다
+  const context = (now: Date): DayContext | null => (consent === 'yes' ? dayContext(day, events, routineLogs, memos, now) : null);
   const shown = consent === 'yes' ? context(new Date()) : null;
   const selected = shown ? sourceOfKey(shown, selectedKey) : null;
   const dayLabel = `${day.getMonth() + 1}월 ${day.getDate()}일`;
@@ -239,7 +237,7 @@ export function AskSheet({
 
   /** 초안 카드를 맨 아래에 다시 — 앞 카드는 보이지 않게 하고, 단계 줄(「✓ 초안에서 … 뺐어요」)을 위에 둔다 */
   const showDraftCard = (steps: string[]) =>
-    setMsgs((prev) => [...prev.map((m) => (m.from === 'app' && m.type === 'draft' && m.state === 'open' ? { ...m, state: 'replaced' as const } : m)), { id: nextId(), from: 'app', type: 'draft', steps, state: 'open', saved: [], undone: false }]);
+    setMsgs((prev) => [...prev.map((m) => (m.from === 'app' && m.type === 'draft' && m.state === 'open' ? { ...m, state: 'replaced' as const } : m)), { id: nextId(), from: 'app', type: 'draft', steps, state: 'open' }]);
 
   const answer = (a: Answer, steps?: string[]) => {
     setLastAnswer(a);
@@ -315,7 +313,7 @@ export function AskSheet({
     setBusy(true);
     let res: AgentResponse | null = null;
     try {
-      res = await askAgent({ text: s, history: lastTurns(turnsOf(msgs, draftItems)), day: ctx?.day ?? null, records: ctx?.records ?? [], selected: sel?.ref ?? null, tools: true }, now);
+      res = await askAgent({ text: s, history: lastTurns(turnsOf(msgs, shellSet, shells)), day: ctx?.day ?? null, records: ctx?.records ?? [], selected: sel?.ref ?? null, tools: true }, now);
     } catch {
       res = null;
     }
@@ -342,31 +340,6 @@ export function AskSheet({
       if (asksPlan(s) && !changes.some((ch) => ch.op === 'plan')) {
         const plan = planFromText(s, now);
         if (plan) changes.push(plan);
-      }
-      // 하루 초안이 열려 있으면 — 초안을 가리킨 고치기 · 지우기는 초안에 바로, 새 기록은 초안에 넣는다
-      if (drafting) {
-        let items = draftItems;
-        const lines: string[] = [];
-        const rest: Change[] = [];
-        for (const ch of changes) {
-          const r = applyChangeToDrafts(items, ch);
-          if (r) {
-            items = r.items;
-            lines.push(r.line);
-          } else rest.push(ch);
-        }
-        const added = dayDrafts({ events: [], day, now, said: rest.flatMap((ch) => (ch.op === 'add' ? [ch.input] : [])), fill: false });
-        if (added.length) {
-          items = [...items, ...added].sort((a, b) => a.at - b.at);
-          lines.push(...added.map((d) => `초안에 ${draftWhen(d)} ${d.title}${objectOf(d.title)} 넣었어요`));
-        }
-        changes = rest.filter((ch) => ch.op !== 'add');
-        if (lines.length) {
-          tap();
-          onDrafts({ day: dayKey, items });
-          showDraftCard(lines);
-          if (!changes.length) return;
-        }
       }
       if (onlyAdds(changes)) return offerRecords(s, changes.flatMap((ch) => (ch.op === 'add' ? [ch.input] : [])), steps.length ? steps : undefined);
       if (changes.length) {
@@ -476,43 +449,36 @@ export function AskSheet({
     input.current?.focus();
   };
 
-  /** 「오늘 하루 기록 초안으로 작성해 줘. 10시 반에 분유 140 먹었어」 — 말한 기록은 규칙으로 읽고(못 읽으면 에이전트에게 문장만), 나머지 때는 평소 기록으로 채운다 */
+  /**
+   * 「오늘 하루 기록 초안 작성해 줘」 — 지난 7일 가운데 기록이 가장 많았던 날을 시간을 비운 빈칸으로 복사한다(task today/029).
+   * 함께 말한 기록(「10시 반에 분유 140 먹었어」)은 규칙으로 읽고(못 읽으면 에이전트에게 문장만) 「이렇게 기록할까요?」로 묻는다 — 저장하면 가까운 빈칸이 채워진다
+   */
   const makeDraft = async (s: string, now: Date, askAgentForRest = true) => {
-    const rest = stripDraftAsk(s);
-    let said: ParsedInput[] = [];
-    if (rest) {
-      said = looksMulti(rest) ? splitRecords(rest, now) : recordOf(rest, now);
-      if (!said.length && askAgentForRest) {
-        setBusy(true);
-        try {
-          const res = await askAgent({ text: rest, history: [], day: null, records: [], selected: null }, now);
-          if (res?.type === 'changes') said = changesFrom(res.actions, null, now, rest).flatMap((ch) => (ch.op === 'add' ? [ch.input] : []));
-        } catch {
-          said = [];
-        }
-        setBusy(false);
-      }
-    }
-    const items = dayDrafts({ events, day, now, said, fill: true });
-    if (!items.length) {
-      push({ id: nextId(), from: 'app', type: 'text', text: `${dayLabel}에 초안으로 넣을 것이 없어요. 「10시 반에 분유 140 먹었어」처럼 적어 보세요.` });
+    const dones = routineLogs.flatMap((x) => (x.log.step == null && !x.log.skip ? [{ routineId: x.log.routineId, logId: x.log.id, title: x.title, at: x.log.at, by: x.log.by, endAt: x.log.endAt ?? null }] : []));
+    const set = makeShellSet(events, dones, day, now);
+    if (!set) {
+      push({ id: nextId(), from: 'app', type: 'text', text: `${dayLabel} 앞 7일에 복사할 기록이 없어요. 기록이 며칠 쌓이면 다시 해 보세요.` });
       return;
     }
-    const read = dayContext(day, events, routineLogs, memos, now).records.length;
-    const guessed = items.filter((d) => d.guessed).length;
     tap();
-    onDrafts({ day: dayKey, items });
+    onMakeShells(set);
     onHighlight(null);
-    showDraftCard([`${dayLabel} 기록 ${read}개를 읽었어요`, ...(guessed ? ['말하지 않은 때는 지난 7일 기록을 보고 채웠어요'] : [])]);
-  };
-
-  /** 초안이 열린 채 기록하는 말 — 저장하지 않고 초안에 넣는다 */
-  const addToDraft = (said: ParsedInput[], now: Date) => {
-    const added = dayDrafts({ events: [], day, now, said, fill: false });
-    if (!added.length) return push({ id: nextId(), from: 'app', type: 'text', text: NOT_READ });
-    tap();
-    onDrafts({ day: dayKey, items: [...draftItems, ...added].sort((a, b) => a.at - b.at) });
-    showDraftCard(added.map((d) => `초안에 ${draftWhen(d)} ${d.title}${objectOf(d.title)} 넣었어요`));
+    const src = new Date(`${set.source}T00:00:00`);
+    showDraftCard([`${sourceWord(set) === '어제' ? '어제' : `${src.getMonth() + 1}월 ${src.getDate()}일`} 기록이 가장 많아서 그날을 복사했어요`, '시간은 비워 뒀어요']);
+    const rest = stripDraftAsk(s);
+    if (!rest) return;
+    let said: ParsedInput[] = looksMulti(rest) ? splitRecords(rest, now) : recordOf(rest, now);
+    if (!said.length && askAgentForRest) {
+      setBusy(true);
+      try {
+        const res = await askAgent({ text: rest, history: [], day: null, records: [], selected: null }, now);
+        if (res?.type === 'changes') said = changesFrom(res.actions, null, now, rest).flatMap((ch) => (ch.op === 'add' ? [ch.input] : []));
+      } catch {
+        said = [];
+      }
+      setBusy(false);
+    }
+    if (said.length) offerRecords(rest, said);
   };
 
   const send = async (raw: string) => {
@@ -531,20 +497,18 @@ export function AskSheet({
     // 「오늘 일기 써 줘」 — 글은 사람이 쓴다. 메모 창을 열고 그날 기록을 칩으로 보인다(decisions/042)
     if (asksDiary(s)) return offer(s, offerHead('do', 1), [callOffer({ tool: 'write_diary' }, s)]);
     if (asksDraft(s)) return offer(s, offerHead('do', 1), [{ ...callOffer({ tool: 'day_draft' }, s), go: () => makeDraft(s, now) }]);
-    if (drafting) {
-      // 「오후 낮잠은 안 잤어」 — 규칙으로 정해지면 초안에서 바로 뺀다, 못 정하면 에이전트에게
-      const gone = negatedDrafts(s, draftItems);
+    if (drafting && shellSet) {
+      // 「오후 낮잠은 안 잤어」 — 규칙으로 정해지면 빈칸을 바로 뺀다. 빈칸은 모델이 모르니 못 정하면 흐름에서 빼 달라고 한다
+      const gone = negatedShells(s, shells);
       if (gone.length) {
         tap();
-        onDrafts({ day: dayKey, items: draftItems.filter((d) => !gone.includes(d)) });
-        showDraftCard(gone.map((d) => `초안에서 ${draftWhen(d)} ${d.title}${objectOf(d.title)} 뺐어요`));
+        onRemoveShells(gone.map((x) => x.id));
+        showDraftCard(gone.map((x) => `초안에서 ${shellHint(shellSet, x)} ${x.title}${objectOf(x.title)} 뺐어요`));
         return;
       }
-      if (/안 |않았|없었|없어|아니/.test(s)) return viaAgent(s, now);
-      // 기록하는 말은 저장하지 않고 초안에 넣는다
-      if (!pointsOrEdits(s) && !isQuestion(s)) {
-        const said = looksMulti(s) ? splitRecords(s, now) : recordOf(s, now);
-        if (said.length) return addToDraft(said, now);
+      if (/안 |않았|없었|없어/.test(s) && /낮잠|밤잠|잠|잤|분유|모유|수유|소변|쉬|오줌|대변|응가|똥|기저귀/.test(s) && !isQuestion(s)) {
+        push({ id: nextId(), from: 'app', type: 'text', text: '어느 빈칸인지 정하지 못했어요. 흐름에서 빈칸을 눌러 「초안에서 빼기」를 눌러 주세요.' });
+        return;
       }
     }
 
@@ -724,48 +688,10 @@ export function AskSheet({
     onHighlight(null);
   };
 
-  /** 「모두 저장」 — 초안을 기록으로. 한 번에 되돌릴 수 있다 */
-  const saveDraft = async (m: Extract<Msg, { type: 'draft' }>) => {
-    if (busy || !draftItems.length) return;
-    tap('success');
-    setBusy(true);
-    const saved: Saved[] = [];
-    for (const d of draftItems) {
-      try {
-        const p = d.input;
-        if (p.type === 'event') {
-          const e = await addEvent(p.input);
-          saved.push({ kind: 'event', id: e.id, title: d.title, at: new Date(e.startAt).getTime(), item: itemOf(p.input) as ItemKind, key: e.id });
-        } else if (p.type === 'routine') saved.push(await doneRoutine(p.title, new Date(p.at)));
-        else {
-          const mm = await addMemo(p.text, new Date(p.at));
-          if (mm) saved.push({ kind: 'memo', id: mm.id, title: d.title, at: new Date(mm.at).getTime(), item: 'memo', key: `memo-${mm.id}` });
-        }
-      } catch {
-        // 하나가 안 되어도 나머지는 저장한다
-      }
-    }
-    setBusy(false);
-    onDrafts(null);
-    setMsg(m.id, { state: 'saved', saved });
-    onHighlight(saved.length ? { keys: saved.map((x) => x.key), label: '새 기록' } : null);
-  };
-
   const dropDraft = (m: Extract<Msg, { type: 'draft' }>) => {
     tap();
-    onDrafts(null);
+    onDropShells();
     setMsg(m.id, { state: 'dropped' });
-    onHighlight(null);
-  };
-
-  const undoDraft = async (m: Extract<Msg, { type: 'draft' }>) => {
-    tap();
-    for (const x of m.saved) {
-      if (x.kind === 'event') await removeEvent(x.id);
-      else if (x.kind === 'routine') await removeLog(x.id);
-      else await removeMemo(x.id);
-    }
-    setMsg(m.id, { undone: true });
     onHighlight(null);
   };
 
@@ -918,7 +844,7 @@ export function AskSheet({
                     {m.type === 'changes' ? (
                       <ChangesBody m={m} busy={busy} onApply={() => void applyChanges(m)} onCancel={() => (tap(), setMsg(m.id, { state: 'cancelled' }), onHighlight(null), onPreview([]))} onUndo={() => void undoChanges(m)} />
                     ) : (
-                      <DraftBody m={m} items={draftItems} busy={busy} onSave={() => void saveDraft(m)} onDrop={() => dropDraft(m)} onUndo={() => void undoDraft(m)} />
+                      <DraftBody m={m} set={shellSet} items={shells} onDrop={() => dropDraft(m)} />
                     )}
                   </View>
                 </View>
@@ -1028,7 +954,7 @@ export function AskSheet({
             ref={input}
             value={text}
             onChangeText={setText}
-            placeholder={drafting ? '고칠 것을 말해 주세요' : '기록하거나 물어보세요'}
+            placeholder={drafting ? '빈칸을 채울 기록을 말해 주세요' : '기록하거나 물어보세요'}
             placeholderTextColor={c.textTertiary}
             returnKeyType="send"
             onSubmitEditing={() => void send(text)}
@@ -1085,25 +1011,17 @@ function Steps({ steps }: { steps: string[] }) {
   );
 }
 
-/** 하루 초안 카드 — 「초안 8개」와 줄 셋(「모두 보기」로 다), 「모두 저장」 · 「버리기」. 저장한 뒤에는 「N개 적었어요」와 「되돌리기」 */
-function DraftBody({ m, items, busy, onSave, onDrop, onUndo }: { m: Extract<Msg, { type: 'draft' }>; items: Draft[]; busy: boolean; onSave: () => void; onDrop: () => void; onUndo: () => void }) {
+/** 하루 초안 카드 — 「빈칸 9개」와 줄 셋(「모두 보기」로 다), 「버리기」. 빈칸은 흐름에서 누르거나 말해서 채운다 */
+function DraftBody({ m, set, items, onDrop }: { m: Extract<Msg, { type: 'draft' }>; set: ShellSet | null; items: Shell[]; onDrop: () => void }) {
   const c = useTheme();
   const [all, setAll] = useState(false);
   if (m.state === 'dropped') return <ThemedText type="body">초안을 버렸어요.</ThemedText>;
-  if (m.state === 'saved') {
-    return (
-      <>
-        <ThemedText type="body">{m.undone ? '되돌렸어요.' : `초안 ${m.saved.length}개를 적었어요.`}</ThemedText>
-        {!m.undone && <SmallButton label="되돌리기" onPress={onUndo} />}
-      </>
-    );
-  }
-  if (!items.length) return <ThemedText type="body">초안에 남은 것이 없어요. 「10시 반에 분유 140 먹었어」처럼 적으면 초안에 넣어요.</ThemedText>;
+  if (!set || !items.length) return <ThemedText type="body">빈칸을 모두 채웠어요.</ThemedText>;
   const rows = all || items.length <= 4 ? items : items.slice(0, 3);
   return (
     <>
       <View style={styles.cardHead}>
-        <ThemedText type="heading">{`초안 ${items.length}개`}</ThemedText>
+        <ThemedText type="heading">{`빈칸 ${items.length}개`}</ThemedText>
         {items.length > 4 && (
           <Pressable
             accessibilityRole="button"
@@ -1122,22 +1040,15 @@ function DraftBody({ m, items, busy, onSave, onDrop, onUndo }: { m: Extract<Msg,
         )}
       </View>
       <View>
-        {rows.map((d) => (
-          <View key={d.id} style={styles.draftRow}>
-            <RecTile tile={tileOfInput(d.input)} title={d.title} size={24} />
-            <ThemedText type="label" style={[styles.draftTime, { color: c.textSecondary }]}>
-              {draftWhen(d)}
-            </ThemedText>
+        {rows.map((x) => (
+          <View key={x.id} style={styles.draftRow}>
+            <RecTile tile={shellItemKind(x)} title={x.title} size={24} />
             <ThemedText type="label" numberOfLines={1} style={[styles.flex, { fontWeight: 700 }]}>
-              {d.title}
+              {x.title}
             </ThemedText>
-            {d.edited && (
-              <View style={[styles.edited, { backgroundColor: c.accentSoft }]}>
-                <ThemedText type="caption" style={{ color: c.accentText, fontWeight: 700 }}>
-                  고침
-                </ThemedText>
-              </View>
-            )}
+            <ThemedText type="caption" style={[styles.draftTime, { color: c.textSecondary }]}>
+              {shellHint(set, x)}
+            </ThemedText>
           </View>
         ))}
         {rows.length < items.length && (
@@ -1147,7 +1058,6 @@ function DraftBody({ m, items, busy, onSave, onDrop, onUndo }: { m: Extract<Msg,
         )}
       </View>
       <View style={styles.row}>
-        <SmallButton label="모두 저장" ink disabled={busy} onPress={onSave} />
         <SmallButton label="버리기" onPress={onDrop} />
       </View>
     </>
@@ -1417,7 +1327,7 @@ const styles = StyleSheet.create({
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   more: { flexDirection: 'row', alignItems: 'center', gap: 2, height: 28, paddingLeft: 6 },
   draftRow: { flexDirection: 'row', alignItems: 'center', gap: 10, height: 32 },
-  draftTime: { width: 60, fontVariant: ['tabular-nums'] },
+  draftTime: { fontVariant: ['tabular-nums'] },
   draftMore: { paddingLeft: 34, paddingTop: 2 },
   edited: { height: 18, paddingHorizontal: 6, borderRadius: 9, justifyContent: 'center' },
   ctxRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 16, paddingBottom: 6 },

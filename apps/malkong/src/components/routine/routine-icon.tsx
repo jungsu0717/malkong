@@ -32,6 +32,10 @@ const RULES: [RegExp, IconChoice][] = [
   [/책|독서/, { ion: 'book-outline' }],
   [/청소|소독|세척|삶기/, { ion: 'sparkles-outline' }],
   [/재고|남은 양/, { ion: 'cube-outline' }],
+  // 기록 단추로 추가하는 것(task today/029)
+  [/병원|진료|검진/, { ion: 'medkit-outline' }],
+  [/투약|약/, { ion: 'medical-outline' }],
+  [/^기타$/, { ion: 'ellipsis-horizontal-outline' }],
 ];
 
 function pick(title: string): IconChoice {

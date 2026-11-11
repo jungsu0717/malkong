@@ -346,7 +346,7 @@ export function toolLabel(call: ToolCall): ToolLabel {
     case 'day_summary':
       return { title: `${RANGE_WORD[call.day ?? ''] ?? '그날'} 하루 요약`, sub: '수유, 기저귀, 잠과 루틴', tile: 'doc' };
     case 'day_draft':
-      return { title: '오늘 하루 기록 초안', sub: '평소 시각으로 채우고, 고친 뒤 저장해요', tile: 'doc' };
+      return { title: '오늘 하루 기록 초안', sub: '기록이 가장 많았던 날을 복사하고 시간은 비워 둬요', tile: 'doc' };
     case 'write_diary':
       return { title: '메모 쓰기', sub: '그날 기록을 보며 써요', tile: 'doc' };
     case 'show_week':

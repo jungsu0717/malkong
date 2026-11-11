@@ -7,6 +7,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import { readSetting, writeSetting } from './db';
 import { cancelRecordAlerts } from './notifications';
+import { barFromText, barToText, DEFAULT_BAR, type BarSetting } from './record-bar';
 
 /**
  * 아침 알림 시각 `HH:MM`, 끄면 'off'. 정한 적이 없으면 오전 8시(SPEC-TOPIC-09).
@@ -23,6 +24,8 @@ const CARE_REMINDERS_KEY = 'care_reminders';
 /** 하루 보기의 「흐름 | 목록」 — 마지막으로 고른 것. 정한 적이 없으면 흐름(SPEC-MAIN-08) */
 const DAY_VIEW_KEY = 'day.view';
 export type DayViewMode = 'flow' | 'list';
+/** 위쪽 기록 단추 줄 — 순서와 뺀 단추(task today/029). 이 폰에서만 */
+const RECORD_BAR_KEY = 'record.bar';
 export const DEFAULT_BRIEFING_TIME = '08:00';
 
 type PreferencesValue = {
@@ -41,6 +44,9 @@ type PreferencesValue = {
   /** 하루 보기 — 앱을 켤 때 한 번 읽어 두어 날짜를 넘겨도 처음부터 이 보기로 연다 */
   dayView: DayViewMode;
   setDayView: (mode: DayViewMode) => Promise<void>;
+  /** 위쪽 기록 단추 줄 — 「편집」에서 정한 순서와 뺀 단추 */
+  recordBar: BarSetting;
+  setRecordBar: (bar: BarSetting) => Promise<void>;
 };
 
 const PreferencesContext = createContext<PreferencesValue | null>(null);
@@ -51,18 +57,20 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const [growthAlerts, setGrowth] = useState(true);
   const [careReminders, setCare] = useState(false);
   const [dayView, setView] = useState<DayViewMode>('flow');
+  const [recordBar, setBar] = useState<BarSetting>(DEFAULT_BAR);
 
   useEffect(() => {
     let cancelled = false;
     // 예전 기록 요청 · 체온 알림을 걸어 둔 폰이 있다 — 다시 걸지 않는 알림이라 지운다(decisions/030 · 036)
     void cancelRecordAlerts().catch(() => undefined);
-    Promise.all([readSetting(BRIEFING_TIME_KEY), readSetting(GROWTH_ALERTS_KEY), readSetting(CARE_REMINDERS_KEY), readSetting(DAY_VIEW_KEY)])
-      .then(([time, growth, care, view]) => {
+    Promise.all([readSetting(BRIEFING_TIME_KEY), readSetting(GROWTH_ALERTS_KEY), readSetting(CARE_REMINDERS_KEY), readSetting(DAY_VIEW_KEY), readSetting(RECORD_BAR_KEY)])
+      .then(([time, growth, care, view, bar]) => {
         if (cancelled) return;
         setTime(time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME));
         setGrowth(growth !== 'off');
         setCare(care === 'on');
         setView(view === 'list' ? 'list' : 'flow');
+        setBar(barFromText(bar));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -92,9 +100,14 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     await writeSetting(DAY_VIEW_KEY, mode);
   }, []);
 
+  const setRecordBar = useCallback(async (bar: BarSetting) => {
+    setBar(bar);
+    await writeSetting(RECORD_BAR_KEY, barToText(bar));
+  }, []);
+
   const value = useMemo(
-    () => ({ loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts, careReminders, setCareReminders, dayView, setDayView }),
-    [loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts, careReminders, setCareReminders, dayView, setDayView],
+    () => ({ loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts, careReminders, setCareReminders, dayView, setDayView, recordBar, setRecordBar }),
+    [loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts, careReminders, setCareReminders, dayView, setDayView, recordBar, setRecordBar],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;

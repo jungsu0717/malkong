@@ -4,7 +4,7 @@
  * 맨 위에 다음 수유 예상(흐린 줄)과 「지금 14:20, 먹은 지 30분」, 그 아래 기록과 잠이 시간 역순으로 쌓인다.
  * 한 줄에 시각, 기록 아이콘(흐름과 같은 색), 이름, 누가와 자세한 내용, 오른쪽에 같은 기록끼리 간격. 묶음과 묶음 사이에는 「2시간 10분 기록 없음」.
  * 물어보기가 답한 기록은 코랄 테두리와 짧은 표시로 비춘다. 줄을 누르면 그 시간의 기록 화면이 열린다.
- * 아직 저장하지 않은 초안은 점선 테두리와 「초안」 표시, 짐작한 시각에는 「쯤」(SPEC-MAIN-16).
+ * 하루 초안의 빈칸은 맨 위에 점선 줄로 놓인다 — 시각 대신 복사한 날의 시각(「어제 10:30」)이 작게 보이고, 누르면 채우는 창이 뜬다(SPEC-MAIN-16, task today/029).
  */
 
 import { Ionicons } from '@expo/vector-icons';
@@ -12,7 +12,7 @@ import { Fragment, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { BottleIcon, ZzIcon } from '@/components/baby-icons';
-import { NodeIcon, nodeTone, type ItemKind } from '@/components/flow/flow-graph';
+import { NodeIcon, draftTone, nodeTone, type ItemKind } from '@/components/flow/flow-graph';
 import { ThemedText } from '@/components/themed-text';
 import { tap } from '@/components/ui';
 import { hhmm, sleepTitle, spanRange, type Block, type DayFlow, type SleepSpan, type SubItem } from '@/data/day-flow';
@@ -23,6 +23,8 @@ import { useTheme } from '@/hooks/use-theme';
 const MIN = 60 * 1000;
 
 export type ListItemInfo = { kind: ItemKind; title: string; stool: StoolColor | null; by: string | null };
+/** 초안의 빈칸 한 줄 */
+export type ShellRow = { key: string; kind: ItemKind | 'sleep'; title: string; hint: string; onPress: () => void };
 
 type Line =
   | { type: 'item'; key: string; at: number; item: SubItem; block: Block }
@@ -56,7 +58,7 @@ export function DayList({
   gapOf,
   awakeOf,
   lit,
-  draftOf,
+  shells = [],
   onOpenItem,
   onOpenSleep,
 }: {
@@ -73,8 +75,8 @@ export function DayList({
   gapOf: (key: string) => string | null;
   awakeOf: (id: string) => string | null;
   lit: (key: string) => string | null;
-  /** 그 key 가 초안이면 — 점선 줄과 「초안」, 짐작한 시각이면 「쯤」 */
-  draftOf?: (key: string) => { guessed: boolean } | null;
+  /** 초안의 빈칸 — 맨 위에 점선 줄로 */
+  shells?: ShellRow[];
   onOpenItem: (block: Block, key: string) => void;
   onOpenSleep: (s: SleepSpan) => void;
 }) {
@@ -105,6 +107,30 @@ export function DayList({
           </View>
         </Pressable>
       )}
+      {shells.map((sh) => (
+        <Row
+          key={sh.key}
+          time=""
+          draft
+          tile={
+            sh.kind === 'sleep' ? (
+              <View style={[styles.tile, { backgroundColor: c.card, borderColor: c.ink, borderWidth: 1.5, borderStyle: 'dashed' }]}>
+                <ZzIcon size={18} color={c.text} />
+              </View>
+            ) : (
+              <View style={[styles.tile, draftTone(sh.kind, c), sh.kind === 'pee' || sh.kind === 'poo' || sh.kind === 'both' ? styles.round : null]}>
+                <NodeIcon kind={sh.kind} title={sh.title} stool={null} size={18} light />
+              </View>
+            )
+          }
+          title={sh.title}
+          meta={`${sh.hint} · 시간 비움`}
+          gap={null}
+          highlight={null}
+          aria={`초안 ${sh.title}, ${sh.hint}. 누르면 시각을 골라 기록`}
+          onPress={sh.onPress}
+        />
+      ))}
       {isToday && (
         <View style={[styles.now, { backgroundColor: c.accentSoft }]}>
           <View style={styles.nowHead}>
@@ -139,13 +165,11 @@ export function DayList({
         if (l.type === 'sleep') {
           const s = l.sleep;
           const label = lit(s.event.id);
-          const draft = draftOf?.(s.event.id) ?? null;
           const meta = [spanRange(s.from, s.to, dayStart), awakeOf(s.event.id)].filter(Boolean).join(' · ');
           return (
             <Row
               key={l.key}
-              time={`${hhmm(s.from)}${draft?.guessed ? '쯤' : ''}`}
-              draft={!!draft}
+              time={hhmm(s.from)}
               tile={
                 <View style={[styles.tile, { backgroundColor: c.ink }]}>
                   <ZzIcon size={18} color={c.onInk} />
@@ -167,12 +191,10 @@ export function DayList({
         const range = end !== null && end - it.at >= MIN ? spanRange(it.at, end, dayStart) : null;
         const meta = [range, x.stool ? STOOL_COLOR_LABEL[x.stool] : null, x.by].filter(Boolean).join(' · ');
         const gap = gapOf(it.key);
-        const draft = draftOf?.(it.key) ?? null;
         return (
           <Fragment key={l.key}>
             <Row
-              time={`${hhmm(it.at)}${draft?.guessed ? '쯤' : ''}`}
-              draft={!!draft}
+              time={hhmm(it.at)}
               tile={
                 <View style={[styles.tile, nodeTone(x.kind, c), x.kind === 'pee' || x.kind === 'poo' || x.kind === 'both' ? styles.round : null]}>
                   <NodeIcon kind={x.kind} title={x.title} stool={x.stool} size={18} />

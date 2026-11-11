@@ -500,6 +500,35 @@ export function GhostNode({
   );
 }
 
+/**
+ * 하루 초안의 빈칸 (SPEC-MAIN-16, task today/029) — 앞으로 올 것 줄에 놓인다. 흰 바탕에 그 기록 색의 점선,
+ * 이름 아래 복사한 날의 시각(「어제 10:30」)과 코랄 「시간 비움」. 누르면 시각을 골라 기록하는 창이 뜬다
+ */
+export function ShellNode({ cx, cy, kind, title, hint, aria, onPress }: { cx: number; cy: number; kind: ItemKind | 'sleep'; title: string; hint: string; aria: string; onPress: () => void }) {
+  const c = useTheme();
+  const round = kind !== 'sleep' && isDiaper(kind);
+  const size = round ? 42 : ITEM;
+  return (
+    <>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={aria}
+        hitSlop={6}
+        onPress={onPress}
+        style={({ pressed }) => [
+          styles.item,
+          styles.itemWrap,
+          { left: cx - size / 2, top: cy - size / 2, width: size, height: size, borderRadius: round ? size / 2 : 12 },
+          kind === 'sleep' ? { backgroundColor: c.card, borderColor: c.ink, borderWidth: 1.6, borderStyle: 'dashed' } : draftTone(kind, c),
+          pressed && { opacity: 0.7 },
+        ]}>
+        {kind === 'sleep' ? <ZzIcon size={21} color={c.text} /> : <NodeIcon kind={kind} title={title} stool={null} size={21} light />}
+      </Pressable>
+      <NodeLabel cx={cx} top={cy + ITEM / 2 + 8} title={title} sub={hint} gap="시간 비움" width={92} />
+    </>
+  );
+}
+
 /** 접힌 이전 기록 */
 export function ChipNode({ rect, label, onPress }: { rect: Rect; label: string; onPress: () => void }) {
   const c = useTheme();

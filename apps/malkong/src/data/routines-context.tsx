@@ -42,7 +42,7 @@ type RoutinesValue = {
   /** 「오늘은 건너뛰기」 ↔ 취소 — 그날 알림과 진행에서 빠진다(task common/022) */
   skipToday: (id: string) => Promise<void>;
   /** 정한 때에 완료 한 줄 — 수유와 같이 먹인 비타민D, 물어보기로 적은 루틴(task log/008 · today/019). 새 줄의 id */
-  logAt: (id: string, at: Date, endAt?: Date | null) => Promise<string>;
+  logAt: (id: string, at: Date, endAt?: Date | null, logId?: string) => Promise<string>;
   /** 시간을 재는 루틴(터미타임) — 재는 중인 루틴 id → 시작한 때. 이 폰에서만 기억한다(task today/020) */
   timers: Record<string, string>;
   startTimer: (id: string) => Promise<void>;
@@ -192,8 +192,9 @@ export function RoutinesProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logAt = useCallback(
-    async (id: string, at: Date, endAt: Date | null = null) => {
-      const log = makeRoutineLog(id, at, null, null, false, endAt);
+    async (id: string, at: Date, endAt: Date | null = null, logId?: string) => {
+      const made = makeRoutineLog(id, at, null, null, false, endAt);
+      const log = logId ? { ...made, id: logId } : made;
       await addLog(log);
       return log.id;
     },

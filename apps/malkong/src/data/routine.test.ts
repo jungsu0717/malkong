@@ -11,6 +11,7 @@ import {
   everyLabel,
   isDueOn,
   nextDayLabel,
+  noRepeat,
   routineKindOf,
   routineReminders,
   slotOf,
@@ -247,4 +248,21 @@ test('같은 루틴인지는 띄어쓰기를 빼고 본다 · 추천은 그대�
   const input = templateInput({ title: '재고 확인', kind: 'stock', everyDays: 7, weekdays: [0], time: null, items: ['분유'] });
   assert.deepEqual(input, { title: '재고 확인', kind: 'stock', everyDays: 7, weekdays: [0], time: null, items: ['분유'] });
   assert.equal(templateInput({ title: '목욕', kind: 'check', everyDays: 2, time: '20:00' }).weekdays, null);
+});
+
+test('반복 안 함 — 할 날이 없어 오늘 할 루틴과 알림에 나오지 않고, 누른 날만 완료', () => {
+  const r = routine({ id: 'r9', title: '병원', everyDays: 0, time: null });
+  assert.equal(noRepeat(r), true);
+  assert.equal(noRepeat(routine({ everyDays: 7, weekdays: [0] })), false);
+  assert.equal(isDueOn(r, [], NOW), false);
+  assert.equal(everyLabel(0), '반복 안 함');
+  assert.equal(scheduleLabel(r), '반복 안 함');
+  assert.equal(statusLine(r, todayState(r, [], NOW)).text, '반복 안 함');
+  assert.equal(statusLine(r, todayState(r, [log(iso(10, 13, 10), 'r9')], NOW)).text, '3일 전');
+  const today = todayState(r, [log(iso(10, 16, 10, 5), 'r9')], NOW);
+  assert.equal(today.done, true);
+  const plan = todayPlan([routine(), r], [], NOW);
+  assert.deepEqual(plan.today.map((x) => x.r.id), ['r1']);
+  assert.deepEqual(plan.later.map((x) => x.r.id), ['r9']);
+  assert.equal(routineReminders([{ ...r, time: '10:00' }], [], NOW).length, 0);
 });

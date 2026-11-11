@@ -24,7 +24,7 @@ export type Routine = {
   id: string;
   title: string;
   kind: RoutineKind;
-  /** 1 이면 매일, 7 이면 지난번에 한 날부터 7일마다. 요일을 정했으면(`weekdays`) 쓰지 않는다 */
+  /** 1 이면 매일, 7 이면 지난번에 한 날부터 7일마다, 0 이면 반복 안 함(누를 때만 기록하는 단추, task today/029). 요일을 정했으면(`weekdays`) 쓰지 않는다 */
   everyDays: number;
   /** 요일 반복(0 일요일 ~ 6 토요일) — 「매주 일요일」. 없으면 null(task common/022) */
   weekdays: number[] | null;
@@ -86,12 +86,18 @@ function lastBefore(routineId: string, logs: RoutineLog[], day: Date): RoutineLo
 
 const hasWeekdays = (r: Pick<Routine, 'weekdays'>) => !!r.weekdays && r.weekdays.length > 0;
 
+/** 반복 안 함 — 할 날이 없어서 오늘 할 루틴과 알림에 나오지 않고, 기록 단추로 누를 때만 완료 한 줄을 남긴다(task today/029) */
+export function noRepeat(r: Pick<Routine, 'everyDays' | 'weekdays'>): boolean {
+  return !hasWeekdays(r) && r.everyDays <= 0;
+}
+
 /**
  * 그날이 할 차례인가 — 요일을 정했으면 그 요일, 매일이면 늘,
  * N일마다면 그날 전 마지막 기록부터 N일이 지났을 때(한 적이 없으면 차례)
  */
 export function isDueOn(routine: Routine, logs: RoutineLog[], day: Date): boolean {
   if (hasWeekdays(routine)) return routine.weekdays!.includes(day.getDay());
+  if (noRepeat(routine)) return false;
   if (routine.everyDays <= 1) return true;
   const last = lastBefore(routine.id, logs, day);
   return !last || daysBetween(new Date(last.at), day) >= routine.everyDays;
@@ -128,7 +134,7 @@ export function todayState(routine: Routine, logs: RoutineLog[], now = new Date(
   let nextInDays = 0;
   if (!due && hasWeekdays(routine)) {
     nextInDays = [1, 2, 3, 4, 5, 6, 7].find((n) => routine.weekdays!.includes(addDays(now, n).getDay())) ?? 7;
-  } else if (!due && sinceDays !== null) {
+  } else if (!due && sinceDays !== null && !noRepeat(routine)) {
     nextInDays = Math.max(0, routine.everyDays - sinceDays);
   }
   return { due, done, firstAt: today[0]?.at ?? null, firstBy: today[0]?.by ?? null, sinceDays, nextInDays, stepsDone, skipped };
@@ -169,8 +175,9 @@ export function timeLabel(time: string): string {
   return `${ampm} ${h12}:${String(m).padStart(2, '0')}`;
 }
 
-/** 「매일」 「2일마다」 「매주」 */
+/** 「매일」 「2일마다」 「매주」 「반복 안 함」 */
 export function everyLabel(days: number): string {
+  if (days <= 0) return '반복 안 함';
   if (days <= 1) return '매일';
   if (days === 7) return '매주';
   return `${days}일마다`;
@@ -198,6 +205,7 @@ export function clockLabel(iso: string): string {
  * 오늘 할 날이 아니면 「내일」 「3일 뒤」, N일마다는 「마지막 7일 전」, 그 밖에는 알림 시각이나 「매일」.
  */
 export function statusLine(routine: Routine, state: TodayState): { text: string; done: boolean } {
+  if (noRepeat(routine) && !state.firstAt) return { text: state.sinceDays === null ? '반복 안 함' : state.sinceDays === 1 ? '어제' : `${state.sinceDays}일 전`, done: false };
   if (!state.due) return { text: state.nextInDays === 1 ? '내일' : `${state.nextInDays}일 뒤`, done: false };
   if (state.skipped && !state.firstAt) return { text: '오늘은 건너뜀', done: false };
   if (state.firstAt) {
@@ -242,7 +250,10 @@ export function todayPlan(routines: Routine[], logs: RoutineLog[], now = new Dat
   const today = states
     .filter((x) => x.s.due)
     .sort((a, b) => (a.r.time ?? '99').localeCompare(b.r.time ?? '99') || a.r.sort - b.r.sort);
-  const later = states.filter((x) => !x.s.due).sort((a, b) => a.s.nextInDays - b.s.nextInDays || a.r.sort - b.r.sort);
+  // 반복 안 함은 다른 날 루틴의 맨 뒤 — 할 날이 정해져 있지 않다
+  const later = states
+    .filter((x) => !x.s.due)
+    .sort((a, b) => Number(noRepeat(a.r)) - Number(noRepeat(b.r)) || a.s.nextInDays - b.s.nextInDays || a.r.sort - b.r.sort);
   // 건너뛴 것은 진행에서 뺀다 — 화면에는 남겨 되돌릴 수 있게 한다
   const counted = today.filter((x) => !(x.s.skipped && !x.s.done));
   const done = counted.filter((x) => x.s.done).length;

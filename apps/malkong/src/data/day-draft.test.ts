@@ -6,8 +6,22 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import type { Change } from './agent.ts';
-import { applyChangeToDrafts, asksDraft, dayDrafts, draftContext, draftFlow, draftIdOfKey, draftWhen, editDraft, negatedDrafts, stripDraftAsk, usualTimes } from './day-draft.ts';
+import {
+  asksDraft,
+  busiestDay,
+  dayRecords,
+  liveShellSet,
+  makeShellSet,
+  negatedShells,
+  openShells,
+  shellHint,
+  shellInput,
+  shellSetFromText,
+  shellTitle,
+  stripDraftAsk,
+  type ShellSet,
+} from './day-draft.ts';
+import type { RoutineDone } from './day-flow.ts';
 import type { CareEvent } from './events.ts';
 
 const DAY = new Date(2026, 10, 9);
@@ -62,107 +76,108 @@ test('초안을 부탁하는 말과 그 나머지', () => {
   assert.equal(stripDraftAsk('오늘 하루 초안 작성해 줘'), '');
 });
 
-test('평소 시각 — 지난 7일에 되풀이된 분유 · 기저귀 · 낮잠, 밤잠은 빼고', () => {
-  const list = usualTimes(week(), DAY, new Date(2026, 10, 9, 20, 30));
-  const by = (kind: string) => list.filter((u) => u.kind === kind).map((u) => u.minute);
-  assert.deepEqual(by('formula'), [7 * 60 + 40, 10 * 60 + 30, 13 * 60 + 30, 16 * 60 + 50, 19 * 60 + 50]);
-  assert.deepEqual(by('pee'), [7 * 60 + 35, 17 * 60]);
-  assert.deepEqual(by('poo'), [10 * 60 + 40]);
-  assert.deepEqual(by('nap'), [12 * 60, 15 * 60 + 30]);
-  const f = list.find((u) => u.kind === 'formula' && u.minute === 10 * 60 + 30)!;
-  assert.equal(f.amount, 140);
-  assert.equal(f.days, 7);
-  const nap = list.find((u) => u.kind === 'nap' && u.minute === 12 * 60)!;
-  assert.equal(nap.minutes, 70);
-  // 사흘이 안 되면 평소가 아니다
-  assert.deepEqual(usualTimes(week().filter((e) => new Date(e.startAt).getDate() >= 7), DAY), []);
+
+const NOW = new Date(2026, 10, 9, 11, 5);
+const hm = (set: ShellSet, i: number) => shellHint(set, set.items[i]);
+
+test('복사할 날 — 지난 7일 가운데 기록이 가장 많았던 날, 같으면 가장 최근', () => {
+  const events = week();
+  // 날마다 같으면 어제(8일)
+  assert.equal(busiestDay(events, [], DAY, NOW)?.day.getDate(), 8);
+  // 6일에 기록이 하나 더 있으면 6일
+  const more = [...events, ev({ kind: 'diaper', diaper: 'pee', startAt: at(6, 22, 0) })];
+  assert.equal(busiestDay(more, [], DAY, NOW)?.day.getDate(), 6);
+  // 어제 기록을 깜빡했으면 그 전의 날
+  const noYesterday = events.filter((e) => !e.startAt.startsWith('2026-11-08') && new Date(e.startAt).getDate() !== 8);
+  assert.equal(busiestDay(noYesterday, [], DAY, NOW)?.day.getDate(), 7);
+  assert.equal(busiestDay([], [], DAY, NOW), null);
 });
 
-test('하루 초안 — 말한 것은 그대로, 비어 있는 때는 평소로, 이미 적은 기록 근처는 비워 둔다', () => {
-  const now = new Date(2026, 10, 9, 20, 30);
-  const events = [...week(), ev({ kind: 'breast', startAt: at(9, 7, 45), endAt: at(9, 8, 0) })];
-  const said = [{ type: 'event' as const, input: { kind: 'formula' as const, amount: 140, startAt: at(9, 10, 30) }, complete: true, title: '분유 140ml' }];
-  const items = dayDrafts({ events, day: DAY, now, said, fill: true });
-  const lines = items.map((d) => `${draftWhen(d)} ${d.title}`);
-  assert.deepEqual(lines, [
-    '07:35쯤 소변',
-    '10:30 분유 140ml',
-    '10:40쯤 대변',
-    '12:00쯤 낮잠 1시간 10분',
-    '13:30쯤 분유 140ml',
-    '15:30쯤 낮잠 50분',
-    '16:50쯤 분유 140ml',
-    '17:00쯤 소변',
-    '19:50쯤 분유 150ml',
-  ]);
-  assert.equal(items.filter((d) => !d.guessed).length, 1);
-  // 채우지 않으면 말한 것만
-  assert.equal(dayDrafts({ events, day: DAY, now, said, fill: false }).length, 1);
-  // 오늘이면 지금까지만 — 11시에는 소변 · 분유 · 대변 셋
-  const early = dayDrafts({ events, day: DAY, now: new Date(2026, 10, 9, 11, 0), said, fill: true });
-  assert.deepEqual(
-    early.map((d) => d.title),
-    ['소변', '분유 140ml', '대변'],
-  );
+test('초안 — 그날을 복사한 빈칸, 시각은 비우고 어제 시각만 작게', () => {
+  const dones: RoutineDone[] = [{ routineId: 'rt-bath', logId: 'l1', title: '목욕', at: at(8, 19, 30), by: null, endAt: null }];
+  const set = makeShellSet(week(), dones, DAY, NOW)!;
+  assert.equal(set.day, '2026-11-09');
+  assert.equal(set.source, '2026-11-08');
+  assert.equal(set.made, '2026-11-09');
+  // 분유 다섯, 기저귀 셋, 잠 셋(밤잠 포함), 목욕
+  assert.equal(set.items.length, 12);
+  assert.equal(set.items[0].title, '소변');
+  assert.equal(hm(set, 0), '어제 07:40');
+  const formula = set.items.find((s) => s.kind === 'formula')!;
+  assert.equal(formula.title, '분유 120ml');
+  assert.ok(set.items.some((s) => s.title === '낮잠 1시간 10분'));
+  assert.ok(set.items.some((s) => s.title.startsWith('밤잠')));
+  assert.ok(set.items.some((s) => s.kind === 'routine' && s.title === '목욕' && s.routineId === 'rt-bath'));
+  // 체온은 옮기지 않는다
+  const withTemp = [...week(), ev({ kind: 'temp', amount: 37.2, startAt: at(8, 9, 0) })];
+  assert.equal(makeShellSet(withTemp, [], DAY, NOW)!.items.filter((s) => s.title.includes('37')).length, 0);
+  // 날이 지나면 버린다
+  assert.equal(liveShellSet(set, NOW), set);
+  assert.equal(liveShellSet(set, new Date(2026, 10, 10, 0, 1)), null);
+  // 저장했다가 읽기
+  assert.deepEqual(shellSetFromText(JSON.stringify(set)), set);
+  assert.equal(shellSetFromText('{깨짐'), null);
 });
 
-test('흐름에 놓는 모양과 key', () => {
-  const items = dayDrafts({ events: [], day: DAY, now: new Date(2026, 10, 9, 20), said: [{ type: 'routine', title: '터미타임', at: at(9, 9, 0) }, { type: 'memo', text: '처음 웃었다', at: at(9, 9, 30) }], fill: false });
-  const flow = draftFlow(items);
-  assert.equal(flow.routines[0].title, '터미타임');
-  assert.equal(flow.memos[0].text, '처음 웃었다');
-  assert.equal(draftIdOfKey(`routine-${items[0].id}`), items[0].id);
-  assert.equal(draftIdOfKey(`memo-${items[1].id}`), items[1].id);
-  assert.equal(draftIdOfKey('routine-abc'), null);
-  assert.equal(draftIdOfKey('ev-1'), null);
+test('기록하면 같은 종류에서 시각이 가장 가까운 빈칸이 채워진다', () => {
+  const set = makeShellSet(week(), [], DAY, NOW)!;
+  const feeds = () => openShells(set, dayRecords(today, [], DAY)).filter((s) => s.kind === 'formula').map((s) => shellHint(set, s));
+  let today: CareEvent[] = [];
+  assert.deepEqual(feeds(), ['어제 07:45', '어제 10:35', '어제 13:35', '어제 16:55', '어제 19:55']);
+  // 07:20 분유 — 07:45 칸, 모유도 수유라 10:35 칸
+  today = [ev({ kind: 'formula', amount: 120, startAt: at(9, 7, 20) }), ev({ kind: 'breast', side: 'left', startAt: at(9, 10, 0), endAt: at(9, 10, 15) })];
+  assert.deepEqual(feeds(), ['어제 13:35', '어제 16:55', '어제 19:55']);
+  // 두 시간 넘게 떨어진 수유는 빈칸을 채우지 않는다(평소와 다른 기록)
+  today = [ev({ kind: 'formula', amount: 120, startAt: at(9, 4, 0) })];
+  assert.equal(feeds().length, 5);
+  // 기저귀는 기저귀 칸만
+  today = [ev({ kind: 'diaper', diaper: 'poo', startAt: at(9, 7, 30) })];
+  assert.equal(feeds().length, 5);
+  assert.equal(openShells(set, dayRecords(today, [], DAY)).filter((s) => s.kind === 'diaper').length, 2);
+  // 루틴은 같은 이름끼리
+  const withBath = makeShellSet(week(), [{ routineId: 'rt-bath', logId: 'l1', title: '목욕', at: at(8, 19, 30), by: null, endAt: null }], DAY, NOW)!;
+  const bath = (dones: RoutineDone[]) => openShells(withBath, dayRecords([], dones, DAY)).filter((s) => s.kind === 'routine').length;
+  assert.equal(bath([]), 1);
+  assert.equal(bath([{ routineId: 'rt-new', logId: 'l2', title: '목 욕', at: at(9, 20, 0), by: null, endAt: null }]), 0);
+  assert.equal(bath([{ routineId: 'rt-x', logId: 'l3', title: '산책', at: at(9, 19, 30), by: null, endAt: null }]), 1);
 });
 
-test('작은 창에서 고치기 — 시각을 옮기면 끝도 따라오고, 양과 걸린 시간을 바꾼다', () => {
-  const now = new Date(2026, 10, 9, 20, 30);
-  const [nap] = dayDrafts({ events: week(), day: DAY, now, said: [], fill: true }).filter((d) => d.title.startsWith('낮잠'));
-  const moved = editDraft(nap, { at: nap.at + 10 * 60 * 1000 });
-  assert.equal(moved.input.type === 'event' && moved.input.input.startAt, at(9, 12, 10));
-  assert.equal(moved.input.type === 'event' && moved.input.input.endAt, at(9, 13, 20));
-  assert.equal(moved.edited, true);
-  assert.equal(moved.guessed, true);
-  const shorter = editDraft(nap, { minutes: 40 });
-  assert.equal(shorter.title, '낮잠 40분');
-  const formula = { id: 'draft-x', input: { type: 'event' as const, input: { kind: 'formula' as const, amount: 140, startAt: at(9, 10, 30) }, complete: true, title: '분유 140ml' }, title: '분유 140ml', at: new Date(at(9, 10, 30)).getTime(), guessed: false, edited: false };
-  assert.equal(editDraft(formula, { amount: 160 }).title, '분유 160ml');
-  assert.equal(editDraft(formula, { amount: 9999 }).title, '분유 400ml');
+test('눌러서 채운 빈칸과 뺀 빈칸 — 채운 기록을 지우면 다시 보인다', () => {
+  const set = makeShellSet(week(), [], DAY, NOW)!;
+  const f = set.items.filter((s) => s.kind === 'formula');
+  // 13:35 칸을 눌러 「지금 11:05」으로 기록했다 — 가까운 10:35 칸이 아니라 누른 칸이 채워진다
+  const rec = ev({ kind: 'formula', amount: 140, startAt: at(9, 11, 5) });
+  const filled: ShellSet = { ...set, filled: { [f[2].id]: rec.id }, removed: [f[4].id] };
+  const left = openShells(filled, dayRecords([rec], [], DAY)).filter((s) => s.kind === 'formula').map((s) => shellHint(set, s));
+  assert.deepEqual(left, ['어제 07:45', '어제 10:35', '어제 16:55']);
+  // 그 기록을 지우면 13:35 칸이 돌아온다
+  assert.equal(openShells(filled, dayRecords([], [], DAY)).filter((s) => s.kind === 'formula').length, 4);
 });
 
-test('「오후 낮잠은 안 잤어」 — 규칙으로 뺄 초안을 고른다', () => {
-  const now = new Date(2026, 10, 9, 20, 30);
-  const items = dayDrafts({ events: week(), day: DAY, now, said: [], fill: true });
-  const afternoon = negatedDrafts('오후 낮잠은 안 잤어', items);
+test('빈칸을 기록으로 — 시각을 고르고, 지금보다 늦게 끝나는 잠은 재는 중으로', () => {
+  const set = makeShellSet(week(), [], DAY, NOW)!;
+  const nap = set.items.find((s) => s.title === '낮잠 1시간 10분')!;
+  const now = new Date(2026, 10, 9, 12, 30).getTime();
+  const from = new Date(2026, 10, 9, 12, 0).getTime();
+  assert.deepEqual(shellInput(nap, from, {}, now), { kind: 'sleep', startAt: new Date(from).toISOString(), endAt: null, side: null });
+  const early = new Date(2026, 10, 9, 10, 0).getTime();
+  assert.equal(shellInput(nap, early, { minutes: 30 }, now)?.endAt, new Date(early + 30 * 60000).toISOString());
+  const formula = set.items.find((s) => s.kind === 'formula')!;
+  assert.equal(shellInput(formula, early, { amount: 160 }, now)?.amount, 160);
+  assert.equal(shellTitle(formula, { amount: 160 }), '분유 160ml');
+  assert.equal(shellTitle(nap, { minutes: 50 }), '낮잠 50분');
+});
+
+test('「오후 낮잠은 안 잤어」 — 규칙으로 뺄 빈칸을 고른다', () => {
+  const set = makeShellSet(week(), [], DAY, NOW)!;
+  const items = set.items;
+  const afternoon = negatedShells('오후 낮잠은 안 잤어', items);
   assert.equal(afternoon.length, 1);
-  assert.equal(draftWhen(afternoon[0]), '15:30쯤');
+  assert.equal(shellHint(set, afternoon[0]), '어제 15:35');
   // 낮잠이 둘인데 때가 없으면 정하지 못한다
-  assert.equal(negatedDrafts('낮잠은 안 잤어', items).length, 0);
-  assert.equal(negatedDrafts('낮잠은 다 안 잤어', items).length, 2);
-  assert.equal(negatedDrafts('오후 5시 분유는 안 먹였어', items).map(draftWhen)[0], '16:50쯤');
-  assert.equal(negatedDrafts('저녁에 소변 안 쌌어', items).map(draftWhen)[0], '17:00쯤');
-  assert.equal(negatedDrafts('분유 먹였어', items).length, 0);
-});
-
-test('에이전트가 초안을 가리켜 고치거나 빼면 초안에 바로 반영한다', () => {
-  const now = new Date(2026, 10, 9, 20, 30);
-  const items = dayDrafts({ events: week(), day: DAY, now, said: [], fill: true });
-  const ctx = draftContext(items, 3);
-  assert.equal(ctx.records[0].ref, 'r3');
-  assert.equal(ctx.sources[0].key, items[0].id);
-  const nap = ctx.sources.find((s) => s.label.startsWith('낮잠') && s.type === 'event' && s.event.startAt === at(9, 15, 30))!;
-  const del: Change = { op: 'delete', src: nap, title: nap.label, from: '15:30' };
-  const r = applyChangeToDrafts(items, del)!;
-  assert.equal(r.items.length, items.length - 1);
-  assert.equal(r.line, '초안에서 15:30쯤 낮잠 50분을 뺐어요');
-  const feed = ctx.sources.find((s) => s.label === '분유 140ml' && s.type === 'event' && s.event.startAt === at(9, 16, 50))!;
-  const up: Change = { op: 'update', src: feed, title: feed.label, from: '140ml', to: '160ml', patch: { amount: 160 } };
-  const u = applyChangeToDrafts(items, up)!;
-  assert.equal(u.line, '초안의 분유 140ml를 160ml로 고쳤어요');
-  assert.equal(u.items.find((d) => d.id === draftIdOfKey(feed.key))!.title, '분유 160ml');
-  // 초안이 아닌 기록은 null
-  const real: Change = { op: 'delete', src: { ...nap, key: 'ev-1' }, title: '잠', from: '15:30' };
-  assert.equal(applyChangeToDrafts(items, real), null);
+  assert.equal(negatedShells('낮잠은 안 잤어', items).length, 0);
+  assert.equal(negatedShells('낮잠은 다 안 잤어', items).length, 2);
+  assert.equal(shellHint(set, negatedShells('오후 5시 분유는 안 먹였어', items)[0]), '어제 16:55');
+  assert.equal(shellHint(set, negatedShells('저녁에 소변 안 쌌어', items)[0]), '어제 17:05');
+  assert.equal(negatedShells('분유 먹였어', items).length, 0);
 });

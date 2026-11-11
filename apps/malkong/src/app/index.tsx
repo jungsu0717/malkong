@@ -4,7 +4,8 @@
  * 위쪽에 날짜 · 함께한 지 며칠 · 달력 · 마이 버튼(아기 사진), 그 아래 「하루 · 일주일 · 1년」 바꾸기. 화면을 두 손가락으로 오므리면 한 단계 물러나고
  * (하루 → 일주일 → 1년), 벌리면 다가간다. 일주일 보기에서 막대를 누르면 그날 하루 보기, 「오늘 보기」를 누르면 돌아온다.
  * 알림을 누르고 들어오면 `view` 로 보기를 고른다(성장 소식 · 아기 일정 알림은 1년).
- * 그 아래 기록 칸(모유 · 분유 · 기저귀 · 잠 단추와 합계, 「추가」 줄)이 위쪽에 고정되고 아래 흐름만 스크롤된다. 바닥에는 배너 광고만 고정한다(app-design 「광고 자리」).
+ * 그 아래 기록 단추 줄(모유, 분유, 기저귀, 잠, 루틴 단추와 합계, 옆으로 밀어 더 보고 끝의 「편집」에서 넣고 뺀다)이 위쪽에 고정되고 아래 흐름만 스크롤된다.
+ * 바닥에는 배너 광고만 고정한다(app-design 「광고 자리」). 하루 초안의 빈칸은 이 화면이 들고 물어보기 창과 하루 보기가 함께 본다(task today/029).
  */
 
 import { router, useLocalSearchParams } from 'expo-router';
@@ -20,7 +21,9 @@ import { AdBanner } from '@/components/ad-banner';
 import { BabyAvatar } from '@/components/baby-profile-extra';
 import { AskButton, AskSheet } from '@/components/flow/ask-sheet';
 import { DayView, type Highlight, type Preview } from '@/components/flow/day-view';
+import { RecordBarSheet } from '@/components/flow/record-bar-sheet';
 import { RecordPanel } from '@/components/flow/record-panel';
+import { useRoutineActions } from '@/components/routine/use-routine-actions';
 import { WeekView } from '@/components/flow/week-view';
 import { YearView } from '@/components/flow/year-view';
 import { ScreenLoading } from '@/components/screen-loading';
@@ -31,16 +34,17 @@ import { tap } from '@/components/ui';
 import { MaxContentWidth } from '@/constants/theme';
 import { ymd } from '@/data/agent';
 import { useAskConsent } from '@/data/ask-consent';
-import { editDraft, type Draft, type DraftPatch, type DraftSet } from '@/data/day-draft';
+import type { Shell } from '@/data/day-draft';
 import { useBaby } from '@/data/baby-context';
 import { birthOf } from '@/data/auto-todos';
 import { dayTotals } from '@/data/day-flow';
 import { startOfDay } from '@/data/event-summary';
 import { runningOf } from '@/data/events';
 import { useEvents } from '@/data/events-context';
-import { dateLabel } from '@/data/routine';
+import { dateLabel, hasSteps, isTimed, type Routine } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { useTodos } from '@/data/todos-context';
+import { useDayShells } from '@/hooks/use-day-shells';
 import { useGrowthAlerts } from '@/hooks/use-growth';
 import { useNow } from '@/hooks/use-now';
 import { useTheme } from '@/hooks/use-theme';
@@ -53,14 +57,14 @@ const PINCH_OUT = 0.8;
 const PINCH_IN = 1.25;
 
 const isView = (v: unknown): v is View3 => v === 'day' || v === 'week' || v === 'year';
-const NO_DRAFTS: Draft[] = [];
+const NO_SHELLS: Shell[] = [];
 
 export default function FlowScreen() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ view?: string; at?: string }>();
   const { baby, age } = useBaby();
-  const { loading, logs } = useRoutines();
+  const { loading, logs, logAt } = useRoutines();
   const { loading: todosLoading, todos } = useTodos();
   const { events, loading: eventsLoading } = useEvents();
   const log = useLogActions();
@@ -69,20 +73,19 @@ export default function FlowScreen() {
   const [highlight, setHighlight] = useState<Highlight | null>(null);
   /** 창을 연 채 흐름에서 누른 기록 — 그날 기록을 함께 읽기로 했을 때만(task today/022) */
   const [pickedKey, setPickedKey] = useState<string | null>(null);
-  /** 하루 초안과, 변경 카드가 열려 있는 동안 흐름에 먼저 보일 것 — 물어보기 창과 흐름이 같이 본다(SPEC-MAIN-16, task today/023) */
-  const [drafts, setDrafts] = useState<DraftSet | null>(null);
+  /** 변경 카드가 열려 있는 동안 흐름에 먼저 보일 것 — 물어보기 창과 흐름이 같이 본다(SPEC-MAIN-16, task today/023) */
   const [previews, setPreviews] = useState<Preview[]>([]);
-  const patchDraft = useCallback(
-    (id: string, patch: DraftPatch) => setDrafts((prev) => (prev ? { ...prev, items: prev.items.map((d) => (d.id === id ? editDraft(d, patch) : d)).sort((a, b) => a.at - b.at) } : prev)),
-    [],
-  );
-  const removeDraft = useCallback((id: string) => setDrafts((prev) => (prev ? { ...prev, items: prev.items.filter((d) => d.id !== id) } : prev)), []);
+  /** 기록 단추 편집 시트(task today/029) */
+  const [editingBar, setEditingBar] = useState(false);
   const consent = useAskConsent();
   // 비춘 기록이 화면 위쪽에 오게 — 아래는 물어보기 창이 덮는다
   const focusAt = useCallback((y: number) => scroll.current?.scrollTo({ y: Math.max(0, y - 90), animated: true }), []);
   // 30초마다, 그리고 기록 · 루틴 완료 · 할 일이 바뀌면 바로 — 자정을 넘기거나 앱으로 돌아오면 「오늘」이 따라온다. 재는 중 시계는 지금 노드가 따로 센다
   const changed = useMemo(() => ({ events, logs, todos }), [events, logs, todos]);
   const now = useNow(false, changed);
+  /** 하루 초안의 빈칸 — 그날 끝까지 폰에 남긴다(task today/029) */
+  const shells = useDayShells(now);
+  const routineActs = useRoutineActions(now);
   const [view, setView] = useState<View3>(isView(params.view) ? params.view : 'day');
   /** 하루 보기의 날 — null 이면 오늘 */
   const [picked, setPicked] = useState<Date | null>(null);
@@ -124,7 +127,19 @@ export default function FlowScreen() {
   const day = picked && startOfDay(picked).getTime() !== startOfDay(now).getTime() ? picked : null;
   /** 물어보기가 보는 날 — 하루 보기의 그날, 일주일 · 1년 보기에서는 오늘 */
   const askDay = view === 'day' && day ? day : now;
-  const draftItems = drafts && drafts.day === ymd(askDay) ? drafts.items : NO_DRAFTS;
+  const askShellSet = shells.set && shells.set.day === ymd(askDay) ? shells.set : null;
+  const askShells = askShellSet ? shells.open : NO_SHELLS;
+  const viewShellSet = shells.set && shells.set.day === ymd(day ?? now) ? shells.set : null;
+  /** 루틴 단추 — 한 번 누르면 지금 완료 한 줄. 단계 · 재고 확인 · 시간을 재는 루틴은 그 시트를 연다 */
+  const pressRoutine = (r: Routine) => {
+    if (isTimed(r) || hasSteps(r) || r.kind === 'stock') {
+      tap();
+      routineActs.onCheck(r.id);
+      return;
+    }
+    tap('success');
+    void logAt(r.id, new Date());
+  };
   const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
   const birth = birthOf(baby.birthDate);
   const title =
@@ -214,6 +229,8 @@ export default function FlowScreen() {
               date={totalsDay}
               sleeping={!!runningOf(events, 'sleep')}
               onRecord={log.press}
+              onRoutine={pressRoutine}
+              onEdit={() => setEditingBar(true)}
             />
           )}
         </View>
@@ -230,10 +247,12 @@ export default function FlowScreen() {
                   now={now}
                   highlight={highlight}
                   selected={asking ? pickedKey : null}
-                  drafts={draftItems}
+                  shellSet={viewShellSet}
+                  shells={viewShellSet ? shells.open : NO_SHELLS}
                   previews={previews}
-                  onEditDraft={patchDraft}
-                  onRemoveDraft={removeDraft}
+                  onFillShell={(sh, at, patch) => void shells.fill(sh, at, patch)}
+                  onRemoveShell={(id) => shells.remove([id])}
+                  onDropShells={shells.drop}
                   onPick={
                     asking && consent === 'yes'
                       ? (k) => {
@@ -260,6 +279,8 @@ export default function FlowScreen() {
       </View>
       <AdBanner anchored />
       {log.sheets}
+      {routineActs.sheets}
+      <RecordBarSheet open={editingBar} onClose={() => setEditingBar(false)} />
       <AskSheet
         open={asking}
         day={askDay}
@@ -269,8 +290,11 @@ export default function FlowScreen() {
         onHighlight={setHighlight}
         onOpenKind={(kind, editing) => log.open(kind, editing)}
         onShowWeek={() => go('week')}
-        drafts={drafts}
-        onDrafts={setDrafts}
+        shellSet={askShellSet}
+        shells={askShells}
+        onMakeShells={shells.create}
+        onRemoveShells={shells.remove}
+        onDropShells={shells.drop}
         onPreview={setPreviews}
       />
     </ThemedView>

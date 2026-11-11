@@ -1,5 +1,5 @@
 /**
- * 반복 고르기 (SPEC-MAIN-03, task today/004) — 매일 · 2일마다 · 3일마다 · 요일 지정(동그라미 일곱) · 며칠마다(− 7일마다 +).
+ * 반복 고르기 (SPEC-MAIN-03, task today/004 · 029) — 반복 안 함 · 매일 · 2일마다 · 3일마다 · 요일 지정(동그라미 일곱) · 며칠마다(− 7일마다 +).
  * 「완료」를 눌러야 바뀌고, 바깥을 누르면 그대로 닫힌다. 요일을 일곱 개 다 고르면 「매일」로 저장한다.
  */
 
@@ -15,10 +15,11 @@ import { scheduleLabel, type Routine } from '@/data/routine';
 import { useTheme } from '@/hooks/use-theme';
 
 export type RepeatValue = Pick<Routine, 'everyDays' | 'weekdays'>;
-type Choice = 1 | 2 | 3 | 'weekdays' | 'custom';
+type Choice = 0 | 1 | 2 | 3 | 'weekdays' | 'custom';
 
 const DAY_NAMES = ['일', '월', '화', '수', '목', '금', '토'];
-const FIXED: { days: 1 | 2 | 3; label: string }[] = [
+const FIXED: { days: 0 | 1 | 2 | 3; label: string }[] = [
+  { days: 0, label: '반복 안 함' },
   { days: 1, label: '매일' },
   { days: 2, label: '2일마다' },
   { days: 3, label: '3일마다' },
@@ -28,7 +29,7 @@ const CUSTOM_MAX = 99;
 
 function initialChoice(v: RepeatValue): Choice {
   if (v.weekdays?.length) return 'weekdays';
-  return v.everyDays === 1 || v.everyDays === 2 || v.everyDays === 3 ? v.everyDays : 'custom';
+  return v.everyDays <= 0 ? 0 : v.everyDays === 1 || v.everyDays === 2 || v.everyDays === 3 ? v.everyDays : 'custom';
 }
 
 export function RepeatPicker({
@@ -57,7 +58,7 @@ export function RepeatPicker({
         ? { everyDays: 1, weekdays: null }
         : { everyDays: 7, weekdays: [...days].sort((a, b) => a - b) }
       : { everyDays: choice === 'custom' ? custom : choice, weekdays: null };
-  const caption = result.weekdays ? `${scheduleLabel(result)}에 할 루틴이 돼요` : `${scheduleLabel(result)} 할 루틴이 돼요`;
+  const caption = result.everyDays <= 0 && !result.weekdays ? '기록 단추를 누를 때만 기록해요' : result.weekdays ? `${scheduleLabel(result)}에 할 루틴이 돼요` : `${scheduleLabel(result)} 할 루틴이 돼요`;
 
   const pick = (next: Choice) => {
     if (next !== choice) tap();
