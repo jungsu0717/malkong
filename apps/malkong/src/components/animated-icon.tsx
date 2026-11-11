@@ -1,16 +1,14 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import * as SplashScreen from 'expo-splash-screen';
-import { useRef, useState, type ReactNode } from 'react';
+import { useRef, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { RepeatCheckIcon } from '@/components/baby-icons';
-import { BrandLogo, BrandSlogan, BrandStar } from '@/components/brand';
+import { BrandStar } from '@/components/brand';
 import { HeroMobile } from '@/components/growth/growth-hero';
-import { ThemedText } from '@/components/themed-text';
+import { SplashCards } from '@/components/splash-scene';
 import { useTheme } from '@/hooks/use-theme';
 
 /** 둘레가 나타나는 시간 · 머무는 시간 · 전체가 흐려지는 시간 (ms) */
@@ -26,8 +24,8 @@ const BASE = { width: 390, height: 844 };
 
 /**
  * 기기 시작 화면이 걷힐 때 한 번 (task common/018 · 025, decisions/032).
- * 기기 시작 화면(먹색 바탕 + 서 있는 버디)과 같은 자리에 버디를 그대로 두고, 둘레에 성장 탭의 모빌과
- * 루틴 · 할 일 · 성장 카드 셋, 아래에 로고(글자 + 별)와 슬로건을 한 번에 띄운다. 단계별 움직임은 두지 않는다(Julian, 2026-10-23).
+ * 기기 시작 화면(먹색 바탕 + 서 있는 버디)과 같은 자리에 버디를 그대로 두고, 둘레에 모빌과 지금 앱의 카드 셋(기록 한 줄, 물어보기, 하루 고리 — 11판),
+ * 아래에 로고(글자 + 별)와 슬로건을 한 번에 띄운다. 단계별 움직임은 두지 않는다(Julian, 2026-10-23).
  * 카드 내용은 앱을 보여 주는 그림이고 그 집의 실제 기록이 아니다. 작은 화면에서는 둘레만 줄이고 버디는 기기 시작 화면과 같은 크기다.
  * 바탕색은 app.json 의 expo-splash-screen 설정(`Colors.splash`)과 같아야 이음매가 보이지 않는다.
  */
@@ -104,74 +102,9 @@ export function AnimatedSplashOverlay() {
       <Image style={IMAGE} source={require('@/assets/images/splash-icon.png')} contentFit="contain" />
 
       <Animated.View style={[StyleSheet.absoluteFill, aroundStyle]} pointerEvents="none">
-        <SplashCard style={at(-177, -222)} rotate={-6} scale={s} icon={<RepeatCheckIcon size={13} color={c.onHeroDim} />} name="루틴">
-          <View style={styles.row}>
-            <View style={[styles.done, { backgroundColor: c.heroAccent }]}>
-              <Ionicons name="checkmark" size={15} color={c.hero} />
-            </View>
-            <View>
-              <ThemedText style={[styles.cardTitle, { color: c.onHero }]}>목욕</ThemedText>
-              <ThemedText style={[styles.cardSub, { color: c.heroAccent, fontWeight: 600 }]}>08:10 완료</ThemedText>
-            </View>
-          </View>
-        </SplashCard>
-        <SplashCard style={at(27, -196)} rotate={5} scale={s} icon={<Ionicons name="checkbox-outline" size={13} color={c.onHeroDim} />} name="할 일">
-          <View style={styles.row}>
-            <View style={[styles.open, { borderColor: c.onHeroDim }]} />
-            <View>
-              <ThemedText style={[styles.cardTitle, { color: c.onHero, fontSize: 14 }]}>산후 검진 예약</ThemedText>
-              <ThemedText style={[styles.cardSub, { color: c.onHeroDim }]}>내일 오전 10:00</ThemedText>
-            </View>
-          </View>
-        </SplashCard>
-        <SplashCard style={at(35, 70)} rotate={-3} scale={s} icon={<Ionicons name="leaf-outline" size={13} color={c.onHeroDim} />} name="성장">
-          <ThemedText style={[styles.cardTitle, { color: c.onHero, fontSize: 16 }]}>
-            D+25 <ThemedText style={[styles.cardSub, { color: c.onHeroDim }]}>4주차</ThemedText>
-          </ThemedText>
-          <View style={[styles.track, { backgroundColor: c.heroTrack }]}>
-            <View style={[styles.fill, { backgroundColor: c.heroAccent }]} />
-            <View style={[styles.knob, { backgroundColor: c.onHero }]} />
-          </View>
-          <View style={styles.ends}>
-            <ThemedText style={[styles.tiny, { color: c.onHeroDim }]}>1개월</ThemedText>
-            <ThemedText style={[styles.tiny, { color: c.onHeroDim }]}>50일</ThemedText>
-          </View>
-        </SplashCard>
-
-        <View style={[styles.words, { top: at(0, 206).top, transform: [{ scale: s }] }]}>
-          <BrandLogo size={36} color={c.onHero} />
-          <BrandSlogan onDark />
-        </View>
+        <SplashCards at={at} s={s} />
       </Animated.View>
     </Animated.View>
-  );
-}
-
-/** 먹색 위의 작은 카드 — 위에 탭 아이콘과 이름 */
-function SplashCard({
-  style,
-  rotate,
-  scale,
-  icon,
-  name,
-  children,
-}: {
-  style: { left: number; top: number };
-  rotate: number;
-  scale: number;
-  icon: ReactNode;
-  name: string;
-  children: ReactNode;
-}) {
-  const c = useTheme();
-  return (
-    <View style={[styles.card, style, { backgroundColor: c.heroCard, borderColor: c.heroCardLine, transform: [{ rotate: `${rotate}deg` }, { scale }] }]}>
-      <View style={styles.tab}>
-        {icon}
-        <ThemedText style={[styles.tiny, { color: c.onHeroDim, fontSize: 11, fontWeight: 600 }]}>{name}</ThemedText>
-      </View>
-      {children}
-    </View>
   );
 }
 
@@ -183,27 +116,4 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   abs: { position: 'absolute' },
-  card: {
-    position: 'absolute',
-    width: 150,
-    paddingTop: 11,
-    paddingBottom: 12,
-    paddingHorizontal: 13,
-    borderRadius: 16,
-    gap: 7,
-    borderWidth: 1,
-  },
-  tab: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  done: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  open: { width: 20, height: 20, borderRadius: 10, borderWidth: 1.8 },
-  cardTitle: { fontSize: 15, lineHeight: 20, fontWeight: 700, letterSpacing: -0.3 },
-  cardSub: { fontSize: 11, lineHeight: 15 },
-  tiny: { fontSize: 10, lineHeight: 14 },
-  track: { height: 6, borderRadius: 3, justifyContent: 'center' },
-  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '58%', borderRadius: 3 },
-  knob: { position: 'absolute', left: '58%', width: 12, height: 12, marginLeft: -6, borderRadius: 6 },
-  ends: { flexDirection: 'row', justifyContent: 'space-between' },
-  // 버디는 화면 한가운데 그대로 — 로고와 슬로건은 그 아래에 따로 놓아 버디가 밀리지 않게 한다
-  words: { position: 'absolute', left: 0, right: 0, alignItems: 'center', gap: 16 },
 });

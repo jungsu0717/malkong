@@ -12,7 +12,7 @@ import { answerFor, copula, valueText } from './ask.ts';
 import { feedSessions, hhmm, nextFeedGuess, usualFeedGap } from './day-flow.ts';
 import { durationLabel, startOfDay } from './event-summary.ts';
 import type { CareEvent } from './events.ts';
-import { rangeOf, readWhat, runFind, WHAT_LABEL, type FindMeasure, type FindRange, type FindRangeKey, type FindWhat } from './find-parse.ts';
+import { rangeOf, readWhat, runFind, WHAT_LABEL, type FindMeasure, type FindQuery, type FindRange, type FindRangeKey, type FindWhat } from './find-parse.ts';
 
 const MIN = 60 * 1000;
 const DAY = 24 * 60 * MIN;
@@ -292,11 +292,33 @@ const and = (w: string) => `${w}${copula(w) === '이에요' ? '과' : '와'}`;
 export type ToolTile = 'sleep' | 'feed' | 'diaper' | 'doc';
 export type ToolLabel = { title: string; sub: string; tile: ToolTile };
 
+const tileOf = (what: FindWhat): ToolTile =>
+  ['sleep', 'nap', 'night'].includes(what) ? 'sleep' : ['diaper', 'pee', 'poo'].includes(what) ? 'diaper' : ['feed', 'formula', 'breast'].includes(what) ? 'feed' : 'doc';
+
+/** 화면을 바꾸거나 무엇을 만드는 기능 — 카드 머리가 「이렇게 할까요?」 */
+export const isActionCall = (call: ToolCall) => call.tool === 'day_draft' || call.tool === 'write_diary' || call.tool === 'show_week';
+
+/** 되묻는 카드의 머리(decisions/045) — 알려 줄 것이면 「이걸 알려 드릴까요?」, 할 일이면 「이렇게 할까요?」. 보기가 여럿이면 「어떤 걸 …」 */
+export function offerHead(kind: 'ask' | 'do', n: number): string {
+  if (kind === 'ask') return n > 1 ? '어떤 걸 알려 드릴까요?' : '이걸 알려 드릴까요?';
+  return n > 1 ? '어떤 걸 할까요?' : '이렇게 할까요?';
+}
+
+/** 규칙으로 읽은 찾기 조건의 카드 한 줄 — 「마지막 수유」, 「오늘 분유」, 「최근 7일 낮잠 하루 평균」 */
+export function queryLabel(q: FindQuery, offset = 0, average = false): ToolLabel {
+  const name = WHAT_LABEL[q.what];
+  const tile = tileOf(q.what);
+  if (q.measure === 'last' || offset > 0) return { title: offset > 0 ? `그 전 ${name}` : `마지막 ${name}`, sub: '언제였는지와 지난 시간', tile };
+  if (average) return { title: `${q.range.label} ${name} 하루 평균`, sub: '여러 날의 하루 평균', tile };
+  const sub = q.measure === 'duration' ? '모두 몇 시간인지와 평소' : q.measure === 'amount' ? '모두 얼마나 먹었는지와 평소' : '몇 번인지와 평소';
+  return { title: `${q.range.label} ${name}`, sub, tile };
+}
+
 /** 카드 한 줄의 글 — 앱이 쓴다(모델이 쓴 글은 보이지 않는다, 헌장 13) */
 export function toolLabel(call: ToolCall): ToolLabel {
   const what = (call.what ?? 'feed') as FindWhat;
   const name = WHAT_LABEL[what];
-  const tile: ToolTile = ['sleep', 'nap', 'night'].includes(what) ? 'sleep' : ['diaper', 'pee', 'poo'].includes(what) ? 'diaper' : ['feed', 'formula', 'breast'].includes(what) ? 'feed' : 'doc';
+  const tile = tileOf(what);
   const a = RANGE_WORD[call.range ?? ''] ?? '';
   const b = RANGE_WORD[call.rangeB ?? ''] ?? '';
   switch (call.tool) {
@@ -324,7 +346,7 @@ export function toolLabel(call: ToolCall): ToolLabel {
     case 'day_summary':
       return { title: `${RANGE_WORD[call.day ?? ''] ?? '그날'} 하루 요약`, sub: '수유, 기저귀, 잠과 루틴', tile: 'doc' };
     case 'day_draft':
-      return { title: '오늘 하루 기록 초안', sub: '평소 시각으로 채워요', tile: 'doc' };
+      return { title: '오늘 하루 기록 초안', sub: '평소 시각으로 채우고, 고친 뒤 저장해요', tile: 'doc' };
     case 'write_diary':
       return { title: '메모 쓰기', sub: '그날 기록을 보며 써요', tile: 'doc' };
     case 'show_week':

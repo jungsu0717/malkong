@@ -2,7 +2,7 @@
  * 버디 — 쪽쪽이 문 아기 캐릭터, 육아버디의 얼굴 (decisions/015).
  * 원본은 캐릭터 시트 한 장(`assets/brand/buddy-sheet.jpg`)이고, 잘라 낸 그림은 `assets/images/mascot/`.
  * 머리 위 · 생각 중 · 빈 화면 · 지식 지도 가운데에 같은 얼굴을 쓴다.
- * 로고는 글자 「육아버디」 오른쪽 위에 앱 아이콘의 노란 별, 슬로건은 「육아 할 일, / 버디가 챙겨요」(decisions/032).
+ * 로고는 글자 「육아버디」 오른쪽 위에 앱 아이콘의 노란 별, 슬로건은 「아기 하루, / 버디가 챙겨요」(decisions/032, 2026-11-11 Julian 이 바꿈).
  */
 
 import { Image } from 'expo-image';
@@ -73,13 +73,13 @@ export function BrandLogo({ size = 36, color }: { size?: number; color?: string 
   );
 }
 
-/** 슬로건 — 「육아 할 일,」 다음 줄 「버디가 챙겨요」, 「버디」만 코랄. 먹색 바탕(`onDark`)과 흰 바탕 둘 다 */
+/** 슬로건 — 「아기 하루,」 다음 줄 「버디가 챙겨요」, 「버디」만 코랄. 먹색 바탕(`onDark`)과 흰 바탕 둘 다 */
 export function BrandSlogan({ onDark = false, size = 16 }: { onDark?: boolean; size?: number }) {
   const c = useTheme();
   const lineHeight = Math.round(size * 1.5);
   return (
     <View style={{ alignItems: 'center' }}>
-      <ThemedText style={{ fontSize: size, lineHeight, color: onDark ? c.onHeroDim : c.textSecondary }}>육아 할 일,</ThemedText>
+      <ThemedText style={{ fontSize: size, lineHeight, color: onDark ? c.onHeroDim : c.textSecondary }}>아기 하루,</ThemedText>
       <ThemedText style={{ fontSize: size, lineHeight, fontWeight: 700, color: onDark ? c.onHero : c.text }}>
         <ThemedText style={{ fontSize: size, lineHeight, fontWeight: 700, color: onDark ? c.heroAccent : c.accent }}>버디</ThemedText>가 챙겨요
       </ThemedText>

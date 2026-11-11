@@ -1,6 +1,6 @@
 # 044 질문은 규칙과 카드로, 모델은 고치는 말과 다 못 읽은 기록에만 — 끌 수 있는 보조
 
-> 상태: 확정 (2026-11-10, Julian 「ㅇㅇ 그렇게하자」) · 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「10판 시안 — 물어보기가 뜻을 되묻는 카드 (2026-11-10)」
+> 상태: 확정 (2026-11-10, Julian 「ㅇㅇ 그렇게하자」) · 「카드는 뜻이 여럿이거나 못 읽었을 때만」은 [045](045-ask-confirm-first.md)로 바뀜(2026-11-11) · 시안: https://claude.ai/artifact/4CMt2A8pGPqV1xhaAg3H8x 「10판 시안 — 물어보기가 뜻을 되묻는 카드 (2026-11-10)」
 > [040](040-ask-agent-reads-the-day.md) · [043](043-agent-knows-app-tools.md)의 한 번 호출과 기능 목록은 그대로 두고, 무엇을 모델로 보낼지를 좁힌다.
 
 ## 맥락

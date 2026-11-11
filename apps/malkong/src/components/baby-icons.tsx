@@ -148,3 +148,19 @@ export function RepeatCheckIcon({ size = 24, color }: IconProps) {
     </Svg>
   );
 }
+
+/** AI 비서 아이콘 — 말풍선 안에 반짝임(빌드 15 피드백 「ai agent 비서같은 아이콘으로 … 물어보기 같은 텍스트는 빼고」) */
+export function AssistantIcon({ size = 28, color, spark }: { size?: number; color: ColorValue; spark: ColorValue }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M6 4.5h12A2.5 2.5 0 0 1 20.5 7v8a2.5 2.5 0 0 1-2.5 2.5h-6l-4.2 3.2c-.4.3-.8 0-.8-.4v-2.8H6A2.5 2.5 0 0 1 3.5 15V7A2.5 2.5 0 0 1 6 4.5Z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+      />
+      <Path d="M12 6.9c.38 2.05 1.4 3.07 3.45 3.45-2.05.38-3.07 1.4-3.45 3.45-.38-2.05-1.4-3.07-3.45-3.45 2.05-.38 3.07-1.4 3.45-3.45Z" fill={spark} />
+      <Path d="M16.2 12.6c.15.8.55 1.2 1.35 1.35-.8.15-1.2.55-1.35 1.35-.15-.8-.55-1.2-1.35-1.35.8-.15 1.2-.55 1.35-1.35Z" fill={spark} />
+    </Svg>
+  );
+}

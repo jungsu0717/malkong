@@ -234,8 +234,11 @@ const subj = (w: string) => `${w}${copula(w) === '이에요' ? '이' : '가'}`;
  */
 export function wakeAnswer(text: string, events: CareEvent[], now: Date): LocalAnswer | null {
   if (!/(일어났|일어난|깼|깬|깨어났|기상)/.test(text) || /(분유|모유|기저귀|체온)/.test(text)) return null;
-  return wakeFor(/낮잠/.test(text) ? 'nap' : /밤잠|아침/.test(text) ? 'night' : 'any', events, now);
+  return wakeFor(wakeWhich(text), events, now);
 }
+
+/** 어느 잠에서 깼는지 묻는가 — 「아까 낮잠」은 낮잠, 「아침에」는 밤잠 */
+export const wakeWhich = (text: string): 'any' | 'nap' | 'night' => (/낮잠/.test(text) ? 'nap' : /밤잠|아침/.test(text) ? 'night' : 'any');
 
 /** 깬 시각 — any 는 마지막으로 깬 잠(지금 자는 중이면 잠든 시각), nap · night 는 그 잠 */
 export function wakeFor(which: 'any' | 'nap' | 'night', events: CareEvent[], now: Date): LocalAnswer {

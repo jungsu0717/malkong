@@ -131,3 +131,21 @@ test('섞인 기록은 조각을 모두 읽었을 때만 규칙으로, 「요즘
   assert.deepEqual(searchTerms('목욕은 괜찮아?'), ['목욕']);
   assert.equal(asksDaySummary('오늘 어땠어?'), true);
 });
+
+test('되묻는 카드 — 머리와 찾기 조건의 한 줄(decisions/045)', async () => {
+  const { offerHead, queryLabel, isActionCall } = await import('./agent-tools.ts');
+  const { parseFind } = await import('./find-parse.ts');
+  assert.equal(offerHead('ask', 1), '이걸 알려 드릴까요?');
+  assert.equal(offerHead('ask', 3), '어떤 걸 알려 드릴까요?');
+  assert.equal(offerHead('do', 1), '이렇게 할까요?');
+  assert.equal(offerHead('do', 2), '어떤 걸 할까요?');
+  assert.equal(isActionCall({ tool: 'day_draft' }), true);
+  assert.equal(isActionCall({ tool: 'last', what: 'feed' }), false);
+  const now = new Date('2026-11-10T14:40:00+09:00');
+  const last = parseFind('마지막 수유 언제였지?', now)!;
+  assert.deepEqual(queryLabel(last), { title: '마지막 수유', sub: '언제였는지와 지난 시간', tile: 'feed' });
+  assert.equal(queryLabel(last, 1).title, '그 전 수유');
+  const total = parseFind('오늘 분유 몇 ml 먹었어?', now)!;
+  assert.equal(queryLabel(total).title, '오늘 분유');
+  assert.equal(queryLabel(total).sub, '모두 얼마나 먹었는지와 평소');
+});
