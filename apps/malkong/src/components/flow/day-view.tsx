@@ -64,6 +64,7 @@ import { useEvents } from '@/data/events-context';
 import { useFamily } from '@/data/family-context';
 import { flowLayout, ITEM, type LinkSpec, type PartSpec, type Shape } from '@/data/flow-layout';
 import { useMemos } from '@/data/memos-context';
+import { usePreferences } from '@/data/preferences-context';
 import { isTimed, logsOn, todayPlan } from '@/data/routine';
 import { useRoutines } from '@/data/routines-context';
 import { randomPose, type BuddyPose } from '@/data/stage';
@@ -75,8 +76,6 @@ const DAY = 24 * 60 * 60 * 1000;
 const WEEKDAYS = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 /** 가족 노드를 숨겼는지 — 'yes' 면 이 폰에서 다시 보이지 않는다(예전 홈 가족 초대 카드와 같은 설정값) */
 const FAMILY_HIDDEN_KEY = 'home.familyCardHidden';
-/** 흐름 | 목록 중 고른 보기 — 이 폰에서 기억한다(SPEC-MAIN-08) */
-const VIEW_KEY = 'day.view';
 
 const MIN = 60 * 1000;
 /** 초안 고치기 창의 높이쯤 — 창이 노드 위에 뜨니 그만큼 위가 보이게 스크롤한다 */
@@ -224,19 +223,14 @@ export function DayView({
   /** 소식 그림의 버디 자세 — 열 때마다 셋 중 하나(decisions/042) */
   const [sharePose, setSharePose] = useState<BuddyPose>('lie');
   const [familyHidden, setFamilyHidden] = useState(true);
-  const [mode, setMode] = useState<'flow' | 'list'>('flow');
+  // 「흐름 | 목록」은 마지막으로 고른 것 — 앱을 켤 때 한 번 읽어 두어서 날짜를 넘겨도 흐름으로 먼저 그리지 않는다
+  const { dayView: mode, setDayView } = usePreferences();
   /** 고치는 중인 초안의 id — 작은 창이 그 노드 옆에 뜬다 */
   const [editing, setEditing] = useState<string | null>(null);
   useEffect(() => {
     void readSetting(FAMILY_HIDDEN_KEY).then((v) => setFamilyHidden(v === 'yes'));
-    void readSetting(VIEW_KEY).then((v) => {
-      if (v === 'list') setMode('list');
-    });
   }, []);
-  const changeMode = (m: 'flow' | 'list') => {
-    setMode(m);
-    void writeSetting(VIEW_KEY, m);
-  };
+  const changeMode = (m: 'flow' | 'list') => void setDayView(m).catch(() => undefined);
   const breast = runningOf(events, 'breast');
   // 모유를 재는 중이면 1초마다 — 지금 노드의 시계만
   const tick = useNow(!!breast || !!runningOf(events, 'sleep'), events);

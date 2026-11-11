@@ -23,6 +23,8 @@ Julian(2026-11-11, 빌드 17 을 써 보고): 「메인 스플래시 화면도 �
   하루 24시간 고리(잠, 수유, 기저귀). 루틴, 할 일, 성장 카드는 뺐다. 버디와 모빌, 별, 움직임은 그대로
 - 슬로건 「육아 할 일, 버디가 챙겨요」 → 「아기 하루, 버디가 챙겨요」(`BrandSlogan`). 구글 플레이 그래픽 이미지도 같은 말로 다시 찍었다(`marketing/store/out/feature.png`, 아래 줄은 「수유, 기저귀, 잠 기록을 가족과 함께 봐요」)
 - AI 비서 아이콘을 `baby-icons.tsx` 로 옮겼다(시작 화면과 물어보기 단추가 같이 쓴다)
+- 하루 보기의 「흐름 | 목록」(SPEC-MAIN-08) — Julian 「다음에 유저가 설정한 화면으로 볼 수 있도록도」. 고른 보기는 전에도 저장했지만 날짜 화면을 열 때마다 흐름으로 먼저 그린 뒤 읽어서 바꿨다.
+  이제 앱을 켤 때 한 번 읽어 두고(`preferences-context` 의 `dayView`) 모든 날짜가 처음부터 그 보기로 열린다
 
 ## 손댄 파일
 
@@ -31,6 +33,7 @@ src/components/flow/ask-sheet.tsx — offer 카드(OfferBody, OfferRow), 모든 
 src/data/agent-tools.ts · agent-tools.test.ts — offerHead · queryLabel · isActionCall, 초안 보기 설명
 src/data/ask-local.ts — wakeWhich · src/data/day-draft.ts · day-draft.test.ts — 「전체 기록 작성해줘」
 src/components/splash-scene.tsx(새 파일) · animated-icon.tsx · brand.tsx · baby-icons.tsx
+src/data/preferences-context.tsx · src/components/flow/day-view.tsx — 「흐름 | 목록」을 앱 시작 때 읽어 두기
 marketing/store/feature.html · out/feature.png
 docs: decisions/045 · 032 · 044, main SPEC-MAIN-12 · 13 · 15, app-design README, product-brief, store-toon, README
 ```
@@ -44,7 +47,8 @@ docs: decisions/045 · 032 · 044, main SPEC-MAIN-12 · 13 · 15, app-design REA
 - [x] 시작 화면 카드 셋과 슬로건, 구글 플레이 그래픽 이미지
 - [x] 앱 tsc · lint · 시험 · copy-check
 - [x] 웹에서 확인(모델 호출은 가리키는 말 한 번뿐, 가짜 답)
-- [ ] 빌드 — Julian 승인 뒤. 시작 화면 그림(기기 시작 화면)은 바뀌지 않아서 카드와 슬로건만 새 빌드로 보인다
+- [x] (SPEC-MAIN-08) 고른 「흐름 | 목록」으로 다시 켜도, 일주일에서 돌아와도 바로 열림(웹)
+- [ ] 빌드 1.0.0 (18) — Julian 「ㅇㅇ」(2026-11-11). 시작 화면 그림(기기 시작 화면)은 바뀌지 않아서 카드와 슬로건만 새 빌드로 보인다
 
 ## 확인
 

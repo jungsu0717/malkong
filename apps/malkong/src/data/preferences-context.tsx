@@ -20,6 +20,9 @@ const GROWTH_ALERTS_KEY = 'growth_alerts';
  * 때는 부모가 고르지 않고 월령 기준으로 앱이 정한다(care-reminders.ts). 거는 것은 events-context 가 한다
  */
 const CARE_REMINDERS_KEY = 'care_reminders';
+/** 하루 보기의 「흐름 | 목록」 — 마지막으로 고른 것. 정한 적이 없으면 흐름(SPEC-MAIN-08) */
+const DAY_VIEW_KEY = 'day.view';
+export type DayViewMode = 'flow' | 'list';
 export const DEFAULT_BRIEFING_TIME = '08:00';
 
 type PreferencesValue = {
@@ -35,6 +38,9 @@ type PreferencesValue = {
   /** 기록 알림 — 수유 · 기저귀 · 잠 */
   careReminders: boolean;
   setCareReminders: (on: boolean) => Promise<void>;
+  /** 하루 보기 — 앱을 켤 때 한 번 읽어 두어 날짜를 넘겨도 처음부터 이 보기로 연다 */
+  dayView: DayViewMode;
+  setDayView: (mode: DayViewMode) => Promise<void>;
 };
 
 const PreferencesContext = createContext<PreferencesValue | null>(null);
@@ -44,17 +50,19 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(true);
   const [growthAlerts, setGrowth] = useState(true);
   const [careReminders, setCare] = useState(false);
+  const [dayView, setView] = useState<DayViewMode>('flow');
 
   useEffect(() => {
     let cancelled = false;
     // 예전 기록 요청 · 체온 알림을 걸어 둔 폰이 있다 — 다시 걸지 않는 알림이라 지운다(decisions/030 · 036)
     void cancelRecordAlerts().catch(() => undefined);
-    Promise.all([readSetting(BRIEFING_TIME_KEY), readSetting(GROWTH_ALERTS_KEY), readSetting(CARE_REMINDERS_KEY)])
-      .then(([time, growth, care]) => {
+    Promise.all([readSetting(BRIEFING_TIME_KEY), readSetting(GROWTH_ALERTS_KEY), readSetting(CARE_REMINDERS_KEY), readSetting(DAY_VIEW_KEY)])
+      .then(([time, growth, care, view]) => {
         if (cancelled) return;
         setTime(time === 'off' ? null : (time ?? DEFAULT_BRIEFING_TIME));
         setGrowth(growth !== 'off');
         setCare(care === 'on');
+        setView(view === 'list' ? 'list' : 'flow');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -79,9 +87,14 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     await writeSetting(CARE_REMINDERS_KEY, on ? 'on' : 'off');
   }, []);
 
+  const setDayView = useCallback(async (mode: DayViewMode) => {
+    setView(mode);
+    await writeSetting(DAY_VIEW_KEY, mode);
+  }, []);
+
   const value = useMemo(
-    () => ({ loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts, careReminders, setCareReminders }),
-    [loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts, careReminders, setCareReminders],
+    () => ({ loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts, careReminders, setCareReminders, dayView, setDayView }),
+    [loading, briefingTime, setBriefingTime, growthAlerts, setGrowthAlerts, careReminders, setCareReminders, dayView, setDayView],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
